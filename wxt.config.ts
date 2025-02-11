@@ -4,5 +4,18 @@ import { defineConfig } from 'wxt'
 export default defineConfig({
     srcDir: 'src',
     extensionApi: 'chrome',
-    modules: ['@wxt-dev/module-svelte']
+    modules: ['@wxt-dev/module-svelte'],
+    manifest: {
+        web_accessible_resources: [
+            {
+                resources: [
+                    '/init.js',
+                    '/media-capture.js',
+                    '/media-override.js',
+                    '/media-listener.js'
+                ],
+                matches: ['<all_urls>']
+            }
+        ]
+    }
 })
