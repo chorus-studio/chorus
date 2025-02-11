@@ -25,7 +25,10 @@ export const highlightElement = ({
 export const highlightIconTimer = ({ highlight, selector, fill = false }) => {
     let updated
     const timer = setInterval(() => {
-        if (updated) { clearInterval(timer); return }
+        if (updated) {
+            clearInterval(timer)
+            return
+        }
 
         updated = highlightIcon({ highlight, selector, fill })
     }, 0)

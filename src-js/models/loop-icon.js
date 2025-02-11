@@ -64,13 +64,13 @@ export default class LoopIcon {
     }
 
     get #isHighlighted() {
-        const svgIcon =  document.getElementById('loop-icon')
+        const svgIcon = document.getElementById('loop-icon')
         if (!svgIcon) return false
 
         return svgIcon.getAttribute('fill') == '#1ed760'
     }
 
-    highlightLoop({ isSnip, autoLoop = false }) { 
+    highlightLoop({ isSnip, autoLoop = false }) {
         if (!isSnip && autoLoop) {
             this._video.element.setAttribute('startTime', 0)
             this._video.element.setAttribute('endTime', playback.duration())
@@ -84,7 +84,7 @@ export default class LoopIcon {
             'aria-label',
             autoLoop ? 'Remove Loop' : `Loop ${isSnip ? 'Snip' : 'Track'}`
         )
-        highlightIcon({ highlight: autoLoop, selector: '#loop-icon' }) 
+        highlightIcon({ highlight: autoLoop, selector: '#loop-icon' })
     }
 
     removeIcon() {

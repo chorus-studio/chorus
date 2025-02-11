@@ -1,0 +1,95 @@
+{
+    "short_name": "Chorus",
+    "name": "Chorus - Spotify Enhancer",
+    "description": "Enhance Spotify with controls to save favourite snips, auto-skip tracks, and set global and custom speed. More to come!",
+    "version": "1.24.1",
+    "manifest_version": 3,
+    "author": "cdrani",
+    "action": {
+        "default_icon": {
+            "32": "icons/logo.png"
+        },
+        "default_popup": "popup/index.html"
+    },
+    "icons": {
+        "16": "icons/icon16.png",
+        "24": "icons/icon24.png",
+        "48": "icons/icon48.png",
+        "64": "icons/icon64.png",
+        "128": "icons/icon128.png"
+    },
+    "content_scripts": [
+        {
+            "run_at": "document_idle",
+            "js": ["content.js"],
+            "css": ["styles.css"],
+            "matches": ["*://open.spotify.com/*"]
+        }
+    ],
+    "web_accessible_resources": [
+        {
+            "matches": ["*://open.spotify.com/*"],
+            "resources": [
+                "styles.css",
+                "utils/*.js",
+                "models/*.js",
+                "events/*.js",
+                "components/*.js",
+                "observers/*.js",
+                "stores/*.js",
+                "actions/*.js",
+                "data/*.js",
+                "services/*.js",
+                "lib/**/*.js",
+                "lib/sounds/*.wav"
+            ]
+        }
+    ],
+    "commands": {
+        "on/off": {
+            "description": "Toggle Extension On/Off"
+        },
+        "loop": {
+            "description": "Loop/UnLoop Snip/Track"
+        },
+        "next": {
+            "description": "Next Track"
+        },
+        "play/pause": {
+            "description": "Play/Pause"
+        },
+        "repeat": {
+            "description": "Repeat Track"
+        },
+        "shuffle": {
+            "description": "Shuffle Tracks"
+        },
+        "previous": {
+            "description": "Previous Track"
+        },
+        "settings": {
+            "description": "Display Controls"
+        },
+        "mute/unmute": {
+            "description": "Mute/Unmute Track"
+        },
+        "seek-fastforward": {
+            "description": "Seek Track Forwards"
+        },
+        "save/unsave": {
+            "description": "Save/Unsave Track"
+        },
+        "seek-rewind": {
+            "description": "Seek Track Backwards"
+        },
+        "block-track": {
+            "description": "Add track to block list"
+        }
+    },
+    "permissions": ["tabs", "storage", "activeTab", "scripting", "webRequest", "unlimitedStorage"],
+    "host_permissions": ["*://*.spotify.com/*"],
+    "background": {
+        "type": "module",
+        "service_worker": "background.js"
+    }
+}
