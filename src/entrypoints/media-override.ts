@@ -1,6 +1,6 @@
 function mediaOverride() {
     const sources: any[] = []
-    const defaultSpeed = 1.75
+    const defaultSpeed = 1
     let speed = defaultSpeed
 
     function addSource(source: any) {
