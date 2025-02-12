@@ -1,6 +1,12 @@
 import { timeToSeconds } from './time'
 
 export const playback = {
+    loop: () => {
+        const loopButton = document.querySelector('[data-testid="control-button-repeat"]')
+        if (!loopButton) return false
+
+        return loopButton.getAttribute('aria-label') === 'Disable repeat one'
+    },
     duration: () => {
         const getPlaybackDuration = () =>
             document.querySelector('[data-testid="playback-duration"]')
@@ -21,6 +27,7 @@ export const playback = {
     data: () => {
         const duration = playback.duration()
         const position = playback.current()
-        return { duration, position }
+        const loop = playback.loop()
+        return { duration, position, loop }
     }
 }

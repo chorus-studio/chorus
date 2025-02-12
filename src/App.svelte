@@ -28,11 +28,11 @@
                     </g>
                 </svg>
         </Popover.Trigger>
-        <Popover.Content customAnchor="[data-testid='CoverSlotCollapsed__container']" side="left" align="end" class="fixed bottom-20 left-[80px] h-[270px] w-[350px] border-2 rounded-md">
-                <div class="flex flex-col justify-center relative">
-                    <h1 class="absolute left-1 top-0.5 lowercase">Chorus</h1>
-                    <TabsList />
-                </div>
+        <Popover.Content customAnchor="[data-testid='CoverSlotCollapsed__container']" side="left" align="end" class="fixed bottom-20 left-[80px] h-[270px] w-[350px] outline-4 outline-[#28e269] outline-offset-0 rounded-md">
+            <div class="flex flex-col justify-center relative">
+                <h1 class="absolute top-0.5 lowercase">Chorus</h1>
+                <TabsList />
+            </div>
         </Popover.Content>
     </Popover.Root>
-    </div>
+</div>

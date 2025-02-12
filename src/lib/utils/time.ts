@@ -23,8 +23,8 @@ export const secondsToTime = (seconds: number) => {
     return time
 }
 
-export const formatTimeInSeconds = (totalSeconds: string) => {
-    const parsedSeconds = parseFloat(totalSeconds)
+export const formatTimeInSeconds = (totalSeconds: string | number) => {
+    const parsedSeconds = parseFloat(totalSeconds.toString())
 
     if (isNaN(parsedSeconds) || parsedSeconds < 0) return
 

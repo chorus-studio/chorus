@@ -3,12 +3,13 @@ import { currentSongInfo } from '$lib/utils/song'
 import { playback } from '$lib/utils/playback'
 
 type NowPlaying = {
+    current: number
+    duration: number
+    loop: boolean
     id: string | null
     cover: string | null
     title: string | null
     artist: string | null
-    duration: number
-    position: number
 }
 
 function createNowPlayingStore() {
@@ -21,7 +22,8 @@ function createNowPlayingStore() {
         title: null,
         artist: null,
         duration: 0,
-        position: 0
+        current: 0,
+        loop: false
     })
 
     const { subscribe, set } = store
@@ -62,9 +64,9 @@ function createNowPlayingStore() {
         const songInfo = currentSongInfo()
         const { id = null, cover = null } = songInfo
         const [title, artist] = id?.split(' by ') ?? []
-        const { duration = 0, position = 0 } = playback.data()
+        const { duration = 0, position: current = 0, loop = false } = playback.data()
 
-        return { id, cover, title, artist, duration, position }
+        return { id, cover, title, artist, duration, current, loop }
     }
 
     function updateNowPlaying() {
