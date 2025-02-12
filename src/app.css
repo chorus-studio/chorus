@@ -73,3 +73,9 @@
         @apply bg-background text-foreground;
     }
 }
+
+@layer components {
+    .shadow-slider {
+        box-shadow: 0 0 0 4px #28e269;
+    }
+}
