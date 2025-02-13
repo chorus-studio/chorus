@@ -25,6 +25,7 @@
         "clsx": "^2.1.1",
         "husky": "^9.1.7",
         "lint-staged": "^15.4.3",
+        "lucide-svelte": "^0.475.0",
         "svelte": "^5.1.16",
         "svelte-check": "^4.0.7",
         "tailwind-merge": "^3.0.1",

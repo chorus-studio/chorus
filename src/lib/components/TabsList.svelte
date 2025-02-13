@@ -3,12 +3,22 @@
     import * as Tabs from '$lib/components/ui/tabs'
     import { Badge } from '$lib/components/ui/badge'
 
+    import FX from '$lib/components/views/FX.svelte'
+    import EQ from '$lib/components/views/EQ.svelte'
     import Snip from '$lib/components/views/Snip.svelte'
     import TrackInfo from '$lib/components/TrackInfo.svelte'
     import ActionButtons from '$lib/components/ActionButtons.svelte'
 
     let tabs = ['snip', 'speed', 'fx', 'eq', 'seek']
     let activeTab = writable(tabs[0])
+
+    const components = {
+        snip: Snip,
+        // speed: Speed,
+        fx: FX,
+        eq: EQ,
+        // seek: Seek
+    }
 </script>
 
 <Tabs.Root bind:value={$activeTab} class="p-0 h-6">
@@ -21,9 +31,8 @@
     </Tabs.List>
     <Tabs.Content value={$activeTab} class="relative flex h-[205px] flex-col items-center">
         <TrackInfo />
-        {#if $activeTab === 'snip'}
-            <Snip />
-        {/if}
+        <svelte:component this={components[$activeTab]} />
+        <p class="absolute bottom-8 text-xs text-end text-zinc-300 w-full">*changes are temporary and will <span class="font-semibold italic">reset</span> unless saved.</p>
         <ActionButtons />
     </Tabs.Content>
 </Tabs.Root>

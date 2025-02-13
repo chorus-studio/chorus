@@ -27,5 +27,4 @@
     </div>
 </div>
 
-<p class="text-xs text-end text-zinc-300 w-full">*changes are temporary and will <span class="font-semibold italic">reset</span> unless saved.</p>
 
