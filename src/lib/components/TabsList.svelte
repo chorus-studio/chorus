@@ -8,18 +8,19 @@
     import EQ from '$lib/components/views/EQ.svelte'
     import Snip from '$lib/components/views/Snip.svelte'
     import Seek from '$lib/components/views/Seek.svelte'
+    import Speed from '$lib/components/views/Speed.svelte'
     import TrackInfo from '$lib/components/TrackInfo.svelte'
     import ActionButtons from '$lib/components/ActionButtons.svelte'
 
     let tabs = ['snip', 'speed', 'fx', 'eq', 'seek']
-    let activeTab = writable(tabs.at(-1))
+    let activeTab = writable(tabs.at(1))
 
     const components: Record<string, Component> = {
         snip: Snip,
-        // speed: Speed,
         fx: FX,
         eq: EQ,
-        seek: Seek
+        seek: Seek,
+        speed: Speed
     }
 </script>
 

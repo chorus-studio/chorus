@@ -4,7 +4,7 @@
     import { nowPlaying } from '$lib/stores/now-playing'
     import { Slider } from '$lib/components/ui/slider'
 
-    let value = writable([$nowPlaying.position ?? 0, $nowPlaying.duration ?? 0])
+    let value = writable([$nowPlaying.current ?? 0, $nowPlaying.duration ?? 0])
 
     $: start = secondsToTime($value.at(0) ?? 0)
     $: end = secondsToTime($value.at(1) ?? 0)
