@@ -1,7 +1,7 @@
 <script lang="ts">
-    import { buttonVariants } from '$lib/components/ui/button'
     import * as Popover from '$lib/components/ui/popover'
-    import TabsList from '$lib/components/TabsList.svelte';
+    import TabsList from '$lib/components/TabsList.svelte'
+    import { buttonVariants } from '$lib/components/ui/button'
 </script>
 
 <div class="border-none flex space-between">

@@ -1,6 +1,8 @@
 import { get, writable } from 'svelte/store'
 import { currentSongInfo } from '$lib/utils/song'
 import { playback } from '$lib/utils/playback'
+import { setState } from '$lib/utils/state'
+import { storage } from '@wxt-dev/storage'
 
 type NowPlaying = {
     current: number
@@ -10,6 +12,8 @@ type NowPlaying = {
     cover: string | null
     title: string | null
     artist: string | null
+    textColour: string | null
+    backgroundColour: string | null
 }
 
 function createNowPlayingStore() {
@@ -23,7 +27,9 @@ function createNowPlayingStore() {
         artist: null,
         duration: 0,
         current: 0,
-        loop: false
+        loop: false,
+        textColour: '#ffffff',
+        backgroundColour: '#000000'
     })
 
     const { subscribe, set } = store
@@ -60,7 +66,7 @@ function createNowPlayingStore() {
         }
     }
 
-    function getSongInfo() {
+    async function getSongInfo() {
         const songInfo = currentSongInfo()
         const { id = null, cover = null } = songInfo
         const [title, artist] = id?.split(' by ') ?? []
@@ -69,9 +75,10 @@ function createNowPlayingStore() {
         return { id, cover, title, artist, duration, current, loop }
     }
 
-    function updateNowPlaying() {
-        const songInfo = getSongInfo()
-        set(songInfo)
+    async function updateNowPlaying() {
+        const songInfo = await getSongInfo()
+
+        await setState({ key: 'now-playing', values: songInfo })
     }
 
     function observe() {
@@ -87,6 +94,17 @@ function createNowPlayingStore() {
         observer = null
         currentSongId = null
     }
+
+    storage.getItem<NowPlaying>('local:now-playing').then((savedState) => {
+        if (savedState) {
+            store.set(savedState)
+        }
+    })
+
+    storage.watch('local:now-playing', async (newValues) => {
+        if (!newValues) return
+        store.set(newValues as NowPlaying)
+    })
 
     return {
         subscribe,

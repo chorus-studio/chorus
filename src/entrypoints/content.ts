@@ -11,17 +11,27 @@ export default defineContentScript({
 
         loadScript('/init.js')
 
-        chrome.runtime.onMessage.addListener(({ action, data }, sender, sendResponse) => {
-            if (sender.id !== chrome.runtime.id) return true
-            if (!action?.startsWith('CHORUS')) return true
+        chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+            console.log('message', message)
+            const messageKey = Object.keys(message)
+            const changedKey = messageKey.find((key) =>
+                ['enabled', 'now-playing', 'auth_token', 'device_id', 'connection_id'].includes(key)
+            )
 
-            const responseHandler = (event: CustomEvent) => {
-                document.removeEventListener('chorus_response', responseHandler as EventListener)
-                sendResponse(event.detail)
-            }
+            if (!changedKey) return
 
-            document.addEventListener('chorus_response', responseHandler as EventListener)
-            document.dispatchEvent(new CustomEvent('chorus', { detail: { action, data } }))
+            // if (!changedKey) return true
+
+            // if (sender.id !== chrome.runtime.id) return true
+            // if (!action?.startsWith('CHORUS')) return true
+
+            // const responseHandler = (event: CustomEvent) => {
+            //     document.removeEventListener('chorus_response', responseHandler as EventListener)
+            //     sendResponse(event.detail)
+            // }
+
+            // document.addEventListener('chorus_response', responseHandler as EventListener)
+            // document.dispatchEvent(new CustomEvent('chorus', { detail: { action, data } }))
 
             return true
         })

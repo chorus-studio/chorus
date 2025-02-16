@@ -1,3 +1,20 @@
+import { storage } from '@wxt-dev/storage'
+import { getState, setState } from '$lib/utils/state'
+
+type PlaybackSettings = {
+    playbackRate: number
+    preservesPitch: boolean
+    volume: number
+    muted: boolean
+}
+
+const defaultPlaybackSettings: PlaybackSettings = {
+    playbackRate: 1,
+    preservesPitch: true,
+    volume: 1,
+    muted: false
+}
+
 export default defineUnlistedScript({
     main() {
         async function setupMediaListener() {
@@ -7,35 +24,30 @@ export default defineUnlistedScript({
                 )
             }
 
-            const { chorus_playback_settings } = await chrome.storage.local.get(
-                'chorus_playback_settings'
-            )
-            const {
-                playbackRate = 1,
-                preservesPitch = true,
-                volume = 1,
-                muted = false
-            } = chorus_playback_settings
+            let playbackSettings = await getState('chorus_playback_settings')
+            if (!playbackSettings) {
+                playbackSettings = defaultPlaybackSettings
+                await setState({ key: 'chorus_playback_settings', values: defaultPlaybackSettings })
+            }
 
-            updatePlaybackSettings({ playbackRate, preservesPitch, volume, muted })
+            updatePlaybackSettings(playbackSettings)
 
             document.addEventListener('FROM_CHORUS_EXTENSION', (event: CustomEvent) => {
                 updatePlaybackSettings(event.detail)
             })
 
-            chrome.storage.onChanged.addListener((changes) => {
-                for (let [key, { newValue }] of Object.entries(changes)) {
-                    if (key === 'chorus_playback_settings') {
-                        updatePlaybackSettings({
-                            muted: newValue.muted,
-                            volume: newValue.volume,
-                            playbackRate: newValue.playbackRate,
-                            preservesPitch: newValue.preservesPitch
-                        })
-                    }
-                }
+            storage.watch<PlaybackSettings>('local:chorus_playback_settings', (newValues) => {
+                if (!newValues) return
+
+                updatePlaybackSettings({
+                    muted: newValues.muted,
+                    volume: newValues.volume,
+                    playbackRate: newValues.playbackRate,
+                    preservesPitch: newValues.preservesPitch
+                })
             })
         }
+
         setupMediaListener()
         return true
     }

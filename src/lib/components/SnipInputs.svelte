@@ -1,6 +1,6 @@
 <script lang="ts">
-    import { nowPlaying } from '$lib/stores/now-playing'
     import { formatTimeInSeconds } from '$lib/utils/time'
+    import { nowPlaying } from '$lib/stores/now-playing'
 
     import { Input } from '$lib/components/ui/input'
     import { Switch } from '$lib/components/ui/switch'

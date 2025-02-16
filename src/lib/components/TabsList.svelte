@@ -32,7 +32,7 @@
             </Tabs.Trigger>
         {/each}
     </Tabs.List>
-    <Tabs.Content value={$activeTab} class="relative flex h-[205px] flex-col items-center">
+    <Tabs.Content value={$activeTab} class="relative flex h-[205px] flex-col w-full">
         <TrackInfo />
         <svelte:component this={components[$activeTab]} />
         <p class="absolute bottom-8 text-sm text-end text-zinc-300 w-full">*changes will <span class="font-semibold italic">reset</span> unless saved.</p>
