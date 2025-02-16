@@ -307,7 +307,6 @@ export class MediaPlayer {
 
 export default defineUnlistedScript({
     main() {
-        console.log('media-player')
         return true
     }
 })

@@ -55,7 +55,6 @@
     function setupPort() {
         port = chrome.runtime.connect({ name: 'popup' })
         port.onMessage.addListener(async ({ type, data = {} }) => {
-            if (type == 'controls') console.log({ type, data })
             if (!['enabled', 'now-playing', 'controls', 'state', 'ui-state'].includes(type)) return
 
             if (type == 'controls') {

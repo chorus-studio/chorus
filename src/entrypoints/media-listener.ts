@@ -8,6 +8,11 @@ type PlaybackSettings = {
     muted: boolean
 }
 
+type Seek = {
+    type: 'skip_back' | 'skip_forward'
+    value: number
+}
+
 const defaultPlaybackSettings: PlaybackSettings = {
     playbackRate: 1,
     preservesPitch: true,
@@ -24,6 +29,10 @@ export default defineUnlistedScript({
                 )
             }
 
+            function updateSeek(seek: Seek) {
+                document.dispatchEvent(new CustomEvent('FROM_SEEK_LISTENER', { detail: seek }))
+            }
+
             let playbackSettings = await getState('chorus_playback_settings')
             if (!playbackSettings) {
                 playbackSettings = defaultPlaybackSettings
@@ -33,7 +42,12 @@ export default defineUnlistedScript({
             updatePlaybackSettings(playbackSettings)
 
             document.addEventListener('FROM_CHORUS_EXTENSION', (event: CustomEvent) => {
-                updatePlaybackSettings(event.detail)
+                const { type, data } = event.detail
+                if (type === 'playback_settings') {
+                    updatePlaybackSettings(data)
+                } else if (type === 'seek') {
+                    updateSeek(data)
+                }
             })
 
             storage.watch<PlaybackSettings>('local:chorus_playback_settings', (newValues) => {

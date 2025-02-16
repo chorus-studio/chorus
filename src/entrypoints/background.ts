@@ -116,7 +116,6 @@ export default defineBackground(() => {
             if (message?.type !== 'controls') return
 
             const executeResult = await executeButtonClick({ command: message.key })
-            console.log('executeResult', executeResult)
             if (!executeResult?.selector || !executeResult?.tabId) return
 
             const { selector, tabId } = executeResult

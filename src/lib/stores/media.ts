@@ -36,7 +36,6 @@ function createMediaStore() {
         const currentState = get(store)
 
         data.filter(({ data }) => data).forEach(({ key, data, type }) => {
-            console.log({ key, data, type })
             switch (key) {
                 case 'loop':
                     currentState.loop = data.includes('remove')

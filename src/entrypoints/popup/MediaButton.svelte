@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { seekStore } from '$lib/stores/seek'
     import { mediaStore } from '$lib/stores/media'
     import { Button } from '$lib/components/ui/button'
 
@@ -66,21 +67,27 @@
     size="icon"
     variant="ghost"
     role={icon}
-    class="flex gap-0 p-0 border-none items-center justify-center hover:scale-[120%] relative {isPlayPause
-        ? 'w-7 h-7 [&_svg]:size-[20px] rounded-full bg-[var(--text)] hover:bg-[var(--text)]'
-        : `w-6 h-6 bg-transparent hover:bg-transparent [&_svg]:size-[${size}px]`}"
+    class="relative flex items-center justify-center gap-0 border-none p-0 hover:scale-[120%] {isPlayPause
+        ? 'h-7 w-7 rounded-full bg-[var(--text)] hover:bg-[var(--text)] [&_svg]:size-[20px]'
+        : `h-6 w-6 bg-transparent hover:bg-transparent [&_svg]:size-[${size}px]`}"
 >
     {#if isSeek}
         <span
-            class="absolute z-10 bg-transprent font-bold top-[38%] {icon == 'seek-forward'
+            class="bg-transprent absolute top-[38%] z-10 font-bold {icon == 'seek-forward'
                 ? 'left-1/2'
-                : 'right-1/2'} text-center text-[var(--text)] flex text-[12px] leading-0"
+                : 'right-1/2'} leading-0 flex text-center text-[12px] text-[var(--text)]"
         >
-            10
+            {icon == 'seek-forward'
+                ? $seekStore.is_long_form
+                    ? $seekStore.long_form.forward
+                    : $seekStore.default.forward
+                : $seekStore.is_long_form
+                  ? $seekStore.long_form.rewind
+                  : $seekStore.default.rewind}
         </span>
     {/if}
     {#if isRepeat && showDot(icon)}
-        <span class="absolute h-1 text-[var(--text)] bottom-1.5 text-xs" id="{icon}-dot"
+        <span class="absolute bottom-1.5 h-1 text-xs text-[var(--text)]" id="{icon}-dot"
             >&bull;</span
         >
     {/if}

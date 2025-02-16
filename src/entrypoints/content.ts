@@ -12,7 +12,6 @@ export default defineContentScript({
         loadScript('/init.js')
 
         chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-            console.log('message', message)
             const messageKey = Object.keys(message)
             const changedKey = messageKey.find((key) =>
                 ['enabled', 'now-playing', 'auth_token', 'device_id', 'connection_id'].includes(key)

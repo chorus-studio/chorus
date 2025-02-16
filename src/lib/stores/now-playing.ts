@@ -16,22 +16,23 @@ type NowPlaying = {
     backgroundColour: string | null
 }
 
+const defaultNowPlaying: NowPlaying = {
+    id: null,
+    cover: null,
+    title: null,
+    artist: null,
+    duration: 0,
+    current: 0,
+    loop: false,
+    textColour: '#ffffff',
+    backgroundColour: '#000000'
+}
+
 function createNowPlayingStore() {
     let observer: MutationObserver | null = null
     let currentSongId: string | null = null
 
-    const store = writable<NowPlaying>({
-        id: null,
-        cover: null,
-        title: null,
-        artist: null,
-        duration: 0,
-        current: 0,
-        loop: false,
-        textColour: '#ffffff',
-        backgroundColour: '#000000'
-    })
-
+    const store = writable<NowPlaying>(defaultNowPlaying)
     const { subscribe, set } = store
 
     function isAnchor(mutation: MutationRecord) {
@@ -59,10 +60,8 @@ function createNowPlayingStore() {
             const { id } = songInfo
             if (!id) return
 
-            if (id) {
-                currentSongId = id
-                updateNowPlaying()
-            }
+            currentSongId = id
+            updateNowPlaying()
         }
     }
 
@@ -77,7 +76,6 @@ function createNowPlayingStore() {
 
     async function updateNowPlaying() {
         const songInfo = await getSongInfo()
-
         await setState({ key: 'now-playing', values: songInfo })
     }
 
@@ -95,15 +93,14 @@ function createNowPlayingStore() {
         currentSongId = null
     }
 
-    storage.getItem<NowPlaying>('local:now-playing').then((savedState) => {
-        if (savedState) {
-            store.set(savedState)
-        }
-    })
+    storage
+        .getItem<NowPlaying>('local:now-playing', { fallback: defaultNowPlaying })
+        .then((savedState) => {
+            if (savedState) store.set(savedState)
+        })
 
-    storage.watch('local:now-playing', async (newValues) => {
-        if (!newValues) return
-        store.set(newValues as NowPlaying)
+    storage.watch('local:now-playing', (newValues) => {
+        if (newValues) store.set(newValues as NowPlaying)
     })
 
     return {

@@ -6,24 +6,35 @@
     import { Label } from "$lib/components/ui/label"
     import { Switch } from "$lib/components/ui/switch"
 
+    import { seekStore } from "$lib/stores/seek"
+
     type SeekType = 'rewind' | 'forward'
     const seekTypes = ['rewind', 'forward']
-    let seekValues = $state({ rewind: 15, forward: 15 })
-    let checked = $state(false)
-    let setting = $state('G')
 
-    function adjustValue(type: SeekType, amount: number) {
+    let seekValues = $state({ rewind: $seekStore.default.rewind, forward: $seekStore.default.forward })
+    let checked = $state($seekStore.is_long_form)
+    let setting = $state($seekStore.is_long_form ? 'PA' : 'G')
+
+    async function adjustValue(type: SeekType, amount: number) {
         seekValues[type] = Math.min(Math.max(seekValues[type] + amount, 1), 60)
         // Manually update the input's text content
         const input = document.getElementById(`seek-${type}`) as HTMLInputElement
         if (input) {
             input.value = seekValues[type].toString()
         }
+        const updateType = setting === 'G' ? 'default' : 'long_form'
+        await seekStore.updateSeek({ type: updateType, seek: { key: type, value: seekValues[type] } })
     }
 
-    function handleCheckedChange(ticked: boolean) {
+    async function handleCheckedChange(ticked: boolean) {
         checked = ticked
         setting = ticked ? 'PA' : 'G'
+        if (setting == 'G') {
+            seekValues = { rewind: $seekStore.default.rewind, forward: $seekStore.default.forward }
+        } else {
+            seekValues = { rewind: $seekStore.long_form.rewind, forward: $seekStore.long_form.forward }
+        }
+        await seekStore.toggleLongForm()
     }
 
     // Update initial values when component mounts
@@ -51,7 +62,7 @@
                     <Minus color="white" size={24} />
                 </Button>
                 <div class="relative h-12">
-                    <Input bind:value={seekValues[type as keyof typeof seekValues]} class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 py-0 px-0.5 text-lg text-center w-8 h-7 bg-transparent text-white border-none" />
+                    <Input bind:value={seekValues[type as keyof typeof seekValues]} class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 py-0 px-0.5 text-xl md:text-xl text-center w-8 h-7 bg-transparent text-white border-none" />
                     <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" class="fill-none {type === 'rewind' ? 'scale-x-100' : 'scale-x-[-1]'} h-full">
                         <g class="stroke-[#1ed760] stroke-[1.5]" stroke-linecap="round" stroke-linejoin="round">
                             <path d="m14.55 21.67c4.29-1.13 7.45-5.03 7.45-9.67 0-5.52-4.44-10-10-10-6.67 0-10 5.56-10 5.56m0 0v-4.56m0 4.56h2.01 2.43"></path>

@@ -1,3 +1,8 @@
+type Seek = {
+    type: 'skip_back' | 'skip_forward'
+    value: number
+}
+
 function mediaOverride() {
     const sources: any[] = []
     const defaultSpeed = 1
@@ -69,6 +74,16 @@ function mediaOverride() {
         }
     }
 
+    function updateSeek(data: Seek) {
+        for (const source of sources) {
+            if (data.type === 'skip_back') {
+                source.currentTime = Math.max(source.currentTime - data.value, 0)
+            } else if (data.type === 'skip_forward') {
+                source.currentTime = Math.min(source.currentTime + data.value, source.duration)
+            }
+        }
+    }
+
     replaceSetter('playbackRate')
     replaceSetter('defaultPlaybackRate')
     replaceMethod()
@@ -82,6 +97,10 @@ function mediaOverride() {
 
     document.addEventListener('FROM_SPEED_LISTENER', (event: CustomEvent) => {
         updatePlaybackSettings(event.detail)
+    })
+
+    document.addEventListener('FROM_SEEK_LISTENER', (event: CustomEvent) => {
+        updateSeek(event.detail)
     })
 }
 
