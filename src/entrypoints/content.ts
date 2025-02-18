@@ -11,6 +11,9 @@ export default defineContentScript({
 
         loadScript('/init.js')
 
+        sessionStorage.setItem('soundsDir', chrome.runtime.getURL('sounds/'))
+        sessionStorage.setItem('reverbPath', chrome.runtime.getURL('processor.js'))
+
         chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             const messageKey = Object.keys(message)
             const changedKey = messageKey.find((key) =>
@@ -18,19 +21,6 @@ export default defineContentScript({
             )
 
             if (!changedKey) return
-
-            // if (!changedKey) return true
-
-            // if (sender.id !== chrome.runtime.id) return true
-            // if (!action?.startsWith('CHORUS')) return true
-
-            // const responseHandler = (event: CustomEvent) => {
-            //     document.removeEventListener('chorus_response', responseHandler as EventListener)
-            //     sendResponse(event.detail)
-            // }
-
-            // document.addEventListener('chorus_response', responseHandler as EventListener)
-            // document.dispatchEvent(new CustomEvent('chorus', { detail: { action, data } }))
 
             return true
         })

@@ -1,6 +1,7 @@
 import '../app.css'
 import App from '../App.svelte'
 import SeekButton from '$lib/components/SeekButton.svelte'
+import LoopButton from '$lib/components/LoopButton.svelte'
 import { mount, unmount } from 'svelte'
 
 export default defineContentScript({
@@ -23,10 +24,18 @@ export default defineContentScript({
                     mount(SeekButton, { target: div, props: { role: 'seek-backward' } })
                 }
                 if (skipForward) {
-                    const div = document.createElement('div')
+                    const forwardDiv = document.createElement('div')
+                    const loopDiv = document.createElement('div')
                     const parentElement = skipForward.parentElement
-                    parentElement?.insertBefore(div, skipForward.nextSibling)
-                    mount(SeekButton, { target: div, props: { role: 'seek-forward' } })
+                    if (parentElement?.lastElementChild) {
+                        parentElement?.insertBefore(forwardDiv, skipForward.nextSibling)
+                        parentElement?.insertBefore(
+                            loopDiv,
+                            parentElement?.lastElementChild?.nextSibling
+                        )
+                        mount(SeekButton, { target: forwardDiv, props: { role: 'seek-forward' } })
+                        mount(LoopButton, { target: loopDiv })
+                    }
                 }
             },
             onRemove: (app) => {
