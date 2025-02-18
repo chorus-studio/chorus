@@ -1,5 +1,5 @@
-import AudioManager from '../audio-manager.js'
-import { roomPresets, convolverPresets, getParamsListForEffect } from './presets.js'
+import AudioManager from '../audio-manager'
+import { roomPresets, convolverPresets, getParamsListForEffect } from './presets'
 
 export default class Reverb {
     _internal: boolean
@@ -47,9 +47,7 @@ export default class Reverb {
     }
 
     async #createDigitalReverb() {
-        const modulePath = this._internal
-            ? chrome.runtime.getURL('/src/lib/audio-effects/reverb/processor.js')
-            : sessionStorage.getItem('reverbPath')
+        const modulePath = sessionStorage.getItem('reverbPath')
         if (!modulePath || !this._audioContext) return
         await this._audioContext.audioWorklet.addModule(modulePath)
         this._reverb =
@@ -64,9 +62,7 @@ export default class Reverb {
     async #createImpulseReverb(effect: string) {
         this._convolverNode = this._convolverNode ?? this._audioContext?.createConvolver()
         if (!this._convolverNode || !this._audioContext) return
-        const soundsDir = this._internal
-            ? chrome.runtime.getURL('/src/lib/audio-effects/sounds/')
-            : sessionStorage.getItem('soundsDir')
+        const soundsDir = sessionStorage.getItem('soundsDir')
 
         const response = await fetch(`${soundsDir}${effect}.wav`)
         const arraybuffer = await response.arrayBuffer()

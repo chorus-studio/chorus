@@ -3,11 +3,9 @@ export default class AudioManager {
     private _audioContext?: AudioContext
     private _source?: MediaStreamAudioSourceNode | MediaElementAudioSourceNode
     private _destination?: AudioDestinationNode
-    private isTabStream = false
 
     constructor(element: HTMLVideoElement | HTMLAudioElement) {
         this._element = element
-        this.isTabStream = element instanceof MediaStream
 
         // Only create new context if we don't have one or if it's closed
         if (!this.audioContext || this.audioContext.state === 'closed') {
@@ -17,11 +15,9 @@ export default class AudioManager {
         // Cleanup any existing connections first
         this.cleanup()
 
-        this._source = this.isTabStream
-            ? this.audioContext?.createMediaStreamSource(this._element as unknown as MediaStream)
-            : this.audioContext?.createMediaElementSource(
-                  this._element as unknown as HTMLMediaElement
-              )
+        this._source = this.audioContext?.createMediaElementSource(
+            this._element as unknown as HTMLMediaElement
+        )
         this._destination = this.audioContext?.destination
     }
 

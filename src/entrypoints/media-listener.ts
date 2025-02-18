@@ -1,11 +1,12 @@
-import { storage } from '@wxt-dev/storage'
-import { getState, setState } from '$lib/utils/state'
-
-type PlaybackSettings = {
+type Playback = {
     playbackRate: number
     preservesPitch: boolean
-    volume: number
-    muted: boolean
+}
+
+type PlaybackSettings = {
+    default: Playback
+    track: Playback
+    is_default: boolean
 }
 
 type Seek = {
@@ -13,19 +14,12 @@ type Seek = {
     value: number
 }
 
-const defaultPlaybackSettings: PlaybackSettings = {
-    playbackRate: 1,
-    preservesPitch: true,
-    volume: 1,
-    muted: false
-}
-
 export default defineUnlistedScript({
     main() {
         async function setupMediaListener() {
-            function updatePlaybackSettings(playbackSettings: any) {
+            function updatePlaybackSettings(playbackSettings: PlaybackSettings) {
                 document.dispatchEvent(
-                    new CustomEvent('FROM_SPEED_LISTENER', { detail: playbackSettings })
+                    new CustomEvent('FROM_PLAYBACK_LISTENER', { detail: playbackSettings })
                 )
             }
 
@@ -33,13 +27,9 @@ export default defineUnlistedScript({
                 document.dispatchEvent(new CustomEvent('FROM_SEEK_LISTENER', { detail: seek }))
             }
 
-            let playbackSettings = await getState('chorus_playback_settings')
-            if (!playbackSettings) {
-                playbackSettings = defaultPlaybackSettings
-                await setState({ key: 'chorus_playback_settings', values: defaultPlaybackSettings })
+            function updateAudioEffect(effect: { reverb?: string; eq?: string }) {
+                document.dispatchEvent(new CustomEvent('FROM_EFFECTS_LISTENER', { detail: effect }))
             }
-
-            updatePlaybackSettings(playbackSettings)
 
             document.addEventListener('FROM_CHORUS_EXTENSION', (event: CustomEvent) => {
                 const { type, data } = event.detail
@@ -47,18 +37,10 @@ export default defineUnlistedScript({
                     updatePlaybackSettings(data)
                 } else if (type === 'seek') {
                     updateSeek(data)
+                } else if (type === 'audio_effect') {
+                    console.log('FROM_CHORUS_EXTENSION', data)
+                    updateAudioEffect(data)
                 }
-            })
-
-            storage.watch<PlaybackSettings>('local:chorus_playback_settings', (newValues) => {
-                if (!newValues) return
-
-                updatePlaybackSettings({
-                    muted: newValues.muted,
-                    volume: newValues.volume,
-                    playbackRate: newValues.playbackRate,
-                    preservesPitch: newValues.preservesPitch
-                })
             })
         }
 
