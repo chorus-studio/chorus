@@ -1,5 +1,5 @@
 <script lang="ts">
-    import type { Component} from 'svelte'
+    import type { Component } from 'svelte'
     import { writable } from 'svelte/store'
     import * as Tabs from '$lib/components/ui/tabs'
     import { Badge } from '$lib/components/ui/badge'
@@ -24,18 +24,26 @@
     }
 </script>
 
-<Tabs.Root bind:value={$activeTab} class="p-0 h-6">
-    <Tabs.List class="flex items-center h-full bg-transparent justify-end gap-x-1.5 p-0">
+<Tabs.Root bind:value={$activeTab} class="h-6 p-0">
+    <Tabs.List class="flex h-full items-center justify-end gap-x-1.5 bg-transparent p-0">
         {#each tabs as tab (tab)}
-            <Tabs.Trigger value={tab} class="flex p-0 items-center justify-center">
-                <Badge variant="outline" class="leading-[18px] font-semibold py-0 pb-[0.125rem] px-1.5 rounded-[2px] text-sm {$activeTab === tab ? 'bg-[green]' : 'bg-zinc-700'}">{tab}</Badge>
+            <Tabs.Trigger value={tab} class="flex items-center justify-center p-0">
+                <Badge
+                    variant="outline"
+                    class="rounded-[2px] px-1.5 py-0 pb-[0.125rem] text-sm font-semibold leading-[18px] {$activeTab ===
+                    tab
+                        ? 'bg-[green]'
+                        : 'bg-zinc-700'}">{tab}</Badge
+                >
             </Tabs.Trigger>
         {/each}
     </Tabs.List>
-    <Tabs.Content value={$activeTab} class="relative flex h-[205px] flex-col w-full">
+    <Tabs.Content value={$activeTab} class="relative flex h-[205px] w-full flex-col">
         <TrackInfo />
         <svelte:component this={components[$activeTab]} />
-        <p class="absolute bottom-8 text-sm text-end text-zinc-300 w-full">*changes will <span class="font-semibold italic">reset</span> unless saved.</p>
-        <ActionButtons />
+        <p class="absolute bottom-8 w-full text-end text-sm text-zinc-300">
+            *changes will <span class="font-semibold italic">reset</span> unless saved.
+        </p>
+        <ActionButtons tab={$activeTab} />
     </Tabs.Content>
 </Tabs.Root>

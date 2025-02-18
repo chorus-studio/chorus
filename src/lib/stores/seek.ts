@@ -56,7 +56,13 @@ function createSeekStore() {
         await storage.setItem('local:chorus_seek', newState)
     }
 
+    async function reset() {
+        set(defaultSeekData)
+        await storage.setItem<SeekData>('local:chorus_seek', defaultSeekData)
+    }
+
     return {
+        reset,
         subscribe,
         updateSeek,
         toggleLongForm

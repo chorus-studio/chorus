@@ -14,11 +14,11 @@ type PlaybackSettings = {
 
 const defaultPlaybackSettings: PlaybackSettings = {
     default: {
-        playbackRate: 1,
+        playbackRate: 1.0,
         preservesPitch: true
     },
     track: {
-        playbackRate: 1,
+        playbackRate: 1.0,
         preservesPitch: true
     },
     is_default: true
@@ -34,6 +34,14 @@ function createPlaybackStore() {
         await storage.setItem<PlaybackSettings>('local:chorus_playback_settings', newState)
     }
 
+    function dispatchPlaybackSettings() {
+        document.dispatchEvent(
+            new CustomEvent('FROM_CHORUS_EXTENSION', {
+                detail: { type: 'playback_settings', data: get(store) }
+            })
+        )
+    }
+
     async function setPlayback({
         key,
         value,
@@ -46,6 +54,16 @@ function createPlaybackStore() {
         update((state) => ({ ...state, [type]: { ...state[type], [key]: value } }))
         const newState = get(store)
         await storage.setItem<PlaybackSettings>('local:chorus_playback_settings', newState)
+        dispatchPlaybackSettings()
+    }
+
+    async function reset() {
+        set(defaultPlaybackSettings)
+        await storage.setItem<PlaybackSettings>(
+            'local:chorus_playback_settings',
+            defaultPlaybackSettings
+        )
+        dispatchPlaybackSettings()
     }
 
     storage
@@ -57,6 +75,7 @@ function createPlaybackStore() {
         })
 
     return {
+        reset,
         subscribe,
         setPlayback,
         toggleDefault

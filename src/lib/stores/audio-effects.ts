@@ -15,10 +15,23 @@ function createAudioEffectsStore() {
     const store = writable<AudioEffect>(defaultAudioEffect)
     const { subscribe, set, update } = store
 
+    function dispatchEffect(key: keyof AudioEffect, value: string) {
+        document.dispatchEvent(
+            new CustomEvent('FROM_CHORUS_EXTENSION', {
+                detail: { type: 'audio_effect', data: { [key]: value } }
+            })
+        )
+    }
+
     async function updateEffect({ key, value }: { key: keyof AudioEffect; value: string }) {
         update((state) => ({ ...state, [key]: value }))
         const newState = get(store)
         await storage.setItem<AudioEffect>('local:chorus_audio_effects', newState)
+        dispatchEffect(key, value)
+    }
+
+    async function reset(key: keyof AudioEffect) {
+        await updateEffect({ key, value: 'none' })
     }
 
     storage
@@ -33,6 +46,7 @@ function createAudioEffectsStore() {
 
     return {
         set,
+        reset,
         subscribe,
         updateEffect
     }

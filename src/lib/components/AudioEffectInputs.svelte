@@ -24,16 +24,6 @@
 
     async function handleUpdateEffect(value: string) {
         await effectsStore.updateEffect({ key: type, value })
-        document.dispatchEvent(
-            new CustomEvent('FROM_CHORUS_EXTENSION', {
-                detail: {
-                    type: 'audio_effect',
-                    data: {
-                        [type]: value
-                    }
-                }
-            })
-        )
     }
 
     let selectedLabel = type === 'reverb' ? 'active reverb preset' : 'active equalizer preset'
