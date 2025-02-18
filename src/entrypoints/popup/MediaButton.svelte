@@ -68,12 +68,13 @@
     variant="ghost"
     role={icon}
     class="relative flex items-center justify-center gap-0 border-none p-0 hover:scale-[120%] {isPlayPause
-        ? 'h-7 w-7 rounded-full bg-[var(--text)] hover:bg-[var(--text)] [&_svg]:size-[20px]'
+        ? 'h-7 w-7 rounded-full bg-[var(--text)] brightness-50 hover:bg-[var(--text)] [&_svg]:size-[20px]'
         : `h-6 w-6 bg-transparent hover:bg-transparent [&_svg]:size-[${size}px]`}"
 >
     {#if isSeek}
         <span
-            class="bg-transprent absolute top-[38%] z-10 font-bold {icon == 'seek-forward'
+            class="bg-transprent absolute top-[38%] z-10 font-bold brightness-50 {icon ==
+            'seek-forward'
                 ? 'left-1/2'
                 : 'right-1/2'} leading-0 flex text-center text-[12px] text-[var(--text)]"
         >
@@ -87,8 +88,9 @@
         </span>
     {/if}
     {#if isRepeat && showDot(icon)}
-        <span class="absolute bottom-1.5 h-1 text-xs text-[var(--text)]" id="{icon}-dot"
-            >&bull;</span
+        <span
+            class="absolute bottom-1.5 h-1 text-xs text-[var(--text)] brightness-50"
+            id="{icon}-dot">&bull;</span
         >
     {/if}
     <svg
@@ -96,9 +98,9 @@
         stroke-width={strokeWidth}
         preserveAspectRatio="xMidYMid meet"
         {viewBox}
-        class="size-[{size}px] stroke-[var(--text)] {getFillColor(icon)} {isPlayPause
-            ? 'fill-[var(--bg)] stroke-[var(--bg)]'
-            : ''} {icon == 'seek-forward' ? 'scale-x-[-1]' : ''}"
+        class="size-[{size}px] stroke-[var(--text)] brightness-50 {getFillColor(icon)} {isPlayPause
+            ? 'fill-[var(--bg)] stroke-[var(--bg)] brightness-100'
+            : ''} {icon == 'seek-forward' ? 'scale-x-[-1]' : ''} {isSeek ? 'fill-none' : ''}"
     >
         {#if icon.startsWith('seek')}
             {@html SVG_PATHS.seek}

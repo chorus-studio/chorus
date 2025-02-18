@@ -4,6 +4,6 @@
     $: source = $nowPlaying.cover ?? ''
 </script>
 
-<div class="flex items-center justify-center h-16 w-16 bg-[var(--bg)]">
-    <img src={source} loading="eager" alt="Cover Album Art" class="w-full aspect-auto h-full" />
+<div class="flex aspect-square size-16 items-center justify-center bg-[var(--bg)]">
+    <img src={source} loading="eager" alt="Cover Album Art" class="aspect-square size-16" />
 </div>
