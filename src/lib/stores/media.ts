@@ -11,24 +11,26 @@ export type Media = {
     saved: boolean
 }
 
+const defaultMedia: Media = {
+    play: false,
+    repeat: 'none',
+    shuffle: false,
+    loop: false,
+    rewind: 10,
+    forward: 10,
+    saved: false
+}
+
 function createMediaStore() {
-    const store = writable<Media>({
-        play: false,
-        repeat: 'none',
-        shuffle: false,
-        loop: false,
-        rewind: 10,
-        forward: 10,
-        saved: false
-    })
+    const store = writable<Media>(defaultMedia)
 
     const { subscribe, set } = store
 
-    storage.getItem<Media>('local:media').then((value) => {
+    storage.getItem<Media>('local:chorus_media').then((value) => {
         if (value) set(value)
     })
 
-    storage.watch<Media>('local:media', (value) => {
+    storage.watch<Media>('local:chorus_media', (value) => {
         if (value) set(value)
     })
 
