@@ -2,13 +2,14 @@
     import '../../app.css'
     import { onMount } from 'svelte'
     import { setState } from '$lib/utils/state'
-    import { nowPlaying } from '$lib/stores/now-playing'
     import { mediaStore } from '$lib/stores/media'
+    import { nowPlaying } from '$lib/stores/now-playing'
     import { getImageBackgroundAndTextColours } from '$lib/utils/image-colours'
 
     import CoverImage from './CoverImage.svelte'
     import MediaControls from './MediaControls.svelte'
     import TrackInfo from '$lib/components/TrackInfo.svelte'
+    import TimeProgress from '$lib/components/TimeProgress.svelte'
 
     let port = $state<chrome.runtime.Port | null>(null)
     let colours = $state<{ backgroundColour: string; textColour: string }>({
@@ -93,13 +94,14 @@
     })
 </script>
 
-<main class="flex flex-col gap-2.5 w-[300px] h-[125px] p-3 bg-[var(--bg)]">
-    <div class="flex items-center gap-x-2 w-full h-16">
+<main class="flex h-[150px] w-[300px] flex-col gap-2 bg-[var(--bg)] p-3">
+    <div class="flex h-16 w-full items-center gap-x-2">
         <CoverImage />
-        <div class="flex flex-col justify-center gap-y-1 h-16 text-[var(--text)]">
+        <div class="flex h-16 flex-col justify-center gap-y-1 overflow-hidden text-[var(--text)]">
             <TrackInfo isPopup />
         </div>
     </div>
+    <TimeProgress {port} />
     <MediaControls {port} />
 </main>
 

@@ -113,6 +113,23 @@ export default defineBackground(() => {
         await setMediaState({ active, tabId })
 
         port.onMessage.addListener(async (message) => {
+            if (message?.type == 'current_time') {
+                // need to dispatch  custom event to content script
+                const { tabId } = await activeOpenTab()
+                if (!tabId) return
+                await chrome.scripting.executeScript({
+                    args: [message.data],
+                    target: { tabId },
+                    func: (data) => {
+                        document.dispatchEvent(
+                            new CustomEvent('FROM_CHORUS_EXTENSION', {
+                                detail: { type: 'current_time', data }
+                            })
+                        )
+                    }
+                })
+            }
+
             if (message?.type !== 'controls') return
 
             const executeResult = await executeButtonClick({ command: message.key })

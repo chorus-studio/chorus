@@ -116,6 +116,24 @@ function mediaOverride() {
         }
     }
 
+    function updateVolume(data: { value: number }) {
+        for (const source of sources) {
+            source.volume = data.value
+        }
+    }
+
+    function updateMute(data: { value: boolean }) {
+        for (const source of sources) {
+            source.muted = data.value
+        }
+    }
+
+    function updateCurrentTime(data: { value: number }) {
+        for (const source of sources) {
+            source.currentTime = data.value
+        }
+    }
+
     async function updateAudioEffect(effect: {
         clear?: boolean
         reverb?: string
@@ -164,6 +182,18 @@ function mediaOverride() {
 
     document.addEventListener('FROM_EFFECTS_LISTENER', (event: CustomEvent) => {
         updateAudioEffect(event.detail)
+    })
+
+    document.addEventListener('FROM_VOLUME_LISTENER', (event: CustomEvent) => {
+        updateVolume(event.detail)
+    })
+
+    document.addEventListener('FROM_MUTE_LISTENER', (event: CustomEvent) => {
+        updateMute(event.detail)
+    })
+
+    document.addEventListener('FROM_CURRENT_TIME_LISTENER', (event: CustomEvent) => {
+        updateCurrentTime(event.detail)
     })
 }
 

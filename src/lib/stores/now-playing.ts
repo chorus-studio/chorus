@@ -80,6 +80,14 @@ function createNowPlayingStore() {
         await setState({ key: 'chorus_now_playing', values: songInfo })
     }
 
+    async function setCurrentTime(time: number) {
+        document.dispatchEvent(
+            new CustomEvent('FROM_CHORUS_EXTENSION', {
+                detail: { type: 'current_time', data: { value: time } }
+            })
+        )
+    }
+
     function observe() {
         const target = document.querySelector('[data-testid="now-playing-widget"]')
         if (!target) return
@@ -107,10 +115,12 @@ function createNowPlayingStore() {
     return {
         subscribe,
         set,
+        setCurrentTime,
         observe: () => {
             updateNowPlaying()
             observe()
         },
+        updateNowPlaying,
         disconnect
     }
 }

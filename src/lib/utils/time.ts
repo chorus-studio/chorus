@@ -66,3 +66,21 @@ export const timeToSeconds = (time: string) => {
 
     return timeParts.at(0)
 }
+
+export function formatTime(time: number, basic: boolean = false): string {
+    if (time === 0) return '0:00'
+
+    const hours = Math.floor(time / 3600)
+    const minutes = Math.floor((time % 3600) / 60)
+    const seconds = Math.floor(time % 60)
+    const milliseconds = Math.floor((time % 1) * 1000)
+
+    const shortTime = `${minutes >= 10 || (minutes < 10 && hours < 1) ? minutes : minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
+    const formattedTime = basic
+        ? `${shortTime}.${milliseconds.toString().padStart(2, '0')}`
+        : shortTime
+    if (hours > 0) {
+        return `${hours < 9 ? hours : hours.toString().padStart(2, '0')}:${formattedTime}`
+    }
+    return formattedTime
+}
