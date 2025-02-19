@@ -35,6 +35,7 @@
     <Tooltip.Root>
         <Tooltip.Trigger
             id="chorus-heart"
+            role="heart"
             onclick={handleClick}
             aria-label={isLiked ? 'Remove from Liked Songs' : 'Add to Liked Songs'}
             class={buttonVariants({

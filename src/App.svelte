@@ -3,6 +3,7 @@
     import { ModeWatcher } from 'mode-watcher'
     import { nowPlaying } from '$lib/stores/now-playing'
     import { PlaybackObserver } from '$lib/observers/playback'
+    import { TracklistObserver } from '$lib/observers/tracklist'
 
     import SkipButton from '$lib/components/SkipButton.svelte'
     import HeartButton from '$lib/components/HeartButton.svelte'
@@ -20,9 +21,12 @@
         nowPlaying.observe()
         const playbackObserver = new PlaybackObserver()
         playbackObserver.observe()
+        const tracklistObserver = new TracklistObserver()
+        tracklistObserver.observe()
         return () => {
             nowPlaying.disconnect()
             playbackObserver.disconnect()
+            tracklistObserver.disconnect()
         }
     })
 </script>
