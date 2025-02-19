@@ -75,14 +75,14 @@
     })
 </script>
 
-<div class="flex justify-between w-full gap-2 items-center">
-    <div class="flex items-center justify-between w-16">
+<div class="-mt-1.5 flex w-full items-center justify-between gap-2">
+    <div class="flex w-16 items-center justify-between">
         {#each svgsList.slice(0, 3) as svg}
             <MediaButton icon={svg} {...svgProps?.[svg] || svgProps.default} {handleClick} />
         {/each}
     </div>
 
-    <div class="flex items-center gap-1.5 w-full">
+    <div class="flex w-full items-center gap-1.5">
         {#each svgsList.slice(3) as svg}
             <MediaButton icon={svg} {...svgProps?.[svg] || svgProps.default} {handleClick} />
         {/each}

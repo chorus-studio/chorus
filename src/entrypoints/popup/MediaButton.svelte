@@ -98,9 +98,11 @@
         stroke-width={strokeWidth}
         preserveAspectRatio="xMidYMid meet"
         {viewBox}
-        class="size-[{size}px] stroke-[var(--text)] brightness-50 {getFillColor(icon)} {isPlayPause
-            ? 'fill-[var(--bg)] stroke-[var(--bg)] brightness-100'
-            : ''} {icon == 'seek-forward' ? 'scale-x-[-1]' : ''} {isSeek ? 'fill-none' : ''}"
+        class="size-[{size}px] {getFillColor(icon)} {isPlayPause
+            ? 'fill-[var(--bg)] brightness-200'
+            : 'stroke-[var(--text)] brightness-50'} {icon == 'seek-forward'
+            ? 'scale-x-[-1]'
+            : ''} {isSeek ? 'fill-none' : ''}"
     >
         {#if icon.startsWith('seek')}
             {@html SVG_PATHS.seek}
