@@ -11,9 +11,9 @@
 
     function removeAddToPlaylistButton() {
         const addToPlaylistButton = document.querySelector(
-            '[data-testid="now-playing-widget"] > button[data-encore-id="buttonTertiary"]'
+            '[data-testid="now-playing-widget"] > div > button[data-encore-id="buttonTertiary"]'
         )
-        addToPlaylistButton?.remove()
+        addToPlaylistButton?.parentElement?.remove()
     }
 
     onMount(() => {
@@ -33,7 +33,7 @@
 
 <ModeWatcher defaultMode="dark" />
 <div class="flex items-center justify-between">
+    <HeartButton />
     <SettingsPopover />
     <SkipButton />
-    <HeartButton />
 </div>
