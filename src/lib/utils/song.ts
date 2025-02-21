@@ -6,7 +6,15 @@ const getImage = (imageSrc: string) => {
     return imageSrc?.replace('4851', 'b273')
 }
 
-export const currentSongInfo = () => {
+type CurrentSongInfo = {
+    id?: string
+    cover?: string
+    type: string
+    track_id: string
+    url: string
+}
+
+export const currentSongInfo = (): CurrentSongInfo => {
     const songLabel = document
         .querySelector('[data-testid="now-playing-widget"]')
         ?.getAttribute('aria-label')
@@ -21,18 +29,27 @@ export const currentSongInfo = () => {
     const id = songLabel?.split('Now playing: ')?.at(1)
     const cover = getImage(image?.src)
 
-    const [, type, trackId] = new URL(anchor?.href).pathname.split('/')
+    const [, type, track_id] = new URL(anchor?.href).pathname.split('/')
 
     return {
         id,
         cover,
         type: type ?? 'track',
-        trackId,
+        track_id,
         url: anchor.href
     }
 }
 
-export const trackSongInfo = (row: HTMLElement) => {
+type TrackSongInfo = TrackIdInfo & {
+    id?: string
+    title?: string | null
+    artists?: string
+    cover?: string
+    endTime?: number
+    startTime?: number
+}
+
+export const trackSongInfo = (row: HTMLElement): TrackSongInfo | null => {
     const title =
         row?.querySelector('a > div')?.textContent ||
         row?.querySelector('div[data-encore-id="type"]')?.textContent
@@ -43,7 +60,7 @@ export const trackSongInfo = (row: HTMLElement) => {
         (row?.querySelector('img') as HTMLImageElement) ||
         (document.querySelector('button > div img') as HTMLImageElement)
 
-    if (!songLength) return
+    if (!songLength) return null
 
     const artists = getArtists(row)
     const trackInfo = getTrackId(row)
@@ -59,17 +76,22 @@ export const trackSongInfo = (row: HTMLElement) => {
     }
 }
 
-export const getTrackId = (row: HTMLElement) => {
+type TrackIdInfo = {
+    url?: string
+    track_id?: string
+} | null
+
+export const getTrackId = (row: HTMLElement): TrackIdInfo | null => {
     const trackIdUrl = (
         row.querySelector('a[data-testid="internal-track-link"], a') as HTMLAnchorElement
     )?.href
-    if (!trackIdUrl) return
+    if (!trackIdUrl) return null
 
     const url = trackIdUrl.split('.com').at(1)
-    return { url: trackIdUrl, trackId: url?.split('/').at(2) }
+    return { url: trackIdUrl, track_id: url?.split('/').at(2) ?? '' }
 }
 
-const getArtists = (row: HTMLElement) => {
+const getArtists = (row: HTMLElement): string => {
     const artistsList = row.querySelectorAll('span > div > a, span > span > a')
 
     // Here means we are at artist or song page and can get artist from Banner

@@ -13,7 +13,12 @@
         const addToPlaylistButton = document.querySelector(
             '[data-testid="now-playing-widget"] > div > button[data-encore-id="buttonTertiary"]'
         )
-        addToPlaylistButton?.parentElement?.remove()
+        const parent = addToPlaylistButton?.parentElement
+        if (parent) {
+            parent.style.margin = '0'
+            parent.style.gap = '0'
+        }
+        addToPlaylistButton?.remove()
     }
 
     onMount(() => {

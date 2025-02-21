@@ -1,11 +1,11 @@
 import { mount } from 'svelte'
 import { TrackListIcon } from './tracklist-icon'
-import SkipButton from '$lib/components/SkipButton.svelte'
+import TrackListSkipButton from '$lib/components/TrackListSkipButton.svelte'
+import { trackSongInfo } from '$lib/utils/song'
 
 export class SkipIcon extends TrackListIcon {
     constructor() {
         super({
-            // store,
             key: 'isSkipped',
             selector: 'button[role="skip"]'
         })
@@ -18,23 +18,18 @@ export class SkipIcon extends TrackListIcon {
     setUI(row: HTMLElement) {
         if (!row) return
 
-        if (!this.getIcon(row)) {
-            const heartIcon = row.querySelector('button[data-encore-id="buttonTertiary"]')
-            if (!heartIcon) return
-            console.log({ heartIcon })
+        if (this.getIcon(row)) return
 
-            const parentElement = heartIcon?.parentElement
-            const div = document.createElement('div')
-            parentElement?.insertBefore(div, heartIcon)
-            mount(SkipButton, {
-                target: div
-            })
-        }
+        const heartIcon = row.querySelector('button[data-encore-id="buttonTertiary"]')
+        if (!heartIcon) return
 
-        const icon = this.getIcon(row) as HTMLElement
-
-        if (icon) {
-            icon.style.display = 'flex'
-        }
+        const parentElement = heartIcon?.parentElement
+        const div = document.createElement('div')
+        parentElement?.insertBefore(div, heartIcon)
+        const trackInfo = trackSongInfo(row)
+        mount(TrackListSkipButton, {
+            target: div,
+            props: { trackInfo }
+        })
     }
 }

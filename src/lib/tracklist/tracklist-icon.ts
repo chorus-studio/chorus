@@ -25,7 +25,6 @@ export class TrackListIcon {
     }
 
     setInitialState(row: HTMLElement) {
-        console.log('setInitialState', { row })
         const icon = this.getIcon(row) as HTMLElement
 
         this.initializeTrack(row)
@@ -39,17 +38,6 @@ export class TrackListIcon {
         if (this.seen.has(song.id)) return
 
         this.seen.add(song.id)
-
-        // await this._store.getTrack({
-        //     id: song.id,
-        //     value: {
-        //         ...song,
-        //         isSkipped: false,
-        //         isSnip: false,
-        //         startTime: 0,
-        //         endTime: song.endTime
-        //     }
-        // })
     }
 
     private async getTrack(id: string) {
@@ -82,61 +70,5 @@ export class TrackListIcon {
         // this.skipJustBlockedSong({ isSkipped: savedTrack.isSkipped, row })
 
         // if (savedTrack.isSkipped) {
-        //     await this._queue.refreshQueue()
-        // }
-    }
-
-    private getRow(icon: HTMLElement) {
-        return icon?.parentElement?.parentElement
-    }
-
-    async animate(icon: HTMLElement, _heart?: boolean) {
-        const row = this.getRow(icon)
-        if (!row) return
-        const song = trackSongInfo(row)
-
-        if (!song) return
-
-        // const snipInfo = await this.getTrack(song.id)
-
-        // const display = snipInfo?.[this._key] ?? false
-        // this._burn({ icon, burn: display })
-        // this._glow({ icon, glow: display })
-        // icon.setAttribute('aria-label', `${display ? 'Un' : 'B'}lock Track`)
-    }
-
-    private getStyleProp(icon: HTMLElement) {
-        return icon.role == 'snip' ? 'color' : 'fill'
-    }
-
-    burn({ icon, burn }: { icon: HTMLElement; burn: boolean }) {
-        const svg = icon.querySelector('svg') as SVGElement
-        if (burn) {
-            icon.style.visibility = 'visible'
-        }
-
-        if (icon.role == 'skip') {
-            icon.setAttribute('aria-label', `${burn ? 'Unb' : 'B'}lock Track`)
-        }
-
-        const styleProp = this.getStyleProp(icon)
-        svg.style[styleProp] = burn ? '#1ed760' : 'currentColor'
-    }
-
-    glow({ icon, glow }: { icon: HTMLElement; glow: boolean }) {
-        const svg = icon.querySelector('svg') as SVGElement
-        const styleProp = this.getStyleProp(icon)
-
-        svg.addEventListener('mouseover', () => {
-            if (glow && svg.style[styleProp] == '#1ed760') return
-
-            svg.style[styleProp] = glow ? '#1ed760' : '#fff'
-        })
-
-        svg.addEventListener('mouseleave', () => {
-            if (glow && svg.style[styleProp] == '#1ed760') return
-
-            svg.style[styleProp] = glow ? '#1ed760' : 'currentColor'
-        })
     }
 }
