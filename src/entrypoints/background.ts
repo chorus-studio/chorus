@@ -1,14 +1,18 @@
 import { storage } from '@wxt-dev/storage'
+import type { NowPlaying } from '$lib/stores/now-playing'
 import { getState, setState } from '$lib/utils/state'
 import { chorusKeys, mediaKeys } from '$lib/utils/selectors'
-import { activeOpenTab, sendMessage } from '$lib/utils/messaging'
+import { activeOpenTab } from '$lib/utils/messaging'
+import { registerTrackService } from '$lib/api/services/track'
 
 export default defineBackground(() => {
     let ENABLED = true
-    let popupPort: chrome.runtime.Port | null = null
+    let popupPort: browser.runtime.Port | null = null
+
+    registerTrackService()
 
     async function registerScripts() {
-        const scripts: chrome.scripting.RegisteredContentScript[] = [
+        const scripts: browser.scripting.RegisteredContentScript[] = [
             {
                 id: 'media-override',
                 js: ['media-override.js'],
@@ -26,11 +30,11 @@ export default defineBackground(() => {
         ]
 
         try {
-            await chrome.scripting.registerContentScripts(scripts)
+            await browser.scripting.registerContentScripts(scripts)
         } catch (error) {
             if (error instanceof Error && error.message.includes('already exists')) {
-                await chrome.scripting.unregisterContentScripts()
-                await chrome.scripting.registerContentScripts(scripts)
+                await browser.scripting.unregisterContentScripts()
+                await browser.scripting.registerContentScripts(scripts)
             }
         }
     }
@@ -46,7 +50,7 @@ export default defineBackground(() => {
         tabId: number
         delay?: number
     }) {
-        const [result] = await chrome.scripting.executeScript({
+        const [result] = await browser.scripting.executeScript({
             args: [selector, delay],
             target: { tabId },
             func: (selector, delay) =>
@@ -105,7 +109,7 @@ export default defineBackground(() => {
         return popupPort?.postMessage({ type: 'state', data: state })
     }
 
-    chrome.runtime.onConnect.addListener(async (port) => {
+    browser.runtime.onConnect.addListener(async (port) => {
         if (port.name !== 'popup') return
 
         popupPort = port
@@ -145,54 +149,28 @@ export default defineBackground(() => {
         port.onDisconnect.addListener(() => (popupPort = null))
     })
 
-    // type PromiseHandlerParams<T> = {
-    //     promise: Promise<T>
-    //     sendResponse: (response: { state: string, data?: T, error?: string }) => void
-    // }
-
-    // function promiseHandler<T>({ promise, sendResponse }: PromiseHandlerParams<T>) {
-    //     promise
-    //         .then((result) => sendResponse({ state: 'completed', data: result }))
-    //         .catch((error) => sendResponse({ state: 'error', error: error.message }))
-    // }
-
-    // chrome.runtime.onMessage.addListener(({ key, values }, _, sendResponse) => {
-    //     const messageHandler = {
-    //         'queue.set': setQueueList,
-    //         'queue.get': getQueueList,
-    //         'play.shared': playSharedTrack,
-    //         'play.seek': seekTrackToPosition,
-    //         'tracks.album': getAlbum,
-    //         'tracks.update': updateLikedTracks,
-    //         'tracks.liked': checkIfTracksInCollection,
-    //         'artist.disco': createArtistDiscoPlaylist
-    //     }
-
-    //     const handlerFn = messageHandler[key]
-    //     handlerFn
-    //         ? promiseHandler(handlerFn(values), sendResponse)
-    //         : sendResponse({ state: 'error', error: 'key not not configured' })
-    //     return true
-    // })
-
-    // storage.watch('local:now-playing', async (newValues) => {
-    //     console.log('now-playing', newValues)
-    //     if (!popupPort) return
-
-    //     const { active, tabId } = await activeOpenTab()
-    //     active && popupPort.postMessage({ type: 'now-playing', data: newValues })
-    //     await setMediaState({ active, tabId })
-    // })
-
-    chrome.webRequest.onBeforeRequest.addListener(
+    browser.webRequest.onBeforeRequest.addListener(
         (details) => {
             const rawBody = details?.requestBody?.raw?.at(0)?.bytes
             if (!rawBody) return
 
             const text = new TextDecoder('utf-8').decode(new Uint8Array(rawBody))
             const data = JSON.parse(text)
-            setState({ key: 'device_id', values: data.device.device_id.toString() })
-            setState({ key: 'connection_id', values: data.connection_id.toString() })
+            storage.getItem('local:chorus_metadata').then((chorusMetadata) => {
+                if (chorusMetadata) {
+                    storage.setItem('local:chorus_metadata', {
+                        ...chorusMetadata,
+                        device_id: `${data.device.device_id}`,
+                        connection_id: `${data.connection_id}`
+                    })
+                } else {
+                    storage.setItem('local:chorus_metadata', {
+                        auth_token: '',
+                        device_id: `${data.device.device_id}`,
+                        connection_id: `${data.connection_id}`
+                    })
+                }
+            })
         },
         { urls: ['https://guc3-spclient.spotify.com/track-playback/v1/devices'] },
         ['requestBody']
@@ -206,15 +184,16 @@ export default defineBackground(() => {
         return uris.split('track:').at(-1)
     }
 
-    chrome.webRequest.onBeforeSendHeaders.addListener(
-        async (details) => {
+    browser.webRequest.onBeforeSendHeaders.addListener(
+        (details) => {
             if (details.url.includes('areEntitiesInLibrary')) {
-                const nowPlaying = (await getState('now-playing')) as Record<string, any>
-                if (!nowPlaying) return
-                if (nowPlaying?.trackId) return
+                storage.getItem<NowPlaying>('local:chorus_now_playing').then((nowPlaying) => {
+                    if (!nowPlaying) return
+                    if (nowPlaying?.id) return
 
-                nowPlaying.trackId = getTrackId(details.url)
-                await setState({ key: 'now-playing', values: nowPlaying })
+                    nowPlaying.id = getTrackId(details.url)
+                    storage.setItem('local:chorus_now_playing', nowPlaying)
+                })
             }
 
             const authHeader = details?.requestHeaders?.find(
@@ -222,7 +201,14 @@ export default defineBackground(() => {
             )
             if (!authHeader) return
 
-            await setState({ key: 'auth_token', values: authHeader?.value })
+            storage.getItem('local:chorus_metadata').then((chorusMetadata) => {
+                if (!chorusMetadata) return
+
+                storage.setItem('local:chorus_metadata', {
+                    ...chorusMetadata,
+                    auth_token: authHeader?.value
+                })
+            })
         },
         {
             urls: [
@@ -259,7 +245,7 @@ export default defineBackground(() => {
 
         if (isShortCutKey && !ENABLED && isChorusCommand) return
 
-        await chrome.scripting.executeScript({
+        await browser.scripting.executeScript({
             args: [selector],
             target: { tabId },
             func: (selector) => {
@@ -270,7 +256,7 @@ export default defineBackground(() => {
         if (!isShortCutKey) return { selector, tabId }
     }
 
-    chrome.commands.onCommand.addListener(
+    browser.commands.onCommand.addListener(
         async (command) => await executeButtonClick({ command, isShortCutKey: true })
     )
 })

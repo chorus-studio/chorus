@@ -30,6 +30,7 @@ export default defineConfig({
             'unlimitedStorage',
             'webRequest'
         ],
+        host_permissions: ['*://*.spotify.com/*', '*://soundcloud.com/*'],
         commands: {
             'on/off': {
                 description: 'Toggle Extension On/Off'

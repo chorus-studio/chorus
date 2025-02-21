@@ -45,5 +45,8 @@
         "postinstall": "wxt prepare",
         "prepare": "node .husky/install.mjs"
     },
-    "type": "module"
+    "type": "module",
+    "dependencies": {
+        "@webext-core/proxy-service": "^1.2.1"
+    }
 }
