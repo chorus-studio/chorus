@@ -26,7 +26,7 @@
 </script>
 
 {#if $nowPlaying.duration >= 0}
-    <div class="space-1 relative w-full flex-col items-center justify-between">
+    <div class="relative mt-3 h-full w-full flex-col items-center justify-between">
         <div
             role="slider"
             tabindex={0}
@@ -42,7 +42,7 @@
         >
             {#if isHovering}
                 <div
-                    class="absolute bottom-full -mb-0.5 -translate-x-1/2 rounded-sm bg-[var(--bg)] px-1 py-0.5"
+                    class="absolute bottom-full -translate-x-1/2 rounded-sm px-1"
                     style="left: {(hoverPosition / $nowPlaying.duration) * 100}%"
                 >
                     <span class="text-xs font-semibold text-[var(--text)] brightness-75">
@@ -53,16 +53,16 @@
             <Progress
                 value={currentPosition}
                 max={$nowPlaying.duration}
-                innerClass="bg-[var(--bg)]"
-                class="h-1.5 bg-[var(--text)] brightness-50"
+                innerClass="bg-[var(--text)] brightness-75"
+                class="h-1.5 rounded-none border-[0.5px] border-[var(--text)] bg-[var(--bg)] brightness-75"
             />
         </div>
 
         <div class="flex items-center justify-between gap-1">
-            <span class="text-sm font-semibold text-[var(--text)] brightness-50">
+            <span class="text-sm font-semibold text-[var(--text)] brightness-75">
                 {formatTime($nowPlaying.current)}
             </span>
-            <span class="text-sm font-semibold text-[var(--text)] brightness-50">
+            <span class="text-sm font-semibold text-[var(--text)] brightness-75">
                 {formatTime($nowPlaying.duration)}
             </span>
         </div>

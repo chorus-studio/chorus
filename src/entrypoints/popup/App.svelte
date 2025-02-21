@@ -88,13 +88,11 @@
         setupPort()
         getColours()
 
-        return () => {
-            port?.disconnect()
-        }
+        return () => port?.disconnect()
     })
 </script>
 
-<main class="flex h-[150px] w-[300px] flex-col gap-2 bg-[var(--bg)] p-3">
+<main class="flex h-[160px] w-[300px] flex-col gap-1 bg-[var(--bg)] px-3.5 py-3">
     <div class="flex h-16 w-full items-center gap-x-2">
         <CoverImage />
         <div class="flex h-16 flex-col justify-center gap-y-1 overflow-hidden text-[var(--text)]">

@@ -1,6 +1,7 @@
 <script lang="ts">
     import { seekStore } from '$lib/stores/seek'
     import { mediaStore } from '$lib/stores/media'
+    import { nowPlaying } from '$lib/stores/now-playing'
     import { Button } from '$lib/components/ui/button'
 
     const SVG_PATHS: Record<string, string> = {
@@ -22,7 +23,7 @@
         loop: '<path xmlns="http://www.w3.org/2000/svg" d="m16 28.0063c-4.6831 0-8.49375-3.8075-8.5-8.4894-.005-.4138.02437-5.6125 4.245-9.91878.3962-.40437.8162-.78749 1.2575-1.14874-2.55-.96375-5.92312-1.44938-9.5025-1.44938-.82812 0-1.5-.67188-1.5-1.5s.67188-1.5 1.5-1.5c4.8675 0 9.2506.83875 12.5106 2.50062 3.2563-1.65375 7.6325-2.48812 12.4894-2.48812.8281 0 1.5.67188 1.5 1.5 0 .82813-.6719 1.5-1.5 1.5-3.5712 0-6.9388.48312-9.485 1.44187.4337.35563.8456.73188 1.2356 1.13 4.2219 4.30563 4.2544 9.50443 4.25 9.92003v.0025c-.0006 4.6862-3.8137 8.4994-8.5006 8.4994zm.0081-18.04255c-.7818.51185-1.4887 1.08995-2.12 1.73435-3.4331 3.5025-3.3887 7.7356-3.3881 7.7781v.0301c0 3.0325 2.4675 5.5 5.5 5.5s5.5-2.4675 5.5-5.5v-.0388c0-.1538-.0406-4.3962-3.43-7.8219-.6163-.6231-1.3037-1.1837-2.0619-1.68185z"/>'
     }
 
-    const { icon, viewBox = '-4 -4 24 24', size = 20, strokeWidth = 1, handleClick } = $props()
+    const { icon, viewBox = '-4 -4 24 24', size = 20, strokeWidth = 0.125, handleClick } = $props()
 
     const isPlayPause = icon === 'play' || icon === 'pause'
     const isSeek = icon.startsWith('seek')
@@ -55,7 +56,7 @@
 
     function getFillColor(icon: string) {
         if (icon == 'save/unsave') {
-            if ($mediaStore.saved) return 'fill-[var(--text)]'
+            if ($nowPlaying?.liked) return 'fill-[var(--text)]'
             return 'fill-none'
         }
         return alwaysFill.includes(icon) ? 'fill-[var(--text)]' : 'fill-[var(--bg)]'
@@ -68,12 +69,12 @@
     variant="ghost"
     role={icon}
     class="relative flex items-center justify-center gap-0 border-none p-0 hover:scale-[120%] {isPlayPause
-        ? 'h-7 w-7 rounded-full bg-[var(--text)] brightness-50 hover:bg-[var(--text)] [&_svg]:size-[20px]'
+        ? 'h-7 w-7 rounded-full bg-[var(--text)] brightness-75 hover:bg-[var(--text)] [&_svg]:size-[20px]'
         : `h-6 w-6 bg-transparent hover:bg-transparent [&_svg]:size-[${size}px]`}"
 >
     {#if isSeek}
         <span
-            class="bg-transprent absolute top-[38%] z-10 font-bold brightness-50 {icon ==
+            class="bg-transprent absolute top-[38%] z-10 font-bold brightness-75 {icon ==
             'seek-forward'
                 ? 'left-1/2'
                 : 'right-1/2'} leading-0 flex text-center text-[12px] text-[var(--text)]"
@@ -89,7 +90,7 @@
     {/if}
     {#if isRepeat && showDot(icon)}
         <span
-            class="absolute bottom-1.5 h-1 text-xs text-[var(--text)] brightness-50"
+            class="absolute bottom-1.5 h-1 text-xs text-[var(--text)] brightness-75"
             id="{icon}-dot">&bull;</span
         >
     {/if}
@@ -99,8 +100,8 @@
         preserveAspectRatio="xMidYMid meet"
         {viewBox}
         class="size-[{size}px] {getFillColor(icon)} {isPlayPause
-            ? 'fill-[var(--bg)] brightness-200'
-            : 'stroke-[var(--text)] brightness-50'} {icon == 'seek-forward'
+            ? 'fill-[var(--bg)] brightness-150'
+            : 'stroke-[var(--text)] brightness-75'} {icon == 'seek-forward'
             ? 'scale-x-[-1]'
             : ''} {isSeek ? 'fill-none' : ''}"
     >

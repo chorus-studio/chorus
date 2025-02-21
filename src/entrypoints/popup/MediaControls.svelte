@@ -75,7 +75,7 @@
     })
 </script>
 
-<div class="-mt-1.5 flex w-full items-center justify-between gap-2">
+<div class="flex w-full items-center justify-between gap-1">
     <div class="flex w-16 items-center justify-between">
         {#each svgsList.slice(0, 3) as svg}
             <MediaButton icon={svg} {...svgProps?.[svg] || svgProps.default} {handleClick} />
