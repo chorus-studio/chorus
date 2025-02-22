@@ -2,11 +2,14 @@ import { get, writable } from 'svelte/store'
 import { storage } from '@wxt-dev/storage'
 
 import { setState } from '$lib/utils/state'
+import { dataStore } from '$lib/stores/data'
+import { SimpleTrack } from '$lib/stores/data/cache'
 import { playback } from '$lib/utils/playback'
 import { currentSongInfo } from '$lib/utils/song'
 
 export type NowPlaying = {
     liked: boolean
+    blocked: boolean
     current: number
     duration: number
     loop: boolean
@@ -26,6 +29,7 @@ const defaultNowPlaying: NowPlaying = {
     type: null,
     url: null,
     liked: false,
+    blocked: false,
     cover: null,
     title: null,
     artist: null,
@@ -60,12 +64,29 @@ function createNowPlayingStore() {
         return songData.id !== currentSongId
     }
 
+    function skipTrack() {
+        const nextButton = document.querySelector(
+            '[data-testid="control-button-skip-forward"]'
+        ) as HTMLButtonElement
+        nextButton?.click()
+    }
+
     function handleMutation(mutations: MutationRecord[]) {
         for (const mutation of mutations) {
             if (!isAnchor(mutation)) return
             if (!songChanged()) return
 
             const songInfo = currentSongInfo()
+            const trackInfo = songInfo.id
+                ? dataStore.collection.find((x) => x.song_id == songInfo.id)
+                : null
+
+            if (trackInfo?.blocked) {
+                mute()
+                return skipTrack()
+            }
+            unMute()
+
             const { id } = songInfo
             if (!id) return
 
@@ -74,20 +95,77 @@ function createNowPlayingStore() {
         }
     }
 
-    async function getSongInfo() {
+    function muteButton() {
+        return document.querySelector(
+            '[data-testid="volume-bar-toggle-mute-button"]'
+        ) as HTMLButtonElement
+    }
+
+    function isMute() {
+        return muteButton()?.getAttribute('aria-label') == 'Unmute'
+    }
+
+    function mute() {
+        if (!isMute()) muteButton()?.click()
+    }
+
+    function unMute() {
+        if (isMute()) muteButton()?.click()
+    }
+
+    function getSongInfo() {
         const songInfo = currentSongInfo()
         const { id = null, cover = null, type = 'track', url = null } = songInfo
         const [title, artist] = id?.split(' by ') ?? []
         const { duration = 0, position: current = 0, loop = false } = playback.data()
 
-        return { id, cover, title, artist, duration, current, loop, type, url }
+        const trackInfo = dataStore.collection.find((x) => x.song_id == id) ?? ({} as SimpleTrack)
+
+        return {
+            id,
+            cover,
+            title,
+            artist,
+            duration,
+            current,
+            loop,
+            url,
+            type: trackInfo?.track_id ? 'track' : songInfo.type,
+            ...trackInfo
+        }
+    }
+
+    function skipTrack() {
+        const nextButton = document.querySelector(
+            '[data-testid="control-button-skip-forward"]'
+        ) as HTMLButtonElement
+        nextButton?.click()
+    }
+
+    function checkIfTrackIsBlocked(track_id: string) {
+        const track = dataStore.collectionObject[track_id]
+        if (!track?.blocked) return
+
+        skipTrack()
     }
 
     async function updateNowPlaying() {
-        const songInfo = await getSongInfo()
+        const songInfo = getSongInfo()
         update((state) => ({ ...state, ...songInfo }))
         const currentState = get(store)
-        await setState({ key: 'chorus_now_playing', values: { ...currentState, ...songInfo } })
+
+        if (currentState?.track_id) {
+            if (dataStore.collectionObject[currentState.track_id]) {
+                checkIfTrackIsBlocked(currentState.track_id)
+            } else {
+                dataStore.generateSimpleTrack(currentState)
+            }
+        }
+
+        await storage.setItem<NowPlaying>('local:chorus_now_playing', {
+            ...currentState,
+            ...songInfo
+        })
     }
 
     async function setCurrentTime(time: number) {
@@ -134,10 +212,7 @@ function createNowPlayingStore() {
         set,
         setLiked,
         setCurrentTime,
-        observe: () => {
-            updateNowPlaying()
-            observe()
-        },
+        observe,
         updateNowPlaying,
         disconnect
     }
