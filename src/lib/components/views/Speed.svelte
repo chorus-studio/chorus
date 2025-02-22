@@ -61,8 +61,7 @@
                 <Input
                     disabled={$playbackStore.is_default}
                     value={padSpeed($playbackStore.track.playbackRate)}
-                    onblur={handleInput}
-                    onmouseout={handleInput}
+                    onchange={handleInput}
                     id="track-speed"
                     class="h-6 w-16 rounded-none px-2 text-end text-base font-bold text-white {!$playbackStore.is_default
                         ? 'bg-[green]'
@@ -79,7 +78,7 @@
                     disabled={!$playbackStore.is_default}
                     id="global-speed"
                     value={padSpeed($playbackStore.default.playbackRate)}
-                    oninput={handleInput}
+                    onchange={handleInput}
                     class="h-6 w-16 rounded-none px-2 text-end text-base font-bold lowercase text-white {$playbackStore.is_default
                         ? 'bg-[green]'
                         : ''} border-none"

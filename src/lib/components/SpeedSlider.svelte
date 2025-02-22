@@ -27,7 +27,7 @@
                     detail: { type: 'playback_settings', data: $playbackStore }
                 })
             )
-        }, 200)
+        }, 100)
     }
 
     $: value = $playbackStore.is_default
