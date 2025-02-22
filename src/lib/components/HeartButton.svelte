@@ -1,13 +1,17 @@
 <script lang="ts">
     import { onMount } from 'svelte'
     import { Heart } from 'lucide-svelte'
-    import { nowPlaying } from '$lib/stores/now-playing'
     import * as Tooltip from '$lib/components/ui/tooltip'
+
+    import { dataStore } from '$lib/stores/data'
+    import type { SimpleTrack } from '$lib/stores/data/cache'
+    import { nowPlaying } from '$lib/stores/now-playing'
     import { getTrackService } from '$lib/api/services/track'
     import { buttonVariants } from '$lib/components/ui/button'
 
     let trackService = getTrackService()
     let currentId = $state($nowPlaying.id)
+    let track = $state<SimpleTrack | null>(null)
 
     function onLikedPage() {
         return window.location.pathname.includes('/collection/tracks')
@@ -48,15 +52,15 @@
             const trackRow = anchor?.parentElement?.parentElement?.parentElement
             if (!trackRow) return
 
-            const heartIcon = trackRow.querySelector('button[role="heart"]')
+            const heartIcon = trackRow.querySelector('button[role="heart"]') as HTMLButtonElement
             if (!heartIcon) return
 
             const svg = heartIcon.querySelector('svg')
             if (!svg) return
 
+            const highlight = $nowPlaying.liked
             heartIcon.style.visibility = highlight ? 'visible' : 'hidden'
 
-            const highlight = $nowPlaying.liked
             heartIcon.setAttribute('aria-label', `${highlight ? 'Remove from' : 'Save to'} Liked`)
             svg.style.fill = highlight ? '#1ed760' : 'transparent'
             svg.style.stroke = highlight ? '#1ed760' : 'currentColor'
@@ -64,16 +68,17 @@
     }
 
     async function getTrackId() {
-        const { type, id, url, track_id = null } = $nowPlaying
+        const { type, url, track_id = null } = $nowPlaying
         if (track_id) return track_id
-        if (type == 'album') {
+        if (type == 'album' && url) {
             const albumId = new URL(url).pathname.split('/').pop()
+            if (!albumId) return null
             return await getTrackIdFromAlbumId(albumId)
         }
     }
 
     async function handleClick() {
-        let { type, id, url, track_id = '', liked } = $nowPlaying
+        let { track_id = '', liked } = $nowPlaying
         if (!track_id) {
             track_id = await getTrackId()
         }
@@ -88,26 +93,42 @@
             if (response !== 'empty response') return
             await nowPlaying.setLiked(!liked)
             higlightInTrackList(track_id)
+            if (track) {
+                dataStore.updateTrack({
+                    track_id: track.track_id!,
+                    value: { liked: !liked }
+                })
+            }
         }
     }
 
-    async function isTrackLiked(id: string) {
+    async function isTrackLiked() {
         const trackId = await getTrackId()
         if (!trackId) return false
 
         nowPlaying.set({ ...$nowPlaying, track_id: trackId })
-        const response = await trackService.checkIfTracksInCollection(trackId)
-        if (!response) return false
+        track = dataStore.collectionObject[trackId]
 
-        await nowPlaying.setLiked(response.at(0))
+        const response = await trackService.checkIfTracksInCollection(trackId)
+        if (!Array.isArray(response) || !response?.length) return false
+
+        await nowPlaying.setLiked(response?.at(0))
+        if (track) {
+            dataStore.updateTrack({
+                track_id: track.track_id!,
+                value: { liked: response?.at(0) }
+            })
+        }
     }
 
-    onMount(async () => {
+    onMount(() => {
         const unsubscribe = nowPlaying.subscribe(async (nowPlaying) => {
             if (nowPlaying.id !== currentId && !nowPlaying.track_id) {
                 currentId = nowPlaying.id
-                console.log({ nowPlaying, currentId })
-                await isTrackLiked(nowPlaying.id)
+                await isTrackLiked()
+                if (nowPlaying.track_id) {
+                    track = dataStore.collectionObject[nowPlaying.track_id]
+                }
             }
         })
 

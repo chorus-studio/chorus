@@ -6,7 +6,7 @@ const getImage = (imageSrc: string) => {
     return imageSrc?.replace('4851', 'b273')
 }
 
-type CurrentSongInfo = {
+export type CurrentSongInfo = {
     id?: string
     cover?: string
     type: string
@@ -40,7 +40,7 @@ export const currentSongInfo = (): CurrentSongInfo => {
     }
 }
 
-type TrackSongInfo = TrackIdInfo & {
+export type TrackSongInfo = TrackIdInfo & {
     id?: string
     title?: string | null
     artists?: string
@@ -49,7 +49,7 @@ type TrackSongInfo = TrackIdInfo & {
     startTime?: number
 }
 
-export const trackSongInfo = (row: HTMLElement): TrackSongInfo | null => {
+export const trackSongInfo = (row: Element): TrackSongInfo | null => {
     const title =
         row?.querySelector('a > div')?.textContent ||
         row?.querySelector('div[data-encore-id="type"]')?.textContent
@@ -76,12 +76,12 @@ export const trackSongInfo = (row: HTMLElement): TrackSongInfo | null => {
     }
 }
 
-type TrackIdInfo = {
+export type TrackIdInfo = {
     url?: string
     track_id?: string
 } | null
 
-export const getTrackId = (row: HTMLElement): TrackIdInfo | null => {
+export const getTrackId = (row: Element): TrackIdInfo | null => {
     const trackIdUrl = (
         row.querySelector('a[data-testid="internal-track-link"], a') as HTMLAnchorElement
     )?.href
@@ -91,7 +91,7 @@ export const getTrackId = (row: HTMLElement): TrackIdInfo | null => {
     return { url: trackIdUrl, track_id: url?.split('/').at(2) ?? '' }
 }
 
-const getArtists = (row: HTMLElement): string => {
+const getArtists = (row: Element): string => {
     const artistsList = row.querySelectorAll('span > div > a, span > span > a')
 
     // Here means we are at artist or song page and can get artist from Banner

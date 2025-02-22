@@ -1,27 +1,48 @@
 <script lang="ts">
     import { Ban } from 'lucide-svelte'
-    import { nowPlaying } from '$lib/stores/now-playing'
     import * as Tooltip from '$lib/components/ui/tooltip'
     import { buttonVariants } from '$lib/components/ui/button'
 
-    let { trackInfo }: { trackInfo: TrackSongInfo } = $props()
-    let isSkipped = $state(false)
+    import { dataStore } from '$lib/stores/data'
+    import { nowPlaying } from '$lib/stores/now-playing'
+    import type { SimpleTrack } from '$lib/stores/data/cache'
+
+    let { track }: { track: SimpleTrack } = $props()
+    let isSkipped = $state(track?.blocked ?? false)
 
     function handleSkip() {
-        const { id: trackSongId } = trackInfo
-
         isSkipped = !isSkipped
-        if (trackInfo.id === $nowPlaying.id) {
-            skipTrack()
+        if (track) {
+            dataStore.updateTrack({ track_id: track.track_id, value: { blocked: isSkipped } })
+
+            if (track?.song_id === $nowPlaying.id) skipTrack()
         }
     }
 
+    function mute() {
+        const muteButton = document.querySelector(
+            '[data-testid="volume-bar-toggle-mute-button"]'
+        ) as HTMLButtonElement
+        muteButton?.click()
+    }
+
     function skipTrack() {
+        mute()
         const nextButton = document.querySelector(
             '[data-testid="control-button-skip-forward"]'
         ) as HTMLButtonElement
         nextButton?.click()
     }
+
+    function isNowPlayingBlocked() {
+        return $nowPlaying.id === track?.song_id && track?.blocked
+    }
+
+    onMount(() => {
+        if (isNowPlayingBlocked()) {
+            skipTrack()
+        }
+    })
 </script>
 
 <Tooltip.Provider>

@@ -1,6 +1,7 @@
 import { mount } from 'svelte'
-import { trackSongInfo } from '$lib/utils/song'
 import { TrackListIcon } from './tracklist-icon'
+import type { TrackSongInfo } from '$lib/utils/song'
+import type { SimpleTrack } from '$lib/stores/data/cache'
 import TrackListHeartButton from '$lib/components/TrackListHeartButton.svelte'
 
 export class HeartIcon extends TrackListIcon {
@@ -8,7 +9,7 @@ export class HeartIcon extends TrackListIcon {
         super({ key: 'isLiked', selector: 'button[role="heart"]' })
     }
 
-    setUI(row: HTMLElement) {
+    setUI({ row, track }: { row: Element; track: SimpleTrack }) {
         if (!row) return
         if (this.getIcon(row)) return
 
@@ -18,7 +19,6 @@ export class HeartIcon extends TrackListIcon {
         const parentElement = heartIcon?.parentElement
         const div = document.createElement('div')
         parentElement?.insertBefore(div, heartIcon)
-        const trackInfo = trackSongInfo(row)
-        mount(TrackListHeartButton, { target: div, props: { trackInfo } })
+        mount(TrackListHeartButton, { target: div, props: { track } })
     }
 }

@@ -1,30 +1,31 @@
 <script lang="ts">
     import { onMount } from 'svelte'
     import { Heart } from 'lucide-svelte'
+
+    import { dataStore } from '$lib/stores/data'
+    import type { SimpleTrack } from '$lib/stores/data/cache'
+
     import { nowPlaying } from '$lib/stores/now-playing'
-    import type { TrackSongInfo } from '$lib/utils/song'
     import { getTrackService } from '$lib/api/services/track'
 
     import * as Tooltip from '$lib/components/ui/tooltip'
     import { buttonVariants } from '$lib/components/ui/button'
 
-    let { trackInfo }: { trackInfo: TrackSongInfo } = $props()
-    let isLiked = $state(false)
+    let { track }: { track: SimpleTrack } = $props()
+    let isLiked = $state(track?.liked ?? false)
     let trackService = getTrackService()
 
     async function handleClick() {
-        if (!trackInfo.track_id) {
+        if (!track?.track_id) {
             console.error('No track_id provided')
             return
         }
 
         const method = isLiked ? 'DELETE' : 'PUT'
 
-        const result = await trackService?.updateLikedTracks({
-            ids: trackInfo.track_id,
-            method
-        })
+        await trackService?.updateLikedTracks({ ids: track.track_id, method })
         isLiked = method === 'PUT'
+        if (track) dataStore.updateTrack({ track_id: track.track_id!, value: { liked: isLiked } })
         await updateCurrentTrack(isLiked)
     }
 
@@ -33,13 +34,16 @@
     }
 
     async function updateCurrentTrack(liked: boolean) {
-        if ($nowPlaying.id !== trackInfo.id) return
+        if ($nowPlaying.id !== track?.song_id) return
 
         await nowPlaying.setLiked(liked)
     }
 
     onMount(async () => {
         isLiked = onLikedPage()
+        if (track) {
+            isLiked = track?.liked ?? false
+        }
     })
 </script>
 

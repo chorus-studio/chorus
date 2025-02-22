@@ -4,7 +4,7 @@ import { defineProxyService } from '@webext-core/proxy-service'
 const ALBUM_URL = 'https://api.spotify.com/v1/albums'
 const TRACK_URL = 'https://api.spotify.com/v1/me/tracks'
 
-class TrackService {
+export class TrackService {
     async getAlbum(albumId: string) {
         try {
             const url = `${ALBUM_URL}/${albumId}`
@@ -27,18 +27,16 @@ class TrackService {
         }
     }
 
-    // ids must must be comma-separated of spotify ids. Ex. ids=jksfdlkjd,jfdklkfdsj,lsuouw
+    // ids must be comma-separated of spotify ids. Ex. ids=jksfdlkjd,jfdklkfdsj,lsuouw
     async checkIfTracksInCollection(ids: string) {
-        return new Promise(async (resolve, reject) => {
-            try {
-                const options = await setOptions({ method: 'GET' })
-                const url = `${TRACK_URL}/contains?ids=${ids}`
-                const response = await request({ url, options })
-                resolve(response)
-            } catch (error) {
-                reject(error)
-            }
-        })
+        try {
+            const options = await setOptions({ method: 'GET' })
+            const url = `${TRACK_URL}/contains?ids=${ids}`
+            return await request({ url, options })
+        } catch (error) {
+            console.error(error)
+            return null
+        }
     }
 }
 

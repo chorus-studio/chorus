@@ -1,9 +1,9 @@
 import { TrackList } from '$lib/tracklist'
 
 export class TracklistObserver {
+    private trackList: TrackList
     private observer: MutationObserver | null = null
     private timeout: NodeJS.Timeout | null = null
-    private trackList: TrackList
 
     constructor() {
         this.trackList = new TrackList()
@@ -42,10 +42,8 @@ export class TracklistObserver {
                 if (this.timeout) clearTimeout(this.timeout)
 
                 this.timeout = setTimeout(() => {
-                    // this.observer?.disconnect()
-
                     this.trackList.setUpBlocking()
-                }, 250)
+                }, 200)
             }
         }
     }

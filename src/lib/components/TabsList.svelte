@@ -13,7 +13,7 @@
     import ActionButtons from '$lib/components/ActionButtons.svelte'
 
     let tabs = ['snip', 'speed', 'fx', 'eq', 'seek']
-    let activeTab = writable(tabs.at(1))
+    let activeTab = writable(tabs.at(0))
 
     const components: Record<string, Component> = {
         snip: Snip,
