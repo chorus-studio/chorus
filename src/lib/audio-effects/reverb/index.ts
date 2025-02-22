@@ -47,7 +47,7 @@ export default class Reverb {
     }
 
     async #createDigitalReverb() {
-        const modulePath = sessionStorage.getItem('reverbPath')
+        const modulePath = sessionStorage.getItem('chorus:reverb_path')
         if (!modulePath || !this._audioContext) return
         await this._audioContext.audioWorklet.addModule(modulePath)
         this._reverb =
@@ -62,7 +62,7 @@ export default class Reverb {
     async #createImpulseReverb(effect: string) {
         this._convolverNode = this._convolverNode ?? this._audioContext?.createConvolver()
         if (!this._convolverNode || !this._audioContext) return
-        const soundsDir = sessionStorage.getItem('soundsDir')
+        const soundsDir = sessionStorage.getItem('chorus:sounds_dir')
 
         const response = await fetch(`${soundsDir}${effect}.wav`)
         const arraybuffer = await response.arrayBuffer()
