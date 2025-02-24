@@ -1,4 +1,4 @@
-import { storage } from '@wxt-dev/storage'
+import { getState } from '$lib/utils/state'
 
 type RequestOptions = {
     method?: 'GET' | 'POST' | 'PUT' | 'DELETE'
@@ -6,7 +6,7 @@ type RequestOptions = {
     connect?: boolean
 }
 
-type ChorusMetadata = {
+export type ChorusMetadata = {
     auth_token: string
     device_id: string
     connection_id: string
@@ -27,9 +27,12 @@ export const setOptions = async ({
     body = null,
     connect = false
 }: RequestOptions): Promise<SetOptionsResponse | undefined> => {
-    const chorusMetadata = await storage.getItem<ChorusMetadata>('local:chorus_metadata')
-    const authHeader = chorusMetadata?.auth_token
-    const connectHeader = connect ? chorusMetadata?.connection_id : null
+    const [authToken, connectionId] = await storage.getItems([
+        'local:chorus_auth_token',
+        'local:chorus_connection_id'
+    ])
+    const authHeader = authToken?.value
+    const connectHeader = connect ? connectionId?.value : null
 
     if (!authHeader || (connect && !connectHeader)) return
 

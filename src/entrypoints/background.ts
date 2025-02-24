@@ -1,15 +1,15 @@
 import { storage } from '@wxt-dev/storage'
 import type { NowPlaying } from '$lib/stores/now-playing'
+import type { ChorusMetadata } from '$lib/api/request'
 import { getState, setState } from '$lib/utils/state'
 import { chorusKeys, mediaKeys } from '$lib/utils/selectors'
 import { activeOpenTab } from '$lib/utils/messaging'
 import { registerTrackService } from '$lib/api/services/track'
+import { registerPlayerService } from '$lib/api/services/player'
 
 export default defineBackground(() => {
     let ENABLED = true
     let popupPort: browser.runtime.Port | null = null
-
-    registerTrackService()
 
     async function registerScripts() {
         const scripts: browser.scripting.RegisteredContentScript[] = [
@@ -149,28 +149,33 @@ export default defineBackground(() => {
         port.onDisconnect.addListener(() => (popupPort = null))
     })
 
+    registerTrackService()
+    registerPlayerService()
+
     browser.webRequest.onBeforeRequest.addListener(
         (details) => {
-            const rawBody = details?.requestBody?.raw?.at(0)?.bytes
-            if (!rawBody) return
+            try {
+                const rawBody = details?.requestBody?.raw?.at(0)?.bytes
+                if (!rawBody) return
 
-            const text = new TextDecoder('utf-8').decode(new Uint8Array(rawBody))
-            const data = JSON.parse(text)
-            storage.getItem('local:chorus_metadata').then((chorusMetadata) => {
-                if (chorusMetadata) {
-                    storage.setItem('local:chorus_metadata', {
-                        ...chorusMetadata,
-                        device_id: `${data.device.device_id}`,
-                        connection_id: `${data.connection_id}`
-                    })
-                } else {
-                    storage.setItem('local:chorus_metadata', {
-                        auth_token: '',
-                        device_id: `${data.device.device_id}`,
-                        connection_id: `${data.connection_id}`
-                    })
-                }
-            })
+                const text = new TextDecoder('utf-8').decode(new Uint8Array(rawBody))
+                const data = JSON.parse(text)
+
+                if (!data?.device?.device_id || !data?.connection_id) return
+
+                storage.setItems([
+                    {
+                        key: 'local:chorus_device_id',
+                        value: data.device.device_id
+                    },
+                    {
+                        key: 'local:chorus_connection_id',
+                        value: data.connection_id
+                    }
+                ])
+            } catch (error) {
+                console.error('Error in onBeforeRequest listener:', error)
+            }
         },
         { urls: ['https://guc3-spclient.spotify.com/track-playback/v1/devices'] },
         ['requestBody']
@@ -187,12 +192,12 @@ export default defineBackground(() => {
     browser.webRequest.onBeforeSendHeaders.addListener(
         (details) => {
             if (details.url.includes('areEntitiesInLibrary')) {
-                storage.getItem<NowPlaying>('local:chorus_now_playing').then((nowPlaying) => {
-                    if (!nowPlaying) return
-                    if (nowPlaying?.id) return
+                storage.getItem('local:chorus_now_playing').then((nowPlaying) => {
+                    const currentState = (nowPlaying ?? {}) as NowPlaying
+                    if (!currentState?.id) return
 
-                    nowPlaying.id = getTrackId(details.url)
-                    storage.setItem('local:chorus_now_playing', nowPlaying)
+                    currentState.track_id = getTrackId(details.url)
+                    storage.setItem('local:chorus_now_playing', currentState)
                 })
             }
 
@@ -201,14 +206,7 @@ export default defineBackground(() => {
             )
             if (!authHeader) return
 
-            storage.getItem('local:chorus_metadata').then((chorusMetadata) => {
-                if (!chorusMetadata) return
-
-                storage.setItem('local:chorus_metadata', {
-                    ...chorusMetadata,
-                    auth_token: authHeader?.value
-                })
-            })
+            storage.setItem('local:chorus_auth_token', authHeader?.value ?? '')
         },
         {
             urls: [
