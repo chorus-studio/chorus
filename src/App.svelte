@@ -4,10 +4,13 @@
     import { nowPlaying } from '$lib/stores/now-playing'
     import { PlaybackObserver } from '$lib/observers/playback'
     import { TracklistObserver } from '$lib/observers/tracklist'
+    import { trackObserver } from '$lib/observers/track'
 
     import SkipButton from '$lib/components/SkipButton.svelte'
     import HeartButton from '$lib/components/HeartButton.svelte'
     import SettingsPopover from '$lib/components/SettingsPopover.svelte'
+
+    let position = $state<number | null>(null)
 
     function removeAddToPlaylistButton() {
         const addToPlaylistButton = document.querySelector(
@@ -28,10 +31,19 @@
         playbackObserver.observe()
         const tracklistObserver = new TracklistObserver()
         tracklistObserver.observe()
+
+        const unsubscribe = nowPlaying.subscribe((nowPlaying) => {
+            if (!position || position !== nowPlaying.current) {
+                position = nowPlaying.current
+                trackObserver.process()
+            }
+        })
+
         return () => {
             nowPlaying.disconnect()
             playbackObserver.disconnect()
             tracklistObserver.disconnect()
+            unsubscribe()
         }
     })
 </script>

@@ -1,13 +1,13 @@
 import { get, writable } from 'svelte/store'
 import { storage } from '@wxt-dev/storage'
 
-import { setState } from '$lib/utils/state'
 import { dataStore } from '$lib/stores/data'
-import { SimpleTrack } from '$lib/stores/data/cache'
 import { playback } from '$lib/utils/playback'
 import { currentSongInfo } from '$lib/utils/song'
+import { trackObserver } from '$lib/observers/track'
+import type { SimpleTrack } from '$lib/stores/data/cache'
 
-export type NowPlaying = {
+export type NowPlaying = SimpleTrack & {
     liked: boolean
     blocked: boolean
     current: number
@@ -71,51 +71,23 @@ function createNowPlayingStore() {
         nextButton?.click()
     }
 
-    function handleMutation(mutations: MutationRecord[]) {
+    async function handleMutation(mutations: MutationRecord[]) {
         for (const mutation of mutations) {
             if (!isAnchor(mutation)) return
             if (!songChanged()) return
 
-            const songInfo = currentSongInfo()
-            const trackInfo = songInfo.id
-                ? dataStore.collection.find((x) => x.song_id == songInfo.id)
-                : null
+            const songInfo = getSongInfo()
+            if (!songInfo.id) return
 
-            if (trackInfo?.blocked) {
-                mute()
-                return skipTrack()
-            }
-            unMute()
-
-            const { id } = songInfo
-            if (!id) return
-
-            currentSongId = id
-            updateNowPlaying()
+            currentSongId = songInfo.id
+            await updateNowPlaying()
+            await trackObserver?.processSongTransition()
         }
-    }
-
-    function muteButton() {
-        return document.querySelector(
-            '[data-testid="volume-bar-toggle-mute-button"]'
-        ) as HTMLButtonElement
-    }
-
-    function isMute() {
-        return muteButton()?.getAttribute('aria-label') == 'Unmute'
-    }
-
-    function mute() {
-        if (!isMute()) muteButton()?.click()
-    }
-
-    function unMute() {
-        if (isMute()) muteButton()?.click()
     }
 
     function getSongInfo() {
         const songInfo = currentSongInfo()
-        const { id = null, cover = null, type = 'track', url = null } = songInfo
+        const { id = null, cover = null, url = null } = songInfo
         const [title, artist] = id?.split(' by ') ?? []
         const { duration = 0, position: current = 0, loop = false } = playback.data()
 
@@ -135,31 +107,17 @@ function createNowPlayingStore() {
         }
     }
 
-    function skipTrack() {
-        const nextButton = document.querySelector(
-            '[data-testid="control-button-skip-forward"]'
-        ) as HTMLButtonElement
-        nextButton?.click()
-    }
-
-    function checkIfTrackIsBlocked(track_id: string) {
-        const track = dataStore.collectionObject[track_id]
-        if (!track?.blocked) return
-
-        skipTrack()
-    }
-
     async function updateNowPlaying() {
         const songInfo = getSongInfo()
         update((state) => ({ ...state, ...songInfo }))
         const currentState = get(store)
 
-        if (currentState?.track_id) {
-            if (dataStore.collectionObject[currentState.track_id]) {
-                checkIfTrackIsBlocked(currentState.track_id)
-            } else {
-                dataStore.generateSimpleTrack(currentState)
-            }
+        if (
+            currentState.type == 'track' &&
+            currentState.track_id &&
+            !dataStore.collectionObject[currentState.track_id]
+        ) {
+            dataStore.generateSimpleTrack(currentState)
         }
 
         await storage.setItem<NowPlaying>('local:chorus_now_playing', {
@@ -183,12 +141,13 @@ function createNowPlayingStore() {
         await storage.setItem<NowPlaying>('local:chorus_now_playing', newState)
     }
 
-    function observe() {
+    async function observe() {
         const target = document.querySelector('[data-testid="now-playing-widget"]')
         if (!target) return
 
         observer = new MutationObserver(handleMutation)
         observer.observe(target, { attributes: true })
+        await trackObserver?.initialize()
     }
 
     function disconnect() {
@@ -208,6 +167,7 @@ function createNowPlayingStore() {
     })
 
     return {
+        update,
         subscribe,
         set,
         setLiked,
