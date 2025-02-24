@@ -21,32 +21,32 @@ function createLoopStore() {
 
     async function resetIteration() {
         update((loop) => ({ ...loop, iteration: 1, looping: false }))
-        await storage.setItem<Loop>('local:chorus-loop', defaultLoop)
+        await storage.setItem<Loop>('local:chorus_loop', defaultLoop)
     }
 
     async function toggleType(type: 'infinite' | 'amount') {
         update((loop) => ({ ...loop, type, looping: true }))
         const newState = get(store)
-        await storage.setItem<Loop>('local:chorus-loop', newState)
+        await storage.setItem<Loop>('local:chorus_loop', newState)
     }
 
     async function toggleLoop() {
         update((loop) => ({ ...loop, looping: !loop.looping }))
         const newState = get(store)
-        await storage.setItem<Loop>('local:chorus-loop', newState)
+        await storage.setItem<Loop>('local:chorus_loop', newState)
     }
 
     async function setIteration(iteration: number) {
         update((loop) => ({ ...loop, iteration, looping: true }))
         const newState = get(store)
-        await storage.setItem<Loop>('local:chorus-loop', newState)
+        await storage.setItem<Loop>('local:chorus_loop', newState)
     }
 
-    storage.getItem<Loop>('local:chorus-loop', { fallback: defaultLoop }).then((savedState) => {
+    storage.getItem<Loop>('local:chorus_loop', { fallback: defaultLoop }).then((savedState) => {
         if (savedState) store.set(savedState)
     })
 
-    storage.watch('local:chorus-loop', (newValues) => {
+    storage.watch('local:chorus_loop', (newValues) => {
         if (newValues) store.set(newValues as Loop)
     })
 
