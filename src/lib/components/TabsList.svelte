@@ -1,4 +1,6 @@
 <script lang="ts">
+    import { onMount } from 'svelte'
+
     import type { Component } from 'svelte'
     import { writable } from 'svelte/store'
     import * as Tabs from '$lib/components/ui/tabs'
@@ -12,8 +14,12 @@
     import TrackInfo from '$lib/components/TrackInfo.svelte'
     import ActionButtons from '$lib/components/ActionButtons.svelte'
 
+    import { dataStore } from '$lib/stores/data'
+    import { snipStore } from '$lib/stores/snip'
+    import { nowPlaying } from '$lib/stores/now-playing'
+
     let tabs = ['snip', 'speed', 'fx', 'eq', 'seek']
-    let activeTab = writable(tabs.at(0))
+    let activeTab = writable<string | undefined>(undefined)
 
     const components: Record<string, Component> = {
         snip: Snip,
@@ -22,12 +28,42 @@
         seek: Seek,
         speed: Speed
     }
+
+    function setActiveTab(tab: string) {
+        if (tab === 'snip') {
+            setSnip()
+        }
+        activeTab.set(tab)
+    }
+
+    function setSnip() {
+        const track =
+            $nowPlaying.type == 'track' && $nowPlaying.track_id
+                ? dataStore.collectionObject[$nowPlaying.track_id]
+                : dataStore.collection.find((x) => x.song_id === $nowPlaying.id)
+
+        snipStore.set({
+            is_shared: false,
+            start_time: track?.start_time ?? 0,
+            end_time: track?.end_time ?? $nowPlaying.duration
+        })
+    }
+
+    onMount(() => {
+        setSnip()
+        activeTab.set(tabs.at(0)!)
+        return () => snipStore.reset()
+    })
 </script>
 
-<Tabs.Root bind:value={$activeTab} class="h-6 p-0">
+<Tabs.Root value={$activeTab} class="h-6 p-0">
     <Tabs.List class="flex h-full items-center justify-end gap-x-1.5 bg-transparent p-0">
         {#each tabs as tab (tab)}
-            <Tabs.Trigger value={tab} class="flex items-center justify-center p-0">
+            <Tabs.Trigger
+                value={tab}
+                class="flex items-center justify-center p-0"
+                onclick={() => setActiveTab(tab)}
+            >
                 <Badge
                     variant="outline"
                     class="rounded-[2px] px-1.5 py-0 pb-[0.125rem] text-sm font-semibold leading-[18px] {$activeTab ===
@@ -38,12 +74,14 @@
             </Tabs.Trigger>
         {/each}
     </Tabs.List>
-    <Tabs.Content value={$activeTab} class="relative flex h-[205px] w-full flex-col">
-        <TrackInfo />
-        <svelte:component this={components[$activeTab]} />
-        <p class="absolute bottom-8 w-full text-end text-sm text-zinc-300">
-            *changes will <span class="font-semibold italic">reset</span> unless saved.
-        </p>
-        <ActionButtons tab={$activeTab} />
-    </Tabs.Content>
+    {#if $activeTab}
+        <Tabs.Content value={$activeTab} class="relative flex h-[205px] w-full flex-col">
+            <TrackInfo />
+            <svelte:component this={components[$activeTab]} />
+            <p class="absolute bottom-8 w-full text-end text-sm text-zinc-300">
+                *changes will <span class="font-semibold italic">reset</span> unless saved.
+            </p>
+            <ActionButtons tab={$activeTab} />
+        </Tabs.Content>
+    {/if}
 </Tabs.Root>

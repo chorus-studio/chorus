@@ -1,20 +1,33 @@
 <script lang="ts">
-    import { writable } from 'svelte/store'
+    import { snipStore } from '$lib/stores/snip'
     import { secondsToTime } from '$lib/utils/time'
     import { nowPlaying } from '$lib/stores/now-playing'
     import { Slider } from '$lib/components/ui/slider'
 
-    let value = writable([$nowPlaying.current ?? 0, $nowPlaying.duration ?? 0])
+    function handleValueChange(value: number[]) {
+        const [start_time, end_time] = value
+        if (!start_time || !end_time || !$snipStore) return
 
-    $: start = secondsToTime($value.at(0) ?? 0)
-    $: end = secondsToTime($value.at(1) ?? 0)
+        snipStore.set({ ...$snipStore, start_time, end_time })
+    }
 </script>
 
-<div class="flex items-center justify-between gap-x-4 w-full">
-    <p class="text-xs text-muted-foreground">{start}</p>
-    <Slider
-        type="multiple" bind:value={$value} min={0} max={$nowPlaying.duration}  step={1}
-        class="h-6 w-full"
-    />
-    <p class="text-xs text-muted-foreground">{end}</p>
-</div>
+{#if $snipStore}
+    <div class="flex w-full items-center justify-between gap-x-4">
+        <p class="text-xs text-muted-foreground">
+            {secondsToTime($snipStore?.start_time)}
+        </p>
+        <Slider
+            onValueChange={handleValueChange}
+            type="multiple"
+            value={[$snipStore?.start_time, $snipStore?.end_time]}
+            min={0}
+            max={$nowPlaying.duration}
+            step={1}
+            class="h-6 w-full"
+        />
+        <p class="text-xs text-muted-foreground">
+            {secondsToTime($snipStore?.end_time)}
+        </p>
+    </div>
+{/if}
