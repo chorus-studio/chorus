@@ -62,12 +62,15 @@ export class TrackObserver {
         const lastUpdateSet = !!last_updated
         const loopEndTimeMS =
             !lastUpdateSet || last_updated == 'start' ? endTimeMS : endTimeMS + 3000
-        return currentTimeMS > Math.min(loopEndTimeMS, this.currentSong.duration * 1000)
+        return (
+            !Number.isNaN(endTimeMS) &&
+            currentTimeMS > Math.min(loopEndTimeMS, this.currentSong.duration * 1000)
+        )
     }
 
     atSnipEnd({ currentTimeMS, track }: { currentTimeMS: number; track: SimpleTrack }) {
         const { end_time } = track
-        const atSongEnd = end_time == playback.duration()!
+        const atSongEnd = end_time == this.currentSong.duration
         const endTimeMS = end_time * 1000 - (atSongEnd ? 100 : 0)
         return currentTimeMS >= endTimeMS
     }
@@ -107,29 +110,31 @@ export class TrackObserver {
     }
 
     private async processTimeUpdate(event: CustomEvent) {
-        setTimeout(async () => {
-            const currentSong = this.currentSong
+        const currentSong = this.currentSong
 
-            if (!currentSong || this.seeking) return
+        if (!currentSong || this.seeking) return
 
-            const currentTimeMS = event.detail.currentTime * 1000
-            const snip = this.snip
+        const currentTimeMS = event.detail.currentTime * 1000
+        const snip = this.snip
 
-            if (this.snip && this.atTempSnipEnd(currentTimeMS)) {
-                return this.updateCurrentTime(this.snip.start_time)
-            }
+        if (this.snip && this.atTempSnipEnd(currentTimeMS)) {
+            return this.updateCurrentTime(this.snip.start_time)
+        }
 
-            if (currentSong.snipped && !this.atSnipEnd({ currentTimeMS, track: currentSong }))
-                return
+        if (currentSong.snipped && !this.atSnipEnd({ currentTimeMS, track: currentSong })) return
 
-            if (this.loop.looping && this.atSnipEnd({ currentTimeMS, track: currentSong })) {
-                if (this.loop.type === 'amount') await loopStore.decrement()
-                return this.updateCurrentTime(currentSong.start_time)
-            }
+        if (this.loop.looping && this.atSnipEnd({ currentTimeMS, track: currentSong })) {
+            if (this.loop.type === 'amount') await loopStore.decrement()
+            return this.updateCurrentTime(currentSong.start_time)
+        }
 
-            if (snip?.is_shared && location?.search) history.pushState(null, '', location.pathname)
-            if (currentSong.snipped || currentSong.blocked) this.skipTrack()
-        }, 100)
+        if (snip?.is_shared && location?.search) history.pushState(null, '', location.pathname)
+        if (
+            currentSong.snipped ||
+            currentSong.blocked ||
+            currentTimeMS >= this.currentSong.duration * 1000
+        )
+            this.skipTrack()
     }
 
     disconnect() {
