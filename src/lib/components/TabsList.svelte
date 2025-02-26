@@ -19,7 +19,7 @@
     import { nowPlaying } from '$lib/stores/now-playing'
 
     let tabs = ['snip', 'speed', 'fx', 'eq', 'seek']
-    let activeTab = writable<string | undefined>(undefined)
+    let activeTab = writable<string | undefined>(tabs.at(0))
 
     const components: Record<string, Component> = {
         snip: Snip,
@@ -37,10 +37,9 @@
     }
 
     function setSnip() {
-        const track =
-            $nowPlaying.type == 'track' && $nowPlaying.track_id
-                ? dataStore.collectionObject[$nowPlaying.track_id]
-                : dataStore.collection.find((x) => x.song_id === $nowPlaying.id)
+        const track = $nowPlaying?.track_id
+            ? dataStore.collectionObject[$nowPlaying.track_id]
+            : dataStore.collection.find((x) => x.song_id === $nowPlaying.id)
 
         snipStore.set({
             is_shared: false,
@@ -50,8 +49,8 @@
     }
 
     onMount(() => {
-        setSnip()
         activeTab.set(tabs.at(0)!)
+        setSnip()
         return () => snipStore.reset()
     })
 </script>

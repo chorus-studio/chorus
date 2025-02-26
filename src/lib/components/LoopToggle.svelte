@@ -1,25 +1,25 @@
 <script lang="ts">
     import { loopStore } from '$lib/stores/loop'
     import { Input } from '$lib/components/ui/input'
+    import { Label } from '$lib/components/ui/label'
     import { Infinity, Tally5Icon } from 'lucide-svelte'
-    import * as ToggleGroup from '$lib/components/ui/toggle-group'
     import { buttonVariants } from '$lib/components/ui/button'
+    import * as ToggleGroup from '$lib/components/ui/toggle-group'
 
-    function handleChange(value: string) {
-        loopStore.toggleType(value as 'infinite' | 'amount')
+    async function handleChange(value: string) {
+        await loopStore.toggleType(value as 'infinite' | 'amount')
     }
 
-    let type = $state($loopStore.type)
-    $effect(() => {
-        loopStore.subscribe((loop) => {
-            type = loop.type
-        })
-    })
+    $: showCount = $loopStore.looping && $loopStore.type === 'amount'
 </script>
 
-<div class="flex w-full flex-col items-center justify-between gap-y-2">
-    <div class="flex w-full items-center justify-between gap-x-2">
-        <ToggleGroup.Root type="single" value={type} onValueChange={handleChange}>
+<div
+    class="relative flex w-full flex-col items-center justify-between gap-y-2 {showCount
+        ? 'pb-2.5'
+        : ''}"
+>
+    <div class="relative flex w-full items-center justify-between gap-x-2">
+        <ToggleGroup.Root type="single" value={$loopStore.type} onValueChange={handleChange}>
             <ToggleGroup.Item
                 value="infinite"
                 class={buttonVariants({
@@ -47,12 +47,17 @@
             min={1}
             placeholder="1"
             class="h-8 w-full"
-            disabled={type === 'infinite'}
-            bind:value={$loopStore.iteration}
-            oninput={(e) => {
+            disabled={$loopStore.type === 'infinite'}
+            value={$loopStore.iteration}
+            oninput={async (e) => {
                 const value = (e.target as HTMLInputElement).value
-                loopStore.setIteration(Number(value))
+                await loopStore.setIteration(Number(value))
             }}
         />
     </div>
+    {#if showCount}
+        <Label class="absolute -bottom-2 right-0 text-xs text-muted-foreground"
+            >loop{$loopStore.iteration > 1 ? 's' : ''} left: {$loopStore.iteration}</Label
+        >
+    {/if}
 </div>
