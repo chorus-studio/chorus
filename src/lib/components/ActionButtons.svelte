@@ -94,14 +94,14 @@
 </script>
 
 <div class="absolute bottom-0 flex w-full items-center justify-between gap-x-2">
-    {#if ['fx', 'eq', 'snip'].includes(tab)}
+    {#if ['fx', 'eq', 'snip', 'speed'].includes(tab)}
         <Button
             variant="outline"
             size="sm"
             class="h-6 rounded-[4px] border-none bg-red-700 px-2 py-0 pb-[0.125rem] text-sm font-semibold text-primary hover:bg-red-800"
             onclick={handleReset}
         >
-            {$nowPlaying.snipped ? 'delete' : 'reset'}
+            {tab !== 'snip' ? 'reset' : $nowPlaying.snipped ? 'delete' : 'reset'}
         </Button>
     {/if}
 
