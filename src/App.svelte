@@ -10,40 +10,37 @@
     import HeartButton from '$lib/components/HeartButton.svelte'
     import SettingsPopover from '$lib/components/SettingsPopover.svelte'
 
-    let position = $state<number | null>(null)
-
     function removeAddToPlaylistButton() {
         const addToPlaylistButton = document.querySelector(
             '[data-testid="now-playing-widget"] > div > button[data-encore-id="buttonTertiary"]'
-        )
+        ) as HTMLButtonElement
         const parent = addToPlaylistButton?.parentElement
         if (parent) {
             parent.style.margin = '0'
             parent.style.gap = '0'
         }
-        addToPlaylistButton?.remove()
+        if (addToPlaylistButton) {
+            addToPlaylistButton.style.visibility = 'hidden'
+        }
+    }
+
+    async function init() {
+        removeAddToPlaylistButton()
+        await nowPlaying.observe()
     }
 
     onMount(() => {
-        removeAddToPlaylistButton()
-        nowPlaying.observe()
+        init()
         const playbackObserver = new PlaybackObserver()
         playbackObserver.observe()
         const tracklistObserver = new TracklistObserver()
         tracklistObserver.observe()
 
-        const unsubscribe = nowPlaying.subscribe((nowPlaying) => {
-            if (!position || position !== nowPlaying.current) {
-                position = nowPlaying.current
-                trackObserver.process()
-            }
-        })
-
         return () => {
             nowPlaying.disconnect()
             playbackObserver.disconnect()
             tracklistObserver.disconnect()
-            unsubscribe()
+            trackObserver.disconnect()
         }
     })
 </script>

@@ -11,10 +11,28 @@
 
     let trackService = getTrackService()
     let currentId = $state($nowPlaying.id)
-    let track = $state<SimpleTrack | null>(null)
+    // let track = $state<SimpleTrack | null>(null)
 
-    function onLikedPage() {
-        return window.location.pathname.includes('/collection/tracks')
+    function inUserCollection() {
+        if (!$nowPlaying?.track_id) return false
+        return dataStore.checkInUserCollection($nowPlaying.track_id)
+    }
+
+    function isAlreadyLiked() {
+        const likedState = inUserCollection()
+        if (likedState !== null) return likedState
+
+        // If Spotify does not highlight the liked button, assume it's not liked
+        if (!isSpotifyHighlighted()) {
+            if ($nowPlaying.track_id) {
+                dataStore.updateUserCollection({
+                    track_id: $nowPlaying.track_id,
+                    liked: false
+                })
+            }
+            return false
+        }
+        return $nowPlaying.liked
     }
 
     function isSpotifyHighlighted() {
@@ -59,26 +77,23 @@
             if (!svg) return
 
             const highlight = $nowPlaying.liked
-            heartIcon.style.visibility = highlight ? 'visible' : 'hidden'
-
             heartIcon.setAttribute('aria-label', `${highlight ? 'Remove from' : 'Save to'} Liked`)
-            svg.style.fill = highlight ? '#1ed760' : 'transparent'
+            svg.style.fill = highlight ? '#1ed760' : 'none'
             svg.style.stroke = highlight ? '#1ed760' : 'currentColor'
         })
     }
 
     async function getTrackId() {
-        const { type, url, track_id = null } = $nowPlaying
-        if (track_id) return track_id
-        if (type == 'album' && url) {
-            const albumId = new URL(url).pathname.split('/').pop()
-            if (!albumId) return null
-            return await getTrackIdFromAlbumId(albumId)
+        if ($nowPlaying.track_id) return $nowPlaying.track_id
+        if ($nowPlaying.album_id) {
+            const trackId = await getTrackIdFromAlbumId($nowPlaying.album_id)
+            nowPlaying.set({ ...$nowPlaying, track_id: trackId })
+            return trackId
         }
     }
 
     async function handleClick() {
-        let { track_id = '', liked } = $nowPlaying
+        let { track_id, liked } = $nowPlaying
         if (!track_id) {
             track_id = await getTrackId()
         }
@@ -90,45 +105,54 @@
                 ids: track_id,
                 method: liked ? 'DELETE' : 'PUT'
             })
+
             if (response !== 'empty response') return
+
+            dataStore.updateUserCollection({ track_id, liked: !liked })
             await nowPlaying.setLiked(!liked)
-            higlightInTrackList(track_id)
-            if (track) {
-                dataStore.updateTrack({
-                    track_id: track.track_id!,
-                    value: { liked: !liked }
-                })
-            }
+            await dataStore.updateTrack({
+                track_id: track_id,
+                value: { liked: !liked }
+            })
+
+            setTimeout(() => {
+                higlightInTrackList(track_id)
+            }, 500)
         }
     }
 
-    async function isTrackLiked() {
+    async function highlightHeart() {
         const trackId = await getTrackId()
-        if (!trackId) return false
+        let shouldHighlight = false
 
-        nowPlaying.set({ ...$nowPlaying, track_id: trackId })
-        track = dataStore.collectionObject[trackId]
+        shouldHighlight = isAlreadyLiked()
+        dataStore.updateUserCollection({
+            track_id: trackId,
+            liked: shouldHighlight
+        })
+        await nowPlaying.setLiked(shouldHighlight)
+        await dataStore.updateTrack({
+            track_id: trackId,
+            value: { liked: shouldHighlight }
+        })
+        setTimeout(() => {
+            higlightInTrackList(trackId)
+        }, 1000)
+    }
 
-        const response = await trackService.checkIfTracksInCollection(trackId)
-        if (!Array.isArray(response) || !response?.length) return false
-
-        await nowPlaying.setLiked(response?.at(0))
-        if (track) {
-            dataStore.updateTrack({
-                track_id: track.track_id!,
-                value: { liked: response?.at(0) }
-            })
-        }
+    async function init() {
+        await highlightHeart()
+        setTimeout(() => {
+            higlightInTrackList($nowPlaying.track_id)
+        }, 1000)
     }
 
     onMount(() => {
+        init()
         const unsubscribe = nowPlaying.subscribe(async (nowPlaying) => {
             if (nowPlaying.id !== currentId && !nowPlaying.track_id) {
                 currentId = nowPlaying.id
-                await isTrackLiked()
-                if (nowPlaying.track_id) {
-                    track = dataStore.collectionObject[nowPlaying.track_id]
-                }
+                await highlightHeart()
             }
         })
 

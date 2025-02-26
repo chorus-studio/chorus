@@ -104,17 +104,24 @@ export class TrackList {
         this.setRowEvents()
     }
 
-    generateSimpleTrack(row: HTMLElement) {
+    async generateSimpleTrack(row: HTMLElement) {
         const track = trackSongInfo(row)
         if (!track) return
 
+        if (track?.track_id && this.isOnLikedSongsPage) {
+            dataStore.updateUserCollection({
+                track_id: track.track_id,
+                liked: true
+            })
+        }
+
         if (track?.track_id && !dataStore.collectionObject[track.track_id]) {
-            dataStore.updateTrack({
+            await dataStore.updateTrack({
                 track_id: track.track_id,
                 value: {
+                    liked: dataStore.checkInUserCollection(track.track_id),
                     track_id: track.track_id,
                     song_id: track.id!,
-                    liked: this.isOnLikedSongsPage,
                     snipped: false,
                     blocked: false,
                     end_time: track.endTime!,

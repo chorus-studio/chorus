@@ -25,7 +25,8 @@
 
         await trackService?.updateLikedTracks({ ids: track.track_id, method })
         isLiked = method === 'PUT'
-        if (track) dataStore.updateTrack({ track_id: track.track_id!, value: { liked: isLiked } })
+        if (track)
+            await dataStore.updateTrack({ track_id: track.track_id!, value: { liked: isLiked } })
         await updateCurrentTrack(isLiked)
     }
 
@@ -60,6 +61,7 @@
             })}
         >
             <Heart
+                role="heart"
                 size={24}
                 fill={isLiked ? '#1ed760' : 'none'}
                 color={isLiked ? '#1ed760' : 'currentColor'}

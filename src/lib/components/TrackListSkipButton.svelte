@@ -10,10 +10,10 @@
     let { track }: { track: SimpleTrack } = $props()
     let isSkipped = $state(track?.blocked ?? false)
 
-    function handleSkip() {
+    async function handleSkip() {
         isSkipped = !isSkipped
         if (track) {
-            dataStore.updateTrack({ track_id: track.track_id, value: { blocked: isSkipped } })
+            await dataStore.updateTrack({ track_id: track.track_id, value: { blocked: isSkipped } })
 
             if (track?.song_id === $nowPlaying.id) skipTrack()
         }
