@@ -81,6 +81,7 @@ export class TrackObserver {
     }
 
     skipTrack() {
+        if (!this.isMute) this.mute()
         const nextButton = document.querySelector(
             '[data-testid="control-button-skip-forward"]'
         ) as HTMLButtonElement

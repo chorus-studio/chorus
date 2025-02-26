@@ -1,8 +1,11 @@
 <script lang="ts">
+    import { dataStore } from '$lib/stores/data'
     import { nowPlaying } from '$lib/stores/now-playing'
-    import { buttonVariants } from '$lib/components/ui/button'
+
     import { Ban } from 'lucide-svelte'
     import * as Tooltip from '$lib/components/ui/tooltip'
+    import { buttonVariants } from '$lib/components/ui/button'
+    import { trackObserver } from '$lib/observers/track'
 
     function highlightInTrackList() {
         const rowsQuery = document.querySelectorAll('[data-testid="tracklist-row"]')
@@ -28,16 +31,17 @@
         svg.style.stroke = '#1ed760'
     }
 
-    function skipTrack() {
-        const nextButton = document.querySelector(
-            '[data-testid="control-button-skip-forward"]'
-        ) as HTMLButtonElement
-        nextButton?.click()
-    }
+    async function handleSkip() {
+        if ($nowPlaying.track_id) {
+            nowPlaying.set({ ...$nowPlaying, blocked: true })
+            await dataStore.updateTrack({
+                track_id: $nowPlaying.track_id,
+                value: { blocked: true }
+            })
+            highlightInTrackList()
+        }
 
-    function handleSkip() {
-        if ($nowPlaying.track_id) highlightInTrackList()
-        skipTrack()
+        trackObserver?.skipTrack()
     }
 </script>
 

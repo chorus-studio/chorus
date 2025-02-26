@@ -4,6 +4,7 @@
     import { buttonVariants } from '$lib/components/ui/button'
 
     import { dataStore } from '$lib/stores/data'
+    import { trackObserver } from '$lib/observers/track'
     import { nowPlaying } from '$lib/stores/now-playing'
     import type { SimpleTrack } from '$lib/stores/data/cache'
 
@@ -14,33 +15,13 @@
         isSkipped = !isSkipped
         if (track) {
             await dataStore.updateTrack({ track_id: track.track_id, value: { blocked: isSkipped } })
-
-            if (track?.song_id === $nowPlaying.id) skipTrack()
+            if (track?.song_id === $nowPlaying.id) trackObserver?.skipTrack()
         }
     }
 
-    function mute() {
-        const muteButton = document.querySelector(
-            '[data-testid="volume-bar-toggle-mute-button"]'
-        ) as HTMLButtonElement
-        muteButton?.click()
-    }
-
-    function skipTrack() {
-        mute()
-        const nextButton = document.querySelector(
-            '[data-testid="control-button-skip-forward"]'
-        ) as HTMLButtonElement
-        nextButton?.click()
-    }
-
-    function isNowPlayingBlocked() {
-        return $nowPlaying.id === track?.song_id && track?.blocked
-    }
-
     onMount(() => {
-        if (isNowPlayingBlocked()) {
-            skipTrack()
+        if ($nowPlaying.id === track?.song_id && track?.blocked) {
+            trackObserver?.skipTrack()
         }
     })
 </script>
