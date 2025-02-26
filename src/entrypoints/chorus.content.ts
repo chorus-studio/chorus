@@ -20,7 +20,7 @@ export default defineContentScript({
                 if (skipBack) {
                     const div = document.createElement('div')
                     const parentElement = skipBack.parentElement
-                    parentElement?.insertBefore(div, skipBack.nextSibling)
+                    parentElement?.insertBefore(div, skipBack)
                     mount(SeekButton, { target: div, props: { role: 'seek-backward' } })
                 }
                 if (skipForward) {
