@@ -9,9 +9,9 @@ const getImage = (imageSrc: string) => {
 export type CurrentSongInfo = {
     id?: string
     cover?: string
-    type: string
-    track_id: string
     url: string
+    track_id?: string
+    album_id?: string
 }
 
 export const currentSongInfo = (): CurrentSongInfo => {
@@ -29,14 +29,25 @@ export const currentSongInfo = (): CurrentSongInfo => {
     const id = songLabel?.split('Now playing: ')?.at(1)
     const cover = getImage(image?.src)
 
-    const [, type, track_id] = new URL(anchor?.href).pathname.split('/')
+    let trackKey: 'track_id' | 'album_id' | null = null
+    let spotify_id: string | null = null
+    try {
+        let [, type, spotify_id] = new URL(anchor?.href).pathname.split('/')
+        trackKey = type === 'track' ? 'track_id' : 'album_id'
+        spotify_id = spotify_id ?? null
+    } catch {
+        return {
+            id,
+            cover,
+            url: anchor?.href || ''
+        }
+    }
 
     return {
         id,
         cover,
-        type: type ?? 'track',
-        track_id,
-        url: anchor.href
+        url: anchor.href,
+        [trackKey]: spotify_id
     }
 }
 

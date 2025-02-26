@@ -14,19 +14,18 @@ export type NowPlaying = SimpleTrack & {
     duration: number
     loop: boolean
     id: string | null
-    type: string | null
     url: string | null
     cover: string | null
     title: string | null
     artist: string | null
     track_id: string | null
+    album_id: string | null
     textColour: string | null
     backgroundColour: string | null
 }
 
 const defaultNowPlaying: NowPlaying = {
     id: null,
-    type: null,
     url: null,
     liked: false,
     blocked: false,
@@ -37,6 +36,7 @@ const defaultNowPlaying: NowPlaying = {
     current: 0,
     loop: false,
     track_id: null,
+    album_id: null,
     textColour: '#ffffff',
     backgroundColour: '#000000'
 }
@@ -64,19 +64,12 @@ function createNowPlayingStore() {
         return songData.id !== currentSongId
     }
 
-    function skipTrack() {
-        const nextButton = document.querySelector(
-            '[data-testid="control-button-skip-forward"]'
-        ) as HTMLButtonElement
-        nextButton?.click()
-    }
-
     async function handleMutation(mutations: MutationRecord[]) {
         for (const mutation of mutations) {
             if (!isAnchor(mutation)) return
             if (!songChanged()) return
 
-            const songInfo = getSongInfo()
+            const songInfo = currentSongInfo()
             if (!songInfo.id) return
 
             currentSongId = songInfo.id
@@ -91,7 +84,9 @@ function createNowPlayingStore() {
         const [title, artist] = id?.split(' by ') ?? []
         const { duration = 0, position: current = 0, loop = false } = playback.data()
 
-        const trackInfo = dataStore.collection.find((x) => x.song_id == id) ?? ({} as SimpleTrack)
+        const trackInfo = songInfo?.track_id
+            ? dataStore.collectionObject[songInfo.track_id]
+            : (dataStore.collection.find((x) => x.song_id == id) ?? ({} as SimpleTrack))
 
         return {
             id,
@@ -102,31 +97,26 @@ function createNowPlayingStore() {
             current,
             loop,
             url,
-            type: trackInfo?.track_id ? 'track' : songInfo.type,
             ...trackInfo
         }
     }
 
     async function updateNowPlaying() {
         const songInfo = getSongInfo()
-        update((state) => ({ ...state, ...songInfo }))
-        const currentState = get(store)
+        const newState = { ...get(store), ...songInfo }
 
-        if (
-            currentState.type == 'track' &&
-            currentState.track_id &&
-            !dataStore.collectionObject[currentState.track_id]
-        ) {
-            dataStore.generateSimpleTrack(currentState)
+        let dataState: SimpleTrack | null = null
+        if (newState.track_id && !dataStore.collectionObject[newState.track_id]) {
+            dataStore.generateSimpleTrack(newState)
+            dataState = dataStore.collectionObject[newState.track_id] ?? {}
         }
 
-        await storage.setItem<NowPlaying>('local:chorus_now_playing', {
-            ...currentState,
-            ...songInfo
-        })
+        update(() => ({ ...newState, ...dataState }))
+
+        await storage.setItem<NowPlaying>('local:chorus_now_playing', newState)
     }
 
-    async function setCurrentTime(time: number) {
+    function setCurrentTime(time: number) {
         document.dispatchEvent(
             new CustomEvent('FROM_CHORUS_EXTENSION', {
                 detail: { type: 'current_time', data: { value: time } }
@@ -147,6 +137,7 @@ function createNowPlayingStore() {
 
         observer = new MutationObserver(handleMutation)
         observer.observe(target, { attributes: true })
+        await updateNowPlaying()
         await trackObserver?.initialize()
     }
 
