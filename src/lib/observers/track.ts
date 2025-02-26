@@ -54,11 +54,15 @@ export class TrackObserver {
         if (this.isMute) this.muteButton?.click()
     }
 
-    atTempSnipEnd({ currentTimeMS, snip }: { currentTimeMS: number; snip: Snip }) {
-        const { end_time } = snip
+    atTempSnipEnd(currentTimeMS: number) {
+        const { end_time, last_updated } = this.snip as Snip
+        if (!end_time || !last_updated) return false
+
         const endTimeMS = end_time * 1000 - 100
-        const loopEndTimeMS = endTimeMS + 3000
-        return currentTimeMS > Math.min(loopEndTimeMS, end_time * 1000)
+        const lastUpdateSet = !!last_updated
+        const loopEndTimeMS =
+            !lastUpdateSet || last_updated == 'start' ? endTimeMS : endTimeMS + 3000
+        return currentTimeMS > Math.min(loopEndTimeMS, this.currentSong.duration * 1000)
     }
 
     atSnipEnd({ currentTimeMS, track }: { currentTimeMS: number; track: SimpleTrack }) {
@@ -101,19 +105,17 @@ export class TrackObserver {
         if (this.isMute) this.unMute()
     }
 
-    private processTimeUpdate(event: CustomEvent) {
-        const currentSong = this.currentSong
-
-        if (!currentSong || this.seeking) return
-
+    private async processTimeUpdate(event: CustomEvent) {
         setTimeout(async () => {
-            const currentTimeMS = event.detail.currentTime * 1000
             const currentSong = this.currentSong
+
+            if (!currentSong || this.seeking) return
+
+            const currentTimeMS = event.detail.currentTime * 1000
             const snip = this.snip
 
-            if (this.snip && this.atTempSnipEnd({ currentTimeMS, snip: this.snip })) {
-                const start_time = this.snip.start_time
-                return this.updateCurrentTime(start_time)
+            if (this.snip && this.atTempSnipEnd(currentTimeMS)) {
+                return this.updateCurrentTime(this.snip.start_time)
             }
 
             if (currentSong.snipped && !this.atSnipEnd({ currentTimeMS, track: currentSong }))
@@ -126,7 +128,7 @@ export class TrackObserver {
 
             if (snip?.is_shared && location?.search) history.pushState(null, '', location.pathname)
             if (currentSong.snipped || currentSong.blocked) this.skipTrack()
-        }, 0)
+        }, 100)
     }
 
     disconnect() {

@@ -12,30 +12,32 @@ export type NowPlaying = SimpleTrack & {
     blocked: boolean
     current: number
     duration: number
-    loop: boolean
     id: string | null
     url: string | null
     cover: string | null
     title: string | null
     artist: string | null
-    track_id: string | null
     album_id: string | null
     textColour: string | null
     backgroundColour: string | null
 }
 
 const defaultNowPlaying: NowPlaying = {
+    song_id: '',
+    snipped: false,
+    end_time: 0,
+    start_time: 0,
+    track_id: '',
+    blocked: false,
+    // ---------
     id: null,
     url: null,
     liked: false,
-    blocked: false,
     cover: null,
     title: null,
     artist: null,
     duration: 0,
     current: 0,
-    loop: false,
-    track_id: null,
     album_id: null,
     textColour: '#ffffff',
     backgroundColour: '#000000'
@@ -87,6 +89,10 @@ function createNowPlayingStore() {
         const trackInfo = songInfo?.track_id
             ? dataStore.collectionObject[songInfo.track_id]
             : (dataStore.collection.find((x) => x.song_id == id) ?? ({} as SimpleTrack))
+
+        if (trackInfo.blocked) {
+            trackObserver?.skipTrack()
+        }
 
         return {
             id,

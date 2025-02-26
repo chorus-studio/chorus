@@ -1,14 +1,22 @@
 <script lang="ts">
     import { snipStore } from '$lib/stores/snip'
-    import { secondsToTime } from '$lib/utils/time'
     import { nowPlaying } from '$lib/stores/now-playing'
+
+    import { secondsToTime } from '$lib/utils/time'
     import { Slider } from '$lib/components/ui/slider'
 
     function handleValueChange(value: number[]) {
         const [start_time, end_time] = value
-        if (!start_time || !end_time || !$snipStore) return
+        if (!$snipStore) return
 
-        snipStore.set({ ...$snipStore, start_time, end_time })
+        if (start_time !== $snipStore.start_time) {
+            snipStore.set({ ...$snipStore, start_time, last_updated: 'start' })
+            nowPlaying.setCurrentTime(start_time)
+        }
+        if (end_time !== $snipStore.end_time) {
+            snipStore.set({ ...$snipStore, end_time, last_updated: 'end' })
+            nowPlaying.setCurrentTime(end_time)
+        }
     }
 </script>
 
@@ -18,7 +26,7 @@
             {secondsToTime($snipStore?.start_time)}
         </p>
         <Slider
-            onValueChange={handleValueChange}
+            onValueCommit={(value) => handleValueChange(value)}
             type="multiple"
             value={[$snipStore?.start_time, $snipStore?.end_time]}
             min={0}
