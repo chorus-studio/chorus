@@ -186,17 +186,21 @@ export default defineBackground(() => {
         const params = new URLSearchParams(query.search)
         const variables = params.get('variables')
         const uris = JSON.parse(decodeURIComponent(variables ?? '')).uris.at(0)
+        if (!uris || !uris.includes('track:')) return
         return uris.split('track:').at(-1)
     }
 
     browser.webRequest.onBeforeSendHeaders.addListener(
         (details) => {
             if (details.url.includes('areEntitiesInLibrary')) {
-                storage.getItem('local:chorus_now_playing').then((nowPlaying) => {
-                    const currentState = (nowPlaying ?? {}) as NowPlaying
-                    if (!currentState?.id) return
+                const trackDetails = getTrackId(details.url)
+                if (!trackDetails) return
 
-                    currentState.track_id = getTrackId(details.url)
+                storage.getItem('local:chorus_now_playing').then((nowPlaying) => {
+                    if (!nowPlaying) return
+
+                    const currentState = nowPlaying as NowPlaying
+                    currentState.track_id = trackDetails
                     storage.setItem('local:chorus_now_playing', currentState)
                 })
             }
