@@ -13,8 +13,10 @@ export type SimpleTrack = {
 }
 
 export const COLLECTION_KEY = 'collection'
+export const USER_COLLECTION_KEY = 'user_collection'
 
 export type Collection = Record<string, SimpleTrack>
+export type UserCollection = Record<string, boolean>
 
 export class CacheStore {
     private prefix: string
