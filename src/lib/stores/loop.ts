@@ -9,7 +9,7 @@ type Loop = {
 }
 
 const defaultLoop: Loop = {
-    type: 'infinite',
+    type: 'amount',
     amount: 1,
     iteration: 1,
     looping: false
@@ -25,13 +25,36 @@ function createLoopStore() {
     }
 
     async function toggleType(type: 'infinite' | 'amount') {
-        update((loop) => ({ ...loop, type, looping: true }))
+        update((previous) => ({
+            ...previous,
+            type,
+            looping: true,
+            ...(type === 'amount' && { iteration: previous.amount })
+        }))
         const newState = get(store)
         await storage.setItem<Loop>('local:chorus_loop', newState)
     }
 
     async function toggleLoop() {
-        update((loop) => ({ ...loop, looping: !loop.looping }))
+        update((loop) => ({
+            ...loop,
+            looping: !loop.looping,
+            ...(loop.type === 'amount' && { iteration: loop.amount })
+        }))
+
+        const newState = get(store)
+        await storage.setItem<Loop>('local:chorus_loop', newState)
+    }
+
+    async function decrement() {
+        update((state) => {
+            const newIteration = state.iteration - 1
+            return {
+                ...state,
+                iteration: newIteration == 0 ? state.amount : newIteration,
+                looping: newIteration > 0
+            }
+        })
         const newState = get(store)
         await storage.setItem<Loop>('local:chorus_loop', newState)
     }
@@ -46,15 +69,12 @@ function createLoopStore() {
         if (savedState) store.set(savedState)
     })
 
-    storage.watch('local:chorus_loop', (newValues) => {
-        if (newValues) store.set(newValues as Loop)
-    })
-
     return {
         subscribe,
         toggleType,
         toggleLoop,
         setIteration,
+        decrement,
         resetIteration
     }
 }
