@@ -5,14 +5,26 @@
     import { buttonVariants } from '$lib/components/ui/button'
 </script>
 
-<div class="border-none flex space-between">
+<div class="space-between flex border-none">
     <Popover.Root>
-        <Popover.Trigger class={buttonVariants({ variant: "ghost", size: "icon", class: "size-7 bg-transparent hover:bg-transparent border-none stroke-current [&_svg]:size-[1.125rem]" })}>
+        <Popover.Trigger
+            class={buttonVariants({
+                variant: 'ghost',
+                size: 'icon',
+                class: 'size-7 border-none bg-transparent stroke-current hover:bg-transparent [&_svg]:size-[1.125rem]'
+            })}
+        >
             <Tooltip.Provider>
                 <Tooltip.Root>
                     <Tooltip.Trigger>
-                        <svg id="settings-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-                            <g class="fill-green-400 stroke-green-400 stroke-2 stroke-linecap-round">
+                        <svg
+                            id="settings-icon"
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 24 24"
+                        >
+                            <g
+                                class="stroke-linecap-round fill-green-400 stroke-green-400 stroke-2"
+                            >
                                 <path d="M3 5h4m14 0H11m-8 7h12m6 0h-2M3 19h2m16 0H9" />
                                 <circle cx="9" cy="5" r="2" />
                                 <circle cx="17" cy="12" r="2" />
@@ -20,18 +32,22 @@
                             </g>
                         </svg>
                     </Tooltip.Trigger>
-                    <Tooltip.Content class="text-sm bg-background text-white p-2">
+                    <Tooltip.Content class="bg-background p-2 text-sm text-white">
                         <p>Settings</p>
                     </Tooltip.Content>
                 </Tooltip.Root>
             </Tooltip.Provider>
         </Popover.Trigger>
-        <Popover.Content customAnchor="[data-testid='CoverSlotCollapsed__container']" side="left" align="end" class="fixed bottom-20 left-[80px] h-[270px] w-[350px] outline-4 outline-[#28e269] outline-offset-0 rounded-md">
-            <div class="flex flex-col justify-center relative">
+        <Popover.Content
+            customAnchor="[data-testid='CoverSlotCollapsed__container']"
+            side="left"
+            align="end"
+            class="fixed bottom-20 left-[80px] h-[270px] w-[350px] rounded-md outline-4 outline-offset-0 outline-[#28e269]"
+        >
+            <div class="relative flex flex-col justify-center">
                 <h1 class="absolute top-0.5 lowercase">Chorus</h1>
                 <TabsList />
             </div>
         </Popover.Content>
     </Popover.Root>
 </div>
-
