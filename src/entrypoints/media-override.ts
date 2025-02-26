@@ -42,6 +42,15 @@ function mediaOverride() {
             equalizer = new Equalizer(audioManager)
             reverb = new Reverb(audioManager)
 
+            // Add timeupdate event listener
+            source.addEventListener('timeupdate', () => {
+                document.dispatchEvent(
+                    new CustomEvent('FROM_MEDIA_TIMEUPDATE', {
+                        detail: { currentTime: source.currentTime }
+                    })
+                )
+            })
+
             // Ensure direct connection to destination when no effects are active
             audioManager.disconnect()
         }

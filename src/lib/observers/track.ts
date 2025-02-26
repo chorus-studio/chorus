@@ -1,23 +1,27 @@
 import { get } from 'svelte/store'
-import { dataStore } from '$lib/stores/data'
-import { nowPlaying, type NowPlaying } from '$lib/stores/now-playing'
-import { snipStore, type Snip } from '$lib/stores/snip'
+import { loopStore } from '$lib/stores/loop'
 import { playback } from '$lib/utils/playback'
+import { nowPlaying } from '$lib/stores/now-playing'
+import { snipStore, type Snip } from '$lib/stores/snip'
 import type { SimpleTrack } from '$lib/stores/data/cache'
-import { currentSongInfo } from '$lib/utils/song'
 import { getPlayerService, type PlayerService } from '$lib/api/services/player'
 
 export class TrackObserver {
     private seeking: boolean = false
-    private timer: NodeJS.Timeout | null = null
     private playerService: PlayerService
+    private boundProcessTimeUpdate: (event: CustomEvent) => void
 
     constructor() {
         this.playerService = getPlayerService()
+        this.boundProcessTimeUpdate = this.processTimeUpdate.bind(this)
     }
 
     async initialize() {
         await this.processSongTransition()
+        document.addEventListener(
+            'FROM_MEDIA_TIMEUPDATE',
+            this.boundProcessTimeUpdate as EventListener
+        )
     }
 
     get currentSong() {
@@ -26,6 +30,10 @@ export class TrackObserver {
 
     get snip() {
         return get(snipStore)
+    }
+
+    get loop() {
+        return get(loopStore)
     }
 
     get muteButton() {
@@ -50,12 +58,12 @@ export class TrackObserver {
         const { end_time } = snip
         const endTimeMS = end_time * 1000 - 100
         const loopEndTimeMS = endTimeMS + 3000
-        return currentTimeMS >= Math.min(loopEndTimeMS, end_time * 1000)
+        return currentTimeMS > Math.min(loopEndTimeMS, end_time * 1000)
     }
 
     atSnipEnd({ currentTimeMS, track }: { currentTimeMS: number; track: SimpleTrack }) {
         const { end_time } = track
-        const atSongEnd = end_time === playback.duration()
+        const atSongEnd = end_time == playback.duration()!
         const endTimeMS = end_time * 1000 - (atSongEnd ? 100 : 0)
         return currentTimeMS >= endTimeMS
     }
@@ -82,11 +90,10 @@ export class TrackObserver {
             this.mute()
             return this.skipTrack()
         } else if (songInfo?.snipped) {
+            this.seeking = true
             this.mute()
             const { start_time } = songInfo
             const startTimeMS = start_time * 1000
-            const currentTimeMS = (this.currentSong?.current ?? 0) * 1000
-            this.seeking = true
             await this.playerService.seekTrackToPosition(startTimeMS)
             this.seeking = false
         }
@@ -94,36 +101,39 @@ export class TrackObserver {
         if (this.isMute) this.unMute()
     }
 
-    process() {
-        if (!this.currentSong) return
+    private processTimeUpdate(event: CustomEvent) {
+        const currentSong = this.currentSong
 
-        this.timer = setTimeout(() => {
+        if (!currentSong || this.seeking) return
+
+        setTimeout(async () => {
+            const currentTimeMS = event.detail.currentTime * 1000
             const currentSong = this.currentSong
             const snip = this.snip
 
-            if (!currentSong || this.seeking) return
-
-            const currentTimeMS = currentSong.current * 1000
-
-            if (snip && this.atTempSnipEnd({ currentTimeMS, snip })) {
-                return this.updateCurrentTime(snip.start_time)
+            if (this.snip && this.atTempSnipEnd({ currentTimeMS, snip: this.snip })) {
+                const start_time = this.snip.start_time
+                return this.updateCurrentTime(start_time)
             }
 
             if (currentSong.snipped && !this.atSnipEnd({ currentTimeMS, track: currentSong }))
                 return
 
-            if (currentSong.loop && snip?.is_shared && currentSong.current >= snip.end_time) {
-                return this.updateCurrentTime(snip.start_time)
+            if (this.loop.looping && this.atSnipEnd({ currentTimeMS, track: currentSong })) {
+                if (this.loop.type === 'amount') await loopStore.decrement()
+                return this.updateCurrentTime(currentSong.start_time)
             }
 
             if (snip?.is_shared && location?.search) history.pushState(null, '', location.pathname)
             if (currentSong.snipped || currentSong.blocked) this.skipTrack()
-        }, 100)
+        }, 0)
     }
 
     disconnect() {
-        if (this.timer) clearTimeout(this.timer)
-        this.timer = null
+        document.removeEventListener(
+            'FROM_MEDIA_TIMEUPDATE',
+            this.boundProcessTimeUpdate as EventListener
+        )
     }
 }
 
