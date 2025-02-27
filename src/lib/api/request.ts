@@ -1,15 +1,7 @@
-import { getState } from '$lib/utils/state'
-
 type RequestOptions = {
     method?: 'GET' | 'POST' | 'PUT' | 'DELETE'
     body?: Record<string, unknown> | null
     connect?: boolean
-}
-
-export type ChorusMetadata = {
-    auth_token: string
-    device_id: string
-    connection_id: string
 }
 
 type SetOptionsResponse = RequestInit & {

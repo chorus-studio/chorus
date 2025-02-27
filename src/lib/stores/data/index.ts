@@ -86,6 +86,10 @@ class DataStore {
         return Object.values(this.collectionObject)
     }
 
+    getTrack(track_id: string) {
+        return this.collectionObject[track_id]
+    }
+
     async updateTrack({ track_id, value }: { track_id: string; value: Partial<SimpleTrack> }) {
         this.cache.updateTrackInCollection({ track_id, value })
         const track = this.collectionObject[track_id]

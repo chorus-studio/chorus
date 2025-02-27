@@ -1,6 +1,6 @@
 import { storage } from '@wxt-dev/storage'
+import { setOptions, request } from '../request'
 import { defineProxyService } from '@webext-core/proxy-service'
-import { setOptions, request, type ChorusMetadata } from '../request'
 
 const API_URL = 'https://api.spotify.com/v1/me/player'
 

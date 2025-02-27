@@ -3,6 +3,7 @@
     import * as Tooltip from '$lib/components/ui/tooltip'
     import { buttonVariants } from '$lib/components/ui/button'
 
+    import { queue } from '$lib/observers/queue'
     import { dataStore } from '$lib/stores/data'
     import { trackObserver } from '$lib/observers/track'
     import { nowPlaying } from '$lib/stores/now-playing'
@@ -15,6 +16,7 @@
         isSkipped = !isSkipped
         if (track) {
             await dataStore.updateTrack({ track_id: track.track_id, value: { blocked: isSkipped } })
+            if (isSkipped) await queue.refreshQueue()
             if (track?.song_id === $nowPlaying.id) trackObserver?.skipTrack()
         }
     }

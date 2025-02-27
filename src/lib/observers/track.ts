@@ -1,6 +1,6 @@
 import { get } from 'svelte/store'
 import { loopStore } from '$lib/stores/loop'
-import { playback } from '$lib/utils/playback'
+import { queue } from '$lib/observers/queue'
 import { nowPlaying } from '$lib/stores/now-playing'
 import { snipStore, type Snip } from '$lib/stores/snip'
 import type { SimpleTrack } from '$lib/stores/data/cache'
@@ -18,6 +18,7 @@ export class TrackObserver {
 
     async initialize() {
         await this.processSongTransition()
+        await queue.refreshQueue()
         document.addEventListener(
             'FROM_MEDIA_TIMEUPDATE',
             this.boundProcessTimeUpdate as EventListener
@@ -107,6 +108,7 @@ export class TrackObserver {
         }
 
         if (this.isMute) this.unMute()
+        await queue.refreshQueue()
     }
 
     private async processTimeUpdate(event: CustomEvent) {

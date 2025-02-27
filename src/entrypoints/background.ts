@@ -1,11 +1,11 @@
 import { storage } from '@wxt-dev/storage'
 import type { NowPlaying } from '$lib/stores/now-playing'
-import type { ChorusMetadata } from '$lib/api/request'
 import { getState, setState } from '$lib/utils/state'
 import { chorusKeys, mediaKeys } from '$lib/utils/selectors'
 import { activeOpenTab } from '$lib/utils/messaging'
 import { registerTrackService } from '$lib/api/services/track'
 import { registerPlayerService } from '$lib/api/services/player'
+import { registerQueueService } from '$lib/api/services/queue'
 
 export default defineBackground(() => {
     let ENABLED = true
@@ -151,6 +151,7 @@ export default defineBackground(() => {
 
     registerTrackService()
     registerPlayerService()
+    registerQueueService()
 
     browser.webRequest.onBeforeRequest.addListener(
         (details) => {

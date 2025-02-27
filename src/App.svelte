@@ -2,9 +2,10 @@
     import { onMount } from 'svelte'
     import { ModeWatcher } from 'mode-watcher'
     import { nowPlaying } from '$lib/stores/now-playing'
+    import { QueueObserver } from '$lib/observers/queue'
+    import { trackObserver } from '$lib/observers/track'
     import { PlaybackObserver } from '$lib/observers/playback'
     import { TracklistObserver } from '$lib/observers/tracklist'
-    import { trackObserver } from '$lib/observers/track'
 
     import SkipButton from '$lib/components/SkipButton.svelte'
     import HeartButton from '$lib/components/HeartButton.svelte'
@@ -35,12 +36,15 @@
         playbackObserver.observe()
         const tracklistObserver = new TracklistObserver()
         tracklistObserver.observe()
+        const queueObserver = new QueueObserver()
+        queueObserver.observe()
 
         return () => {
             nowPlaying.disconnect()
             playbackObserver.disconnect()
             tracklistObserver.disconnect()
             trackObserver.disconnect()
+            queueObserver.disconnect()
         }
     })
 </script>
