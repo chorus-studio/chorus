@@ -1,11 +1,11 @@
 <script lang="ts">
     import { dataStore } from '$lib/stores/data'
+    import { trackObserver } from '$lib/observers/track'
     import { nowPlaying } from '$lib/stores/now-playing'
 
     import { Ban } from 'lucide-svelte'
     import * as Tooltip from '$lib/components/ui/tooltip'
     import { buttonVariants } from '$lib/components/ui/button'
-    import { trackObserver } from '$lib/observers/track'
 
     function highlightInTrackList() {
         const rowsQuery = document.querySelectorAll('[data-testid="tracklist-row"]')
@@ -21,17 +21,17 @@
 
         if (!context) return
 
-        const skipIcon = context.querySelector('button[role="skip"]')
-        if (!skipIcon) return
+        const blockIcon = context.querySelector('button[role="block"]')
+        if (!blockIcon) return
 
-        const svg = skipIcon.querySelector('svg')
+        const svg = blockIcon.querySelector('svg')
         if (!svg) return
 
-        skipIcon.setAttribute('aria-label', 'Block Track')
+        blockIcon.setAttribute('aria-label', 'Block Track')
         svg.style.stroke = '#1ed760'
     }
 
-    async function handleSkip() {
+    async function handleBlock() {
         if ($nowPlaying.track_id) {
             nowPlaying.set({ ...$nowPlaying, blocked: true })
             await dataStore.updateTrack({
@@ -48,9 +48,10 @@
 <Tooltip.Provider>
     <Tooltip.Root>
         <Tooltip.Trigger
-            role="skip"
+            role="block"
+            id="chorus-block"
             aria-label="Block Track"
-            onclick={handleSkip}
+            onclick={handleBlock}
             class={buttonVariants({
                 variant: 'ghost',
                 size: 'icon',

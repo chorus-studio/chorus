@@ -8,6 +8,7 @@
 <div class="space-between flex border-none">
     <Popover.Root>
         <Popover.Trigger
+            id="chorus-settings"
             class={buttonVariants({
                 variant: 'ghost',
                 size: 'icon',

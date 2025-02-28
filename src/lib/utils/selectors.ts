@@ -1,4 +1,5 @@
 const mediaKeys = {
+    dj: '[data-testid="control-button-npv"]',
     repeat: '[data-testid="control-button-repeat"]',
     shuffle: '[data-testid="control-button-shuffle"]',
     next: '[data-testid="control-button-skip-forward"]',
@@ -9,11 +10,11 @@ const mediaKeys = {
 
 const chorusKeys = {
     loop: '#loop-button',
-    settings: '#chorus-icon',
-    'block-track': '#chorus-skip',
     'seek-rewind': '#seek-player-rw-button',
     'seek-forward': '#seek-player-ff-button',
-    'save/unsave': '[data-testid="now-playing-widget"] > div #chorus-heart'
+    settings: '[data-testid="now-playing-widget"] div#chorus-ui #chorus-settings',
+    'save/unsave': '[data-testid="now-playing-widget"] div#chorus-ui #chorus-heart',
+    'block-track': '[data-testid="now-playing-widget"] div#chorus-ui #chorus-block'
 }
 
 export { mediaKeys, chorusKeys }
