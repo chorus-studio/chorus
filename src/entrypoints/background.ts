@@ -1,11 +1,10 @@
 import { storage } from '@wxt-dev/storage'
-import type { NowPlaying } from '$lib/stores/now-playing'
-import { getState, setState } from '$lib/utils/state'
-import { chorusKeys, mediaKeys } from '$lib/utils/selectors'
 import { activeOpenTab } from '$lib/utils/messaging'
+import type { NowPlaying } from '$lib/stores/now-playing'
+import { chorusKeys, mediaKeys } from '$lib/utils/selectors'
 import { registerTrackService } from '$lib/api/services/track'
-import { registerPlayerService } from '$lib/api/services/player'
 import { registerQueueService } from '$lib/api/services/queue'
+import { registerPlayerService } from '$lib/api/services/player'
 
 export default defineBackground(() => {
     let ENABLED = true
@@ -41,80 +40,10 @@ export default defineBackground(() => {
 
     registerScripts()
 
-    async function getUIState({
-        selector,
-        tabId,
-        delay = 0
-    }: {
-        selector: string
-        tabId: number
-        delay?: number
-    }) {
-        const [result] = await browser.scripting.executeScript({
-            args: [selector, delay],
-            target: { tabId },
-            func: (selector, delay) =>
-                new Promise((resolve) => {
-                    setTimeout(() => {
-                        resolve(
-                            document
-                                .querySelector(selector as string)
-                                ?.getAttribute('aria-label')
-                                ?.toLowerCase()
-                        )
-                    }, delay as number)
-                })
-        })
-
-        return result?.result
-    }
-
-    async function getMediaControlsState(tabId: number) {
-        const requiredKeys = [
-            'repeat',
-            'shuffle',
-            'play/pause',
-            'seek-rewind',
-            'seek-fastforward',
-            'loop',
-            'save/unsave'
-        ]
-        const selectorKeys = { ...mediaKeys, ...chorusKeys }
-        const selectors = requiredKeys
-            .map((key) => selectorKeys[key as keyof typeof selectorKeys] ?? undefined)
-            .filter(Boolean)
-        const promises = selectors.map(
-            (selector) =>
-                new Promise((resolve) => {
-                    if (selector.search(/(loop)|(heart)/g) < 0) {
-                        return resolve(getUIState({ selector, tabId }))
-                    }
-                    return setTimeout(() => resolve(getUIState({ selector, tabId })), 500)
-                })
-        )
-
-        const results = await Promise.allSettled(promises)
-        return results.map((item, idx) => ({
-            data: item.status === 'fulfilled' ? item.value : null,
-            key: requiredKeys[idx]
-        }))
-    }
-
-    async function setMediaState({ active, tabId }: { active: boolean; tabId?: number }) {
-        popupPort?.postMessage({ type: 'ui-state', data: { active } })
-
-        if (!active || !tabId) return
-
-        const state = await getMediaControlsState(tabId)
-        return popupPort?.postMessage({ type: 'state', data: state })
-    }
-
     browser.runtime.onConnect.addListener(async (port) => {
         if (port.name !== 'popup') return
 
         popupPort = port
-        const { active, tabId } = await activeOpenTab()
-        await setMediaState({ active, tabId })
 
         port.onMessage.addListener(async (message) => {
             if (message?.type == 'current_time') {
@@ -136,14 +65,7 @@ export default defineBackground(() => {
 
             if (message?.type !== 'controls') return
 
-            const executeResult = await executeButtonClick({ command: message.key })
-            if (!executeResult?.selector || !executeResult?.tabId) return
-
-            const { selector, tabId } = executeResult
-            const delay = selector.includes('heart') ? 500 : 0
-            const result = await getUIState({ selector, tabId, delay })
-
-            port.postMessage({ type: 'controls', data: { key: message.key, result } })
+            await executeButtonClick({ command: message.key })
         })
 
         port.onDisconnect.addListener(() => (popupPort = null))
@@ -235,10 +157,7 @@ export default defineBackground(() => {
         const { active, tabId } = await activeOpenTab()
         if (!active || !tabId) return
 
-        if (command == 'on/off') {
-            const enabled = await getState('enabled')
-            return await setState({ key: 'enabled', values: !enabled })
-        }
+        if (command == 'on/off') return
 
         const selector =
             chorusKeys[command as keyof typeof chorusKeys] ||
@@ -252,7 +171,12 @@ export default defineBackground(() => {
             args: [selector],
             target: { tabId },
             func: (selector) => {
-                ;(document.querySelector(selector) as HTMLElement)?.click()
+                if (!selector.includes('control-button-npv')) {
+                    return (document.querySelector(selector) as HTMLElement)?.click()
+                }
+                const target = document.querySelector(selector) as HTMLElement
+                const djButton = target.previousElementSibling as HTMLElement
+                djButton?.click()
             }
         })
 

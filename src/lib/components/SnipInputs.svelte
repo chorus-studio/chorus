@@ -1,13 +1,12 @@
 <script lang="ts">
     import { snipStore } from '$lib/stores/snip'
+    import { mediaStore } from '$lib/stores/media'
     import { nowPlaying } from '$lib/stores/now-playing'
     import { formatTimeInSeconds, timeToSeconds, secondsToTime } from '$lib/utils/time'
 
     import { Input } from '$lib/components/ui/input'
     import { Label } from '$lib/components/ui/label'
-    import { Switch } from '$lib/components/ui/switch'
-
-    let timeout: NodeJS.Timeout
+    import { Button } from '$lib/components/ui/button'
 
     type SnipKey = 'start_time' | 'end_time'
 
@@ -29,7 +28,6 @@
         const updatedTime = timeToSeconds(value!)
         if (updatedTime) {
             snipStore.set({ ...$snipStore, [id]: updatedTime, last_updated: updatedHandle })
-            console.log('snipinputs setting current time to', updatedTime)
             nowPlaying.setCurrentTime(updatedTime)
         }
     }
@@ -48,51 +46,107 @@
         return true
     }
 
-    function handleLoopChange(checked: boolean) {
-        nowPlaying.update((prev) => ({ ...prev, loop: checked }))
+    function handlePlayPause() {
+        const playPauseButton = document.querySelector(
+            '[data-testid="control-button-playpause'
+        ) as HTMLButtonElement
+        playPauseButton?.click()
+    }
+
+    function restart() {
+        if (!$snipStore) return
+        nowPlaying.setCurrentTime($snipStore.start_time!)
     }
 </script>
 
 {#if $snipStore}
-    <div class="grid w-full grid-cols-2">
-        <div class="flex flex-col items-center gap-y-1.5">
+    <p class="-mt-3 flex w-full text-xs text-muted-foreground">
+        * while editing "end", track plays 3 secs past set end
+    </p>
+
+    <div class="-mt-2 grid w-full grid-cols-2">
+        <div class="flex flex-col items-center gap-y-1">
             <div class="flex h-6 items-center">
                 <Label
                     for="start_time"
-                    class="h-6 w-12 min-w-12 border-none bg-zinc-700 px-2 py-0 pb-[0.125rem] text-center text-base font-bold lowercase leading-5"
+                    class="h-6 w-12 min-w-12 border-none bg-zinc-700 px-2 py-0 pb-[0.075rem] text-center text-base font-bold lowercase leading-5"
                     >Start</Label
                 >
                 <Input
                     id="start_time"
                     value={formatTimeInSeconds($snipStore.start_time!)}
                     onchange={handleChange}
-                    class="h-6 w-full rounded-none border-none bg-[green] pl-0 text-end text-base font-bold text-white"
+                    class="h-6 w-full rounded-none border-none bg-[green] pr-1 text-end text-base font-bold text-white"
                 />
             </div>
             <div class="flex w-full items-center">
                 <Label
                     for="end_time"
-                    class="h-6 w-12 min-w-12 border-none bg-zinc-700 px-2 py-0 pb-[0.125rem] text-center text-base font-bold lowercase leading-5"
+                    class="h-6 w-12 min-w-12 border-none bg-zinc-700 px-2 py-0 pb-[0.075rem] text-center text-base font-bold lowercase leading-5"
                     >End</Label
                 >
                 <Input
                     id="end_time"
                     value={formatTimeInSeconds($snipStore.end_time!)}
                     onchange={handleChange}
-                    class="h-6 w-full rounded-none border-none bg-[green] pl-0 text-end text-base font-bold lowercase text-white"
+                    class="h-6 w-full rounded-none border-none bg-[green] pr-1 text-end text-base font-bold lowercase text-white"
                 />
             </div>
         </div>
 
-        <!-- <div class="flex items-center justify-end gap-x-2">
-            <Label for="loop" class="py-0 pb-[0.125rem] text-base font-bold lowercase"
+        <div class="flex w-full flex-col items-center gap-1">
+            <p class="text-sm text-muted-foreground">
+                snip length: {secondsToTime($snipStore.end_time! - $snipStore.start_time!)}
+            </p>
+            <div class="flex items-center justify-between gap-x-2">
+                <Button
+                    size="icon"
+                    variant="ghost"
+                    onclick={restart}
+                    class="size-7 rounded-full border-none bg-transparent stroke-current hover:bg-transparent [&_svg]:size-[1.5rem]"
+                >
+                    <svg
+                        class="h-6 w-6 fill-none stroke-current stroke-[5]"
+                        viewBox="0 0 64 64"
+                        xmlns="http://www.w3.org/2000/svg"
+                        preserveAspectRatio="xMidYMid meet"
+                    >
+                        <path d="M34.46,53.91A21.91,21.91,0,1,0,12.55,31.78"></path>
+                        <polyline points="4.65 22.33 12.52 32.62 22.81 24.75"></polyline>
+                    </svg>
+                </Button>
+                <Button
+                    size="icon"
+                    variant="ghost"
+                    onclick={handlePlayPause}
+                    class="size-7 rounded-full bg-transparent stroke-current hover:bg-transparent [&_svg]:size-[1.5rem]"
+                >
+                    <svg
+                        class="h-6 w-6 fill-none stroke-current stroke-1"
+                        viewBox="-4 -4 24 24"
+                        xmlns="http://www.w3.org/2000/svg"
+                        preserveAspectRatio="xMidYMid meet"
+                    >
+                        {#if $mediaStore.play}
+                            <path
+                                d="M3 1.713a.7.7 0 0 1 1.05-.607l10.89 6.288a.7.7 0 0 1 0 1.212L4.05 14.894A.7.7 0 0 1 3 14.288V1.713z"
+                            />
+                        {:else}
+                            <path
+                                d="M2.7 1a.7.7 0 0 0-.7.7v12.6a.7.7 0 0 0 .7.7h2.6a.7.7 0 0 0 .7-.7V1.7a.7.7 0 0 0-.7-.7H2.7zm8 0a.7.7 0 0 0-.7.7v12.6a.7.7 0 0 0 .7.7h2.6a.7.7 0 0 0 .7-.7V1.7a.7.7 0 0 0-.7-.7h-2.6z"
+                            />
+                        {/if}
+                    </svg></Button
+                >
+            </div>
+            <!-- <Label for="loop" class="py-0 pb-[0.125rem] text-base font-bold lowercase"
                 >Auto Loop</Label
-            >
-            <Switch
+            > -->
+            <!-- <Switch
                 id="loop"
                 checked={$nowPlaying.loop ?? false}
                 onCheckedChange={handleLoopChange}
-            />
-        </div> -->
+            /> -->
+        </div>
     </div>
 {/if}

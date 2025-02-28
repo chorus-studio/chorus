@@ -10,10 +10,10 @@
         'shuffle',
         'seek-rewind',
         'previous',
-        $mediaStore.play ? 'play' : 'pause',
+        $mediaStore.playing ? 'pause' : 'play',
         'next',
         'seek-forward',
-        $mediaStore.repeat == 'one' ? 'repeat1' : 'repeat'
+        $mediaStore.dj ? 'dj' : $mediaStore.repeat == 'one' ? 'repeat1' : 'repeat'
     ])
     const seek = { viewBox: '0 0 64 64', strokeWidth: 7 }
     const repeat = { strokeWidth: 0.5, size: 24 }
@@ -28,6 +28,11 @@
         },
         next: {
             size: 24
+        },
+        dj: {
+            size: 20,
+            viewBox: '-2 -2 20 20',
+            strokeWidth: 0.5
         },
         'save/unsave': {
             viewBox: '-3 -5 24 24',
@@ -64,13 +69,12 @@
                 'shuffle',
                 'seek-rewind',
                 'previous',
-                state.play ? 'play' : 'pause',
+                state.playing ? 'pause' : 'play',
                 'next',
                 'seek-forward',
-                state.repeat == 'one' ? 'repeat1' : 'repeat'
+                state.dj ? 'dj' : state.repeat == 'one' ? 'repeat1' : 'repeat'
             ]
         })
-
         return () => unsubscribe()
     })
 </script>

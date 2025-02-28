@@ -1,32 +1,100 @@
-import { writable, get } from 'svelte/store'
 import { storage } from '@wxt-dev/storage'
+import { writable, get } from 'svelte/store'
 
 export type Media = {
-    play: boolean
-    repeat: 'none' | 'default' | 'one'
-    shuffle: boolean
-    loop: boolean
-    rewind: number
-    forward: number
+    dj: boolean
     saved: boolean
+    playing: boolean
+    shuffle: boolean
+    repeat: 'none' | 'default' | 'one'
 }
 
 const defaultMedia: Media = {
-    play: false,
+    dj: false,
+    saved: false,
+    playing: false,
     repeat: 'none',
-    shuffle: false,
-    loop: false,
-    rewind: 10,
-    forward: 10,
-    saved: false
+    shuffle: false
 }
 
 function createMediaStore() {
     const store = writable<Media>(defaultMedia)
+    const { subscribe, set, update } = store
 
-    const { subscribe, set } = store
+    let observer: MutationObserver | null = null
 
-    storage.getItem<Media>('local:chorus_media').then((value) => {
+    async function observe() {
+        const target = document.querySelector('[data-testid="now-playing-bar"]')
+        if (!target) return
+
+        observer = new MutationObserver(handleMutations)
+        observer.observe(target, {
+            childList: true,
+            subtree: true,
+            attributes: true,
+            attributeFilter: ['aria-label']
+        })
+        await updateState()
+    }
+
+    async function handleMutations(mutations: MutationRecord[]) {
+        for (const mutation of mutations) {
+            const target = mutation.target as HTMLElement
+            const isHeart = target.id === 'chorus-ui'
+            const isSpotifyControls =
+                mutation.type == 'attributes' &&
+                target.localName === 'button' &&
+                mutation.attributeName === 'aria-label'
+
+            if (isHeart || isSpotifyControls) await updateState()
+        }
+    }
+
+    function updateStateByKeys({ key, target }: { key: string; target: HTMLElement }) {
+        const label = target.getAttribute('aria-label')
+        if (!label) return
+        else if (key === 'playing') {
+            update((state) => ({ ...state, [key]: label == 'Pause' }))
+        } else if (key === 'saved') {
+            update((state) => ({ ...state, [key]: label.includes('Remove') }))
+        } else if (key === 'repeat') {
+            update((state) => ({
+                ...state,
+                [key]: label.includes('Disable')
+                    ? 'one'
+                    : label.includes('one')
+                      ? 'default'
+                      : 'none'
+            }))
+        } else if (key === 'shuffle') {
+            update((state) => ({ ...state, [key]: label.includes('Disable') }))
+        }
+    }
+
+    async function updateState() {
+        const targetMap = {
+            '#chorus-ui > button[role="heart"]': 'saved',
+            '[data-testid="control-button-npv"]': 'dj',
+            '[data-testid="control-button-playpause"]': 'playing',
+            '[data-testid="control-button-repeat"]': 'repeat',
+            '[data-testid="control-button-shuffle"]': 'shuffle'
+        }
+
+        for (const key in targetMap) {
+            const target = document.querySelector(key) as HTMLElement
+            if (!target) continue
+
+            if (key == '[data-testid="control-button-npv"]') {
+                const newTarget = target.previousElementSibling as HTMLElement
+                update((state) => ({ ...state, dj: !!newTarget }))
+            } else {
+                updateStateByKeys({ key: targetMap[key as keyof typeof targetMap], target })
+            }
+        }
+        await storage.setItem('local:chorus_media', get(store))
+    }
+
+    storage.getItem<Media>('local:chorus_media', { fallback: defaultMedia }).then((value) => {
         if (value) set(value)
     })
 
@@ -34,62 +102,17 @@ function createMediaStore() {
         if (value) set(value)
     })
 
-    async function updateMedia(data: { key: string; data: string; type?: string }[]) {
-        const currentState = get(store)
-
-        data.filter(({ data }) => data).forEach(({ key, data, type }) => {
-            switch (key) {
-                case 'loop':
-                    currentState.loop = data.includes('remove')
-                    break
-                case 'repeat': {
-                    if (type == 'state') {
-                        currentState.repeat = data?.includes('disable')
-                            ? 'none'
-                            : data?.includes('one')
-                              ? 'one'
-                              : 'default'
-                    } else {
-                        currentState.repeat = data?.includes('one')
-                            ? 'default'
-                            : data?.includes('disable')
-                              ? 'one'
-                              : 'none'
-                    }
-                    break
-                }
-                case 'shuffle':
-                    currentState.shuffle =
-                        type == 'state' ? data?.includes('disable') : data?.includes('enable')
-                    break
-                case 'save/unsave':
-                    currentState.saved = data?.includes('remove')
-                    break
-                case 'seek-rewind':
-                    currentState.rewind = Number(data?.split(' ')?.at(-1) ?? 10)
-                    break
-                case 'seek-forward':
-                    currentState.forward = Number(data?.split(' ')?.at(-1) ?? 10)
-                    break
-                case 'play/pause':
-                    currentState.play = type == 'state' ? data == 'pause' : data?.includes('pause')
-                    break
-            }
-        })
-
-        set(currentState)
-        await storage.setItem('local:media', currentState)
-    }
-
-    async function updateKey(data: { key: string; data: any; type?: string }[]) {
-        await updateMedia(data)
+    function disconnect() {
+        observer?.disconnect()
+        observer = null
     }
 
     return {
         subscribe,
         set,
-        updateMedia,
-        updateKey
+        observe,
+        updateState,
+        disconnect
     }
 }
 

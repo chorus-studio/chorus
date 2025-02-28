@@ -111,7 +111,6 @@ export class QueueObserver {
 
     handleMutation = (mutations: MutationRecord[]) => {
         for (const mutation of mutations) {
-            console.log('mutation: ', mutation)
             if (!this.isAsideQueueView(mutation)) return
 
             if (this.timeout) clearTimeout(this.timeout)

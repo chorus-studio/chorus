@@ -12,12 +12,16 @@
 <div class="space-between flex border-none">
     <HoverCard.Root>
         <HoverCard.Trigger
+            role="loop"
             id="loop-button"
             onclick={toggleLoop}
+            aria-label={$loopStore.looping
+                ? `Disable ${$loopStore.type} loop`
+                : `Enable ${$loopStore.type} loop`}
             class={buttonVariants({
                 variant: 'ghost',
                 size: 'icon',
-                class: 'relative size-8 border-none bg-transparent stroke-current hover:bg-transparent [&_svg]:size-[1.125rem]'
+                class: 'relative size-8 border-none bg-transparent hover:bg-transparent [&_svg]:size-[1.125rem]'
             })}
         >
             {#if $loopStore.looping}

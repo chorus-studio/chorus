@@ -1,6 +1,7 @@
 <script lang="ts">
     import { onMount } from 'svelte'
     import { ModeWatcher } from 'mode-watcher'
+    import { mediaStore } from '$lib/stores/media'
     import { nowPlaying } from '$lib/stores/now-playing'
     import { QueueObserver } from '$lib/observers/queue'
     import { trackObserver } from '$lib/observers/track'
@@ -11,23 +12,9 @@
     import HeartButton from '$lib/components/HeartButton.svelte'
     import SettingsPopover from '$lib/components/SettingsPopover.svelte'
 
-    function removeAddToPlaylistButton() {
-        const addToPlaylistButton = document.querySelector(
-            '[data-testid="now-playing-widget"] > div > button[data-encore-id="buttonTertiary"]'
-        ) as HTMLButtonElement
-        const parent = addToPlaylistButton?.parentElement
-        if (parent) {
-            parent.style.margin = '0'
-            parent.style.gap = '0'
-        }
-        if (addToPlaylistButton) {
-            addToPlaylistButton.style.visibility = 'hidden'
-        }
-    }
-
     async function init() {
-        removeAddToPlaylistButton()
         await nowPlaying.observe()
+        await mediaStore.observe()
     }
 
     onMount(() => {
@@ -41,6 +28,7 @@
 
         return () => {
             nowPlaying.disconnect()
+            mediaStore.disconnect()
             playbackObserver.disconnect()
             tracklistObserver.disconnect()
             trackObserver.disconnect()
@@ -50,7 +38,7 @@
 </script>
 
 <ModeWatcher defaultMode="dark" />
-<div class="flex items-center justify-between">
+<div id="chorus-ui" class="flex items-center justify-between">
     <HeartButton />
     <SettingsPopover />
     <SkipButton />

@@ -7,11 +7,11 @@
 
 <div class="flex flex-col text-[var(--text)] {isPopup ? 'h-16 justify-center gap-y-2' : ''}">
     <ScrollingText
-        text={$nowPlaying.title!}
+        text={$nowPlaying.title! ?? 'UP NEXT'}
         className="text-sm font-semibold text-[var(--text)] brightness-75"
     />
     <ScrollingText
-        text={$nowPlaying.artist!}
+        text={$nowPlaying.artist! ?? 'DJ X'}
         className="text-sm font-semibold text-[var(--text)] brightness-75"
     />
 </div>

@@ -7,7 +7,13 @@
 
     function handleClick() {
         const type = role == 'seek-forward' ? 'skip_forward' : 'skip_back'
-        const value = isForward ? (isLongForm ? $seekStore.long_form.forward : $seekStore.default.forward) : (isLongForm ? $seekStore.long_form.rewind : $seekStore.default.rewind)
+        const value = isForward
+            ? isLongForm
+                ? $seekStore.long_form.forward
+                : $seekStore.default.forward
+            : isLongForm
+              ? $seekStore.long_form.rewind
+              : $seekStore.default.rewind
         document.dispatchEvent(
             new CustomEvent('FROM_CHORUS_EXTENSION', {
                 detail: { type: 'seek', data: { type, value } }
@@ -18,26 +24,48 @@
     const id = role == 'seek-forward' ? 'seek-player-ff-button' : 'seek-player-rw-button'
     $: isForward = role == 'seek-forward'
     $: isLongForm = $seekStore.is_long_form
-    $: seekValue = isForward ? (isLongForm ? $seekStore.long_form.forward : $seekStore.default.forward) : (isLongForm ? $seekStore.long_form.rewind : $seekStore.default.rewind)
+    $: seekValue = isForward
+        ? isLongForm
+            ? $seekStore.long_form.forward
+            : $seekStore.default.forward
+        : isLongForm
+          ? $seekStore.long_form.rewind
+          : $seekStore.default.rewind
 </script>
 
 <Tooltip.Provider>
     <Tooltip.Root>
         <Tooltip.Trigger
-            id={id}
+            {id}
             onclick={handleClick}
             aria-label={role == 'seek-forward' ? 'Seek forward' : 'Seek backward'}
-            class={buttonVariants({ variant: 'ghost', size: 'icon', class: 'relative flex items-center justify-center size-8 px-0 bg-transparent hover:bg-transparent border-none stroke-current [&_svg]:size-[1.5rem]' })}
+            class={buttonVariants({
+                variant: 'ghost',
+                size: 'icon',
+                class: 'relative flex size-8 items-center justify-center border-none bg-transparent stroke-none px-0 hover:bg-transparent [&_svg]:size-[1.5rem]'
+            })}
         >
-            <span class="absolute top-1/2 text-center font-bold text-xs bg-transparent {role == 'seek-forward' ? 'left-[50%]' : 'right-[50%]'}">
+            <span
+                class="absolute top-1/2 bg-transparent text-center text-xs font-bold {role ==
+                'seek-forward'
+                    ? 'left-[50%]'
+                    : 'right-[50%]'}"
+            >
                 {seekValue}
             </span>
-            <svg class="stroke-[5] -z-10 stroke-current fill-none w-6 h-6 {role == 'seek-forward' ? 'scale-x-[-1]' : ''}" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
+            <svg
+                class="-z-10 h-6 w-6 fill-none stroke-current stroke-[5] {role == 'seek-forward'
+                    ? 'scale-x-[-1]'
+                    : ''}"
+                viewBox="0 0 64 64"
+                xmlns="http://www.w3.org/2000/svg"
+                preserveAspectRatio="xMidYMid meet"
+            >
                 <path d="M34.46,53.91A21.91,21.91,0,1,0,12.55,31.78"></path>
                 <polyline points="4.65 22.33 12.52 32.62 22.81 24.75"></polyline>
             </svg>
         </Tooltip.Trigger>
-        <Tooltip.Content class="text-sm bg-background text-white p-2">
+        <Tooltip.Content class="bg-background p-2 text-sm text-white">
             <p>{role == 'seek-forward' ? `Seek forward` : `Seek backward`}</p>
         </Tooltip.Content>
     </Tooltip.Root>

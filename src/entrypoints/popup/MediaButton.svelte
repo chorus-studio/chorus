@@ -1,7 +1,7 @@
 <script lang="ts">
+    import { loopStore } from '$lib/stores/loop'
     import { seekStore } from '$lib/stores/seek'
     import { mediaStore } from '$lib/stores/media'
-    import { nowPlaying } from '$lib/stores/now-playing'
     import { Button } from '$lib/components/ui/button'
 
     const SVG_PATHS: Record<string, string> = {
@@ -20,11 +20,13 @@
         repeat: '<path d="M0 4.75A3.75 3.75 0 0 1 3.75 1h8.5A3.75 3.75 0 0 1 16 4.75v5a3.75 3.75 0 0 1-3.75 3.75H9.81l1.018 1.018a.75.75 0 1 1-1.06 1.06L6.939 12.75l2.829-2.828a.75.75 0 1 1 1.06 1.06L9.811 12h2.439a2.25 2.25 0 0 0 2.25-2.25v-5a2.25 2.25 0 0 0-2.25-2.25h-8.5A2.25 2.25 0 0 0 1.5 4.75v5A2.25 2.25 0 0 0 3.75 12H5v1.5H3.75A3.75 3.75 0 0 1 0 9.75v-5z"/>',
         repeat1:
             '<path d="M0 4.75A3.75 3.75 0 0 1 3.75 1h.75v1.5h-.75A2.25 2.25 0 0 0 1.5 4.75v5A2.25 2.25 0 0 0 3.75 12H5v1.5H3.75A3.75 3.75 0 0 1 0 9.75v-5zM12.25 2.5h-.75V1h.75A3.75 3.75 0 0 1 16 4.75v5a3.75 3.75 0 0 1-3.75 3.75H9.81l1.018 1.018a.75.75 0 1 1-1.06 1.06L6.939 12.75l2.829-2.828a.75.75 0 1 1 1.06 1.06L9.811 12h2.439a2.25 2.25 0 0 0 2.25-2.25v-5a2.25 2.25 0 0 0-2.25-2.25z"/><path d="M9.12 8V1H7.787c-.128.72-.76 1.293-1.787 1.313V3.36h1.57V8h1.55z"/>',
-        loop: '<path xmlns="http://www.w3.org/2000/svg" d="m16 28.0063c-4.6831 0-8.49375-3.8075-8.5-8.4894-.005-.4138.02437-5.6125 4.245-9.91878.3962-.40437.8162-.78749 1.2575-1.14874-2.55-.96375-5.92312-1.44938-9.5025-1.44938-.82812 0-1.5-.67188-1.5-1.5s.67188-1.5 1.5-1.5c4.8675 0 9.2506.83875 12.5106 2.50062 3.2563-1.65375 7.6325-2.48812 12.4894-2.48812.8281 0 1.5.67188 1.5 1.5 0 .82813-.6719 1.5-1.5 1.5-3.5712 0-6.9388.48312-9.485 1.44187.4337.35563.8456.73188 1.2356 1.13 4.2219 4.30563 4.2544 9.50443 4.25 9.92003v.0025c-.0006 4.6862-3.8137 8.4994-8.5006 8.4994zm.0081-18.04255c-.7818.51185-1.4887 1.08995-2.12 1.73435-3.4331 3.5025-3.3887 7.7356-3.3881 7.7781v.0301c0 3.0325 2.4675 5.5 5.5 5.5s5.5-2.4675 5.5-5.5v-.0388c0-.1538-.0406-4.3962-3.43-7.8219-.6163-.6231-1.3037-1.1837-2.0619-1.68185z"/>'
+        loop: '<path xmlns="http://www.w3.org/2000/svg" d="m16 28.0063c-4.6831 0-8.49375-3.8075-8.5-8.4894-.005-.4138.02437-5.6125 4.245-9.91878.3962-.40437.8162-.78749 1.2575-1.14874-2.55-.96375-5.92312-1.44938-9.5025-1.44938-.82812 0-1.5-.67188-1.5-1.5s.67188-1.5 1.5-1.5c4.8675 0 9.2506.83875 12.5106 2.50062 3.2563-1.65375 7.6325-2.48812 12.4894-2.48812.8281 0 1.5.67188 1.5 1.5 0 .82813-.6719 1.5-1.5 1.5-3.5712 0-6.9388.48312-9.485 1.44187.4337.35563.8456.73188 1.2356 1.13 4.2219 4.30563 4.2544 9.50443 4.25 9.92003v.0025c-.0006 4.6862-3.8137 8.4994-8.5006 8.4994zm.0081-18.04255c-.7818.51185-1.4887 1.08995-2.12 1.73435-3.4331 3.5025-3.3887 7.7356-3.3881 7.7781v.0301c0 3.0325 2.4675 5.5 5.5 5.5s5.5-2.4675 5.5-5.5v-.0388c0-.1538-.0406-4.3962-3.43-7.8219-.6163-.6231-1.3037-1.1837-2.0619-1.68185z"/>',
+        dj: '<path d="M7.813 14.497A6.5 6.5 0 0 1 1.5 8.016c.008-3.553 2.71-5.744 5.043-6.078.85-.121 1.288.037 1.564.246.312.238.553.639.822 1.276.077.184.156.386.239.602.451 1.167 1.05 2.717 2.505 3.81 1.01.76 1.46 1.529 1.592 2.209.13.679-.037 1.375-.468 2.03-.88 1.34-2.793 2.388-4.844 2.388-.046 0-.093 0-.14-.002Zm-.037 1.5A8 8 0 1 0 0 8.032c0 4.34 3.464 7.87 7.776 7.965Zm6.666-7.124c-.358-.788-.979-1.532-1.868-2.2-1.082-.813-1.51-1.9-1.967-3.06a30.59 30.59 0 0 0-.296-.736 6.285 6.285 0 0 0-.605-1.151 6.529 6.529 0 0 1 4.39 4.01 6.485 6.485 0 0 1 .346 3.137Z"></path>'
     }
 
     const { icon, viewBox = '-4 -4 24 24', size = 20, strokeWidth = 0.125, handleClick } = $props()
 
+    const isDJ = icon === 'dj'
     const isPlayPause = icon === 'play' || icon === 'pause'
     const isSeek = icon.startsWith('seek')
     const isRepeat = ['shuffle', 'loop', 'repeat', 'repeat1'].includes(icon)
@@ -37,7 +39,7 @@
             return $mediaStore.repeat == 'default'
         }
 
-        if (icon == 'loop') return $mediaStore.loop
+        if (icon == 'loop') return $loopStore.looping
         if (icon == 'shuffle') return $mediaStore.shuffle
 
         return false
@@ -56,10 +58,14 @@
 
     function getFillColor(icon: string) {
         if (icon == 'save/unsave') {
-            if ($nowPlaying?.liked) return 'fill-[var(--text)]'
-            return 'fill-none'
+            if ($mediaStore.saved) return 'fill-[var(--text)]'
+            return 'fill-none stroke-[var(--text)]'
         }
-        return alwaysFill.includes(icon) ? 'fill-[var(--text)]' : 'fill-[var(--bg)]'
+        if (icon == 'dj') return 'fill-[#1ed760] stroke-[#1ed760]'
+
+        return alwaysFill.includes(icon)
+            ? 'fill-[var(--text)] stroke-[var(--text)]'
+            : 'fill-[var(--bg)]'
     }
 </script>
 
@@ -68,8 +74,9 @@
     size="icon"
     variant="ghost"
     role={icon}
-    class="relative flex items-center justify-center gap-0 border-none p-0 hover:scale-[120%] {isPlayPause
-        ? 'h-7 w-7 rounded-full bg-[var(--text)] brightness-75 hover:bg-[var(--text)] [&_svg]:size-[20px]'
+    class="relative flex items-center justify-center gap-0 border-none p-0 hover:scale-[120%] {isPlayPause ||
+    icon == 'dj'
+        ? `h-7 w-7 rounded-full ${icon == 'dj' ? 'bg-blue-500 hover:bg-blue-500' : 'bg-[var(--text)] hover:bg-[var(--text)]'} brightness-75 [&_svg]:size-[${size}px]`
         : `h-6 w-6 bg-transparent hover:bg-transparent [&_svg]:size-[${size}px]`}"
 >
     {#if isSeek}
@@ -101,9 +108,11 @@
         {viewBox}
         class="size-[{size}px] {getFillColor(icon)} {isPlayPause
             ? 'fill-[var(--bg)] brightness-150'
-            : 'stroke-[var(--text)] brightness-75'} {icon == 'seek-forward'
-            ? 'scale-x-[-1]'
-            : ''} {isSeek ? 'fill-none' : ''}"
+            : icon == 'dj'
+              ? 'fill-[#1ed760] stroke-[#1ed760] brightness-150'
+              : 'brightness-75'} {icon == 'seek-forward' ? 'scale-x-[-1]' : ''} {isSeek
+            ? 'fill-none stroke-[var(--text)]'
+            : ''}"
     >
         {#if icon.startsWith('seek')}
             {@html SVG_PATHS.seek}

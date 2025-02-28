@@ -69,6 +69,10 @@ function createLoopStore() {
         if (savedState) store.set(savedState)
     })
 
+    storage.watch<Loop>('local:chorus_loop', (newState) => {
+        if (newState) store.set(newState)
+    })
+
     return {
         subscribe,
         toggleType,

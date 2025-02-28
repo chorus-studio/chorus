@@ -95,10 +95,8 @@ export class TrackObserver {
     async processSongTransition() {
         const songInfo = this.currentSong
 
-        if (songInfo?.blocked) {
-            this.mute()
-            return this.skipTrack()
-        } else if (songInfo?.snipped) {
+        if (songInfo?.blocked) return this.skipTrack()
+        if (songInfo?.snipped) {
             this.seeking = true
             this.mute()
             const { start_time } = songInfo

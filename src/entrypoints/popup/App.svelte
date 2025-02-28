@@ -1,8 +1,7 @@
 <script lang="ts">
     import '../../app.css'
     import { onMount } from 'svelte'
-    import { setState } from '$lib/utils/state'
-    import { mediaStore } from '$lib/stores/media'
+    import { storage } from '@wxt-dev/storage'
     import { nowPlaying } from '$lib/stores/now-playing'
     import { getImageBackgroundAndTextColours } from '$lib/utils/image-colours'
 
@@ -45,7 +44,10 @@
                     canvas
                 })
                 colours = { textColour, backgroundColour }
-                await setState({ key: 'now-playing', values: { ...$nowPlaying, ...colours } })
+                await storage.setItem('local:chorus_now_playing', {
+                    ...$nowPlaying,
+                    ...colours
+                })
             }
         } catch (error) {
             console.error('Error loading image:', error)
@@ -56,15 +58,7 @@
     function setupPort() {
         port = chrome.runtime.connect({ name: 'popup' })
         port.onMessage.addListener(async ({ type, data = {} }) => {
-            if (!['enabled', 'now-playing', 'controls', 'state', 'ui-state'].includes(type)) return
-
-            if (type == 'controls') {
-                await mediaStore.updateKey([{ key: data.key, data: data.result, type }])
-            }
-
-            if (type == 'state') {
-                await mediaStore.updateMedia([{ key: data.key, data: data.result, type }])
-            }
+            if (!['enabled', 'controls'].includes(type)) return
         })
     }
 

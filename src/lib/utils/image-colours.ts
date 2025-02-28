@@ -262,8 +262,14 @@ function findElementWithMaxDistance(initialRgb: number[], colours: { base: numbe
     return elementWithMaxDistance
 }
 
-function getImageBackgroundAndTextColours(imageElement: HTMLImageElement) {
-    const imageData = getImageData(imageElement)
+function getImageBackgroundAndTextColours({
+    img,
+    canvas
+}: {
+    img: HTMLImageElement
+    canvas: HTMLCanvasElement
+}) {
+    const imageData = getImageData({ img, canvas })
     const palette = getPalette(imageData)
     const sortedPalette = sortColoursByProximityAndLuminance(palette.slice())
 
