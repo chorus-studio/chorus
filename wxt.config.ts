@@ -11,15 +11,8 @@ export default defineConfig({
     manifest: {
         web_accessible_resources: [
             {
-                resources: [
-                    '/init.js',
-                    '/media-capture.js',
-                    '/media-override.js',
-                    '/media-listener.js',
-                    '/sounds/*',
-                    '/processor.js'
-                ],
-                matches: ['*://open.spotify.com/*', '*://soundcloud.com/*']
+                resources: ['/media-override.js', '/sounds/*', '/processor.js'],
+                matches: ['*://open.spotify.com/*']
             }
         ],
         permissions: [
@@ -30,7 +23,7 @@ export default defineConfig({
             'unlimitedStorage',
             'webRequest'
         ],
-        host_permissions: ['*://*.spotify.com/*', '*://soundcloud.com/*'],
+        host_permissions: ['*://*.spotify.com/*'],
         commands: {
             'on/off': {
                 description: 'Toggle Extension On/Off'

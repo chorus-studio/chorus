@@ -18,13 +18,6 @@ export default defineBackground(() => {
                 matches: ['<all_urls>'],
                 runAt: 'document_start',
                 world: 'MAIN'
-            },
-            {
-                id: 'media-listener',
-                js: ['media-listener.js'],
-                matches: ['<all_urls>'],
-                runAt: 'document_start',
-                world: 'ISOLATED'
             }
         ]
 

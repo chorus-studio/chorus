@@ -8,7 +8,13 @@ class DataStore {
 
     constructor() {
         this.cache = new CacheStore()
+        this.initialize()
         this.populate()
+    }
+
+    initialize() {
+        sessionStorage.setItem('chorus:sounds_dir', chrome.runtime.getURL('sounds/'))
+        sessionStorage.setItem('chorus:reverb_path', chrome.runtime.getURL('processor.js'))
     }
 
     async populate() {

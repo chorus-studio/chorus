@@ -228,7 +228,7 @@ function mediaOverride() {
 }
 
 export default defineContentScript({
-    matches: ['*://open.spotify.com/*', '*://soundcloud.com/*'],
+    matches: ['*://open.spotify.com/*'],
     main() {
         mediaOverride()
         return true
