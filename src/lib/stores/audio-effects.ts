@@ -17,9 +17,7 @@ function createAudioEffectsStore() {
 
     function dispatchEffect(key: keyof AudioEffect, value: string) {
         document.dispatchEvent(
-            new CustomEvent('FROM_CHORUS_EXTENSION', {
-                detail: { type: 'audio_effect', data: { [key]: value } }
-            })
+            new CustomEvent('FROM_EFFECTS_LISTENER', { detail: { [key]: value } })
         )
     }
 

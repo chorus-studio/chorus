@@ -18,6 +18,12 @@ type PlaybackSettings = {
     is_default: boolean
 }
 
+type Volume = {
+    value: number
+    muted: boolean
+    type: 'linear' | 'logarithmic'
+}
+
 function mediaOverride() {
     const sources: any[] = []
     const defaultSpeed = 1
@@ -41,6 +47,19 @@ function mediaOverride() {
             audioManager = new AudioManager(source)
             equalizer = new Equalizer(audioManager)
             reverb = new Reverb(audioManager)
+
+            // Override volume setter to allow values > 1
+            Object.defineProperty(source, 'volume', {
+                get() {
+                    return this._volume || 1
+                },
+                set(value) {
+                    this._volume = value
+                    if (this._audioNode) {
+                        this._audioNode.gain.value = value
+                    }
+                }
+            })
 
             // Add timeupdate event listener
             source.addEventListener('timeupdate', () => {
@@ -125,15 +144,21 @@ function mediaOverride() {
         }
     }
 
-    function updateVolume(data: { value: number }) {
-        for (const source of sources) {
-            source.volume = data.value
-        }
-    }
+    function updateVolume(data: Volume) {
+        // Scale volume: 0-300 -> 0-3 for gain node, 0-1 for regular source
+        const scaledValue = data.value / 100
 
-    function updateMute(data: { value: boolean }) {
         for (const source of sources) {
-            source.muted = data.value
+            if (source instanceof HTMLMediaElement) {
+                // Keep source volume at 1 and use audio manager for all volume control
+                source.volume = 1
+                if (audioManager) {
+                    audioManager.setGain(data.muted ? 0 : scaledValue, data.type)
+                }
+            } else {
+                // For non-HTMLMediaElement sources, clamp to 0-1 range
+                source.volume = data.muted ? 0 : Math.min(1, scaledValue)
+            }
         }
     }
 
@@ -195,10 +220,6 @@ function mediaOverride() {
 
     document.addEventListener('FROM_VOLUME_LISTENER', (event: CustomEvent) => {
         updateVolume(event.detail)
-    })
-
-    document.addEventListener('FROM_MUTE_LISTENER', (event: CustomEvent) => {
-        updateMute(event.detail)
     })
 
     document.addEventListener('FROM_CURRENT_TIME_LISTENER', (event: CustomEvent) => {

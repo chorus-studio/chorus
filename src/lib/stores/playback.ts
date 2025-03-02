@@ -35,11 +35,7 @@ function createPlaybackStore() {
     }
 
     function dispatchPlaybackSettings() {
-        document.dispatchEvent(
-            new CustomEvent('FROM_CHORUS_EXTENSION', {
-                detail: { type: 'playback_settings', data: get(store) }
-            })
-        )
+        document.dispatchEvent(new CustomEvent('FROM_PLAYBACK_LISTENER', { detail: get(store) }))
     }
 
     async function setPlayback({

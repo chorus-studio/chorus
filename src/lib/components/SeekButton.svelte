@@ -14,11 +14,7 @@
             : isLongForm
               ? $seekStore.long_form.rewind
               : $seekStore.default.rewind
-        document.dispatchEvent(
-            new CustomEvent('FROM_CHORUS_EXTENSION', {
-                detail: { type: 'seek', data: { type, value } }
-            })
-        )
+        document.dispatchEvent(new CustomEvent('FROM_SEEK_LISTENER', { detail: { type, value } }))
     }
 
     const id = role == 'seek-forward' ? 'seek-player-ff-button' : 'seek-player-rw-button'
