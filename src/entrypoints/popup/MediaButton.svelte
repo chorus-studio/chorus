@@ -26,7 +26,6 @@
 
     const { icon, viewBox = '-4 -4 24 24', size = 20, strokeWidth = 0.125, handleClick } = $props()
 
-    const isDJ = icon === 'dj'
     const isPlayPause = icon === 'play' || icon === 'pause'
     const isSeek = icon.startsWith('seek')
     const isRepeat = ['shuffle', 'loop', 'repeat', 'repeat1'].includes(icon)
@@ -97,8 +96,15 @@
     {/if}
     {#if isRepeat && showDot(icon)}
         <span
-            class="absolute bottom-1.5 h-1 text-xs text-[var(--text)] brightness-75"
-            id="{icon}-dot">&bull;</span
+            class="absolute bottom-0.5 h-1.5 text-xs text-[var(--text)] brightness-75"
+            id="{icon}-dot"
+            >{icon == 'loop'
+                ? $loopStore.looping
+                    ? $loopStore.type == 'infinite'
+                        ? '∞'
+                        : $loopStore.iteration
+                    : ''
+                : '&bull;'}</span
         >
     {/if}
     <svg

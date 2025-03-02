@@ -26,7 +26,7 @@
         >
             {#if $loopStore.looping}
                 <span
-                    class="absolute left-3/4 top-1/2 bg-transparent text-center text-xs font-bold text-[#1ed760]"
+                    class="absolute left-1/2 top-5 -translate-x-1/2 bg-transparent text-center text-xs font-bold text-[#1ed760]"
                 >
                     {$loopStore.type === 'infinite' ? '∞' : $loopStore.iteration}
                 </span>
