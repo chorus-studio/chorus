@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { nowPlaying } from '$lib/stores/now-playing'
     import * as Tooltip from '$lib/components/ui/tooltip'
     import * as Popover from '$lib/components/ui/popover'
     import TabsList from '$lib/components/TabsList.svelte'
@@ -24,7 +25,9 @@
                             viewBox="0 0 24 24"
                         >
                             <g
-                                class="stroke-linecap-round fill-green-400 stroke-green-400 stroke-2"
+                                class="stroke-linecap-round stroke-2 {$nowPlaying.snipped
+                                    ? 'fill-green-400 stroke-green-400'
+                                    : 'fill-current stroke-current'}"
                             >
                                 <path d="M3 5h4m14 0H11m-8 7h12m6 0h-2M3 19h2m16 0H9" />
                                 <circle cx="9" cy="5" r="2" />
