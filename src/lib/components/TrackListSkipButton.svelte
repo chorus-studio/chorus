@@ -20,12 +20,6 @@
             if (track?.song_id === $nowPlaying.id) trackObserver?.skipTrack()
         }
     }
-
-    onMount(() => {
-        if ($nowPlaying.id === track?.song_id && track?.blocked) {
-            trackObserver?.skipTrack()
-        }
-    })
 </script>
 
 <Tooltip.Provider>
