@@ -1,8 +1,12 @@
 export default class AudioManager {
-    private _element: HTMLMediaElement | MediaStream
+    private _gainNode?: GainNode
     private _audioContext?: AudioContext
-    private _source?: MediaStreamAudioSourceNode | MediaElementAudioSourceNode
     private _destination?: AudioDestinationNode
+    private _element: HTMLMediaElement | MediaStream
+    private _source?: MediaStreamAudioSourceNode | MediaElementAudioSourceNode
+
+    private _currentVolume: number = 1
+    private _volumeType: 'linear' | 'logarithmic' = 'linear'
 
     constructor(element: HTMLVideoElement | HTMLAudioElement) {
         this._element = element
@@ -18,7 +22,50 @@ export default class AudioManager {
         this._source = this.audioContext?.createMediaElementSource(
             this._element as unknown as HTMLMediaElement
         )
+        this._gainNode = this.audioContext?.createGain()
         this._destination = this.audioContext?.destination
+
+        // Set up default audio chain with gain node
+        if (this._source && this._gainNode && this._destination) {
+            this._source.connect(this._gainNode)
+            this._gainNode.connect(this._destination)
+            // Initialize with default volume
+            this.setGain(1)
+        }
+    }
+
+    private linearToLogarithmic(value: number): number {
+        // Prevent negative values
+        value = Math.max(value, 0)
+
+        if (value === 0) return 0
+
+        // Convert to decibels (-60dB to 20dB range)
+        const minDb = -60
+        const maxDb = 20
+
+        // Map 0-3 range to decibel range
+        const dbScale = minDb + (maxDb - minDb) * (value / 3)
+
+        // Convert decibels to gain
+        return 10 ** (dbScale / 20)
+    }
+
+    setGain(value: number, type: 'linear' | 'logarithmic' = 'linear') {
+        if (!this._gainNode) return
+
+        this._currentVolume = value
+        this._volumeType = type
+
+        this._gainNode.gain.value = type === 'logarithmic' ? this.linearToLogarithmic(value) : value
+    }
+
+    getCurrentVolume(): number {
+        return this._currentVolume
+    }
+
+    getVolumeType(): 'linear' | 'logarithmic' {
+        return this._volumeType
     }
 
     connectReverb({ gain, reverb }: { gain: AudioNode; reverb: AudioNode }) {
@@ -45,22 +92,30 @@ export default class AudioManager {
     }
 
     disconnect() {
-        if (!this.source || !this._destination) return
+        if (!this.source || !this._destination || !this._gainNode) return
 
         // Disconnect all nodes
         this.source.disconnect()
+        this._gainNode.disconnect()
         this.destination?.disconnect()
 
-        // Reconnect basic chain
-        if (this.source && this.destination) {
-            this.source.connect(this.destination)
-        }
+        // Reconnect basic chain with gain
+        if (!(this.source && this._gainNode && this.destination)) return
+
+        this.source.connect(this._gainNode)
+        this._gainNode.connect(this.destination)
+        // Restore the current volume
+        this.setGain(this._currentVolume, this._volumeType)
     }
 
     cleanup() {
         if (this.source) {
             this.source.disconnect()
             this._source = undefined
+        }
+        if (this._gainNode) {
+            this._gainNode.disconnect()
+            this._gainNode = undefined
         }
         if (this.destination) {
             this.destination.disconnect()

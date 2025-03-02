@@ -1,7 +1,9 @@
 import { get } from 'svelte/store'
+import { mount } from 'svelte'
 import { mediaStore } from '$lib/stores/media'
 import { nowPlaying } from '$lib/stores/now-playing'
-
+import TimeProgress from '$lib/components/TimeProgress.svelte'
+import VolumeSlider from '$lib/components/VolumeSlider.svelte'
 export class PlaybackObserver {
     private observer: MutationObserver | null = null
 
@@ -12,6 +14,22 @@ export class PlaybackObserver {
         this.observer = new MutationObserver(this.handleMutation)
         this.observer.observe(target, { characterData: true, subtree: true })
         this.removeAddToPlaylistButton()
+        this.replaceProgress()
+        this.replaceVolumeSlider()
+    }
+
+    private replaceVolumeSlider() {
+        const target = document.querySelector('[data-testid="volume-bar"] div') as HTMLElement
+        if (!target) return
+
+        const container = target?.parentElement
+        if (!container) return
+        container.style.display = 'none'
+
+        const root = container.parentElement?.parentElement
+        if (!root) return
+        root.style.flexDirection = 'column'
+        mount(VolumeSlider, { target: root })
     }
 
     private async checkForDJ() {
@@ -44,6 +62,37 @@ export class PlaybackObserver {
             addToPlaylistButton.style.visibility = 'hidden'
             addToPlaylistButton.style.width = '0'
         }
+    }
+
+    private replaceProgress() {
+        const chorusTimeProgress = document.querySelector('#chorus-time-progress')
+        if (chorusTimeProgress) return
+
+        const target = document.querySelector('[data-testid="playback-progressbar"]') as HTMLElement
+        const playbackPosition = document.querySelector(
+            '[data-testid="playback-position"]'
+        ) as HTMLElement
+        const playbackDuration = document.querySelector(
+            '[data-testid="playback-duration"]'
+        ) as HTMLElement
+        if (!target || !playbackPosition || !playbackDuration) return
+
+        const container = target.parentElement
+        if (!container) return
+
+        target.style.width = '0'
+        target.style.visibility = 'hidden'
+        playbackPosition.style.visibility = 'hidden'
+        playbackDuration.style.visibility = 'hidden'
+        playbackPosition.style.minWidth = '0'
+        playbackPosition.style.width = '0'
+        playbackDuration.style.minWidth = '0'
+        playbackDuration.style.width = '0'
+
+        mount(TimeProgress, {
+            target: container,
+            props: { id: 'chorus-time-progress', port: null }
+        })
     }
 
     private handleMutation = async (mutations: MutationRecord[]) => {

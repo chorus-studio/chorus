@@ -45,27 +45,37 @@ export default defineBackground(() => {
 
         popupPort = port
 
+        const CUSTOM_EVENTS = {
+            volume: 'FROM_VOLUME_LISTENER',
+            current_time: 'FROM_CURRENT_TIME_LISTENER'
+        }
+
         port.onMessage.addListener(async (message) => {
-            if (message?.type == 'current_time') {
-                // need to dispatch  custom event to content script
-                const { tabId } = await activeOpenTab()
-                if (!tabId) return
-                await chrome.scripting.executeScript({
-                    args: [message.data],
-                    target: { tabId },
-                    func: (data) => {
-                        document.dispatchEvent(
-                            new CustomEvent('FROM_CHORUS_EXTENSION', {
-                                detail: { type: 'current_time', data }
-                            })
-                        )
-                    }
-                })
+            if (message?.type == 'controls') {
+                return await executeButtonClick({ command: message.key })
             }
 
-            if (message?.type !== 'controls') return
+            if (!Object.keys(CUSTOM_EVENTS).includes(message.type)) return
 
-            await executeButtonClick({ command: message.key })
+            const { tabId } = await activeOpenTab()
+            if (!tabId) return
+
+            await chrome.scripting.executeScript({
+                args: [
+                    {
+                        value: message.data,
+                        type: CUSTOM_EVENTS[message.type as keyof typeof CUSTOM_EVENTS]
+                    }
+                ],
+                target: { tabId },
+                func: (data) => {
+                    document.dispatchEvent(
+                        new CustomEvent(data.type, {
+                            detail: data.value
+                        })
+                    )
+                }
+            })
         })
 
         port.onDisconnect.addListener(() => (popupPort = null))
