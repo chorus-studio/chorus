@@ -162,9 +162,9 @@ function mediaOverride() {
         }
     }
 
-    function updateCurrentTime(data: { value: number }) {
+    function updateCurrentTime(data: number) {
         for (const source of sources) {
-            source.currentTime = data.value
+            source.currentTime = data
         }
     }
 

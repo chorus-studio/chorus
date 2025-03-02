@@ -123,9 +123,7 @@ function createNowPlayingStore() {
     }
 
     function setCurrentTime(time: number) {
-        document.dispatchEvent(
-            new CustomEvent('FROM_CURRENT_TIME_LISTENER', { detail: { value: time } })
-        )
+        document.dispatchEvent(new CustomEvent('FROM_CURRENT_TIME_LISTENER', { detail: time }))
     }
 
     async function setLiked(liked: boolean) {

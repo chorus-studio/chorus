@@ -77,11 +77,7 @@ export class TrackObserver {
     }
 
     updateCurrentTime(time: number) {
-        document.dispatchEvent(
-            new CustomEvent('FROM_CHORUS_EXTENSION', {
-                detail: { type: 'current_time', data: { value: time } }
-            })
-        )
+        document.dispatchEvent(new CustomEvent('FROM_CURRENT_TIME_LISTENER', { detail: time }))
     }
 
     skipTrack() {
