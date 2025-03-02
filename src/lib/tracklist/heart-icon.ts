@@ -1,12 +1,11 @@
 import { mount } from 'svelte'
 import { TrackListIcon } from './tracklist-icon'
-import type { TrackSongInfo } from '$lib/utils/song'
 import type { SimpleTrack } from '$lib/stores/data/cache'
 import TrackListHeartButton from '$lib/components/TrackListHeartButton.svelte'
 
 export class HeartIcon extends TrackListIcon {
     constructor() {
-        super({ key: 'isLiked', selector: 'button[role="heart"]' })
+        super('button[role="heart"]')
     }
 
     setUI({ row, track }: { row: Element; track: SimpleTrack }) {

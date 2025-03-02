@@ -1,12 +1,10 @@
 import { trackSongInfo } from '$lib/utils/song'
 
 export class TrackListIcon {
-    protected key: string
     protected selector: string
     protected seen: Set<string>
 
-    constructor({ key, selector }: { key: string; selector: string }) {
-        this.key = key
+    constructor(selector: string) {
         this.selector = selector
         this.seen = new Set()
     }

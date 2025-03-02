@@ -17,7 +17,6 @@ export class TrackList {
         this.heartIcon = new HeartIcon()
         this.trackService = getTrackService()
         this.icons = [this.heartIcon, this.skipIcon]
-        // this._previousRowNum = null
     }
 
     get trackRows() {
@@ -56,22 +55,8 @@ export class TrackList {
         button.style.marginRight = show ? '12px' : '0'
     }
 
-    showPlusCircles() {
-        const buttons = this.plusCircles.filter((button) => button?.style?.visibility == 'hidden')
-
-        buttons.forEach((button: HTMLButtonElement) =>
-            this.updateButtonStyles({ button, show: true })
-        )
-    }
-
     private hidePlusCircles() {
         this.plusCircles.forEach((button) => this.updateButtonStyles({ button, show: false }))
-    }
-
-    private hidePlusCircle(row: HTMLElement) {
-        const button = row.querySelector('button[role="buttonTertiary"]') as HTMLButtonElement
-        if (!button) return
-        this.updateButtonStyles({ button, show: false })
     }
 
     private async updateCollectionLikedTracks(ids: string[]) {

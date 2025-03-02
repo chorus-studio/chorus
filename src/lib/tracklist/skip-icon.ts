@@ -5,7 +5,7 @@ import TrackListSkipButton from '$lib/components/TrackListSkipButton.svelte'
 
 export class SkipIcon extends TrackListIcon {
     constructor() {
-        super({ key: 'isSkipped', selector: 'button[role="skip"]' })
+        super('button[role="block"]')
     }
 
     setUI({ row, track }: { row: Element; track: SimpleTrack }) {
