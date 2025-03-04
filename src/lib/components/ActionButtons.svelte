@@ -94,7 +94,7 @@
 </script>
 
 <div class="absolute bottom-0 flex w-full items-center justify-between gap-x-2">
-    {#if ['fx', 'eq', 'snip', 'speed'].includes(tab)}
+    {#if ['fx', 'eq', 'snip', 'speed', 'seek'].includes(tab)}
         <Button
             variant="outline"
             size="sm"

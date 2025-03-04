@@ -59,7 +59,7 @@
     })
 </script>
 
-<Tabs.Root value={$activeTab} class="h-6 p-0">
+<Tabs.Root value={$activeTab} class="h-7 p-0">
     <Tabs.List class="flex h-full items-center justify-end gap-x-1.5 bg-transparent p-0">
         {#each tabs as tab (tab)}
             <Tabs.Trigger
@@ -87,9 +87,11 @@
             {/if}
             <svelte:component this={components[$activeTab]} />
             {#if $activeTab !== 'info'}
-                <p class="absolute bottom-8 w-full text-end text-sm text-zinc-300">
-                    *changes will <span class="font-semibold italic">reset</span> unless saved.
-                </p>
+                {#if $activeTab == 'snip'}
+                    <p class="absolute bottom-8 w-full text-end text-sm text-zinc-300">
+                        *changes will <span class="font-semibold italic">reset</span> unless saved.
+                    </p>
+                {/if}
                 <ActionButtons tab={$activeTab} />
             {/if}
         </Tabs.Content>
