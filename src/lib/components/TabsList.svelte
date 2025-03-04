@@ -8,6 +8,7 @@
 
     import FX from '$lib/components/views/FX.svelte'
     import EQ from '$lib/components/views/EQ.svelte'
+    import Info from '$lib/components/views/Info.svelte'
     import Snip from '$lib/components/views/Snip.svelte'
     import Seek from '$lib/components/views/Seek.svelte'
     import Speed from '$lib/components/views/Speed.svelte'
@@ -18,7 +19,7 @@
     import { snipStore } from '$lib/stores/snip'
     import { nowPlaying } from '$lib/stores/now-playing'
 
-    let tabs = ['snip', 'speed', 'fx', 'eq', 'seek']
+    let tabs = ['snip', 'speed', 'fx', 'eq', 'seek', 'info']
     let activeTab = writable<string | undefined>(tabs.at(0))
 
     const components: Record<string, Component> = {
@@ -26,7 +27,8 @@
         fx: FX,
         eq: EQ,
         seek: Seek,
-        speed: Speed
+        speed: Speed,
+        info: Info
     }
 
     function setActiveTab(tab: string) {
@@ -43,14 +45,16 @@
 
         snipStore.set({
             is_shared: false,
+            last_updated: 'start',
             start_time: track?.start_time ?? 0,
             end_time: track?.end_time ?? $nowPlaying.duration
         })
     }
 
     onMount(() => {
-        activeTab.set(tabs.at(0)!)
-        setSnip()
+        if ($activeTab === 'snip') {
+            setSnip()
+        }
         return () => snipStore.reset()
     })
 </script>
@@ -75,12 +79,16 @@
     </Tabs.List>
     {#if $activeTab}
         <Tabs.Content value={$activeTab} class="relative flex h-[205px] w-full flex-col">
-            <TrackInfo />
+            {#if $activeTab !== 'info'}
+                <TrackInfo />
+            {/if}
             <svelte:component this={components[$activeTab]} />
-            <p class="absolute bottom-8 w-full text-end text-sm text-zinc-300">
-                *changes will <span class="font-semibold italic">reset</span> unless saved.
-            </p>
-            <ActionButtons tab={$activeTab} />
+            {#if $activeTab !== 'info'}
+                <p class="absolute bottom-8 w-full text-end text-sm text-zinc-300">
+                    *changes will <span class="font-semibold italic">reset</span> unless saved.
+                </p>
+                <ActionButtons tab={$activeTab} />
+            {/if}
         </Tabs.Content>
     {/if}
 </Tabs.Root>
