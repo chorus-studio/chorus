@@ -52,7 +52,7 @@ export default defineConfig({
             'mute/unmute': {
                 description: 'Mute/Unmute Track'
             },
-            'seek-fastforward': {
+            'seek-forward': {
                 description: 'Seek Track Forwards'
             },
             'save/unsave': {

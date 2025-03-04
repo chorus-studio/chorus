@@ -10,6 +10,7 @@ const mediaKeys = {
 
 const chorusKeys = {
     loop: '#loop-button',
+    'mute/unmute': '#volume-button',
     'seek-rewind': '#seek-player-rw-button',
     'seek-forward': '#seek-player-ff-button',
     settings: '[data-testid="now-playing-widget"] div#chorus-ui #chorus-settings',
