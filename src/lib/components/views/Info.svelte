@@ -10,11 +10,14 @@
     }
 </script>
 
-<div class="z-100 relative flex w-full flex-col gap-x-1 gap-y-2">
-    <div class="flex flex-col justify-between gap-2 rounded-sm p-2 outline outline-1">
-        <p class="text-xs font-semibold">Issues / Feature Requests / Support</p>
+<div class="z-100 relative flex w-full flex-col justify-between gap-x-1 gap-y-3">
+    <div class="flex flex-col justify-between gap-y-1.5 rounded-sm p-2 outline outline-zinc-300">
+        <div class="flex flex-col">
+            <p class="text-xs font-semibold">Issues / Feature Requests / Support</p>
+            <span class="text-xs"> Please report issues/bugs using Github or Discord. </span>
+        </div>
         <div class="flex w-full items-center justify-between">
-            <Button size="sm" variant="outline">
+            <Button size="sm" variant="secondary">
                 <a
                     class="flex items-center justify-between gap-1"
                     href="https://github.com/chorus-studio/chorus-dev/issues"
@@ -65,12 +68,13 @@
             </Button>
         </div>
     </div>
-    <div class="flex flex-col justify-between gap-2 rounded-sm p-2 outline outline-1">
-        <p class="text-xs font-semibold">Leave a Rating / Review</p>
-        <span class="text-xs">
-            Please report issues/bugs using Github or Discord. Most issues are fixed within a few
-            hours. Leave a rating/review based on your experience using the extension.
-        </span>
+    <div class="flex flex-col justify-between gap-y-1.5 rounded-sm p-2 outline outline-zinc-300">
+        <div class="flex flex-col">
+            <p class="text-xs font-semibold">Leave a Rating / Review</p>
+            <span class="text-xs">
+                Would you recommend this to a friend? Share your thoughts with a rating/view.
+            </span>
+        </div>
         <div class="flex w-full items-center justify-between">
             <Button variant="secondary" size="sm">
                 <a

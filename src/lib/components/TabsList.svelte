@@ -78,7 +78,10 @@
         {/each}
     </Tabs.List>
     {#if $activeTab}
-        <Tabs.Content value={$activeTab} class="relative flex h-[205px] w-full flex-col">
+        <Tabs.Content
+            value={$activeTab}
+            class="relative flex h-[{$activeTab == 'info' ? '225px' : '205px'}] w-full flex-col"
+        >
             {#if $activeTab !== 'info'}
                 <TrackInfo />
             {/if}
