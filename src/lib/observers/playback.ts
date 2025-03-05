@@ -19,6 +19,9 @@ export class PlaybackObserver {
     }
 
     private replaceVolumeSlider() {
+        const volumeButton = document.querySelector('#volume-button')
+        if (volumeButton) return
+
         const target = document.querySelector('[data-testid="volume-bar"] div') as HTMLElement
         if (!target) return
 

@@ -18,23 +18,33 @@ export default defineContentScript({
                 )
                 mount(App, { target: container })
                 if (skipBack) {
-                    const div = document.createElement('div')
-                    const parentElement = skipBack.parentElement
-                    parentElement?.insertBefore(div, skipBack)
-                    mount(SeekButton, { target: div, props: { role: 'seek-backward' } })
+                    const seekBack = document.querySelector('#seek-player-rw-button')
+                    if (!seekBack) {
+                        const div = document.createElement('div')
+                        const parentElement = skipBack.parentElement
+                        parentElement?.insertBefore(div, skipBack)
+                        mount(SeekButton, { target: div, props: { role: 'seek-backward' } })
+                    }
                 }
                 if (skipForward) {
-                    const forwardDiv = document.createElement('div')
-                    const loopDiv = document.createElement('div')
-                    const parentElement = skipForward.parentElement
-                    if (parentElement?.lastElementChild) {
-                        parentElement?.insertBefore(forwardDiv, skipForward.nextSibling)
-                        parentElement?.insertBefore(
-                            loopDiv,
-                            parentElement?.lastElementChild?.nextSibling
-                        )
-                        mount(SeekButton, { target: forwardDiv, props: { role: 'seek-forward' } })
-                        mount(LoopButton, { target: loopDiv })
+                    const seekForward = document.querySelector('#seek-player-ff-button')
+                    const loopButton = document.querySelector('#loop-button')
+                    if (!seekForward && !loopButton) {
+                        const forwardDiv = document.createElement('div')
+                        const loopDiv = document.createElement('div')
+                        const parentElement = skipForward.parentElement
+                        if (parentElement?.lastElementChild) {
+                            parentElement?.insertBefore(forwardDiv, skipForward.nextSibling)
+                            parentElement?.insertBefore(
+                                loopDiv,
+                                parentElement?.lastElementChild?.nextSibling
+                            )
+                            mount(SeekButton, {
+                                target: forwardDiv,
+                                props: { role: 'seek-forward' }
+                            })
+                            mount(LoopButton, { target: loopDiv })
+                        }
                     }
                 }
             },
