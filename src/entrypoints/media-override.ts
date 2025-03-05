@@ -48,19 +48,6 @@ function mediaOverride() {
             equalizer = new Equalizer(audioManager)
             reverb = new Reverb(audioManager)
 
-            // Override volume setter to allow values > 1
-            Object.defineProperty(source, 'volume', {
-                get() {
-                    return this._volume || 1
-                },
-                set(value) {
-                    this._volume = value
-                    if (this._audioNode) {
-                        this._audioNode.gain.value = value
-                    }
-                }
-            })
-
             // Add timeupdate event listener
             source.addEventListener('timeupdate', () => {
                 document.dispatchEvent(
@@ -69,9 +56,6 @@ function mediaOverride() {
                     })
                 )
             })
-
-            // Ensure direct connection to destination when no effects are active
-            audioManager.disconnect()
         }
     }
 
@@ -153,6 +137,7 @@ function mediaOverride() {
                 // Keep source volume at 1 and use audio manager for all volume control
                 source.volume = 1
                 if (audioManager) {
+                    // Just set the gain value without disconnecting
                     audioManager.setGain(data.muted ? 0 : scaledValue, data.type)
                 }
             } else {

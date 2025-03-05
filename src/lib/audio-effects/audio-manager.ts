@@ -16,6 +16,11 @@ export default class AudioManager {
             this._audioContext = new AudioContext({ latencyHint: 'playback' })
         }
 
+        // Ensure context is running
+        if (this._audioContext?.state === 'suspended') {
+            this._audioContext.resume()
+        }
+
         // Cleanup any existing connections first
         this.cleanup()
 
@@ -52,12 +57,16 @@ export default class AudioManager {
     }
 
     setGain(value: number, type: 'linear' | 'logarithmic' = 'linear') {
-        if (!this._gainNode) return
+        if (!this._gainNode) {
+            console.warn('No gain node available')
+            return
+        }
 
         this._currentVolume = value
         this._volumeType = type
 
-        this._gainNode.gain.value = type === 'logarithmic' ? this.linearToLogarithmic(value) : value
+        const gainValue = type === 'logarithmic' ? this.linearToLogarithmic(value) : value
+        this._gainNode.gain.value = gainValue
     }
 
     getCurrentVolume(): number {
