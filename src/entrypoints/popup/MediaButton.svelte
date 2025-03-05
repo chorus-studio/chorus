@@ -104,7 +104,7 @@
                         ? '∞'
                         : $loopStore.iteration
                     : ''
-                : '&bull;'}</span
+                : '•'}</span
         >
     {/if}
     <svg
