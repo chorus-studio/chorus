@@ -10,8 +10,10 @@
     }
 </script>
 
-<div class="z-100 relative flex w-full flex-col justify-between gap-x-1 gap-y-3">
-    <div class="flex flex-col justify-between gap-y-1.5 rounded-sm p-2 outline outline-zinc-300">
+<div class="z-100 relative flex w-full flex-col justify-between gap-y-3">
+    <div
+        class="flex flex-col justify-between gap-y-2 rounded-sm p-2 outline outline-1 outline-zinc-300"
+    >
         <div class="flex flex-col">
             <p class="text-xs font-semibold">Issues / Feature Requests / Support</p>
             <span class="text-xs"> Please report issues/bugs using Github or Discord. </span>
@@ -68,7 +70,9 @@
             </Button>
         </div>
     </div>
-    <div class="flex flex-col justify-between gap-y-1.5 rounded-sm p-2 outline outline-zinc-300">
+    <div
+        class="flex flex-col justify-between gap-y-2 rounded-sm p-2 outline outline-1 outline-zinc-300"
+    >
         <div class="flex flex-col">
             <p class="text-xs font-semibold">Leave a Rating / Review</p>
             <span class="text-xs">
