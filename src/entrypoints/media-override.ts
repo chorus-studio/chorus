@@ -41,8 +41,26 @@ function mediaOverride() {
         sources.push(source)
 
         if (source instanceof HTMLMediaElement) {
+            // Set crossOrigin to anonymous to handle CORS
+            source.crossOrigin = 'anonymous'
+
             // Clean up previous audio effects if they exist
             if (audioManager) audioManager.dispose()
+
+            // For cross-origin sources, just use direct playback
+            try {
+                const currentSrc = source.currentSrc
+                if (currentSrc) {
+                    const sourceUrl = new URL(currentSrc)
+                    const isCrossOrigin = sourceUrl.origin !== window.location.origin
+
+                    if (isCrossOrigin) return
+                }
+            } catch (error) {
+                console.warn('Error checking source origin:', error)
+                // If we can't determine the origin, use direct playback to be safe
+                return
+            }
 
             audioManager = new AudioManager(source)
             equalizer = new Equalizer(audioManager)
