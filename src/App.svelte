@@ -5,7 +5,7 @@
     import { nowPlaying } from '$lib/stores/now-playing'
     import { QueueObserver } from '$lib/observers/queue'
     import { trackObserver } from '$lib/observers/track'
-    import { PlaybackObserver } from '$lib/observers/playback'
+    import { playbackObserver } from '$lib/observers/playback'
     import { TracklistObserver } from '$lib/observers/tracklist'
 
     import SkipButton from '$lib/components/SkipButton.svelte'
@@ -19,7 +19,6 @@
 
     onMount(() => {
         init()
-        const playbackObserver = new PlaybackObserver()
         playbackObserver.observe()
         const tracklistObserver = new TracklistObserver()
         tracklistObserver.observe()

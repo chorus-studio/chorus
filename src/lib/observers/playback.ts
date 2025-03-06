@@ -1,5 +1,5 @@
-import { get } from 'svelte/store'
 import { mount } from 'svelte'
+import { get } from 'svelte/store'
 import { mediaStore } from '$lib/stores/media'
 import { nowPlaying } from '$lib/stores/now-playing'
 import TimeProgress from '$lib/components/TimeProgress.svelte'
@@ -16,6 +16,27 @@ export class PlaybackObserver {
         this.removeAddToPlaylistButton()
         this.replaceProgress()
         this.replaceVolumeSlider()
+        this.updateChorusUI()
+    }
+
+    updateChorusUI() {
+        this.ensureSeekButtonAfterSkipBack()
+        this.removeLongformButtons()
+    }
+
+    private ensureSeekButtonAfterSkipBack() {
+        const skipBack = document.querySelector('[data-testid="control-button-skip-back"]')
+        const seekButton = document.querySelector('#seek-player-rw-button')
+        if (!skipBack?.parentElement || !seekButton?.parentElement) return
+
+        skipBack.parentElement?.insertBefore(seekButton.parentElement, skipBack)
+    }
+
+    private removeLongformButtons() {
+        const buttons = document.querySelectorAll(
+            '[data-testid="control-button-playback-speed"], [data-testid="control-button-seek-back-15"], [data-testid="control-button-seek-forward-15"]'
+        ) as NodeListOf<HTMLElement>
+        buttons.forEach((button) => (button.style.display = 'none'))
     }
 
     private replaceVolumeSlider() {
@@ -115,3 +136,5 @@ export class PlaybackObserver {
         this.observer = null
     }
 }
+
+export const playbackObserver = new PlaybackObserver()

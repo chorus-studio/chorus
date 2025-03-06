@@ -21,8 +21,7 @@ export default defineContentScript({
                     const seekBack = document.querySelector('#seek-player-rw-button')
                     if (!seekBack) {
                         const div = document.createElement('div')
-                        const parentElement = skipBack.parentElement
-                        parentElement?.insertBefore(div, skipBack)
+                        skipBack.parentElement?.insertBefore(div, skipBack)
                         mount(SeekButton, { target: div, props: { role: 'seek-backward' } })
                     }
                 }

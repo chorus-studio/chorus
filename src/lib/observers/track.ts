@@ -2,6 +2,7 @@ import { get } from 'svelte/store'
 import { loopStore } from '$lib/stores/loop'
 import { queue } from '$lib/observers/queue'
 import { seekStore } from '$lib/stores/seek'
+import { playbackObserver } from './playback'
 import { nowPlaying } from '$lib/stores/now-playing'
 import { snipStore, type Snip } from '$lib/stores/snip'
 import type { SimpleTrack } from '$lib/stores/data/cache'
@@ -18,6 +19,7 @@ export class TrackObserver {
     }
 
     async initialize() {
+        playbackObserver.updateChorusUI()
         await this.processSongTransition()
         await queue.refreshQueue()
         document.addEventListener(
@@ -37,6 +39,10 @@ export class TrackObserver {
 
     get loop() {
         return get(loopStore)
+    }
+
+    get seek() {
+        return get(seekStore)
     }
 
     get muteButton() {
@@ -79,12 +85,13 @@ export class TrackObserver {
 
         const type = ['track', 'album'].includes(contextType) ? 'default' : 'long_form'
         if (this.seek.media_type !== type) {
+            playbackObserver.updateChorusUI()
             await seekStore.updateMediaType(type)
         }
     }
 
     atSnipEnd({ currentTimeMS, track }: { currentTimeMS: number; track: SimpleTrack }) {
-        const { end_time } = track
+        const { end_time = this.currentSong.duration } = track?.snip ?? {}
         const atSongEnd = end_time == this.currentSong.duration
         const endTimeMS = end_time * 1000 - (atSongEnd ? 100 : 0)
         return currentTimeMS >= endTimeMS
@@ -106,10 +113,10 @@ export class TrackObserver {
         const songInfo = this.currentSong
 
         if (songInfo?.blocked) return this.skipTrack()
-        if (songInfo?.snipped) {
+        if (songInfo?.snip) {
             this.seeking = true
             this.mute()
-            const { start_time } = songInfo
+            const { start_time = 0 } = songInfo?.snip ?? {}
             const startTimeMS = start_time * 1000
             await this.playerService.seekTrackToPosition(startTimeMS)
             this.seeking = false
@@ -136,7 +143,7 @@ export class TrackObserver {
 
         if (this.loop.looping && this.atSnipEnd({ currentTimeMS, track: currentSong })) {
             if (this.loop.type === 'amount') await loopStore.decrement()
-            return this.updateCurrentTime(currentSong.start_time)
+            return this.updateCurrentTime(currentSong.snip?.start_time ?? 0)
         }
 
         if (snip?.is_shared && location?.search) history.pushState(null, '', location.pathname)
