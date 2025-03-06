@@ -86,10 +86,10 @@
                 : 'right-1/2'} leading-0 flex text-center text-[12px] text-[var(--text)]"
         >
             {icon == 'seek-forward'
-                ? $seekStore.is_long_form
+                ? $seekStore.media_type == 'long_form'
                     ? $seekStore.long_form.forward
                     : $seekStore.default.forward
-                : $seekStore.is_long_form
+                : $seekStore.media_type == 'long_form'
                   ? $seekStore.long_form.rewind
                   : $seekStore.default.rewind}
         </span>

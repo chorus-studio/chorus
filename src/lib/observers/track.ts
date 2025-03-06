@@ -1,6 +1,7 @@
 import { get } from 'svelte/store'
 import { loopStore } from '$lib/stores/loop'
 import { queue } from '$lib/observers/queue'
+import { seekStore } from '$lib/stores/seek'
 import { nowPlaying } from '$lib/stores/now-playing'
 import { snipStore, type Snip } from '$lib/stores/snip'
 import type { SimpleTrack } from '$lib/stores/data/cache'
@@ -23,6 +24,7 @@ export class TrackObserver {
             'FROM_MEDIA_TIMEUPDATE',
             this.boundProcessTimeUpdate as EventListener
         )
+        await this.updateTrackType()
     }
 
     get currentSong() {
@@ -69,6 +71,18 @@ export class TrackObserver {
         )
     }
 
+    async updateTrackType() {
+        const anchor = document.querySelector('[data-testid="context-item-info-title"] > span > a')
+        // album, track, episode, chapter
+        const contextType = anchor?.getAttribute('href')?.split('/')?.at(1)
+        if (!contextType) return
+
+        const type = ['track', 'album'].includes(contextType) ? 'default' : 'long_form'
+        if (this.seek.media_type !== type) {
+            await seekStore.updateMediaType(type)
+        }
+    }
+
     atSnipEnd({ currentTimeMS, track }: { currentTimeMS: number; track: SimpleTrack }) {
         const { end_time } = track
         const atSongEnd = end_time == this.currentSong.duration
@@ -103,6 +117,7 @@ export class TrackObserver {
 
         if (this.isMute) this.unMute()
         await queue.refreshQueue()
+        await this.updateTrackType()
     }
 
     private async processTimeUpdate(event: CustomEvent) {

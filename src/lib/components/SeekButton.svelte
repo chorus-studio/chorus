@@ -19,7 +19,7 @@
 
     const id = role == 'seek-forward' ? 'seek-player-ff-button' : 'seek-player-rw-button'
     $: isForward = role == 'seek-forward'
-    $: isLongForm = $seekStore.is_long_form
+    $: isLongForm = $seekStore.media_type == 'long_form'
     $: seekValue = isForward
         ? isLongForm
             ? $seekStore.long_form.forward

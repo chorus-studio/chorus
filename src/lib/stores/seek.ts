@@ -10,12 +10,12 @@ type SeekData = {
     default: Seek
     long_form: Seek
     is_long_form: boolean
-    long_form_min: number
+    media_type: 'default' | 'long_form'
 }
 
 const defaultSeekData: SeekData = {
     is_long_form: false,
-    long_form_min: 30,
+    media_type: 'default',
     default: { rewind: 10, forward: 10 },
     long_form: { rewind: 30, forward: 30 }
 }
@@ -23,6 +23,15 @@ const defaultSeekData: SeekData = {
 function createSeekStore() {
     const store = writable<SeekData>(defaultSeekData)
     const { subscribe, set, update } = store
+
+    async function updateMediaType(type: 'default' | 'long_form') {
+        update((prev: SeekData) => ({
+            ...prev,
+            media_type: type
+        }))
+        const newState = get(store)
+        await storage.setItem<SeekData>('local:chorus_seek', newState)
+    }
 
     async function updateSeek({
         type = 'default',
@@ -36,7 +45,7 @@ function createSeekStore() {
             [type]: { ...prev[type], [seek.key]: seek.value }
         }))
         const newState = get(store)
-        await storage.setItem('local:chorus_seek', newState)
+        await storage.setItem<SeekData>('local:chorus_seek', newState)
     }
 
     storage.getItem<SeekData>('local:chorus_seek', { fallback: defaultSeekData }).then((data) => {
@@ -53,7 +62,7 @@ function createSeekStore() {
             is_long_form: !prev.is_long_form
         }))
         const newState = get(store)
-        await storage.setItem('local:chorus_seek', newState)
+        await storage.setItem<SeekData>('local:chorus_seek', newState)
     }
 
     async function reset() {
@@ -65,7 +74,8 @@ function createSeekStore() {
         reset,
         subscribe,
         updateSeek,
-        toggleLongForm
+        toggleLongForm,
+        updateMediaType
     }
 }
 
