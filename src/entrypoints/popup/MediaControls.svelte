@@ -30,8 +30,8 @@
             size: 24
         },
         dj: {
-            size: 20,
-            viewBox: '-2 -2 20 20',
+            size: 16,
+            viewBox: '-4 -4 24 24',
             strokeWidth: 0.5
         },
         'save/unsave': {

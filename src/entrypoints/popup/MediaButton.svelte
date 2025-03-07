@@ -75,7 +75,7 @@
     role={icon}
     class="relative flex items-center justify-center gap-0 border-none p-0 hover:scale-[120%] {isPlayPause ||
     icon == 'dj'
-        ? `h-7 w-7 rounded-full ${icon == 'dj' ? 'bg-blue-500 hover:bg-blue-500' : 'bg-[var(--text)] hover:bg-[var(--text)]'} brightness-75 [&_svg]:size-[${size}px]`
+        ? `h-7 w-7 rounded-full ${icon == 'dj' ? 'size-6 bg-blue-500 hover:bg-blue-500' : 'bg-[var(--text)] hover:bg-[var(--text)]'} brightness-75 [&_svg]:size-[${size}px]`
         : `h-6 w-6 bg-transparent hover:bg-transparent [&_svg]:size-[${size}px]`}"
 >
     {#if isSeek}
