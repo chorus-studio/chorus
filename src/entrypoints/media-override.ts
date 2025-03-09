@@ -8,14 +8,8 @@ type Seek = {
 }
 
 type Playback = {
-    playbackRate: number
-    preservesPitch: boolean
-}
-
-type PlaybackSettings = {
-    default: Playback
-    track: Playback
-    is_default: boolean
+    playback_rate: number
+    preserves_pitch: boolean
 }
 
 type Volume = {
@@ -123,16 +117,12 @@ function mediaOverride() {
         for (const el of elements) addSource(el)
     }
 
-    function updatePlaybackSettings(value: PlaybackSettings) {
-        speed = value.is_default ? value.default.playbackRate : value.track.playbackRate
+    function updatePlaybackSettings(value: Playback) {
+        speed = value.playback_rate
         for (const source of sources) {
             source.defaultPlaybackRate = 1
-            source.playbackRate = value.is_default
-                ? value.default.playbackRate
-                : value.track.playbackRate
-            source.preservesPitch = value.is_default
-                ? value.default.preservesPitch
-                : value.track.preservesPitch
+            source.playbackRate = value.playback_rate
+            source.preservesPitch = value.preserves_pitch
         }
     }
 

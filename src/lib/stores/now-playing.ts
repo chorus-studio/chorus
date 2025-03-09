@@ -9,7 +9,6 @@ import type { SimpleTrack } from '$lib/stores/data/cache'
 
 export type NowPlaying = SimpleTrack & {
     liked: boolean
-    blocked: boolean
     current: number
     duration: number
     id: string | null
@@ -24,11 +23,7 @@ export type NowPlaying = SimpleTrack & {
 
 const defaultNowPlaying: NowPlaying = {
     song_id: '',
-    snipped: false,
-    end_time: 0,
-    start_time: 0,
     track_id: '',
-    blocked: false,
     // ---------
     id: null,
     url: null,
@@ -90,9 +85,7 @@ function createNowPlayingStore() {
             ? dataStore.collectionObject[songInfo.track_id]
             : (dataStore.collection.find((x) => x.song_id == id) ?? ({} as SimpleTrack))
 
-        if (trackInfo.blocked) {
-            trackObserver?.skipTrack()
-        }
+        if (trackInfo?.blocked) trackObserver?.skipTrack()
 
         return {
             id,
@@ -109,7 +102,12 @@ function createNowPlayingStore() {
 
     async function updateNowPlaying() {
         const songInfo = getSongInfo()
-        const newState = { ...get(store), ...songInfo }
+        const currentData = get(store)
+        if (!songInfo?.blocked) delete currentData?.blocked
+        if (!songInfo?.snip) delete currentData?.snip
+        if (!songInfo?.playback) delete currentData?.playback
+
+        const newState = { ...currentData, ...songInfo }
 
         let dataState: SimpleTrack | null = null
         if (newState.track_id && !dataStore.collectionObject[newState.track_id]) {

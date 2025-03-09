@@ -8,8 +8,8 @@
         snipStore.set({
             is_shared: false,
             last_updated: 'start',
-            end_time: $nowPlaying.end_time,
-            start_time: $nowPlaying.start_time
+            start_time: $nowPlaying?.snip?.start_time ?? 0,
+            end_time: $nowPlaying?.snip?.end_time ?? $nowPlaying.duration
         })
     }
 

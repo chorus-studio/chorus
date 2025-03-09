@@ -72,11 +72,11 @@
             </div>
         {/if}
         <Progress
-            segments={$nowPlaying.snipped
+            segments={$nowPlaying.snip
                 ? [
                       {
-                          start: $nowPlaying.start_time,
-                          end: $nowPlaying.end_time,
+                          start: $nowPlaying.snip?.start_time,
+                          end: $nowPlaying.snip?.end_time,
                           color: '#1ed760'
                       }
                   ]

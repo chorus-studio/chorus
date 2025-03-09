@@ -5,7 +5,7 @@
     let { isPopup = false } = $props()
 </script>
 
-<div class="flex flex-col text-[var(--text)] {isPopup ? 'h-16 justify-center gap-y-2' : ''}">
+<div class="flex w-full flex-col text-[var(--text)] {isPopup ? 'h-16 justify-center gap-y-2' : ''}">
     <ScrollingText
         text={$nowPlaying.title! ?? 'UP NEXT'}
         className="text-sm font-semibold text-[var(--text)] brightness-75"

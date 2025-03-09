@@ -107,18 +107,15 @@ export class TrackList {
                     liked: dataStore.checkInUserCollection(track.track_id),
                     track_id: track.track_id,
                     song_id: track.id!,
-                    snipped: false,
-                    blocked: false,
-                    end_time: track.endTime!,
-                    start_time: track.startTime!
+                    blocked: false
                 }
             })
         }
     }
 
     private setRowEvents() {
-        this.trackRows?.forEach((row) => {
-            this.generateSimpleTrack(row as HTMLElement)
+        this.trackRows?.forEach(async (row) => {
+            await this.generateSimpleTrack(row as HTMLElement)
             const trackInfo = trackSongInfo(row as HTMLElement)
             const track = dataStore.collectionObject[trackInfo?.track_id!]
             this.icons.forEach((icon) => icon.setUI({ row, track }))

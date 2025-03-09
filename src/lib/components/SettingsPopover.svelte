@@ -25,7 +25,7 @@
                             viewBox="0 0 24 24"
                         >
                             <g
-                                class="stroke-linecap-round stroke-2 {$nowPlaying.snipped
+                                class="stroke-linecap-round stroke-2 {$nowPlaying?.snip
                                     ? 'fill-green-400 stroke-green-400'
                                     : 'fill-current stroke-current'}"
                             >

@@ -1,9 +1,9 @@
 import { get, writable } from 'svelte/store'
 import { storage } from '@wxt-dev/storage'
 
-type Playback = {
-    playbackRate: number
-    preservesPitch: boolean
+export type Playback = {
+    playback_rate: number
+    preserves_pitch: boolean
 }
 
 type PlaybackSettings = {
@@ -14,12 +14,12 @@ type PlaybackSettings = {
 
 const defaultPlaybackSettings: PlaybackSettings = {
     default: {
-        playbackRate: 1.0,
-        preservesPitch: true
+        playback_rate: 1.0,
+        preserves_pitch: true
     },
     track: {
-        playbackRate: 1.0,
-        preservesPitch: true
+        playback_rate: 1.0,
+        preserves_pitch: true
     },
     is_default: true
 }
@@ -28,26 +28,26 @@ function createPlaybackStore() {
     const store = writable<PlaybackSettings>(defaultPlaybackSettings)
     const { subscribe, set, update } = store
 
-    async function toggleDefault() {
-        update((state) => ({ ...state, is_default: !state.is_default }))
-        const newState = get(store)
-        await storage.setItem<PlaybackSettings>('local:chorus_playback_settings', newState)
+    function dispatchPlaybackSettings(playback?: Playback) {
+        const state = get(store)
+
+        const data = playback ?? {
+            playback_rate: state.is_default
+                ? state.default.playback_rate
+                : state.track.playback_rate,
+            preserves_pitch: state.is_default
+                ? state.default.preserves_pitch
+                : state.track.preserves_pitch
+        }
+        document.dispatchEvent(
+            new CustomEvent('FROM_PLAYBACK_LISTENER', {
+                detail: data
+            })
+        )
     }
 
-    function dispatchPlaybackSettings() {
-        document.dispatchEvent(new CustomEvent('FROM_PLAYBACK_LISTENER', { detail: get(store) }))
-    }
-
-    async function setPlayback({
-        key,
-        value,
-        type
-    }: {
-        key: keyof Playback
-        value: number | boolean
-        type: 'default' | 'track'
-    }) {
-        update((state) => ({ ...state, [type]: { ...state[type], [key]: value } }))
+    async function updatePlayback(playback: Partial<PlaybackSettings>) {
+        update((state) => ({ ...state, ...playback }))
         const newState = get(store)
         await storage.setItem<PlaybackSettings>('local:chorus_playback_settings', newState)
         dispatchPlaybackSettings()
@@ -72,9 +72,10 @@ function createPlaybackStore() {
 
     return {
         reset,
+        update,
         subscribe,
-        setPlayback,
-        toggleDefault
+        updatePlayback,
+        dispatchPlaybackSettings
     }
 }
 

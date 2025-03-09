@@ -2,6 +2,7 @@ import { get } from 'svelte/store'
 import { loopStore } from '$lib/stores/loop'
 import { queue } from '$lib/observers/queue'
 import { seekStore } from '$lib/stores/seek'
+import { playbackStore } from '$lib/stores/playback'
 import { playbackObserver } from './playback'
 import { nowPlaying } from '$lib/stores/now-playing'
 import { snipStore, type Snip } from '$lib/stores/snip'
@@ -27,10 +28,22 @@ export class TrackObserver {
             this.boundProcessTimeUpdate as EventListener
         )
         await this.updateTrackType()
+        this.setPlayback()
+    }
+
+    setPlayback() {
+        const playback = this.currentSong?.playback ?? this.playback.default
+        if (!playback) return
+
+        playbackStore.dispatchPlaybackSettings(playback)
     }
 
     get currentSong() {
         return get(nowPlaying)
+    }
+
+    get playback() {
+        return get(playbackStore)
     }
 
     get snip() {
@@ -123,6 +136,7 @@ export class TrackObserver {
         }
 
         if (this.isMute) this.unMute()
+        this.setPlayback()
         await queue.refreshQueue()
         await this.updateTrackType()
     }
@@ -139,7 +153,7 @@ export class TrackObserver {
             return this.updateCurrentTime(this.snip.start_time)
         }
 
-        if (currentSong.snipped && !this.atSnipEnd({ currentTimeMS, track: currentSong })) return
+        if (currentSong.snip && !this.atSnipEnd({ currentTimeMS, track: currentSong })) return
 
         if (this.loop.looping && this.atSnipEnd({ currentTimeMS, track: currentSong })) {
             if (this.loop.type === 'amount') await loopStore.decrement()
@@ -148,8 +162,7 @@ export class TrackObserver {
 
         if (snip?.is_shared && location?.search) history.pushState(null, '', location.pathname)
         if (
-            currentSong.snipped ||
-            currentSong.blocked ||
+            (currentSong.snip || currentSong.blocked) &&
             currentTimeMS >= this.currentSong.duration * 1000
         )
             this.skipTrack()

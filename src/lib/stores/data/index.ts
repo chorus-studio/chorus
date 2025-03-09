@@ -1,7 +1,7 @@
 import { storage } from '@wxt-dev/storage'
 import type { NowPlaying } from '$lib/stores/now-playing'
-import type { Collection, SimpleTrack, UserCollection } from './cache'
 import { CacheStore, COLLECTION_KEY, USER_COLLECTION_KEY } from './cache'
+import type { Collection, SimpleTrack, UserCollection, Playback, Snip } from './cache'
 
 interface OldTrackData {
     id?: string
@@ -11,6 +11,8 @@ interface OldTrackData {
     startTime?: number
     endTime?: number
     url?: string
+    preservesPitch?: boolean
+    playbackSpeed?: number
 }
 class DataStore {
     private cache: CacheStore
@@ -49,19 +51,37 @@ class DataStore {
                 trackData?.id &&
                 trackData?.url?.includes('track') &&
                 trackData?.endTime &&
-                trackData?.trackId === trackData?.url?.split('/')?.at(-1)
+                trackData?.trackId === trackData?.url?.split('/')?.at(-1) &&
+                (trackData?.isSkipped || trackData?.isSnip)
         )
     }
 
     private convertToNewFormat(trackData: Partial<OldTrackData>): SimpleTrack {
+        const snip =
+            trackData.isSnip && trackData?.endTime && trackData?.startTime
+                ? {
+                      start_time: trackData.startTime,
+                      end_time: trackData.endTime
+                  }
+                : ({} as Snip)
+
+        const playback =
+            trackData.playbackSpeed && trackData.playbackSpeed !== 1
+                ? {
+                      preserves_pitch: trackData.preservesPitch ?? false,
+                      playback_rate: trackData.playbackSpeed
+                  }
+                : ({} as Playback)
+
+        const blocked = trackData.isSkipped ? { blocked: true } : {}
+
         return {
             song_id: trackData.id!,
             liked: false,
-            snipped: trackData.isSnip ?? false,
-            blocked: trackData.isSkipped ?? false,
-            end_time: trackData.endTime ?? 0,
             track_id: trackData.trackId!,
-            start_time: trackData.startTime ?? 0
+            ...snip,
+            ...playback,
+            ...blocked
         }
     }
 
@@ -201,10 +221,6 @@ class DataStore {
         return this.collection.filter((track) => track.liked)
     }
 
-    get snipped(): SimpleTrack[] {
-        return this.collection.filter((track) => track.snipped)
-    }
-
     get collectionObject(): Collection {
         return this.get<Collection>(COLLECTION_KEY) ?? {}
     }
@@ -222,21 +238,17 @@ class DataStore {
         const track = this.collectionObject[track_id]
         if (!track) return
 
-        if (!track.snipped && !track.blocked) {
+        if (!track?.snip && !track?.blocked) {
             await this.removeFromExtensionStorage(track_id)
         } else {
             await this.saveToExtensionStorage(track)
         }
     }
 
-    generateSimpleTrack(track: NowPlaying) {
+    generateSimpleTrack(track: Partial<NowPlaying>) {
         const fullTrack = {
             song_id: track.id!,
             liked: this.checkInUserCollection(track.track_id!),
-            snipped: false,
-            blocked: false,
-            start_time: 0,
-            end_time: track.duration,
             track_id: track.track_id
         } as SimpleTrack
         this.updateTrack({ track_id: fullTrack.track_id!, value: fullTrack })

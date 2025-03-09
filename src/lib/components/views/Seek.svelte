@@ -3,6 +3,7 @@
     import { Label } from '$lib/components/ui/label'
     import { Switch } from '$lib/components/ui/switch'
     import SeekInput from '$lib/components/SeekInput.svelte'
+    import ToggleSelect from '$lib/components/ToggleSelect.svelte'
 
     async function handleCheckedChange(ticked: boolean) {
         checked = ticked
@@ -20,23 +21,13 @@
         <SeekInput type="forward" />
     </div>
 
-    <div class="flex w-full items-center justify-between">
-        <div class="flex items-center">
-            {#each ['G', 'PA'] as item}
-                <span
-                    id={`${item}-setting`}
-                    class="{item === setting
-                        ? 'bg-[green]'
-                        : 'bg-transparent'} h-6 w-7 text-center font-bold text-white">{item}</span
-                >
-            {/each}
-        </div>
-
-        <div class="flex items-center justify-end gap-x-2">
-            <Label class="text-base lowercase"
-                >{setting === 'G' ? 'Global' : 'Podcasts/Audiobooks'}</Label
-            >
-            <Switch {checked} onCheckedChange={handleCheckedChange} />
-        </div>
-    </div>
+    <ToggleSelect
+        label={setting === 'G' ? 'Global' : 'Podcasts/Audiobooks'}
+        list={[
+            { label: 'G', value: 'G' },
+            { label: 'PA', value: 'PA' }
+        ]}
+        value={setting}
+        onValueChange={(value: string) => (setting = value)}
+    />
 </div>

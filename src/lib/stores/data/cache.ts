@@ -2,14 +2,23 @@ type CacheItem<T> = {
     value: T
 }
 
+export type Playback = {
+    playback_rate: number
+    preserves_pitch: boolean
+}
+
+export type Snip = {
+    start_time: number
+    end_time: number
+}
+
 export type SimpleTrack = {
     song_id: string
     liked: boolean
-    snipped: boolean
     track_id: string
-    blocked: boolean
-    end_time: number
-    start_time: number
+    snip?: Snip | null
+    playback?: Playback | null
+    blocked?: boolean
 }
 
 export const COLLECTION_KEY = 'collection'
@@ -43,9 +52,25 @@ export class CacheStore {
         value: SimpleTrack | Partial<SimpleTrack>
     }): void {
         const collection = this.get<Collection>(COLLECTION_KEY) ?? {}
-        collection[track_id] = collection[track_id]
-            ? { ...collection[track_id], ...value }
-            : (value as SimpleTrack)
+        if (!collection[track_id]) {
+            collection[track_id] = value as SimpleTrack
+        }
+
+        // Create a new track object based on the existing track
+        const updatedTrack = { ...collection[track_id] }
+
+        // If snip or playback are null in the update value, remove those keys from the track
+        if (value.snip === null) {
+            delete value.snip
+            delete updatedTrack.snip
+        }
+        if (value.playback === null) {
+            delete value.playback
+            delete updatedTrack.playback
+        }
+
+        // Apply the rest of the updates
+        collection[track_id] = { ...updatedTrack, ...value }
         this.set(COLLECTION_KEY, collection)
     }
 
