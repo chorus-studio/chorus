@@ -15,11 +15,11 @@
     async function init() {
         await nowPlaying.observe()
         await mediaStore.observe()
+        playbackObserver.observe()
     }
 
     onMount(() => {
         init()
-        playbackObserver.observe()
         const tracklistObserver = new TracklistObserver()
         tracklistObserver.observe()
         const queueObserver = new QueueObserver()

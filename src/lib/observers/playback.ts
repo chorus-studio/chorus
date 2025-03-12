@@ -68,24 +68,26 @@ export class PlaybackObserver {
     }
 
     private removeAddToPlaylistButton() {
-        const addToPlaylistButton = document.querySelector(
+        const addToPlaylistButtons = document.querySelectorAll(
             '[data-testid="now-playing-widget"] > div > button[data-encore-id="buttonTertiary"]'
-        ) as HTMLButtonElement
+        ) as NodeListOf<HTMLButtonElement>
 
-        if (!addToPlaylistButton) return
+        if (!addToPlaylistButtons?.length) return
 
-        const visibility = addToPlaylistButton.style.visibility
-        if (visibility === 'hidden') return
+        addToPlaylistButtons.forEach((button) => {
+            const visibility = button.style.visibility
+            if (visibility === 'hidden') return
 
-        const parent = addToPlaylistButton?.parentElement
-        if (parent) {
-            parent.style.margin = '0'
-            parent.style.gap = '0'
-        }
-        if (addToPlaylistButton) {
-            addToPlaylistButton.style.visibility = 'hidden'
-            addToPlaylistButton.style.width = '0'
-        }
+            const parent = button?.parentElement
+            if (parent) {
+                parent.style.margin = '0'
+                parent.style.gap = '0'
+            }
+            if (button) {
+                button.style.visibility = 'hidden'
+                button.style.width = '0'
+            }
+        })
     }
 
     private replaceProgress() {
