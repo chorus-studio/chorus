@@ -155,14 +155,14 @@ class DataStore {
     }
 
     async populate() {
-        const userCollection = await storage.getItem('local:chorus_collection')
-        if (userCollection) {
+        const storedCollection = await storage.getItem('local:chorus_collection')
+        if (storedCollection) {
             const currentCollection = this.get<Collection>(COLLECTION_KEY)
             if (currentCollection) {
-                const mergedCollection = { ...currentCollection, ...userCollection }
+                const mergedCollection = { ...currentCollection, ...storedCollection }
                 this.cache.set(COLLECTION_KEY, mergedCollection)
             } else {
-                this.cache.set(COLLECTION_KEY, userCollection as Collection)
+                this.cache.set(COLLECTION_KEY, storedCollection as Collection)
             }
         }
     }
@@ -217,10 +217,6 @@ class DataStore {
         return this.collection.filter((track) => track.blocked)
     }
 
-    get liked(): SimpleTrack[] {
-        return this.collection.filter((track) => track.liked)
-    }
-
     get collectionObject(): Collection {
         return this.get<Collection>(COLLECTION_KEY) ?? {}
     }
@@ -241,17 +237,20 @@ class DataStore {
         if (!track?.snip && !track?.blocked) {
             await this.removeFromExtensionStorage(track_id)
         } else {
+            if (Object.keys(track).includes('liked')) {
+                delete track.liked
+            }
             await this.saveToExtensionStorage(track)
         }
     }
 
-    generateSimpleTrack(track: Partial<NowPlaying>) {
+    async generateSimpleTrack(track: Partial<NowPlaying>) {
         const fullTrack = {
             song_id: track.id!,
             liked: this.checkInUserCollection(track.track_id!),
             track_id: track.track_id
         } as SimpleTrack
-        this.updateTrack({ track_id: fullTrack.track_id!, value: fullTrack })
+        await this.updateTrack({ track_id: fullTrack.track_id!, value: fullTrack })
     }
 
     checkInUserCollection(track_id: string) {
