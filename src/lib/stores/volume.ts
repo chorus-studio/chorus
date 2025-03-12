@@ -20,7 +20,7 @@ function createVolumeStore() {
 
     function dispatchVolumeEvent() {
         const volume = get(store)
-        document.dispatchEvent(new CustomEvent('FROM_VOLUME_LISTENER', { detail: volume }))
+        window.postMessage({ type: 'FROM_VOLUME_LISTENER', data: volume }, '*')
     }
 
     async function updateVolume(state: Partial<VolumeState>) {

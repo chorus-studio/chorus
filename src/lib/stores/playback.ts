@@ -39,11 +39,7 @@ function createPlaybackStore() {
                 ? state.default.preserves_pitch
                 : state.track.preserves_pitch
         }
-        document.dispatchEvent(
-            new CustomEvent('FROM_PLAYBACK_LISTENER', {
-                detail: data
-            })
-        )
+        window.postMessage({ type: 'FROM_PLAYBACK_LISTENER', data: data }, '*')
     }
 
     async function updatePlayback(playback: Partial<PlaybackSettings>) {

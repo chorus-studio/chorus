@@ -199,24 +199,51 @@ function mediaOverride() {
     observer.observe(document, { childList: true, subtree: true })
     addPlayListener()
 
-    document.addEventListener('FROM_PLAYBACK_LISTENER', (event: CustomEvent) => {
-        updatePlaybackSettings(event.detail)
-    })
+    window.addEventListener('message', (event) => {
+        // Verify the origin for security
+        if (event.source !== window) return
 
-    document.addEventListener('FROM_SEEK_LISTENER', (event: CustomEvent) => {
-        updateSeek(event.detail)
-    })
+        try {
+            const { type, data } = event.data
 
-    document.addEventListener('FROM_EFFECTS_LISTENER', (event: CustomEvent) => {
-        updateAudioEffect(event.detail)
-    })
+            switch (type) {
+                case 'FROM_PLAYBACK_LISTENER':
+                    updatePlaybackSettings({
+                        playback_rate: Number(data?.playback_rate) || 1,
+                        preserves_pitch: Boolean(data?.preserves_pitch)
+                    })
+                    break
 
-    document.addEventListener('FROM_VOLUME_LISTENER', (event: CustomEvent) => {
-        updateVolume(event.detail)
-    })
+                case 'FROM_SEEK_LISTENER':
+                    updateSeek({
+                        type: String(data?.type) as 'skip_back' | 'skip_forward',
+                        value: Number(data?.value) || 0
+                    })
+                    break
 
-    document.addEventListener('FROM_CURRENT_TIME_LISTENER', (event: CustomEvent) => {
-        updateCurrentTime(event.detail)
+                case 'FROM_EFFECTS_LISTENER':
+                    updateAudioEffect({
+                        clear: Boolean(data?.clear),
+                        reverb: data?.reverb ? String(data.reverb) : undefined,
+                        equalizer: data?.equalizer ? String(data.equalizer) : undefined
+                    })
+                    break
+
+                case 'FROM_VOLUME_LISTENER':
+                    updateVolume({
+                        value: Number(data?.value) || 0,
+                        muted: Boolean(data?.muted),
+                        type: String(data?.type) as 'linear' | 'logarithmic'
+                    })
+                    break
+
+                case 'FROM_CURRENT_TIME_LISTENER':
+                    updateCurrentTime(Number(data) || 0)
+                    break
+            }
+        } catch (error) {
+            console.warn('Error handling message:', error)
+        }
     })
 }
 

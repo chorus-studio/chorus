@@ -53,7 +53,7 @@ export default defineBackground(() => {
             const { tabId } = await activeOpenTab()
             if (!tabId) return
 
-            await chrome.scripting.executeScript({
+            await browser.scripting.executeScript({
                 args: [
                     {
                         value: message.data,
@@ -62,11 +62,7 @@ export default defineBackground(() => {
                 ],
                 target: { tabId },
                 func: (data) => {
-                    document.dispatchEvent(
-                        new CustomEvent(data.type, {
-                            detail: data.value
-                        })
-                    )
+                    window.postMessage({ type: data.type, data: data.value }, '*')
                 }
             })
         })

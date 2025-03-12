@@ -123,7 +123,7 @@ function createNowPlayingStore() {
     }
 
     function setCurrentTime(time: number) {
-        document.dispatchEvent(new CustomEvent('FROM_CURRENT_TIME_LISTENER', { detail: time }))
+        window.postMessage({ type: 'FROM_CURRENT_TIME_LISTENER', data: time }, '*')
     }
 
     async function setLiked(liked: boolean) {

@@ -16,9 +16,7 @@ function createAudioEffectsStore() {
     const { subscribe, set, update } = store
 
     function dispatchEffect(key: keyof AudioEffect, value: string) {
-        document.dispatchEvent(
-            new CustomEvent('FROM_EFFECTS_LISTENER', { detail: { [key]: value } })
-        )
+        window.postMessage({ type: 'FROM_EFFECTS_LISTENER', data: get(effectsStore) }, '*')
     }
 
     async function updateEffect({ key, value }: { key: keyof AudioEffect; value: string }) {

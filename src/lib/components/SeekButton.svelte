@@ -5,7 +5,7 @@
 
     export let role: 'seek-forward' | 'seek-backward'
 
-    function handleClick() {
+    function handleSeek() {
         const type = role == 'seek-forward' ? 'skip_forward' : 'skip_back'
         const value = isForward
             ? isLongForm
@@ -14,7 +14,7 @@
             : isLongForm
               ? $seekStore.long_form.rewind
               : $seekStore.default.rewind
-        document.dispatchEvent(new CustomEvent('FROM_SEEK_LISTENER', { detail: { type, value } }))
+        window.postMessage({ type: 'FROM_SEEK_LISTENER', data: { type, value } }, '*')
     }
 
     const id = role == 'seek-forward' ? 'seek-player-ff-button' : 'seek-player-rw-button'
@@ -33,7 +33,7 @@
     <Tooltip.Root>
         <Tooltip.Trigger
             {id}
-            onclick={handleClick}
+            onclick={handleSeek}
             aria-label={role == 'seek-forward' ? 'Seek forward' : 'Seek backward'}
             class={buttonVariants({
                 variant: 'ghost',
