@@ -29,7 +29,7 @@
     let selectedLabel = type === 'reverb' ? 'active reverb preset' : 'active equalizer preset'
 </script>
 
-<div class="flex w-full flex-col gap-y-2.5">
+<div class="flex w-full flex-col justify-between space-y-2.5">
     <div class="flex w-full flex-col gap-x-1 gap-y-1">
         <div class="flex w-full items-center justify-between">
             <Label for="room" class="text-base text-gray-400">{topLabel}</Label>

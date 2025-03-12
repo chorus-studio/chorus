@@ -8,7 +8,6 @@
     import { Badge } from '$lib/components/ui/badge'
     import { Label } from '$lib/components/ui/label'
     import { Switch } from '$lib/components/ui/switch'
-    import ScrollingText from '$lib/components/ScrollingText.svelte'
     import FX from '$lib/components/views/FX.svelte'
     import EQ from '$lib/components/views/EQ.svelte'
     import Info from '$lib/components/views/Info.svelte'
@@ -105,25 +104,25 @@
                     variant="outline"
                     class="rounded-[2px] px-1.5 py-0 pb-[0.125rem] text-sm font-semibold leading-[18px] {$activeTab ===
                     tab
-                        ? 'bg-green-700'
-                        : 'bg-zinc-700'}">{tab}</Badge
+                        ? 'bg-green-700 hover:bg-green-800'
+                        : 'bg-zinc-700 hover:bg-zinc-800'}">{tab}</Badge
                 >
             </Tabs.Trigger>
         {/each}
     </Tabs.List>
 
     {#if $activeTab}
-        <Tabs.Content value={$activeTab} class="relative flex h-[205px] w-full flex-col">
+        <Tabs.Content
+            value={$activeTab}
+            class="relative flex h-[205px] {['fx', 'eq', 'speed'].includes($activeTab)
+                ? 'space-y-3'
+                : ''} w-full flex-col"
+        >
             {#if $activeTab !== 'info'}
                 <TrackInfo />
             {/if}
             <svelte:component this={components[$activeTab]} />
             {#if $activeTab !== 'info'}
-                {#if $activeTab == 'snip' || ($activeTab == 'speed' && !$playbackStore.is_default)}
-                    <p class="absolute bottom-8 w-full text-end text-sm text-zinc-300">
-                        *changes will <span class="font-semibold italic">reset</span> unless saved.
-                    </p>
-                {/if}
                 <div class="absolute bottom-0 flex h-6 w-full items-center justify-end gap-x-2">
                     <Label class="text-sm">set as default view</Label>
                     <Switch

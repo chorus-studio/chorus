@@ -76,7 +76,7 @@
         <div class="flex flex-col">
             <p class="text-xs font-semibold">Leave a Rating / Review</p>
             <span class="text-xs">
-                Would you recommend this to a friend? Share your thoughts with a rating/view.
+                Would you recommend this to a friend? Share your thoughts with a rating/review.
             </span>
         </div>
         <div class="flex w-full items-center justify-between">
