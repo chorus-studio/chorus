@@ -59,11 +59,6 @@ export class CacheStore {
         // Create a new track object based on the existing track
         const updatedTrack = { ...collection[track_id] }
 
-        if (Object.keys(value).includes('liked')) {
-            delete value.liked
-            delete updatedTrack.liked
-        }
-
         // If snip or playback are null in the update value, remove those keys from the track
         if (value.snip === null) {
             delete value.snip

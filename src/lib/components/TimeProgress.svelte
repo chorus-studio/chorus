@@ -36,7 +36,7 @@
     $: currentPosition = Math.round($nowPlaying.current ?? 0)
 </script>
 
-<div class="relative flex w-full items-center justify-between gap-x-3">
+<div class="relative flex w-full items-center {isChorus ? 'mt-2' : ''} justify-between gap-x-3">
     {#if isChorus && $nowPlaying.playback}
         <span class="min-w-7 text-xs font-semibold text-[#1ed760]">
             {$nowPlaying.playback.playback_rate}x
