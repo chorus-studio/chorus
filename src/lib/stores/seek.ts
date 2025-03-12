@@ -33,16 +33,10 @@ function createSeekStore() {
         await storage.setItem<SeekData>('local:chorus_seek', newState)
     }
 
-    async function updateSeek({
-        type = 'default',
-        seek
-    }: {
-        type: 'default' | 'long_form'
-        seek: { key: 'rewind' | 'forward'; value: number }
-    }) {
+    async function updateSeek(state: Partial<SeekData>) {
         update((prev: SeekData) => ({
             ...prev,
-            [type]: { ...prev[type], [seek.key]: seek.value }
+            ...state
         }))
         const newState = get(store)
         await storage.setItem<SeekData>('local:chorus_seek', newState)

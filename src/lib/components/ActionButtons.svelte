@@ -149,6 +149,11 @@
     $: showDelete =
         (tab == 'snip' && $nowPlaying?.snip) ||
         (tab == 'speed' && $nowPlaying?.playback && !$playbackStore.is_default)
+    $: showSave =
+        tab == 'snip' ||
+        (tab == 'speed' &&
+            !$playbackStore.is_default &&
+            ($playbackStore.track.playback_rate != 1 || !$playbackStore.track.preserves_pitch))
 </script>
 
 <div class="absolute bottom-0 flex items-center gap-x-2">
@@ -175,15 +180,7 @@
             </Button>
         {/if}
 
-        {#if tab == 'snip' || (tab == 'speed' && !$playbackStore.is_default)}
-            <!-- TODO: add share button -->
-            <!-- <Button
-                variant="outline"
-                size="sm"
-                class="h-6 rounded-[4px] border-none bg-purple-700 px-2 py-0 pb-[0.125rem] text-sm font-semibold text-primary hover:bg-purple-800"
-            >
-                share
-            </Button> -->
+        {#if showSave}
             <Button
                 variant="outline"
                 size="sm"

@@ -1,6 +1,4 @@
 <script lang="ts">
-    import { dataStore } from '$lib/stores/data'
-    import { nowPlaying } from '$lib/stores/now-playing'
     import { playbackStore } from '$lib/stores/playback'
     import { Slider } from '$lib/components/ui/slider'
 
@@ -38,17 +36,6 @@
                     playback_rate: Number(padSpeed(newValue))
                 }
             })
-            if (type === 'track') {
-                await dataStore.updateTrack({
-                    track_id: $nowPlaying.track_id!,
-                    value: {
-                        playback: {
-                            preserves_pitch: $playbackStore.default.preserves_pitch,
-                            playback_rate: Number(padSpeed(newValue))
-                        }
-                    }
-                })
-            }
         }, 100)
     }
 
