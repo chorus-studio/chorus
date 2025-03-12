@@ -20,7 +20,7 @@
 </script>
 
 {#if $snipStore}
-    <div class="flex w-full flex-col gap-x-1 gap-y-3">
+    <div class="flex h-full w-full flex-col gap-x-1 space-y-1.5">
         <TimeSlider />
         <SnipInputs />
     </div>

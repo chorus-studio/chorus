@@ -16,7 +16,7 @@
                 class={buttonVariants({
                     variant: 'secondary',
                     size: 'sm',
-                    class: `size-6 min-w-6 gap-0 rounded-none ${item.value === value ? 'disabled:bg-green-600 disabled:opacity-90 data-[state=on]:bg-green-600 data-[state=on]:text-white data-[state=on]:hover:bg-green-700' : ''}`
+                    class: `size-6 min-w-6 gap-0 rounded-none text-sm font-bold ${item.value === value ? 'disabled:bg-green-600 disabled:opacity-90 data-[state=on]:bg-green-600 data-[state=on]:text-white data-[state=on]:hover:bg-green-700' : ''}`
                 })}
             >
                 {item.label}

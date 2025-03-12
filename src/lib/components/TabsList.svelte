@@ -105,7 +105,7 @@
                     class="rounded-[2px] px-1.5 py-0 pb-[0.125rem] text-sm font-semibold leading-[18px] {$activeTab ===
                     tab
                         ? 'bg-green-700 hover:bg-green-800'
-                        : 'bg-zinc-700 hover:bg-zinc-800'}">{tab}</Badge
+                        : 'bg-zinc-700 hover:bg-zinc-500'}">{tab}</Badge
                 >
             </Tabs.Trigger>
         {/each}
@@ -114,7 +114,7 @@
     {#if $activeTab}
         <Tabs.Content
             value={$activeTab}
-            class="relative flex h-[205px] {['fx', 'eq', 'speed'].includes($activeTab)
+            class="relative flex h-[205px] {['snip', 'fx', 'eq', 'speed'].includes($activeTab)
                 ? 'space-y-3'
                 : ''} w-full flex-col"
         >
