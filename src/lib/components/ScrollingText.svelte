@@ -60,7 +60,7 @@
 
 <style>
     .marquee {
-        animation: marquee 15s linear infinite;
+        animation: marquee 15s linear infinite !important;
     }
 
     @keyframes marquee {
