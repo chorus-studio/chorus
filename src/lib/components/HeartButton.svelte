@@ -115,9 +115,7 @@
                 value: { liked: !liked }
             })
 
-            setTimeout(() => {
-                higlightInTrackList(track_id)
-            }, 500)
+            higlightInTrackList(track_id)
         }
     }
 
@@ -125,7 +123,7 @@
         const trackId = await getTrackId()
         let shouldHighlight = false
 
-        shouldHighlight = isAlreadyLiked()
+        shouldHighlight = isAlreadyLiked() ?? false
         dataStore.updateUserCollection({
             track_id: trackId,
             liked: shouldHighlight
@@ -135,22 +133,17 @@
             track_id: trackId,
             value: { liked: shouldHighlight }
         })
-        setTimeout(() => {
-            higlightInTrackList(trackId)
-        }, 1000)
+        higlightInTrackList(trackId)
     }
 
     async function init() {
         await highlightHeart()
-        setTimeout(() => {
-            higlightInTrackList($nowPlaying.track_id)
-        }, 1000)
     }
 
     onMount(() => {
         init()
         const unsubscribe = nowPlaying.subscribe(async (nowPlaying) => {
-            if (nowPlaying.id !== currentId && !nowPlaying.track_id) {
+            if (nowPlaying.id !== currentId) {
                 currentId = nowPlaying.id
                 await highlightHeart()
             }

@@ -8,7 +8,6 @@ import { trackObserver } from '$lib/observers/track'
 import type { SimpleTrack } from '$lib/stores/data/cache'
 
 export type NowPlaying = SimpleTrack & {
-    liked: boolean
     current: number
     duration: number
     id: string | null
@@ -16,6 +15,7 @@ export type NowPlaying = SimpleTrack & {
     cover: string | null
     title: string | null
     artist: string | null
+    liked?: boolean | null
     album_id: string | null
     textColour: string | null
     backgroundColour: string | null
@@ -70,7 +70,7 @@ function createNowPlayingStore() {
             if (!songInfo.id) return
 
             currentSongId = songInfo.id
-            await updateNowPlaying()
+            await updateNowPlaying(true)
             await trackObserver?.processSongTransition()
         }
     }
@@ -100,18 +100,20 @@ function createNowPlayingStore() {
         }
     }
 
-    async function updateNowPlaying() {
+    async function updateNowPlaying(songChanged = false) {
         const songInfo = getSongInfo()
         const currentData = get(store)
-        if (!songInfo?.blocked) delete currentData?.blocked
-        if (!songInfo?.snip) delete currentData?.snip
-        if (!songInfo?.playback) delete currentData?.playback
+        if (songChanged) {
+            if (!songInfo?.blocked) delete currentData?.blocked
+            if (!songInfo?.snip) delete currentData?.snip
+            if (!songInfo?.playback) delete currentData?.playback
+        }
 
         const newState = { ...currentData, ...songInfo }
 
         let dataState: SimpleTrack | null = null
         if (newState.track_id && !dataStore.collectionObject[newState.track_id]) {
-            dataStore.generateSimpleTrack(newState)
+            await dataStore.generateSimpleTrack(newState)
             dataState = dataStore.collectionObject[newState.track_id] ?? {}
         }
 
