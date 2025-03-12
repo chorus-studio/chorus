@@ -13,14 +13,14 @@ type MessengerParams = {
 }
 
 async function getActiveTab(): Promise<SpotifyTab | undefined> {
-    const currentWindow = await chrome.tabs.query({
+    const currentWindow = await browser.tabs.query({
         active: true,
         currentWindow: true,
         url: ['*://open.spotify.com/*']
     })
     if (currentWindow.length) return currentWindow.at(0) as SpotifyTab
 
-    const anyWindow = await chrome.tabs.query({ url: ['*://open.spotify.com/*'] })
+    const anyWindow = await browser.tabs.query({ url: ['*://open.spotify.com/*'] })
     return anyWindow?.at(0) as SpotifyTab | undefined
 }
 
@@ -31,7 +31,7 @@ async function activeOpenTab(): Promise<{ active: boolean; tabId: number | undef
 
 function messenger({ tabId, message }: MessengerParams): void {
     if (!tabId) return
-    chrome.tabs.sendMessage(tabId, message)
+    browser.tabs.sendMessage(tabId, message)
 }
 
 async function sendMessage({ message }: { message: Message }): Promise<void> {
@@ -43,9 +43,9 @@ async function sendMessage({ message }: { message: Message }): Promise<void> {
 
 function sendBackgroundMessage<T>(message: Message): Promise<T> {
     return new Promise((resolve, reject) => {
-        chrome.runtime.sendMessage(message, (response) => {
-            if (chrome.runtime.lastError) {
-                return reject({ error: chrome.runtime.lastError })
+        browser.runtime.sendMessage(message, (response) => {
+            if (browser.runtime.lastError) {
+                return reject({ error: browser.runtime.lastError })
             }
             return resolve(response as T)
         })
