@@ -4,14 +4,12 @@
     import * as Tooltip from '$lib/components/ui/tooltip'
 
     import { dataStore } from '$lib/stores/data'
-    import type { SimpleTrack } from '$lib/stores/data/cache'
     import { nowPlaying } from '$lib/stores/now-playing'
     import { getTrackService } from '$lib/api/services/track'
     import { buttonVariants } from '$lib/components/ui/button'
 
     let trackService = getTrackService()
-    let currentId = $state($nowPlaying.id)
-    // let track = $state<SimpleTrack | null>(null)
+    let currentId = $state<string | null>(null)
 
     function inUserCollection() {
         if (!$nowPlaying?.track_id) return false
@@ -145,7 +143,7 @@
         const unsubscribe = nowPlaying.subscribe(async (nowPlaying) => {
             if (nowPlaying.id !== currentId) {
                 currentId = nowPlaying.id
-                await highlightHeart()
+                setTimeout(async () => await highlightHeart(), 1500)
             }
         })
 
