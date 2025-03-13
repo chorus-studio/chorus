@@ -4,32 +4,34 @@ import { EQ_PRESETS, EQ_FILTERS } from './presets'
 export default class Equalizer {
     _filters: BiquadFilterNode[]
     _audioManager: AudioManager
-    _audioContext: AudioContext | null
-    _audioNode: AudioNode | null
+    _audioContext?: AudioContext
+    _audioNode?: AudioNode
 
     constructor(audioManager: AudioManager) {
         this._filters = []
         this._audioManager = audioManager
-        this._audioContext = null
-        this._audioNode = null
-    }
-
-    #setup() {
-        this._audioContext = this._audioManager.audioContext as AudioContext
     }
 
     setEQEffect(effect: string) {
-        this.#setup()
-        if (effect == 'none') return this.disconnect()
+        if (!this._audioManager.audioContext) {
+            throw new Error('AudioContext not initialized')
+        }
+
+        this._audioContext = this._audioManager.audioContext
+        if (effect === 'none') {
+            return this.disconnect()
+        }
 
         try {
             this.#applyEQFilters(effect)
         } catch (error) {
-            console.error({ error })
+            console.error('Error setting EQ effect:', error)
+            this.disconnect()
+            throw error
         }
     }
 
-    #createBiquadFilter({
+    createBiquadFilter({
         setting,
         effect,
         index
@@ -38,6 +40,10 @@ export default class Equalizer {
         effect: string
         index: number
     }) {
+        if (!this._audioContext) {
+            throw new Error('AudioContext not initialized')
+        }
+
         const effectGain = EQ_PRESETS[effect][index]
         const filter = this._audioContext.createBiquadFilter()
 
@@ -50,20 +56,30 @@ export default class Equalizer {
     }
 
     #applyEQFilters(effect: string) {
+        if (!this._audioManager.source) {
+            throw new Error('Audio source not initialized')
+        }
+
+        // Disconnect existing filters
         this.disconnect()
+
+        // Create and connect new filters
         EQ_FILTERS.forEach((setting, index) => {
-            const filter = this.#createBiquadFilter({ setting, index, effect })
+            const filter = this.createBiquadFilter({ setting, index, effect })
             this._filters.push(filter)
         })
 
-        // connect filters
-        this._audioNode = this._audioManager.source as AudioNode
+        // Connect filters in series
+        this._audioNode = this._audioManager.source
         this._filters.forEach((filter) => {
-            this._audioNode.connect(filter)
+            this._audioNode?.connect(filter)
             this._audioNode = filter
         })
 
-        this._audioManager.connectEqualizer(this._audioNode)
+        // Connect the last filter to the destination
+        if (this._audioNode) {
+            this._audioManager.connectEqualizer(this._audioNode)
+        }
     }
 
     disconnect() {

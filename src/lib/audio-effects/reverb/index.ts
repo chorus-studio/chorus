@@ -14,7 +14,7 @@ export default class Reverb {
         this._internal = internal
     }
 
-    #isDigital(effect: string) {
+    isDigital(effect: string) {
         return roomPresets.includes(effect)
     }
 
@@ -23,33 +23,56 @@ export default class Reverb {
     }
 
     async setReverbEffect(effect: string) {
-        this.#setup()
-        if (effect == 'none') return this.disconnect()
+        if (!this._audioManager.audioContext) {
+            throw new Error('AudioContext not initialized')
+        }
 
-        const isDigital = this.#isDigital(effect)
-        await (isDigital ? this.#createDigitalReverb() : this.#createImpulseReverb(effect))
-        if (!isDigital) return
+        this._audioContext = this._audioManager.audioContext
+        if (effect === 'none') {
+            return this.disconnect()
+        }
 
-        this.#connect()
-        this.#applyReverbEffect(effect)
+        try {
+            const isDigital = this.isDigital(effect)
+            await (isDigital ? this.createDigitalReverb() : this.createImpulseReverb(effect))
+            if (!isDigital) return
+
+            this.connect()
+            this.applyReverbEffect(effect)
+        } catch (error) {
+            console.error('Error setting reverb effect:', error)
+            this.disconnect()
+            throw error
+        }
     }
 
-    #setup() {
-        this._audioContext = this._audioManager.audioContext as AudioContext
-        this._gain = this._gain ?? this._audioContext.createGain()
-    }
+    connect() {
+        if (!this._gain || !this._reverb) {
+            throw new Error('Audio nodes not properly initialized')
+        }
 
-    #connect() {
         this._audioManager.connectReverb({
-            gain: this._gain as AudioNode,
-            reverb: this._reverb as AudioNode
+            gain: this._gain,
+            reverb: this._reverb
         })
     }
 
-    async #createDigitalReverb() {
+    async createDigitalReverb() {
+        if (!this._audioContext) {
+            throw new Error('AudioContext not initialized')
+        }
+
         const modulePath = sessionStorage.getItem('chorus:reverb_path')
-        if (!modulePath || !this._audioContext) return
+        if (!modulePath) {
+            throw new Error('Reverb module path not found in session storage')
+        }
+
         await this._audioContext.audioWorklet.addModule(modulePath)
+
+        // Create gain node if it doesn't exist
+        this._gain = this._gain ?? this._audioContext.createGain()
+
+        // Create reverb node if it doesn't exist
         this._reverb =
             this._reverb ??
             new AudioWorkletNode(this._audioContext, 'DattorroReverb', {
@@ -59,40 +82,67 @@ export default class Reverb {
             })
     }
 
-    async #createImpulseReverb(effect: string) {
-        this._convolverNode = this._convolverNode ?? this._audioContext?.createConvolver()
-        if (!this._convolverNode || !this._audioContext) return
+    async createImpulseReverb(effect: string) {
+        if (!this._audioContext) {
+            throw new Error('AudioContext not initialized')
+        }
+
+        // Create gain node if it doesn't exist
+        this._gain = this._gain ?? this._audioContext.createGain()
+
+        // Create convolver node if it doesn't exist
+        this._convolverNode = this._convolverNode ?? this._audioContext.createConvolver()
+
         const soundsDir = sessionStorage.getItem('chorus:sounds_dir')
+        if (!soundsDir) {
+            throw new Error('Sounds directory path not found in session storage')
+        }
 
         const response = await fetch(`${soundsDir}${effect}.wav`)
+        if (!response.ok) {
+            throw new Error(`Failed to load impulse response: ${effect}`)
+        }
+
         const arraybuffer = await response.arrayBuffer()
         this._convolverNode.buffer = await this._audioContext.decodeAudioData(arraybuffer)
 
-        this._audioManager.source?.connect(this._convolverNode)
-        this._convolverNode.connect(this._gain as AudioNode)
-        this._gain?.connect(this._audioContext.destination as AudioNode)
+        if (!this._audioManager.source || !this._convolverNode || !this._gain) {
+            throw new Error('Audio nodes not properly initialized')
+        }
+
+        this._audioManager.source.connect(this._convolverNode)
+        this._convolverNode.connect(this._gain)
+        this._gain.connect(this._audioContext.destination)
     }
 
     disconnect() {
         this._audioManager.disconnect()
     }
 
-    async #applyReverbEffect(effect) {
-        if (effect == 'none') return this.disconnect()
+    async applyReverbEffect(effect: string) {
+        if (effect === 'none') {
+            return this.disconnect()
+        }
 
         try {
-            this.#applyReverbEffectParams(effect)
+            this.applyReverbEffectParams(effect)
         } catch (error) {
-            console.error({ error })
+            console.error('Error applying reverb effect:', error)
+            throw error
         }
     }
 
-    #applyReverbEffectParams(effect) {
+    applyReverbEffectParams(effect: string) {
+        if (!this._reverb || !this._audioContext) {
+            throw new Error('Reverb node or AudioContext not initialized')
+        }
+
         const paramsList = getParamsListForEffect(effect)
         paramsList.forEach(({ name, value }: { name: string; value: number }) => {
-            this._reverb?.parameters
-                .get(name)
-                ?.linearRampToValueAtTime(value, this._audioContext?.currentTime + 0.195)
+            const param = this._reverb?.parameters.get(name)
+            if (param && this._audioContext) {
+                param.linearRampToValueAtTime(value, this._audioContext.currentTime + 0.195)
+            }
         })
     }
 }

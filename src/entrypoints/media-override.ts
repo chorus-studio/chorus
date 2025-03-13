@@ -169,6 +169,9 @@ function mediaOverride() {
         if (!audioManager || !equalizer || !reverb) return
 
         try {
+            // Ensure audio chain is ready
+            await audioManager.ensureAudioChainReady()
+
             // Disconnect everything first
             audioManager.disconnect()
             if (effect.clear) return
