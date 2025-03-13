@@ -15,7 +15,7 @@ function createAudioEffectsStore() {
     const store = writable<AudioEffect>(defaultAudioEffect)
     const { subscribe, set, update } = store
 
-    function dispatchEffect(key: keyof AudioEffect, value: string) {
+    function dispatchEffect() {
         window.postMessage({ type: 'FROM_EFFECTS_LISTENER', data: get(effectsStore) }, '*')
     }
 
@@ -23,7 +23,7 @@ function createAudioEffectsStore() {
         update((state) => ({ ...state, [key]: value }))
         const newState = get(store)
         await storage.setItem<AudioEffect>('local:chorus_audio_effects', newState)
-        dispatchEffect(key, value)
+        dispatchEffect()
     }
 
     async function reset(key: keyof AudioEffect) {
@@ -44,7 +44,8 @@ function createAudioEffectsStore() {
         set,
         reset,
         subscribe,
-        updateEffect
+        updateEffect,
+        dispatchEffect
     }
 }
 

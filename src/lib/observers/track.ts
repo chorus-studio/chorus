@@ -6,6 +6,7 @@ import { playbackStore } from '$lib/stores/playback'
 import { playbackObserver } from './playback'
 import { nowPlaying } from '$lib/stores/now-playing'
 import { snipStore, type Snip } from '$lib/stores/snip'
+import { effectsStore } from '$lib/stores/audio-effects'
 import type { SimpleTrack } from '$lib/stores/data/cache'
 import { getPlayerService, type PlayerService } from '$lib/api/services/player'
 
@@ -29,6 +30,7 @@ export class TrackObserver {
         )
         await this.updateTrackType()
         this.setPlayback()
+        effectsStore.dispatchEffect()
     }
 
     setPlayback() {
