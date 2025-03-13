@@ -21,10 +21,10 @@
     }
 
     function setProgress() {
+        $nowPlaying.current = hoverPosition
         if (port) {
             port.postMessage({ type: 'current_time', data: hoverPosition })
         } else {
-            $nowPlaying.current = hoverPosition
             trackObserver?.updateCurrentTime(hoverPosition)
         }
     }
