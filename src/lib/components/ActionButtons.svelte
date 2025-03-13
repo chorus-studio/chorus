@@ -150,7 +150,15 @@
         (tab == 'snip' && $nowPlaying?.snip) ||
         (tab == 'speed' && $nowPlaying?.playback && !$playbackStore.is_default)
     $: showSave =
-        tab == 'snip' ||
+        (tab == 'snip' &&
+            (($snipStore?.start_time &&
+                $nowPlaying?.snip &&
+                $snipStore.start_time !== $nowPlaying?.snip?.start_time) ||
+                $snipStore?.start_time !== 0 ||
+                ($snipStore?.end_time &&
+                    $nowPlaying?.snip &&
+                    $snipStore.end_time !== $nowPlaying?.snip?.end_time) ||
+                $snipStore?.end_time !== $nowPlaying?.duration)) ||
         (tab == 'speed' &&
             !$playbackStore.is_default &&
             ($playbackStore.track.playback_rate != 1 || !$playbackStore.track.preserves_pitch))
