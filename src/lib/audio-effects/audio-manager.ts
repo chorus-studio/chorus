@@ -194,7 +194,8 @@ export default class AudioManager {
         this._volumeType = type
 
         const gainValue = type === 'logarithmic' ? this.linearToLogarithmic(value) : value
-        this._gainNode.gain.value = gainValue
+        // Ensure gain is never negative
+        this._gainNode.gain.value = Math.max(0, gainValue)
     }
 
     getCurrentVolume(): number {
@@ -212,7 +213,8 @@ export default class AudioManager {
         this.disconnect()
 
         // Connect new chain with effects
-        this.source.connect(gain)
+        this.source.connect(this._gainNode!) // First connect to gain node for volume control
+        this._gainNode!.connect(gain) // Then connect gain to reverb chain
         gain.connect(reverb)
         reverb.connect(this.destination)
     }
@@ -224,7 +226,8 @@ export default class AudioManager {
         this.disconnect()
 
         // Connect new chain with equalizer
-        this.source.connect(node)
+        this.source.connect(this._gainNode!) // First connect to gain node for volume control
+        this._gainNode!.connect(node) // Then connect gain to equalizer
         node.connect(this._destination)
     }
 
