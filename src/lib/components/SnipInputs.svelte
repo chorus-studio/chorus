@@ -76,7 +76,7 @@
                     id="start_time"
                     value={formatTimeInSeconds($snipStore.start_time!)}
                     onchange={handleChange}
-                    class="h-6 w-full rounded-none border-none bg-[green] pr-1 text-end text-base font-bold text-white"
+                    class="h-6 w-full rounded-none border-none bg-[green] pr-2 text-end text-base font-bold text-white"
                 />
             </div>
             <div class="flex w-full items-center">
@@ -89,7 +89,7 @@
                     id="end_time"
                     value={formatTimeInSeconds($snipStore.end_time!)}
                     onchange={handleChange}
-                    class="h-6 w-full rounded-none border-none bg-[green] pr-1 text-end text-base font-bold lowercase text-white"
+                    class="h-6 w-full rounded-none border-none bg-[green] pr-2 text-end text-base font-bold lowercase text-white"
                 />
             </div>
         </div>
