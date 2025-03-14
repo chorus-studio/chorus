@@ -26,7 +26,7 @@
             {secondsToTime($snipStore?.start_time)}
         </p>
         <Slider
-            onValueCommit={(value) => handleValueChange(value)}
+            onValueChange={(value) => handleValueChange(value)}
             type="multiple"
             value={[$snipStore?.start_time, $snipStore?.end_time]}
             min={0}
