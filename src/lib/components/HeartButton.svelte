@@ -11,44 +11,26 @@
     let trackService = getTrackService()
     let currentId = $state<string | null>(null)
 
-    function inUserCollection() {
-        if (!$nowPlaying?.track_id) return false
-        return dataStore.checkInUserCollection($nowPlaying.track_id)
-    }
-
-    function isAlreadyLiked() {
-        const likedState = inUserCollection()
+    async function isTrackLiked(track_id: string) {
+        const likedState = dataStore.checkInUserCollection(track_id)
         if (likedState !== null) return likedState
 
+        const response = await trackService.checkIfTracksInCollection(track_id)
+        if (!response) return false
+
+        const isLiked = (response as Array<boolean>)?.at(0) ?? false
         // If Spotify does not highlight the liked button, assume it's not liked
-        if (!isSpotifyHighlighted()) {
-            if ($nowPlaying.track_id) {
-                dataStore.updateUserCollection({
-                    track_id: $nowPlaying.track_id,
-                    liked: false
-                })
-            }
-            return false
-        }
-        return $nowPlaying.liked
-    }
+        dataStore.updateUserCollection({ track_id, liked: isLiked })
 
-    function isSpotifyHighlighted() {
-        const button = document.querySelector(
-            'div[data-testid="now-playing-widget"] > div > button[data-encore-id="buttonTertiary"]'
-        )
-        if (!button) return false
-
-        const ariaChecked = button.getAttribute('aria-checked')
-        return ariaChecked ? JSON.parse(ariaChecked) : false
+        return isLiked
     }
 
     async function getTrackIdFromAlbumId(albumId: string) {
         const response = await trackService.getAlbum(albumId)
         if (!response) return null
 
-        const foundTrack = response.tracks.items.find((track) => {
-            const artists = track.artists.map((artist) => artist.name).join(',')
+        const foundTrack = (response as any).tracks.items.find((track: any) => {
+            const artists = track.artists.map((artist: any) => artist.name).join(',')
             const songTitle = `${track.name} by ${artists}`
             return songTitle == $nowPlaying.id
         })
@@ -59,26 +41,33 @@
     }
 
     function higlightInTrackList(trackId: string) {
-        const anchors = document.querySelectorAll(
-            `a[data-testid="internal-track-link"][href="/track/${trackId}"]`
-        )
-        if (!anchors?.length) return
+        setTimeout(() => {
+            const anchors = document.querySelectorAll(
+                `a[data-testid="internal-track-link"][href="/track/${trackId}"]`
+            )
+            if (!anchors?.length) return
 
-        anchors.forEach((anchor) => {
-            const trackRow = anchor?.parentElement?.parentElement?.parentElement
-            if (!trackRow) return
+            anchors.forEach((anchor) => {
+                const trackRow = anchor?.parentElement?.parentElement?.parentElement
+                if (!trackRow) return
 
-            const heartIcon = trackRow.querySelector('button[role="heart"]') as HTMLButtonElement
-            if (!heartIcon) return
+                const heartIcon = trackRow.querySelector(
+                    'button[role="heart"]'
+                ) as HTMLButtonElement
+                if (!heartIcon) return
 
-            const svg = heartIcon.querySelector('svg')
-            if (!svg) return
+                const svg = heartIcon.querySelector('svg')
+                if (!svg) return
 
-            const highlight = $nowPlaying.liked
-            heartIcon.setAttribute('aria-label', `${highlight ? 'Remove from' : 'Save to'} Liked`)
-            svg.style.fill = highlight ? '#1ed760' : 'none'
-            svg.style.stroke = highlight ? '#1ed760' : 'currentColor'
-        })
+                const highlight = $nowPlaying.liked
+                heartIcon.setAttribute(
+                    'aria-label',
+                    `${highlight ? 'Remove from' : 'Save to'} Liked`
+                )
+                svg.style.fill = highlight ? '#1ed760' : 'none'
+                svg.style.stroke = highlight ? '#1ed760' : 'currentColor'
+            })
+        }, 500)
     }
 
     async function getTrackId() {
@@ -121,7 +110,7 @@
         const trackId = await getTrackId()
         let shouldHighlight = false
 
-        shouldHighlight = isAlreadyLiked() ?? false
+        shouldHighlight = await isTrackLiked(trackId)
         dataStore.updateUserCollection({
             track_id: trackId,
             liked: shouldHighlight
@@ -143,7 +132,7 @@
         const unsubscribe = nowPlaying.subscribe(async (nowPlaying) => {
             if (nowPlaying.id !== currentId) {
                 currentId = nowPlaying.id
-                setTimeout(async () => await highlightHeart(), 1500)
+                await highlightHeart()
             }
         })
 

@@ -247,23 +247,21 @@ class DataStore {
     async generateSimpleTrack(track: Partial<NowPlaying>) {
         const fullTrack = {
             song_id: track.id!,
-            liked: this.checkInUserCollection(track.track_id!),
+            liked: this.checkInUserCollection(track.track_id!) ?? false,
             track_id: track.track_id
         } as SimpleTrack
         await this.updateTrack({ track_id: fullTrack.track_id!, value: fullTrack })
     }
 
     checkInUserCollection(track_id: string) {
-        if (!track_id) return false
+        if (!track_id) return null
 
         const userCollection = this.get<UserCollection>(USER_COLLECTION_KEY) ?? {}
         this.removeUndefinedUserTracks(userCollection)
 
-        if (!userCollection?.[track_id]) {
-            this.updateUserCollection({ track_id, liked: false })
-            return false
-        }
-        return userCollection[track_id]
+        if (userCollection.hasOwnProperty(track_id)) return userCollection[track_id]
+
+        return null
     }
 
     updateUserCollection({ track_id, liked }: { track_id: string; liked: boolean }) {

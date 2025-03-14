@@ -16,17 +16,14 @@
     let trackService = getTrackService()
 
     async function handleClick() {
-        if (!track?.track_id) {
-            console.error('No track_id provided')
-            return
-        }
+        if (!track?.track_id) return
 
         const method = isLiked ? 'DELETE' : 'PUT'
-
         await trackService?.updateLikedTracks({ ids: track.track_id, method })
-        isLiked = method === 'PUT'
-        if (track)
-            await dataStore.updateTrack({ track_id: track.track_id!, value: { liked: isLiked } })
+        isLiked = !isLiked
+
+        dataStore.updateUserCollection({ track_id: track.track_id!, liked: isLiked })
+        await dataStore.updateTrack({ track_id: track.track_id!, value: { liked: isLiked } })
         await updateCurrentTrack(isLiked)
     }
 
@@ -40,7 +37,7 @@
         await nowPlaying.setLiked(liked)
     }
 
-    onMount(async () => {
+    onMount(() => {
         isLiked = onLikedPage()
         if (track) {
             isLiked = track?.liked ?? false
@@ -63,8 +60,9 @@
             <Heart
                 role="heart"
                 size={24}
-                fill={isLiked ? '#1ed760' : 'none'}
-                color={isLiked ? '#1ed760' : 'currentColor'}
+                class={`${isLiked ? 'fill-[#1ed760]' : 'fill-transparent'} ${
+                    isLiked ? 'stroke-[#1ed760]' : 'stroke-current'
+                }`}
             />
         </Tooltip.Trigger>
         <Tooltip.Content class="bg-background p-2 text-sm text-white">

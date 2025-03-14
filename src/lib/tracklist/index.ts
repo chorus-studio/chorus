@@ -89,37 +89,53 @@ export class TrackList {
         this.setRowEvents()
     }
 
-    isLiked(row: HTMLElement) {
+    isSpotifyHighlighted(row: HTMLElement) {
+        const button = row.querySelector('button[data-encore-id="buttonTertiary"]')
+        if (!button) return false
+        const ariaChecked = button.getAttribute('aria-checked')
+        const ariaLabel = button.getAttribute('aria-label')
+        const isInLikedPlaylist = ariaLabel?.includes('Add to playlist')
+        return ariaChecked ? JSON.parse(ariaChecked) && isInLikedPlaylist : false
+    }
+
+    async isLiked(row: HTMLElement) {
         if (this.isOnLikedSongsPage) return true
         if (row.getAttribute('data-testid') != 'tracklist-row') return false
         const track = trackSongInfo(row)
         if (!track?.track_id) return false
 
-        return dataStore.checkInUserCollection(track.track_id)
+        const isAlreadyLiked = dataStore.checkInUserCollection(track.track_id)
+        if (isAlreadyLiked !== null) return isAlreadyLiked
+
+        const response = await this.trackService.checkIfTracksInCollection(track.track_id)
+        if (!response) return false
+
+        const isLiked = (response as Array<boolean>)?.at(0) ?? false
+        await dataStore.updateTrack({ track_id: track.track_id!, value: { liked: isLiked } })
+        dataStore.updateUserCollection({ track_id: track.track_id!, liked: isLiked })
+
+        return isLiked
     }
 
     async generateSimpleTrack(row: HTMLElement) {
         const track = trackSongInfo(row)
-        if (!track) return
+        if (!track?.track_id) return
 
-        if (track?.track_id) {
-            dataStore.updateUserCollection({
-                track_id: track.track_id,
-                liked: this.isLiked(row)
-            })
-        }
+        const isLiked = await this.isLiked(row)
+        dataStore.updateUserCollection({
+            track_id: track.track_id,
+            liked: isLiked
+        })
 
-        if (track?.track_id) {
-            await dataStore.updateTrack({
+        await dataStore.updateTrack({
+            track_id: track.track_id,
+            value: {
+                liked: isLiked,
                 track_id: track.track_id,
-                value: {
-                    liked: dataStore.checkInUserCollection(track.track_id),
-                    track_id: track.track_id,
-                    song_id: track.id!,
-                    blocked: false
-                }
-            })
-        }
+                song_id: track.id!,
+                blocked: false
+            }
+        })
     }
 
     private setRowEvents() {
