@@ -47,6 +47,7 @@
     },
     "type": "module",
     "dependencies": {
-        "@webext-core/proxy-service": "^1.2.1"
+        "@webext-core/proxy-service": "^1.2.1",
+        "mode-watcher": "^0.5.1"
     }
 }
