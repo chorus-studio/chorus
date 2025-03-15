@@ -185,13 +185,19 @@ export default class AudioManager {
                 const scaledValue = type === 'logarithmic' ? this.linearToLogarithmic(value) : value
                 const finalValue = Math.min(1, scaledValue)
                 this._element.volume = finalValue
-                this._element.muted = false
+                this._element.muted = value === 0
             }
             return
         }
 
         this._currentVolume = value
         this._volumeType = type
+
+        // Special handling for muting (value = 0)
+        if (value === 0) {
+            this._gainNode.gain.value = 0
+            return
+        }
 
         const gainValue = type === 'logarithmic' ? this.linearToLogarithmic(value) : value
         // Ensure gain is never negative
@@ -234,6 +240,9 @@ export default class AudioManager {
     disconnect() {
         if (!this.source || !this._destination || !this._gainNode) return
 
+        // Store current gain value before disconnecting
+        const currentGain = this._gainNode.gain.value
+
         // Disconnect all nodes
         this.source.disconnect()
         this._gainNode.disconnect()
@@ -244,8 +253,9 @@ export default class AudioManager {
 
         this.source.connect(this._gainNode)
         this._gainNode.connect(this.destination)
-        // Restore the current volume
-        this.setGain(this._currentVolume, this._volumeType)
+
+        // Immediately set the gain value to maintain volume state
+        this._gainNode.gain.value = currentGain
     }
 
     cleanup() {

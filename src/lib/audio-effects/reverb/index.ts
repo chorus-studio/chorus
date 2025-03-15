@@ -110,9 +110,11 @@ export default class Reverb {
             throw new Error('Audio nodes not properly initialized')
         }
 
-        this._audioManager.source.connect(this._convolverNode)
-        this._convolverNode.connect(this._gain)
-        this._gain.connect(this._audioContext.destination)
+        // Use AudioManager's connectReverb instead of direct connections
+        this._audioManager.connectReverb({
+            gain: this._gain,
+            reverb: this._convolverNode
+        })
     }
 
     disconnect() {
