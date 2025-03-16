@@ -36,11 +36,11 @@
     "private": true,
     "scripts": {
         "dev": "wxt",
-        "dev:firefox": "wxt -b firefox",
+        "dev:fox": "wxt -b firefox",
         "build": "wxt build",
-        "build:firefox": "wxt build -b firefox",
+        "build:fox": "wxt build -b firefox --mv3",
         "zip": "wxt zip",
-        "zip:firefox": "wxt zip -b firefox",
+        "zip:fox": "wxt zip -b firefox --mv3",
         "check": "svelte-check --tsconfig ./tsconfig.json",
         "postinstall": "wxt prepare",
         "prepare": "node .husky/install.mjs"
