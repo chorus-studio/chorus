@@ -2,12 +2,13 @@ import { get } from 'svelte/store'
 import { loopStore } from '$lib/stores/loop'
 import { queue } from '$lib/observers/queue'
 import { seekStore } from '$lib/stores/seek'
+import { volumeStore } from '$lib/stores/volume'
 import { playbackStore } from '$lib/stores/playback'
-import { playbackObserver } from './playback'
 import { nowPlaying } from '$lib/stores/now-playing'
 import { snipStore, type Snip } from '$lib/stores/snip'
 import { effectsStore } from '$lib/stores/audio-effects'
 import type { SimpleTrack } from '$lib/stores/data/cache'
+import { playbackObserver } from '$lib/observers/playback'
 import { getPlayerService, type PlayerService } from '$lib/api/services/player'
 
 export class TrackObserver {
@@ -71,7 +72,7 @@ export class TrackObserver {
     }
 
     mute() {
-        if (!this.isMute) this.muteButton?.click()
+        volumeStore.mute()
     }
 
     unMute() {
@@ -137,7 +138,7 @@ export class TrackObserver {
             this.seeking = false
         }
 
-        if (this.isMute) this.unMute()
+        volumeStore.unMute()
         this.setPlayback()
         await queue.refreshQueue()
         await this.updateTrackType()

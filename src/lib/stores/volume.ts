@@ -18,6 +18,18 @@ function createVolumeStore() {
     const store = writable(defaultVolumeState)
     const { subscribe, set, update } = store
 
+    function mute() {
+        update((prev) => ({ ...prev, muted: true }))
+        dispatchVolumeEvent()
+    }
+
+    function unMute() {
+        if (!get(store).muted) return
+
+        update((prev) => ({ ...prev, muted: false }))
+        dispatchVolumeEvent()
+    }
+
     function dispatchVolumeEvent() {
         const volume = get(store)
         window.postMessage({ type: 'FROM_VOLUME_LISTENER', data: volume }, '*')
@@ -38,6 +50,8 @@ function createVolumeStore() {
     })
 
     return {
+        mute,
+        unMute,
         subscribe,
         updateVolume,
         dispatchVolumeEvent
