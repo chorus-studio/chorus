@@ -132,8 +132,7 @@ export class TrackList {
             value: {
                 liked: isLiked,
                 track_id: track.track_id,
-                song_id: track.id!,
-                blocked: false
+                song_id: track.id!
             }
         })
     }
