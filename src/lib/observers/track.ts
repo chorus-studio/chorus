@@ -144,30 +144,32 @@ export class TrackObserver {
     }
 
     private async processTimeUpdate(event: CustomEvent) {
-        const currentSong = this.currentSong
+        setTimeout(async () => {
+            const currentSong = this.currentSong
 
-        if (!currentSong || this.seeking) return
+            if (!currentSong || this.seeking) return
 
-        const currentTimeMS = event.detail.currentTime * 1000
-        const snip = this.snip
+            const currentTimeMS = event.detail.currentTime * 1000
+            const snip = this.snip
 
-        if (this.snip && this.atTempSnipEnd(currentTimeMS)) {
-            return this.updateCurrentTime(this.snip.start_time)
-        }
+            if (this.snip && this.atTempSnipEnd(currentTimeMS)) {
+                return this.updateCurrentTime(this.snip.start_time)
+            }
 
-        if (currentSong.snip && !this.atSnipEnd({ currentTimeMS, track: currentSong })) return
+            if (currentSong.snip && !this.atSnipEnd({ currentTimeMS, track: currentSong })) return
 
-        if (this.loop.looping && this.atSnipEnd({ currentTimeMS, track: currentSong })) {
-            if (this.loop.type === 'amount') await loopStore.decrement()
-            return this.updateCurrentTime(currentSong.snip?.start_time ?? 0)
-        }
+            if (this.loop.looping && this.atSnipEnd({ currentTimeMS, track: currentSong })) {
+                if (this.loop.type === 'amount') await loopStore.decrement()
+                return this.updateCurrentTime(currentSong.snip?.start_time ?? 0)
+            }
 
-        if (snip?.is_shared && location?.search) history.pushState(null, '', location.pathname)
-        if (
-            (currentSong.snip || currentSong.blocked) &&
-            currentTimeMS >= this.currentSong.duration * 1000
-        )
-            this.skipTrack()
+            if (snip?.is_shared && location?.search) history.pushState(null, '', location.pathname)
+            if (
+                (currentSong.snip || currentSong.blocked) &&
+                currentTimeMS >= this.currentSong.duration * 1000
+            )
+                this.skipTrack()
+        }, 50)
     }
 
     disconnect() {
