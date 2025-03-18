@@ -42,7 +42,7 @@
             <Button size="sm" variant="secondary">
                 <a
                     class="flex items-center justify-between gap-1"
-                    href="https://discord.com/channels/1174769700945801286/1174769701629468780"
+                    href="https://discord.gg/6nwYZsBw8G"
                     rel="noopener noreferrer"
                     target="_blank"
                 >
