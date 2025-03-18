@@ -66,7 +66,7 @@
 
     <div class="-mt-2 grid w-full grid-cols-2">
         <div class="flex flex-col items-center gap-y-1">
-            <div class="flex h-6 items-center">
+            <div class="flex h-6 w-full items-center">
                 <Label
                     for="start_time"
                     class="h-6 w-12 min-w-12 border-none bg-zinc-700 px-2 py-0 pb-[0.075rem] text-center text-base font-bold lowercase leading-5"
@@ -76,7 +76,7 @@
                     id="start_time"
                     value={formatTimeInSeconds($snipStore.start_time!)}
                     onchange={handleChange}
-                    class="h-6 w-full rounded-none border-none bg-[green] pr-2 text-end text-base font-bold text-white"
+                    class="h-6 w-24 rounded-none border-none bg-green-700 pr-2 text-end text-base font-bold tracking-wide text-white"
                 />
             </div>
             <div class="flex w-full items-center">
@@ -89,7 +89,7 @@
                     id="end_time"
                     value={formatTimeInSeconds($snipStore.end_time!)}
                     onchange={handleChange}
-                    class="h-6 w-full rounded-none border-none bg-[green] pr-2 text-end text-base font-bold lowercase text-white"
+                    class="h-6 w-24 rounded-none border-none bg-green-700 pr-2 text-end text-base font-bold lowercase tracking-wide text-white"
                 />
             </div>
         </div>
@@ -136,8 +136,8 @@
                                 d="M3 1.713a.7.7 0 0 1 1.05-.607l10.89 6.288a.7.7 0 0 1 0 1.212L4.05 14.894A.7.7 0 0 1 3 14.288V1.713z"
                             />
                         {/if}
-                    </svg></Button
-                >
+                    </svg>
+                </Button>
             </div>
         </div>
     </div>
