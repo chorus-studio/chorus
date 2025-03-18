@@ -75,7 +75,7 @@
     role={icon}
     class="relative flex items-center justify-center gap-0 border-none p-0 hover:scale-[120%] {isPlayPause ||
     icon == 'dj'
-        ? `h-7 w-7 rounded-full ${icon == 'dj' ? 'size-6 bg-blue-500 hover:bg-blue-500' : 'bg-[var(--text)] hover:bg-[var(--text)]'} brightness-75 [&_svg]:size-[${size}px]`
+        ? `h-7 w-7 rounded-full ${icon == 'dj' ? 'size-6 bg-blue-500 hover:bg-blue-500' : 'bg-[var(--text)] brightness-75 hover:bg-[var(--text)]'} [&_svg]:size-[${size}px]`
         : `h-6 w-6 bg-transparent hover:bg-transparent [&_svg]:size-[${size}px]`}"
 >
     {#if isSeek}
@@ -113,7 +113,7 @@
         preserveAspectRatio="xMidYMid meet"
         {viewBox}
         class="size-[{size}px] {getFillColor(icon)} {isPlayPause
-            ? 'fill-[var(--bg)] brightness-150'
+            ? 'fill-[var(--bg)] brightness-100'
             : icon == 'dj'
               ? 'fill-[#1ed760] stroke-[#1ed760] brightness-150'
               : 'brightness-75'} {icon == 'seek-forward' ? 'scale-x-[-1]' : ''} {isSeek
