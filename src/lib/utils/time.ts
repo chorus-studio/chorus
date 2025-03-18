@@ -31,9 +31,8 @@ export const formatTimeInSeconds = (totalSeconds: string | number) => {
     const hours = `${Math.floor(parsedSeconds / 3600)}`.padStart(2, '0')
     const minutes = `${Math.floor((parsedSeconds % 3600) / 60)}`.padStart(2, '0')
     const seconds = `${Math.floor(parsedSeconds % 60)}`.padStart(2, '0')
-    const milliseconds = `${Math.round((parsedSeconds % 1) * 1000)}`.padStart(3, '0').slice(0, 2)
 
-    return `${hours}:${minutes}:${seconds}:${milliseconds}`
+    return `${hours}:${minutes}:${seconds}`
 }
 
 export const timeToMilliseconds = ({
