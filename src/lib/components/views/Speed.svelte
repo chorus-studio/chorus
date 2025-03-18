@@ -67,7 +67,7 @@
 </script>
 
 <div class="flex w-full flex-col space-y-1">
-    <BadgeList list={[0.5, 0.75, 0.9818, 1, 1.5, 2, 2.5, 2.75]} handleSelect={handleBadgeSelect} />
+    <BadgeList list={[0.5, 0.75, 0.9818, 1, 1.2, 1.5, 2.5]} handleSelect={handleBadgeSelect} />
     <SpeedSlider />
 
     <div class="flex w-full items-center justify-between">
