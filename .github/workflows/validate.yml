@@ -1,0 +1,26 @@
+name: Validate
+on:
+    workflow_call:
+    pull_request:
+    push:
+        branches:
+            - main
+
+jobs:
+    validate:
+        runs-on: ubuntu-22.04
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - uses: oven-sh/setup-bun@v2
+
+            - name: Install dependencies
+              run: bun install --frozen-lockfile
+
+            # TODO: Uncomment when issues are fixed
+            # - name: Run Checks
+            #   run: bun check
+
+            - name: Build
+              run: bun run build
