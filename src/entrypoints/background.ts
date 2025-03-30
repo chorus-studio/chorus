@@ -7,31 +7,7 @@ import { registerQueueService } from '$lib/api/services/queue'
 import { registerPlayerService } from '$lib/api/services/player'
 
 export default defineBackground(() => {
-    let ENABLED = true
     let popupPort: browser.runtime.Port | null = null
-
-    async function registerScripts() {
-        const scripts: browser.scripting.RegisteredContentScript[] = [
-            {
-                id: 'media-override',
-                js: ['media-override.js'],
-                matches: ['<all_urls>'],
-                runAt: 'document_start',
-                world: 'MAIN'
-            }
-        ]
-
-        try {
-            await browser.scripting.registerContentScripts(scripts)
-        } catch (error) {
-            if (error instanceof Error && error.message.includes('already exists')) {
-                await browser.scripting.unregisterContentScripts()
-                await browser.scripting.registerContentScripts(scripts)
-            }
-        }
-    }
-
-    registerScripts()
 
     browser.runtime.onConnect.addListener(async (port) => {
         if (port.name !== 'popup') return
@@ -164,7 +140,7 @@ export default defineBackground(() => {
 
         const isChorusCommand = Object.keys(chorusKeys).includes(command)
 
-        if (isShortCutKey && !ENABLED && isChorusCommand) return
+        if (isShortCutKey && isChorusCommand) return
 
         await browser.scripting.executeScript({
             args: [selector],
