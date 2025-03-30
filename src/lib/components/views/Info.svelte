@@ -5,7 +5,7 @@
         github: 'https://github.com/chorus-studio/chorus-dev/issues',
         review: {
             addon: 'https://addons.mozilla.org/en-CA/firefox/addon/chorus-spotify-enhancer/',
-            cws: 'https://chromewebstore.google.com/detail/chorus-spotify-enhancer/jfnjmnapkhdbaidedlbdcmhiphfjljcd'
+            cws: 'https://chromewebstore.google.com/detail/chorus-spotify-enhancer/jfnjmnapkhdbaidedlbdcmhiphfjljcd/reviews'
         }
     }
 </script>
