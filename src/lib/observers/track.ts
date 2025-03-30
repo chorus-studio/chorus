@@ -61,14 +61,14 @@ export class TrackObserver {
         return get(seekStore)
     }
 
+    get volume() {
+        return get(volumeStore)
+    }
+
     get muteButton() {
         return document.querySelector(
             '[data-testid="volume-bar-toggle-mute-button"]'
         ) as HTMLButtonElement
-    }
-
-    get isMute() {
-        return this.muteButton?.getAttribute('aria-label') == 'Unmute'
     }
 
     mute() {
@@ -76,7 +76,7 @@ export class TrackObserver {
     }
 
     unMute() {
-        if (this.isMute) this.muteButton?.click()
+        if (this.volume.muted) volumeStore.unMute()
     }
 
     atTempSnipEnd(currentTimeMS: number) {
@@ -118,7 +118,7 @@ export class TrackObserver {
     }
 
     skipTrack() {
-        if (!this.isMute) this.mute()
+        if (!this.volume.muted) this.mute()
         const nextButton = document.querySelector(
             '[data-testid="control-button-skip-forward"]'
         ) as HTMLButtonElement
@@ -138,7 +138,7 @@ export class TrackObserver {
             this.seeking = false
         }
 
-        volumeStore.unMute()
+        this.unMute()
         this.setPlayback()
         await queue.refreshQueue()
         await this.updateTrackType()
