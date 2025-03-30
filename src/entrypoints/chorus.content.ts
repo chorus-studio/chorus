@@ -7,7 +7,9 @@ import { mount, unmount } from 'svelte'
 export default defineContentScript({
     matches: ['*://open.spotify.com/*'],
 
-    main(ctx) {
+    async main(ctx) {
+        await injectScript('/media-override.js')
+
         const ui = createIntegratedUi(ctx, {
             position: 'inline',
             anchor: '[data-testid="now-playing-widget"]',

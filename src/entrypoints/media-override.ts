@@ -31,7 +31,6 @@ function mediaOverride() {
         source.isPlaybackRateChanged = true
         source.defaultPlaybackRate = 1
         source.playbackRate = 1
-        source.volume = 1
         sources.push(source)
 
         if (source instanceof HTMLMediaElement) {
@@ -250,10 +249,6 @@ function mediaOverride() {
     })
 }
 
-export default defineContentScript({
-    matches: ['*://open.spotify.com/*'],
-    main() {
-        mediaOverride()
-        return true
-    }
+export default defineUnlistedScript(() => {
+    mediaOverride()
 })
