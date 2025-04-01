@@ -27,7 +27,10 @@
     })
 </script>
 
-<div class="relative flex w-full max-w-[220px] items-center justify-between gap-x-2 self-end">
+<div
+    id="chorus-volume"
+    class="relative flex w-full max-w-[220px] items-center justify-between gap-x-2 self-end"
+>
     <VolumeReset />
 
     <HoverCard.Root>
