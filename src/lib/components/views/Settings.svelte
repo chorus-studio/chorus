@@ -34,7 +34,7 @@
     }
 </script>
 
-<div class="flex w-full flex-col justify-center space-y-2">
+<div class="flex h-full w-full flex-col items-center justify-center space-y-2">
     <div class="flex w-full justify-between">
         <div class="mr-2 flex w-1/2 flex-col gap-y-2">
             <h2 class="text-base font-semibold">ui</h2>
@@ -49,7 +49,7 @@
             {/each}
         </div>
 
-        <Separator orientation="vertical" class="mx-2 w-0.5 space-x-2 bg-slate-400" />
+        <Separator orientation="vertical" class="mx-2 w-0.5 space-x-2" />
 
         <div class="ml-2 flex w-1/2 flex-col gap-y-2">
             <h2 class="text-base font-semibold">views</h2>
