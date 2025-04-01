@@ -26,7 +26,7 @@ const defaultSettingsState: SettingsState = {
         fx: true,
         eq: true,
         speed: true,
-        snip: false,
+        snip: true,
         seek: true
     }
 }
