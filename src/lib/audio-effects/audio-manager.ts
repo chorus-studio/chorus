@@ -1,3 +1,5 @@
+import { AudioContext } from 'standardized-audio-context'
+
 export default class AudioManager {
     private _gainNode?: GainNode
     private _audioContext?: AudioContext
@@ -126,8 +128,8 @@ export default class AudioManager {
             if (this._source && this._gainNode && this._destination) {
                 this._source.connect(this._gainNode)
                 this._gainNode.connect(this._destination)
-                // Initialize with default volume
-                this.setGain(1)
+                // Initialize with current volume instead of default 1
+                this.setGain(this._currentVolume, this._volumeType)
             } else {
                 throw new Error('Failed to create audio chain nodes')
             }

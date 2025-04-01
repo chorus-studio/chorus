@@ -6,12 +6,20 @@ export type VolumeState = {
     muted: boolean
     value: number
     type: VolumeType
+    default_volume: {
+        linear: number
+        logarithmic: number
+    }
 }
 
 const defaultVolumeState: VolumeState = {
     muted: false,
     value: 75,
-    type: 'linear'
+    type: 'linear',
+    default_volume: {
+        linear: 100,
+        logarithmic: 100
+    }
 }
 
 function createVolumeStore() {
@@ -35,8 +43,19 @@ function createVolumeStore() {
         window.postMessage({ type: 'FROM_VOLUME_LISTENER', data: volume }, '*')
     }
 
+    async function updateDefaultVolume(state: Partial<VolumeState>) {
+        update((prev) => ({ ...prev, default_volume: { ...prev.default_volume, ...state } }))
+        await storage.setItem<VolumeState>('local:chorus_volume', get(store))
+    }
+
     async function updateVolume(state: Partial<VolumeState>) {
         update((prev) => ({ ...prev, ...state }))
+        await storage.setItem<VolumeState>('local:chorus_volume', get(store))
+        dispatchVolumeEvent()
+    }
+
+    async function resetVolume() {
+        update((prev) => ({ ...prev, value: prev.default_volume[prev.type] }))
         await storage.setItem<VolumeState>('local:chorus_volume', get(store))
         dispatchVolumeEvent()
     }
@@ -53,7 +72,9 @@ function createVolumeStore() {
         mute,
         unMute,
         subscribe,
+        resetVolume,
         updateVolume,
+        updateDefaultVolume,
         dispatchVolumeEvent
     }
 }

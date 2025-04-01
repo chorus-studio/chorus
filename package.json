@@ -1,6 +1,6 @@
 {
     "name": "chorus",
-    "version": "2.0.0",
+    "version": "2.1.0",
     "devDependencies": {
         "@tailwindcss/container-queries": "^0.1.1",
         "@tailwindcss/vite": "^4.0.0",
@@ -48,6 +48,7 @@
     "type": "module",
     "dependencies": {
         "@webext-core/proxy-service": "^1.2.1",
-        "mode-watcher": "^0.5.1"
+        "mode-watcher": "^0.5.1",
+        "standardized-audio-context": "^25.3.77"
     }
 }

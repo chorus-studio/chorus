@@ -1,11 +1,15 @@
-import { mount } from 'svelte'
+import { mount, unmount, SvelteComponent } from 'svelte'
 import { get } from 'svelte/store'
 import { mediaStore } from '$lib/stores/media'
+import { settingsStore } from '$lib/stores/settings'
 import { nowPlaying } from '$lib/stores/now-playing'
 import TimeProgress from '$lib/components/TimeProgress.svelte'
 import VolumeSlider from '$lib/components/VolumeSlider.svelte'
+
 export class PlaybackObserver {
     private observer: MutationObserver | null = null
+    private volumeSlider: SvelteComponent | null = null
+    private timeProgress: SvelteComponent | null = null
 
     observe() {
         const target = document.querySelector('[data-testid="playback-position"]')
@@ -13,9 +17,9 @@ export class PlaybackObserver {
 
         this.observer = new MutationObserver(this.handleMutation)
         this.observer.observe(target, { characterData: true, subtree: true })
-        this.removeAddToPlaylistButton()
-        this.replaceProgress()
-        this.replaceVolumeSlider()
+        this.togglePlaylistButton()
+        this.toggleVolumeSlider()
+        if (this.settings.ui.progress) this.replaceProgress()
         this.updateChorusUI()
     }
 
@@ -39,9 +43,33 @@ export class PlaybackObserver {
         buttons.forEach((button) => (button.style.display = 'none'))
     }
 
+    private toggleSpotifyVolume() {
+        const showSpotifyVolume = !this.settings.ui.volume
+        const target = document.querySelector('[data-testid="volume-bar"]') as HTMLElement
+        if (!target) return
+
+        target.style.display = showSpotifyVolume ? 'flex' : 'none'
+    }
+
+    toggleVolumeSlider() {
+        if (this.settings.ui.volume) {
+            this.replaceVolumeSlider()
+        } else {
+            this.unmountVolumeSlider()
+        }
+        this.toggleSpotifyVolume()
+    }
+
+    private unmountVolumeSlider() {
+        if (!this.volumeSlider) return
+
+        unmount(this.volumeSlider, { outro: true })
+        this.volumeSlider = null
+    }
+
     private replaceVolumeSlider() {
-        const volumeButton = document.querySelector('#volume-button')
-        if (volumeButton) return
+        const chorusVolume = document.querySelector('#chorus-volume')
+        if (chorusVolume) return
 
         const target = document.querySelector('[data-testid="volume-bar"] div') as HTMLElement
         if (!target) return
@@ -53,7 +81,7 @@ export class PlaybackObserver {
         const root = container.parentElement?.parentElement
         if (!root) return
         root.style.flexDirection = 'column'
-        mount(VolumeSlider, { target: root })
+        this.volumeSlider = mount(VolumeSlider, { target: root })
     }
 
     private async checkForDJ() {
@@ -67,32 +95,38 @@ export class PlaybackObserver {
         }
     }
 
-    private removeAddToPlaylistButton() {
+    get settings() {
+        return get(settingsStore)
+    }
+
+    togglePlaylistButton() {
         const addToPlaylistButtons = document.querySelectorAll(
             '[data-testid="now-playing-widget"] > div > button[data-encore-id="buttonTertiary"]'
         ) as NodeListOf<HTMLButtonElement>
 
         if (!addToPlaylistButtons?.length) return
 
+        const show = this.settings.ui.playlist
         addToPlaylistButtons.forEach((button) => {
+            const shouldShow = show ? 'visible' : 'hidden'
             const visibility = button.style.visibility
-            if (visibility === 'hidden') return
+            if (visibility === shouldShow) return
 
             const parent = button?.parentElement
             if (parent) {
-                parent.style.margin = '0'
-                parent.style.gap = '0'
+                parent.style.margin = show ? '0 8px' : '0'
+                parent.style.width = show ? 'auto' : '0'
+                parent.style.gap = show ? '12px' : '0'
             }
             if (button) {
-                button.style.visibility = 'hidden'
-                button.style.width = '0'
+                button.style.visibility = shouldShow
+                button.style.width = show ? 'auto' : '0'
             }
         })
     }
 
-    private replaceProgress() {
-        const chorusTimeProgress = document.querySelector('#chorus-time-progress')
-        if (chorusTimeProgress) return
+    private toggleSpotifyProgress() {
+        const showSpotifyProgress = !this.settings.ui.progress
 
         const target = document.querySelector('[data-testid="playback-progressbar"]') as HTMLElement
         const playbackPosition = document.querySelector(
@@ -103,19 +137,48 @@ export class PlaybackObserver {
         ) as HTMLElement
         if (!target || !playbackPosition || !playbackDuration) return
 
-        const container = target.parentElement
+        const container = playbackPosition.parentElement
         if (!container) return
 
-        target.style.width = '0'
-        target.style.visibility = 'hidden'
-        playbackPosition.style.visibility = 'hidden'
-        playbackDuration.style.visibility = 'hidden'
-        playbackPosition.style.minWidth = '0'
-        playbackPosition.style.width = '0'
-        playbackDuration.style.minWidth = '0'
-        playbackDuration.style.width = '0'
+        target.style.width = showSpotifyProgress ? '100%' : '0'
+        target.style.visibility = showSpotifyProgress ? 'visible' : 'hidden'
 
-        mount(TimeProgress, {
+        playbackPosition.style.visibility = showSpotifyProgress ? 'visible' : 'hidden'
+        playbackPosition.style.minWidth = showSpotifyProgress ? '40px' : '0'
+        playbackPosition.style.width = showSpotifyProgress ? 'auto' : '0'
+
+        playbackDuration.style.visibility = showSpotifyProgress ? 'visible' : 'hidden'
+        playbackDuration.style.minWidth = showSpotifyProgress ? '40px' : '0'
+        playbackDuration.style.width = showSpotifyProgress ? 'auto' : '0'
+    }
+
+    toggleProgress() {
+        if (this.settings.ui.progress) {
+            this.replaceProgress()
+        } else {
+            this.unmountProgress()
+        }
+
+        this.toggleSpotifyProgress()
+    }
+
+    private unmountProgress() {
+        if (!this.timeProgress) return
+
+        unmount(this.timeProgress, { outro: true })
+        this.timeProgress = null
+    }
+
+    private replaceProgress() {
+        const chorusTimeProgress = document.querySelector('#chorus-time-progress')
+        if (chorusTimeProgress) return
+
+        const target = document.querySelector('[data-testid="playback-progressbar"]') as HTMLElement
+        const container = target.parentElement
+        if (!container) return
+        this.toggleSpotifyProgress()
+
+        this.timeProgress = mount(TimeProgress, {
             target: container,
             props: { id: 'chorus-time-progress', port: null }
         })
@@ -129,7 +192,7 @@ export class PlaybackObserver {
 
             await this.checkForDJ()
             await nowPlaying.updateNowPlaying()
-            this.removeAddToPlaylistButton()
+            if (this.settings.ui.playlist) this.togglePlaylistButton()
         }
     }
 

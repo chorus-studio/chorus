@@ -31,7 +31,6 @@ function mediaOverride() {
         source.isPlaybackRateChanged = true
         source.defaultPlaybackRate = 1
         source.playbackRate = 1
-        source.volume = 1
         sources.push(source)
 
         if (source instanceof HTMLMediaElement) {
@@ -142,8 +141,6 @@ function mediaOverride() {
 
         for (const source of sources) {
             if (source instanceof HTMLMediaElement) {
-                // Keep source volume at 1 and use audio manager for all volume control
-                source.volume = 1
                 if (audioManager) {
                     // Just set the gain value without disconnecting
                     audioManager.setGain(data.muted ? 0 : scaledValue, data.type)
@@ -250,10 +247,6 @@ function mediaOverride() {
     })
 }
 
-export default defineContentScript({
-    matches: ['*://open.spotify.com/*'],
-    main() {
-        mediaOverride()
-        return true
-    }
+export default defineUnlistedScript(() => {
+    mediaOverride()
 })

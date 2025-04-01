@@ -15,7 +15,7 @@ export default defineConfig({
             'Enhance Spotify with controls to save favourite snips, auto-skip tracks, and set global and custom speed. More to come!',
         web_accessible_resources: [
             {
-                resources: ['/media-override.js', '/sounds/*', '/processor.js'],
+                resources: ['/media-override.js', '/icon/*', '/sounds/*', '/processor.js'],
                 matches: ['*://open.spotify.com/*']
             }
         ],

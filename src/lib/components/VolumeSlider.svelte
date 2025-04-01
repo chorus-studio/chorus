@@ -5,6 +5,8 @@
     import { Slider } from '$lib/components/ui/slider'
     import * as HoverCard from '$lib/components/ui/hover-card'
     import VolumeIcon from '$lib/components/VolumeIcon.svelte'
+    import VolumeReset from '$lib/components/VolumeReset.svelte'
+
     import { buttonVariants } from '$lib/components/ui/button'
     import * as ToggleGroup from '$lib/components/ui/toggle-group'
 
@@ -25,7 +27,12 @@
     })
 </script>
 
-<div class="relative flex w-full max-w-[190px] items-center justify-between gap-x-2 self-end">
+<div
+    id="chorus-volume"
+    class="relative flex w-full max-w-[220px] items-center justify-between gap-x-2 self-end"
+>
+    <VolumeReset />
+
     <HoverCard.Root>
         <HoverCard.Trigger
             role="volume"
@@ -40,7 +47,7 @@
         >
             <VolumeIcon />
         </HoverCard.Trigger>
-        <HoverCard.Content class="relative w-32">
+        <HoverCard.Content class="relative w-28">
             <div class="flex w-full flex-col justify-between gap-2">
                 <ToggleGroup.Root
                     type="single"
@@ -52,7 +59,7 @@
                         class={buttonVariants({
                             variant: 'ghost',
                             size: 'icon',
-                            class: 'h-7 w-9 min-w-9 rounded-sm'
+                            class: 'h-7 w-8 min-w-8 rounded-sm'
                         })}
                     >
                         ln
@@ -62,14 +69,14 @@
                         class={buttonVariants({
                             variant: 'ghost',
                             size: 'icon',
-                            class: 'h-7 w-9 min-w-9 rounded-sm'
+                            class: 'h-7 w-8 min-w-8 rounded-sm'
                         })}
                     >
                         log
                     </ToggleGroup.Item>
                 </ToggleGroup.Root>
 
-                <p class="text-xs text-muted-foreground">scale: {$volumeStore.type}</p>
+                <p class="text-xs text-muted-foreground">{$volumeStore.type}</p>
             </div></HoverCard.Content
         >
     </HoverCard.Root>
