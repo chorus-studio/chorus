@@ -6,6 +6,7 @@ import { chorusKeys, mediaKeys } from '$lib/utils/selectors'
 import { registerTrackService } from '$lib/api/services/track'
 import { registerQueueService } from '$lib/api/services/queue'
 import { registerPlayerService } from '$lib/api/services/player'
+import { registerCheckPermissionsService } from '$lib/utils/check-permissions'
 
 export default defineBackground(() => {
     let popupPort: browser.runtime.Port | null = null
@@ -50,6 +51,7 @@ export default defineBackground(() => {
     registerTrackService()
     registerPlayerService()
     registerQueueService()
+    registerCheckPermissionsService()
 
     browser.runtime.onInstalled.addListener(async () => {
         browser.scripting.unregisterContentScripts().then(async () => {

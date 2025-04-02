@@ -15,6 +15,7 @@
     import Seek from '$lib/components/views/Seek.svelte'
     import Speed from '$lib/components/views/Speed.svelte'
     import TrackInfo from '$lib/components/TrackInfo.svelte'
+    import Support from '$lib/components/views/Support.svelte'
     import Settings from '$lib/components/views/Settings.svelte'
     import ActionButtons from '$lib/components/ActionButtons.svelte'
 
@@ -24,7 +25,7 @@
     import { playbackStore } from '$lib/stores/playback'
     import { settingsStore } from '$lib/stores/settings'
 
-    const tabs = ['snip', 'speed', 'fx', 'eq', 'seek', 'settings', 'info']
+    const tabs = ['snip', 'speed', 'fx', 'eq', 'seek', 'settings', 'info', 'support']
     let filteredTabs: string[] = []
 
     let activeTab = writable<string | undefined>()
@@ -37,7 +38,8 @@
         seek: Seek,
         speed: Speed,
         info: Info,
-        settings: Settings
+        settings: Settings,
+        support: Support
     }
 
     async function handleCheckedChange(checked: boolean) {
@@ -116,7 +118,7 @@
             >
                 <Badge
                     variant="outline"
-                    class="rounded-[2px] {['settings', 'info'].includes(tab)
+                    class="rounded-[2px] {['settings', 'info', 'support'].includes(tab)
                         ? 'p-0'
                         : 'px-1.5 py-0 pb-[0.125rem]'} text-sm font-semibold leading-[18px] {$activeTab ===
                     tab
@@ -148,6 +150,19 @@
                                 d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"
                             /><path d="M12 17h.01" /></svg
                         >
+                    {:else if tab === 'support'}
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            class="lucide lucide-coffee-icon lucide-coffee h-5 w-5 fill-none stroke-2 p-1"
+                            ><path d="M10 2v2" /><path d="M14 2v2" /><path
+                                d="M16 8a1 1 0 0 1 1 1v8a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1h14a4 4 0 1 1 0 8h-1"
+                            /><path d="M6 2v2" /></svg
+                        >
                     {:else}
                         {tab}
                     {/if}
@@ -163,7 +178,7 @@
                 ? 'space-y-3'
                 : ''} w-full flex-col"
         >
-            {#if !['info', 'settings'].includes($activeTab)}
+            {#if !['info', 'settings', 'support'].includes($activeTab)}
                 <TrackInfo />
             {/if}
             <svelte:component this={components[$activeTab]} />

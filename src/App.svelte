@@ -2,6 +2,7 @@
     import { onMount } from 'svelte'
     import { ModeWatcher } from 'mode-watcher'
     import { mediaStore } from '$lib/stores/media'
+    import { Toaster } from '$lib/components/ui/sonner'
     import { nowPlaying } from '$lib/stores/now-playing'
     import { QueueObserver } from '$lib/observers/queue'
     import { trackObserver } from '$lib/observers/track'
@@ -37,6 +38,8 @@
 </script>
 
 <ModeWatcher defaultMode="dark" />
+<Toaster position="bottom-right" richColors />
+
 <div id="chorus-ui" class="flex items-center justify-between">
     <HeartButton />
     <SettingsPopover />
