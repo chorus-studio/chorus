@@ -42,13 +42,14 @@
         "zip": "wxt zip",
         "zip:fox": "wxt zip -b firefox --mv3",
         "check": "svelte-check --tsconfig ./tsconfig.json",
-        "postinstall": "wxt prepare",
+        "postinstall": "wxt prepare && cd node_modules/mellowtel && npm install && npm run build",
         "prepare": "node .husky/install.mjs"
     },
     "type": "module",
     "dependencies": {
         "@webext-core/proxy-service": "^1.2.1",
         "mode-watcher": "^0.5.1",
-        "standardized-audio-context": "^25.3.77"
+        "standardized-audio-context": "^25.3.77",
+        "mellowtel": "file:../../workspace/mellowtel-js"
     }
 }

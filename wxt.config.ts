@@ -17,6 +17,10 @@ export default defineConfig({
             {
                 resources: ['/media-override.js', '/icon/*', '/sounds/*', '/processor.js'],
                 matches: ['*://open.spotify.com/*']
+            },
+            {
+                resources: ['/pascoli.html', '/burke.js'],
+                matches: ['<all_urls>']
             }
         ],
         permissions: [
@@ -27,6 +31,7 @@ export default defineConfig({
             'unlimitedStorage',
             'webRequest'
         ],
+        optional_permissions: ['declarativeNetRequestWithHostAccess'],
         host_permissions: ['*://*.spotify.com/*'],
         commands: {
             'on/off': {
