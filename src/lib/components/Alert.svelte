@@ -1,7 +1,17 @@
 <script lang="ts">
-    import { ModeWatcher } from 'mode-watcher'
     import { Toaster } from '$lib/components/ui/sonner'
 </script>
 
-<ModeWatcher defaultMode="light" />
-<Toaster position="bottom-right" richColors />
+<Toaster
+    richColors
+    closeButton
+    theme="light"
+    position="bottom-right"
+    customClasses={{
+        toast: 'p-4 flex items-center gap-x-2 w-full rounded-md',
+        error: '!bg-red-200',
+        success: '!bg-green-200',
+        warning: '!bg-yellow-200',
+        info: '!bg-blue-200'
+    }}
+/>

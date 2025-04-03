@@ -36,7 +36,7 @@
     })
 </script>
 
-<ModeWatcher defaultMode="dark" />
+<ModeWatcher mode="light" track={false} />
 
 <div id="chorus-ui" class="flex items-center justify-between">
     <HeartButton />

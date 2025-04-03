@@ -1,11 +1,11 @@
 <script lang="ts">
-    import { writable } from 'svelte/store'
     import { onMount } from 'svelte'
+    import { toast } from 'svelte-sonner'
+    import { writable } from 'svelte/store'
     import { mellowtel } from '$lib/utils/mellowtel'
     import { isSupporter } from '$lib/stores/supporter'
     import { getCheckPermissionsService } from '$lib/utils/check-permissions'
 
-    import { toast } from 'svelte-sonner'
     import * as Dialog from './ui/dialog'
     import { Button } from './ui/button'
     import SupportAlert from './SupportAlert.svelte'
@@ -42,7 +42,7 @@
             if (permissionGranted) {
                 await userOptin()
             } else {
-                toast('Permission must be granted to opt in. Click Grant to continue.')
+                toast.warning('Permission required to opt in. Click "accept" to continue.')
             }
         } catch (error) {
             console.error('Failed to verify permission:', error)
@@ -56,7 +56,7 @@
 
         if (!hasPermission) {
             permissionGranted.set(false)
-            toast('Permission must be granted to opt in. Click Grant to continue.')
+            toast.warning('Permission required to opt in. Click "Accept" to continue.')
             return
         }
         await userOptin()
@@ -123,19 +123,14 @@
         </article>
         <Dialog.Footer>
             <div class="flex w-full justify-end gap-2">
-                <Button variant="outline" class="h-8 text-base">
-                    <a
-                        target="_blank"
-                        class="text-base underline"
-                        rel="noopener noreferrer"
-                        href={mellowtelLink}>manage</a
-                    >
-                </Button>
+                <Dialog.Close asChild>
+                    <Button variant="outline" class="h-8 text-base">cancel</Button>
+                </Dialog.Close>
                 {#if $isSupporter}
                     <SupportAlert closeDialog={() => (dialogOpen = false)} />
                 {:else if !$permissionGranted}
                     <Button variant="default" onclick={grantPermission} class="h-8 text-base"
-                        >grant & opt in</Button
+                        >accept & opt in</Button
                     >
                 {:else}
                     <Button onclick={handleOptIn} variant="default" class="h-8 text-base"

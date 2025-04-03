@@ -40,7 +40,7 @@
     >
         opt out
     </AlertDialog.Trigger>
-    <AlertDialog.Content class="w-11/12 rounded-lg p-4 md:w-3/4">
+    <AlertDialog.Content class="w-11/12 rounded-lg bg-primary-foreground p-4 md:w-3/4">
         <AlertDialog.Header>
             <AlertDialog.Title class="text-lg">Opt out of Mellowtel?</AlertDialog.Title>
             <AlertDialog.Description class="text-left text-base">
