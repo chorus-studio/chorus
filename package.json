@@ -18,7 +18,7 @@
         "prettier-plugin-tailwindcss": "^0.6.11",
         "svelte": "^5.1.16",
         "svelte-check": "^4.0.7",
-        "svelte-sonner": "^0.3.28",
+        "svelte-sonner": "https://pkg.pr.new/wobsoriano/svelte-sonner@126",
         "tailwind-merge": "^3.0.1",
         "tailwind-variants": "^0.3.1",
         "tailwindcss": "^3.4.17",
@@ -44,14 +44,14 @@
         "zip": "wxt zip",
         "zip:fox": "wxt zip -b firefox --mv3",
         "check": "svelte-check --tsconfig ./tsconfig.json",
-        "postinstall": "wxt prepare && cd node_modules/mellowtel && npm install && npm run build",
+        "postinstall": "wxt prepare && cd node_modules/mellowtel && bun install && bun run build",
         "prepare": "node .husky/install.mjs"
     },
     "type": "module",
     "dependencies": {
         "@webext-core/proxy-service": "^1.2.1",
+        "mellowtel": "git@github.com:aria-studio/mellowtel-js.git#ext-mode",
         "mode-watcher": "^0.5.1",
-        "standardized-audio-context": "^25.3.77",
-        "mellowtel": "file:../../workspace/mellowtel-js"
+        "standardized-audio-context": "^25.3.77"
     }
 }
