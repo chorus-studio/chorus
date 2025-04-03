@@ -6,27 +6,30 @@
     import SupportDialog from '$lib/components/SupportDialog.svelte'
 
     let supporting = false
+    let triggerText = 'Support'
 
     const checkOptInStatus = async () => {
         supporting = await mellowtel.getOptInStatus()
-        console.log('supporting', supporting)
         isSupporter.set(supporting)
+        triggerText = supporting ? 'Manage' : 'Support'
     }
 
     onMount(() => checkOptInStatus())
 </script>
 
-<div class="flex h-full w-full flex-col items-center justify-center space-y-2">
-    <div class="flex w-full justify-between">
-        <div class="mr-2 flex w-1/2 flex-col gap-y-2">
+<div class="flex h-full w-full flex-col justify-between space-y-2">
+    <div class="flex h-full w-full justify-between">
+        <div class="flex w-full flex-col gap-y-2 space-y-4">
             <div class="flex items-center gap-x-2">
-                <h2 class="text-base font-semibold">tier:</h2>
-                <Badge variant={$isSupporter ? 'default' : 'outline'}
-                    >{$isSupporter ? 'supporter' : 'basic'}</Badge
-                >
+                <h2 class="text-base font-semibold underline">tier:</h2>
+                <Badge variant="default">{$isSupporter ? 'supporter' : 'basic'}</Badge>
             </div>
-            <div class="flex gap-x-2">
-                <SupportDialog />
+            <article class="flex w-full text-sm">
+                Want to help support the ongoing development of chorus? Become a supporter!
+                Supporters get access to exclusive upcoming features for FREE!
+            </article>
+            <div class="flex justify-end">
+                <SupportDialog {triggerText} />
             </div>
         </div>
     </div>

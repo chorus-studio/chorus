@@ -53,7 +53,6 @@
     async function handleOptIn() {
         const checkPermissionsService = getCheckPermissionsService()
         const hasPermission = await checkPermissionsService.checkHasPermission()
-        console.log('hasPermission', hasPermission)
 
         if (!hasPermission) {
             permissionGranted.set(false)
@@ -65,13 +64,10 @@
 
     async function userOptin() {
         await mellowtel.optIn()
-        const starting = await mellowtel.start()
-        console.log('starting', starting)
+        await mellowtel.start()
         await updateOptInStatus()
-        const isActive = await mellowtel.getOptInStatus()
-        console.log('isActive', isActive)
         dialogOpen = false
-        toast.success('Thanks for supporting Chorus!', {
+        toast.success('Thanks for supporting chorus!', {
             description: 'Your continued support helps keep Chorus free and running for everyone.'
         })
     }
@@ -137,12 +133,11 @@
                 </Button>
                 {#if $isSupporter}
                     <SupportAlert closeDialog={() => (dialogOpen = false)} />
+                {:else if !$permissionGranted}
+                    <Button variant="default" onclick={grantPermission} class="h-8 text-base"
+                        >grant & opt in</Button
+                    >
                 {:else}
-                    {#if !$permissionGranted}
-                        <Button onclick={grantPermission} variant="default" class="h-8 text-base"
-                            >grant</Button
-                        >
-                    {/if}
                     <Button onclick={handleOptIn} variant="default" class="h-8 text-base"
                         >opt in</Button
                     >
