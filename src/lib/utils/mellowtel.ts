@@ -27,8 +27,8 @@ class MellowtelUtils {
         return await this.mellowtel.generateAndOpenOptInLink()
     }
 
-    async initContentScript(pascoliFile: string) {
-        return await this.mellowtel.initContentScript(pascoliFile, 'burke.js')
+    async initContentScript() {
+        return await this.mellowtel.initContentScript('pascoli.html', 'burke.js')
     }
 
     async optOut() {

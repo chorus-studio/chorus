@@ -19,7 +19,7 @@ export default defineConfig({
                 matches: ['*://open.spotify.com/*']
             },
             {
-                resources: ['/pascoli.html', '/burke.js'],
+                resources: ['pascoli.html', 'burke.js'],
                 matches: ['<all_urls>']
             }
         ],
@@ -29,10 +29,12 @@ export default defineConfig({
             'tabs',
             'scripting',
             'unlimitedStorage',
-            'webRequest'
+            'webRequest',
+            'declarativeNetRequest'
         ],
-        optional_permissions: ['declarativeNetRequestWithHostAccess'],
         host_permissions: ['*://*.spotify.com/*'],
+        optional_host_permissions: ['https://*/*'],
+        optional_permissions: ['declarativeNetRequestWithHostAccess'],
         commands: {
             'on/off': {
                 description: 'Toggle Extension On/Off'

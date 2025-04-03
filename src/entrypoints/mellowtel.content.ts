@@ -5,6 +5,6 @@ export default defineContentScript({
     runAt: 'document_start',
     allFrames: true,
     main: async () => {
-        await mellowtel.initContentScript('pascoli.html')
+        await mellowtel.initContentScript()
     }
 })

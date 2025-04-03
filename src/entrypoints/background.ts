@@ -9,6 +9,12 @@ import { registerPlayerService } from '$lib/api/services/player'
 import { registerCheckPermissionsService } from '$lib/utils/check-permissions'
 
 export default defineBackground(() => {
+    ;(async () => {
+        await mellowtel.initBackground()
+        const hasOptedIn = await mellowtel.getOptInStatus()
+        if (hasOptedIn) await mellowtel.start()
+    })()
+
     let popupPort: browser.runtime.Port | null = null
 
     browser.runtime.onConnect.addListener(async (port) => {
@@ -52,55 +58,6 @@ export default defineBackground(() => {
     registerPlayerService()
     registerQueueService()
     registerCheckPermissionsService()
-
-    browser.runtime.onInstalled.addListener(async () => {
-        browser.scripting.unregisterContentScripts().then(async () => {
-            const permissions = await browser.permissions.getAll()
-
-            if (!permissions.origins?.includes('https://*/*')) return
-
-            await browser.scripting.registerContentScripts([
-                {
-                    id: 'mellowtel.content',
-                    js: ['mellowtel.js'],
-                    matches: ['<all_urls>'],
-                    runAt: 'document_start',
-                    allFrames: true
-                }
-            ])
-            const hasOptedIn = await mellowtel.getOptInStatus()
-            if (hasOptedIn) await mellowtel.start()
-        })
-    })
-
-    async function initMellowtel() {
-        await mellowtel.initBackground()
-        const hasOptedIn = await mellowtel.getOptInStatus()
-        if (hasOptedIn) await mellowtel.start()
-    }
-
-    initMellowtel()
-
-    browser.permissions.onAdded.addListener(async (permissions) => {
-        const scripts = await browser.scripting.getRegisteredContentScripts()
-        const mellowtelContentScript = scripts.find((script) => script.id === 'mellowtel.content')
-
-        if (!permissions.origins?.includes('https://*/*')) return
-
-        if (!mellowtelContentScript) {
-            await browser.scripting.registerContentScripts([
-                {
-                    id: 'mellowtel.content',
-                    js: ['mellowtel.js'],
-                    matches: ['<all_urls>'],
-                    runAt: 'document_start',
-                    allFrames: true
-                }
-            ])
-        }
-        const hasOptedIn = await mellowtel.getOptInStatus()
-        if (hasOptedIn) await mellowtel.start()
-    })
 
     browser.webRequest.onBeforeRequest.addListener(
         (details) => {
