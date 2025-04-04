@@ -9,8 +9,8 @@ export default defineConfig({
         $lib: 'src/lib'
     },
     manifest: {
-        short_name: 'chorus',
-        name: 'Chorus - Spotify Enhancer',
+        short_name: 'chorus BETA',
+        name: 'Chorus - Spotify Enhancer BETA',
         description:
             'Enhance Spotify with controls to save favourite snips, auto-skip tracks, and set global and custom speed. More to come!',
         web_accessible_resources: [
