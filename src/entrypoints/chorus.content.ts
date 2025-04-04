@@ -1,8 +1,10 @@
+import { mount, unmount } from 'svelte'
+
 import '../app.css'
 import App from '../App.svelte'
-import SeekButton from '$lib/components/SeekButton.svelte'
+import Alert from '$lib/components/Alert.svelte'
 import LoopButton from '$lib/components/LoopButton.svelte'
-import { mount, unmount } from 'svelte'
+import SeekButton from '$lib/components/SeekButton.svelte'
 
 export default defineContentScript({
     matches: ['*://open.spotify.com/*'],
@@ -19,6 +21,10 @@ export default defineContentScript({
                     '[data-testid="control-button-skip-forward"]'
                 )
                 mount(App, { target: container })
+                const body = document.querySelector('body')
+                if (body) {
+                    mount(Alert, { target: body })
+                }
                 if (skipBack) {
                     const seekBack = document.querySelector('#seek-player-rw-button')
                     if (!seekBack) {

@@ -1,12 +1,20 @@
 import { storage } from '@wxt-dev/storage'
+import { mellowtel } from '$lib/utils/mellowtel'
 import { activeOpenTab } from '$lib/utils/messaging'
 import type { NowPlaying } from '$lib/stores/now-playing'
 import { chorusKeys, mediaKeys } from '$lib/utils/selectors'
 import { registerTrackService } from '$lib/api/services/track'
 import { registerQueueService } from '$lib/api/services/queue'
 import { registerPlayerService } from '$lib/api/services/player'
+import { registerCheckPermissionsService } from '$lib/utils/check-permissions'
 
 export default defineBackground(() => {
+    ;(async () => {
+        await mellowtel.initBackground()
+        const hasOptedIn = await mellowtel.getOptInStatus()
+        if (hasOptedIn) await mellowtel.start()
+    })()
+
     let popupPort: browser.runtime.Port | null = null
 
     browser.runtime.onConnect.addListener(async (port) => {
@@ -49,6 +57,7 @@ export default defineBackground(() => {
     registerTrackService()
     registerPlayerService()
     registerQueueService()
+    registerCheckPermissionsService()
 
     browser.webRequest.onBeforeRequest.addListener(
         (details) => {
