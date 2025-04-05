@@ -4,6 +4,9 @@
     import { storage } from '@wxt-dev/storage'
     import { volumeStore } from '$lib/stores/volume'
     import { nowPlaying } from '$lib/stores/now-playing'
+    import { settingsStore } from '$lib/stores/settings'
+    import { supporterStore } from '$lib/stores/supporter'
+    import { BellIcon, BellOffIcon, BellRingIcon } from 'lucide-svelte'
     import { getImageBackgroundAndTextColours } from '$lib/utils/image-colours'
 
     import CoverImage from './CoverImage.svelte'
@@ -86,7 +89,28 @@
         port?.postMessage({ type: 'volume', data: $volumeStore })
     }
 
+    function getCurrentState() {
+        if ($settingsStore.notifications.enabled) {
+            if ($settingsStore.notifications.on_track_change) {
+                return 3
+            }
+            return 2
+        }
+        return 1
+    }
+
+    async function toggleNotifications() {
+        const currentState = getCurrentState()
+        await settingsStore.updateSettings({
+            notifications: {
+                enabled: currentState === 3 ? false : true,
+                on_track_change: currentState === 2 ? true : false
+            }
+        })
+    }
+
     onMount(() => {
+        ;(async () => await supporterStore.sync())()
         setupPort()
         getColours()
 
@@ -95,15 +119,36 @@
 </script>
 
 <main class="relative flex h-[160px] w-[300px] flex-col gap-1 bg-[var(--bg)] px-3.5 py-3">
-    <Button
-        variant="ghost"
-        size="icon"
-        aria-label="Volume"
-        onclick={toggleVolumeMute}
-        class="absolute -top-1 right-0 size-8 border-none bg-transparent text-[var(--text)] brightness-75 hover:bg-transparent hover:text-[var(--text)] [&_svg]:size-[1rem]"
-    >
-        <VolumeIcon />
-    </Button>
+    <div class="absolute right-2.5 top-0 flex items-center gap-x-0.5">
+        {#if $supporterStore.isSupporter}
+            <Button
+                size="icon"
+                variant="ghost"
+                aria-label="Notifications"
+                onclick={toggleNotifications}
+                class="size-6 border-none bg-transparent text-[var(--text)] brightness-75 hover:bg-transparent hover:text-[var(--text)] [&_svg]:size-[1rem]"
+            >
+                {#if $settingsStore.notifications.enabled}
+                    {#if $settingsStore.notifications.on_track_change}
+                        <BellRingIcon />
+                    {:else}
+                        <BellIcon />
+                    {/if}
+                {:else}
+                    <BellOffIcon />
+                {/if}
+            </Button>
+        {/if}
+        <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Volume"
+            onclick={toggleVolumeMute}
+            class="size-6 border-none bg-transparent text-[var(--text)] brightness-75 hover:bg-transparent hover:text-[var(--text)] [&_svg]:size-[1rem]"
+        >
+            <VolumeIcon />
+        </Button>
+    </div>
     <div class="flex h-16 w-full items-center gap-x-2">
         <CoverImage />
         <div class="flex h-16 flex-col justify-center gap-y-1 overflow-hidden text-[var(--text)]">
