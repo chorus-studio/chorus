@@ -3,7 +3,7 @@
     import { toast } from 'svelte-sonner'
     import { writable } from 'svelte/store'
     import { mellowtel } from '$lib/utils/mellowtel'
-    import { isSupporter } from '$lib/stores/supporter'
+    import { supporterStore } from '$lib/stores/supporter'
     import { getCheckPermissionsService } from '$lib/utils/check-permissions'
 
     import * as Dialog from './ui/dialog'
@@ -28,8 +28,7 @@
 
     async function updateOptInStatus() {
         try {
-            const status = await mellowtel.getOptInStatus()
-            isSupporter.set(status)
+            await supporterStore.sync()
         } catch (error) {
             console.error('Failed to check opt-in status:', error)
         }
@@ -126,7 +125,7 @@
                 <Dialog.Close asChild>
                     <Button variant="outline" class="h-8 text-base">cancel</Button>
                 </Dialog.Close>
-                {#if $isSupporter}
+                {#if $supporterStore.isSupporter}
                     <SupportAlert closeDialog={() => (dialogOpen = false)} />
                 {:else if !$permissionGranted}
                     <Button variant="default" onclick={grantPermission} class="h-8 text-base"
