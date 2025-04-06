@@ -1,7 +1,7 @@
 <script lang="ts">
     import { toast } from 'svelte-sonner'
     import { mellowtel } from '$lib/utils/mellowtel'
-    import { isSupporter } from '$lib/stores/supporter'
+    import { supporterStore } from '$lib/stores/supporter'
 
     import { buttonVariants } from '$lib/components/ui/button'
     import * as AlertDialog from '$lib/components/ui/alert-dialog'
@@ -12,7 +12,7 @@
         await mellowtel.optIn()
         await mellowtel.start()
         toast.success('Thanks for supporting Chorus!')
-        isSupporter.set(true)
+        await supporterStore.sync()
     }
 
     async function handleOptOut() {
@@ -26,7 +26,7 @@
                     onClick: async () => await handleOptIn()
                 }
             })
-            isSupporter.set(false)
+            await supporterStore.sync()
         } catch (error) {
             console.error(error)
             toast.error('Failed to opt out')

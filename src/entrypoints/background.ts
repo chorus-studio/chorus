@@ -1,12 +1,14 @@
 import { storage } from '@wxt-dev/storage'
 import { mellowtel } from '$lib/utils/mellowtel'
 import { activeOpenTab } from '$lib/utils/messaging'
+import { executeButtonClick } from '$lib/utils/command'
 import type { NowPlaying } from '$lib/stores/now-playing'
-import { chorusKeys, mediaKeys } from '$lib/utils/selectors'
+import type { SettingsState } from '$lib/stores/settings'
 import { registerTrackService } from '$lib/api/services/track'
 import { registerQueueService } from '$lib/api/services/queue'
 import { registerPlayerService } from '$lib/api/services/player'
 import { registerCheckPermissionsService } from '$lib/utils/check-permissions'
+import { registerNotificationService, showNotification } from '$lib/utils/notifications'
 
 export default defineBackground(() => {
     ;(async () => {
@@ -15,12 +17,8 @@ export default defineBackground(() => {
         if (hasOptedIn) await mellowtel.start()
     })()
 
-    let popupPort: browser.runtime.Port | null = null
-
     browser.runtime.onConnect.addListener(async (port) => {
         if (port.name !== 'popup') return
-
-        popupPort = port
 
         const CUSTOM_EVENTS = {
             volume: 'FROM_VOLUME_LISTENER',
@@ -50,13 +48,12 @@ export default defineBackground(() => {
                 }
             })
         })
-
-        port.onDisconnect.addListener(() => (popupPort = null))
     })
 
     registerTrackService()
     registerPlayerService()
     registerQueueService()
+    registerNotificationService()
     registerCheckPermissionsService()
 
     browser.webRequest.onBeforeRequest.addListener(
@@ -129,45 +126,19 @@ export default defineBackground(() => {
         ['requestHeaders']
     )
 
-    type ExecuteButtonClickParams = {
-        command: string
-        isShortCutKey?: boolean
-    }
+    browser.commands.onCommand.addListener(async (command) => {
+        if (command === 'show-track') {
+            const isSupporter = await mellowtel.getOptInStatus()
+            if (!isSupporter) return
 
-    async function executeButtonClick({
-        command,
-        isShortCutKey = false
-    }: ExecuteButtonClickParams) {
-        const { active, tabId } = await activeOpenTab()
-        if (!active || !tabId) return
+            const settings = await storage.getItem<SettingsState>('local:chorus_settings')
+            if (!settings?.notifications?.enabled) return
 
-        if (command == 'on/off') return
+            const nowPlaying = await storage.getItem<NowPlaying>('local:chorus_now_playing')
+            if (nowPlaying) await showNotification(nowPlaying)
+            return
+        }
 
-        const selector =
-            chorusKeys[command as keyof typeof chorusKeys] ||
-            mediaKeys[command as keyof typeof mediaKeys]
-
-        const isChorusCommand = Object.keys(chorusKeys).includes(command)
-
-        if (isShortCutKey && isChorusCommand) return
-
-        await browser.scripting.executeScript({
-            args: [selector],
-            target: { tabId },
-            func: (selector) => {
-                if (!selector.includes('control-button-npv')) {
-                    return (document.querySelector(selector) as HTMLElement)?.click()
-                }
-                const target = document.querySelector(selector) as HTMLElement
-                const djButton = target.previousElementSibling as HTMLElement
-                djButton?.click()
-            }
-        })
-
-        if (!isShortCutKey) return { selector, tabId }
-    }
-
-    browser.commands.onCommand.addListener(
-        async (command) => await executeButtonClick({ command, isShortCutKey: true })
-    )
+        await executeButtonClick({ command, isShortCutKey: true })
+    })
 })

@@ -3,21 +3,28 @@ import { loopStore } from '$lib/stores/loop'
 import { queue } from '$lib/observers/queue'
 import { seekStore } from '$lib/stores/seek'
 import { volumeStore } from '$lib/stores/volume'
+import { settingsStore } from '$lib/stores/settings'
 import { playbackStore } from '$lib/stores/playback'
-import { nowPlaying } from '$lib/stores/now-playing'
+import { supporterStore } from '$lib/stores/supporter'
 import { snipStore, type Snip } from '$lib/stores/snip'
 import { effectsStore } from '$lib/stores/audio-effects'
 import type { SimpleTrack } from '$lib/stores/data/cache'
 import { playbackObserver } from '$lib/observers/playback'
+import { nowPlaying, type NowPlaying } from '$lib/stores/now-playing'
 import { getPlayerService, type PlayerService } from '$lib/api/services/player'
+import { getNotificationService, type NotificationService } from '$lib/utils/notifications'
 
 export class TrackObserver {
     private seeking: boolean = false
     private playerService: PlayerService
+    private currentTrackId: string | null = null
+    private notificationService: NotificationService
+    private songChangeTimeout: NodeJS.Timeout | null = null
     private boundProcessTimeUpdate: (event: CustomEvent) => void
 
     constructor() {
         this.playerService = getPlayerService()
+        this.notificationService = getNotificationService()
         this.boundProcessTimeUpdate = this.processTimeUpdate.bind(this)
     }
 
@@ -63,6 +70,14 @@ export class TrackObserver {
 
     get volume() {
         return get(volumeStore)
+    }
+
+    get settings() {
+        return get(settingsStore)
+    }
+
+    get isSupporter() {
+        return get(supporterStore).isSupporter
     }
 
     get muteButton() {
@@ -142,6 +157,20 @@ export class TrackObserver {
         this.setPlayback()
         await queue.refreshQueue()
         await this.updateTrackType()
+        if (this.isSupporter) await this.showNotification(songInfo)
+    }
+
+    private async showNotification(songInfo: NowPlaying) {
+        if (this.songChangeTimeout) clearTimeout(this.songChangeTimeout)
+
+        if (this.settings.notifications.enabled && this.settings.notifications.on_track_change) {
+            this.songChangeTimeout = setTimeout(async () => {
+                if (!this.currentTrackId || songInfo.id !== this.currentTrackId) {
+                    await this.notificationService.showNotification(songInfo)
+                    this.currentTrackId = songInfo.id
+                }
+            }, 5_000)
+        }
     }
 
     private async processTimeUpdate(event: CustomEvent) {

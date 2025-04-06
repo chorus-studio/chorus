@@ -34,7 +34,7 @@ export default defineConfig({
         ],
         host_permissions: ['*://*.spotify.com/*'],
         optional_host_permissions: ['https://*/*'],
-        optional_permissions: ['declarativeNetRequestWithHostAccess'],
+        optional_permissions: ['notifications', 'declarativeNetRequestWithHostAccess'],
         commands: {
             'on/off': {
                 description: 'Toggle Extension On/Off'
@@ -74,6 +74,9 @@ export default defineConfig({
             },
             'block-track': {
                 description: 'Add track to block list'
+            },
+            'show-track': {
+                description: 'Show current track as a notification'
             }
         }
     }

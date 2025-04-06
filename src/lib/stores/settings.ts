@@ -14,6 +14,10 @@ export type SettingsState = {
         seek: boolean
         speed: boolean
     }
+    notifications: {
+        enabled: boolean
+        on_track_change: boolean
+    }
 }
 
 const defaultSettingsState: SettingsState = {
@@ -28,6 +32,10 @@ const defaultSettingsState: SettingsState = {
         speed: true,
         snip: true,
         seek: true
+    },
+    notifications: {
+        enabled: false,
+        on_track_change: false
     }
 }
 
