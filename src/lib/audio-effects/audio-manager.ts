@@ -1,5 +1,3 @@
-import { AudioContext } from 'standardized-audio-context'
-
 export default class AudioManager {
     private _gainNode?: GainNode
     private _audioContext?: AudioContext
