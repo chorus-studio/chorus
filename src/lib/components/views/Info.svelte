@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { pipStore } from '$lib/stores/pip'
     import { Button } from '$lib/components/ui/button'
 
     const links = {
@@ -8,6 +9,8 @@
             cws: 'https://chromewebstore.google.com/detail/chorus-spotify-enhancer/jfnjmnapkhdbaidedlbdcmhiphfjljcd/reviews'
         }
     }
+
+    let variant = ($pipStore.open ? 'default' : 'secondary') as 'default' | 'secondary'
 </script>
 
 <div class="z-100 relative flex w-full flex-col justify-between gap-y-3">
@@ -19,7 +22,7 @@
             <span class="text-xs"> Please report issues/bugs using Github or Discord. </span>
         </div>
         <div class="flex w-full items-center justify-between">
-            <Button size="sm" variant="secondary">
+            <Button size="sm" {variant}>
                 <a
                     class="flex items-center justify-between gap-1"
                     href="https://github.com/chorus-studio/chorus-dev/issues"
@@ -39,7 +42,7 @@
                     <span>Github</span>
                 </a>
             </Button>
-            <Button size="sm" variant="secondary">
+            <Button size="sm" {variant}>
                 <a
                     class="flex items-center justify-between gap-1"
                     href="https://discord.gg/6nwYZsBw8G"
@@ -80,7 +83,7 @@
             </span>
         </div>
         <div class="flex w-full items-center justify-between">
-            <Button variant="secondary" size="sm">
+            <Button {variant} size="sm">
                 <a
                     class="flex items-center justify-between gap-1"
                     href={links.review.addon}
@@ -348,7 +351,7 @@
                     <span>Add-on Store</span>
                 </a>
             </Button>
-            <Button variant="secondary" size="sm">
+            <Button {variant} size="sm">
                 <a
                     class="flex items-center justify-between gap-1"
                     href={links.review.cws}

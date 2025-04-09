@@ -2,7 +2,7 @@
     import MediaButton from './MediaButton.svelte'
     import { mediaStore, type Media } from '$lib/stores/media'
 
-    let { port }: { port: chrome.runtime.Port | null } = $props()
+    let { port, pip }: { port: chrome.runtime.Port | null; pip: boolean } = $props()
     let svgsList = $state([
         'save/unsave',
         'block-track',
@@ -79,14 +79,14 @@
     })
 </script>
 
-<div class="flex w-full items-center justify-between gap-1">
-    <div class="flex w-16 items-center justify-between">
+<div class="flex w-full items-center justify-between {pip ? 'gap-2' : 'gap-1'}">
+    <div class="flex {pip ? 'w-20' : 'w-16'} items-center justify-between">
         {#each svgsList.slice(0, 3) as svg}
             <MediaButton icon={svg} {...svgProps?.[svg] || svgProps.default} {handleClick} />
         {/each}
     </div>
 
-    <div class="flex w-full items-center gap-1.5">
+    <div class="flex w-full items-center {pip ? 'justify-between' : ''} gap-1.5">
         {#each svgsList.slice(3) as svg}
             <MediaButton icon={svg} {...svgProps?.[svg] || svgProps.default} {handleClick} />
         {/each}

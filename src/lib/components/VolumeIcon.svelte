@@ -1,5 +1,7 @@
 <script lang="ts">
     import { volumeStore } from '$lib/stores/volume'
+
+    let { pip }: { pip: boolean } = $props()
 </script>
 
 <svg

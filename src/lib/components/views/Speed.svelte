@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { pipStore } from '$lib/stores/pip'
     import { nowPlaying } from '$lib/stores/now-playing'
     import { playbackStore } from '$lib/stores/playback'
 
@@ -64,6 +65,8 @@
         setupSpeed()
         return () => setupSpeed()
     })
+
+    let pip = $pipStore.open
 </script>
 
 <div class="flex w-full flex-col space-y-1">
@@ -83,7 +86,9 @@
                     value={padSpeed($playbackStore.track.playback_rate)}
                     onchange={handleInput}
                     id="track-speed"
-                    class="h-6 w-16 rounded-none px-2 text-end text-base font-bold text-white {!$playbackStore.is_default
+                    class="h-6 {pip
+                        ? 'w-20'
+                        : 'w-16'} rounded-none px-2 text-end text-base font-bold text-white {!$playbackStore.is_default
                         ? 'border-1 border-zinc-200 bg-green-700'
                         : ''} border-none"
                 />
@@ -99,7 +104,9 @@
                     id="global-speed"
                     value={padSpeed($playbackStore.default.playback_rate)}
                     onchange={handleInput}
-                    class="h-6 w-16 rounded-none px-2 text-end text-base font-bold lowercase text-white {$playbackStore.is_default
+                    class="h-6 {pip
+                        ? 'w-20'
+                        : 'w-16'} rounded-none px-2 text-end text-base font-bold lowercase text-white {$playbackStore.is_default
                         ? 'border-1 border-zinc-200 bg-green-700'
                         : 'border-none'}"
                 />

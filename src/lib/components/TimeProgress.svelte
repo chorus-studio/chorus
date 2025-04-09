@@ -4,6 +4,7 @@
     import { trackObserver } from '$lib/observers/track'
     import { Progress } from '$lib/components/ui/progress'
 
+    export let pip: boolean = false
     export let port: chrome.runtime.Port | null
     export let id: string | undefined = 'popup-time-progress'
 
@@ -30,10 +31,10 @@
     }
 
     $: isChorus = id === 'chorus-time-progress'
-    $: progressColor = isChorus ? 'bg-white' : 'bg-[var(--text)]'
-    $: textColor = isChorus ? 'text-white' : 'text-[var(--text)]'
-    $: bgColor = isChorus ? 'bg-gray-600' : 'bg-[var(--bg)]'
-    $: borderColor = isChorus ? 'border-[#7c7c7c]' : 'border-[var(--text)]'
+    $: progressColor = isChorus || pip ? 'bg-white' : 'bg-[var(--text)]'
+    $: textColor = isChorus || pip ? 'text-white' : 'text-[var(--text)]'
+    $: bgColor = isChorus || pip ? 'bg-gray-600' : 'bg-[var(--bg)]'
+    $: borderColor = isChorus || pip ? 'border-[#7c7c7c]' : 'border-[var(--text)]'
     $: currentPosition = Math.round($nowPlaying.current ?? 0)
 </script>
 

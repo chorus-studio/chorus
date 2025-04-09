@@ -1,6 +1,8 @@
 <script lang="ts">
+    import { pipStore } from '$lib/stores/pip'
     import { playbackStore } from '$lib/stores/playback'
     import { Slider } from '$lib/components/ui/slider'
+    import { CustomSlider } from '$lib/components/ui/custom-slider'
 
     let timeout: NodeJS.Timeout
 
@@ -42,18 +44,30 @@
     $: value = $playbackStore.is_default
         ? $playbackStore.default.playback_rate
         : $playbackStore.track.playback_rate
+
+    let pip = $pipStore.open
 </script>
 
 <div class="flex w-full items-center justify-between gap-x-4">
     <p class="text-xs text-muted-foreground">0.1x</p>
-    <Slider
-        onValueChange={handleValueChange}
-        type="single"
-        {value}
-        min={0.1}
-        max={4}
-        step={0.001}
-        class="h-6 w-full"
-    />
+    {#if pip}
+        <CustomSlider
+            onValueChange={(value) => handleValueChange(value[0])}
+            type="single"
+            values={[value]}
+            min={0.1}
+            max={4}
+            step={0.001}
+        />
+    {:else}
+        <Slider
+            onValueChange={(value) => handleValueChange(value as number)}
+            type="single"
+            {value}
+            min={0.1}
+            max={4}
+            step={0.001}
+        />
+    {/if}
     <p class="text-xs text-muted-foreground">4x</p>
 </div>

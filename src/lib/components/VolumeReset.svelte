@@ -1,6 +1,8 @@
 <script lang="ts">
     import { volumeStore, type VolumeType } from '$lib/stores/volume'
 
+    export let pip: boolean = false
+
     import { Label } from '$lib/components/ui/label'
     import { Input } from '$lib/components/ui/input'
     import * as HoverCard from '$lib/components/ui/hover-card'
@@ -22,9 +24,9 @@
         onclick={handleResetVolume}
         aria-label="Reset volume"
         class={buttonVariants({
-            variant: 'ghost',
+            variant: pip ? 'default' : 'ghost',
             size: 'icon',
-            class: 'relative flex size-8 border-none bg-transparent hover:bg-transparent [&_svg]:size-[1rem]'
+            class: `relative flex size-8 border-none bg-transparent hover:bg-transparent [&_svg]:size-[1rem]`
         })}
     >
         <svg
