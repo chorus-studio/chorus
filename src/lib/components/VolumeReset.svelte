@@ -1,7 +1,7 @@
 <script lang="ts">
     import { volumeStore, type VolumeType } from '$lib/stores/volume'
 
-    export let pip: boolean = false
+    let { pip = false }: { pip?: boolean } = $props()
 
     import { Label } from '$lib/components/ui/label'
     import { Input } from '$lib/components/ui/input'

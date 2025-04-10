@@ -1,11 +1,12 @@
 <script lang="ts">
-    import { pipStore } from '$lib/stores/pip'
     import { snipStore } from '$lib/stores/snip'
     import { nowPlaying } from '$lib/stores/now-playing'
 
     import { secondsToTime } from '$lib/utils/time'
     import { Slider } from '$lib/components/ui/slider'
     import { CustomSlider } from '$lib/components/ui/custom-slider'
+
+    let { pip = false }: { pip?: boolean } = $props()
 
     function handleValueChange(value: number[]) {
         const [start_time, end_time] = value
@@ -20,6 +21,8 @@
             nowPlaying.setCurrentTime(end_time)
         }
     }
+
+    let Component = pip ? CustomSlider : Slider
 </script>
 
 {#if $snipStore}
@@ -27,25 +30,14 @@
         <p class="w-full max-w-6 text-xs text-muted-foreground">
             {secondsToTime($snipStore?.start_time)}
         </p>
-        {#if $pipStore.open}
-            <CustomSlider
-                onValueChange={(value) => handleValueChange(value as number[])}
-                type="multiple"
-                values={[$snipStore?.start_time, $snipStore?.end_time]}
-                min={0}
-                max={$nowPlaying.duration}
-                step={1}
-            />
-        {:else}
-            <Slider
-                onValueChange={(value) => handleValueChange(value as number[])}
-                type="multiple"
-                value={[$snipStore?.start_time, $snipStore?.end_time]}
-                min={0}
-                max={$nowPlaying.duration}
-                step={1}
-            />
-        {/if}
+        <Component
+            onValueChange={(value) => handleValueChange(value as number[])}
+            type="multiple"
+            value={[$snipStore?.start_time, $snipStore?.end_time]}
+            min={0}
+            max={$nowPlaying.duration}
+            step={1}
+        />
         <p class="w-full max-w-6 text-xs text-muted-foreground">
             {secondsToTime($snipStore?.end_time)}
         </p>

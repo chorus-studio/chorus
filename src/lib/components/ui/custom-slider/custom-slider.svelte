@@ -1,18 +1,18 @@
 <script lang="ts">
     let {
         type = 'single',
-        values = [50, 75],
+        value,
         min = 0,
         max = 100,
         step = 1,
         onValueChange
     }: {
         type: 'single' | 'multiple'
-        values: number[]
+        value: number | number[]
         min: number
         max: number
         step: number
-        onValueChange: (vals: number[]) => void
+        onValueChange: (value: number | number[]) => void
     } = $props()
 
     let sliderElement: HTMLElement
@@ -24,41 +24,46 @@
         const range = max - min
         if (sliderElement && leftInput) {
             if (type === 'single') {
-                const percent = ((values[0] - min) / range) * 100
+                let currentValue = value as number
+                const percent = ((currentValue - min) / range) * 100
                 sliderElement.style.setProperty('--start', '0%')
                 sliderElement.style.setProperty('--stop', `${percent}%`)
-                leftInput.value = values[0].toString()
+                leftInput.value = currentValue.toString()
             } else {
-                const startPercent = ((Math.min(values[0], values[1]) - min) / range) * 100
-                const stopPercent = ((Math.max(values[0], values[1]) - min) / range) * 100
+                let currentValue = value as number[]
+                const startPercent =
+                    ((Math.min(currentValue[0], currentValue[1]) - min) / range) * 100
+                const stopPercent =
+                    ((Math.max(currentValue[0], currentValue[1]) - min) / range) * 100
                 sliderElement.style.setProperty('--start', `${startPercent}%`)
                 sliderElement.style.setProperty('--stop', `${stopPercent}%`)
-                leftInput.value = values[0].toString()
-                if (rightInput) {
-                    rightInput.value = values[1].toString()
-                }
+                leftInput.value = currentValue[0].toString()
+                rightInput.value = currentValue[1].toString()
             }
         }
     })
 
     function handleValueChange(e: Event) {
         const target = e.target as HTMLInputElement
-        const value = +target.value
+        const newValue = +target.value
         const index = +(target.dataset.index ?? '0')
-        const next = [...values]
-        next[index] = value
-        onValueChange(next)
+        let next
+        if (type === 'multiple') {
+            next = [...(value as number[])]
+            next[index] = newValue
+        }
+        onValueChange(next ?? newValue)
 
         // Calculate percentages for CSS variables
         const range = max - min
         if (type === 'single') {
-            const percent = ((value - min) / range) * 100
+            const percent = ((newValue - min) / range) * 100
             const slider = target.closest('.slider') as HTMLElement
             if (slider) {
                 slider.style.setProperty('--start', '0%')
                 slider.style.setProperty('--stop', `${percent}%`)
             }
-        } else {
+        } else if (type === 'multiple' && next) {
             const startPercent = ((Math.min(...next) - min) / range) * 100
             const stopPercent = ((Math.max(...next) - min) / range) * 100
             const slider = target.closest('.slider') as HTMLElement
@@ -72,25 +77,25 @@
 
 <div class="slider relative flex w-full items-center" bind:this={sliderElement}>
     <input
-        bind:this={leftInput}
-        type="range"
-        data-index="0"
-        oninput={handleValueChange}
-        value={values[0]}
         {max}
         {min}
         {step}
+        type="range"
+        data-index="0"
+        bind:this={leftInput}
+        oninput={handleValueChange}
+        value={Array.isArray(value) ? value[0] : value}
     />
     {#if type === 'multiple'}
         <input
-            bind:this={rightInput}
-            type="range"
-            data-index="1"
-            oninput={handleValueChange}
-            value={values[1]}
             {max}
             {min}
             {step}
+            type="range"
+            data-index="1"
+            bind:this={rightInput}
+            oninput={handleValueChange}
+            value={Array.isArray(value) ? value[1] : value}
         />
     {/if}
 </div>
@@ -99,7 +104,7 @@
     .slider {
         position: relative;
         height: 4px;
-        background: #e5e7eb;
+        background: #fafafa33;
     }
 
     .slider input {
@@ -122,10 +127,10 @@
         height: 4px;
         background: linear-gradient(
             to right,
-            #e5e7eb var(--start),
+            #fafafa33 var(--start),
             #22c55e var(--start),
             #22c55e var(--stop),
-            #e5e7eb var(--stop)
+            #fafafa33 var(--stop)
         );
     }
 

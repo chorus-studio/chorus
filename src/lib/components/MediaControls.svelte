@@ -2,7 +2,7 @@
     import MediaButton from './MediaButton.svelte'
     import { mediaStore, type Media } from '$lib/stores/media'
 
-    let { port, pip }: { port: chrome.runtime.Port | null; pip: boolean } = $props()
+    let { port, pip = false }: { port: chrome.runtime.Port | null; pip?: boolean } = $props()
     let svgsList = $state([
         'save/unsave',
         'block-track',

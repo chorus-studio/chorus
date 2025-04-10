@@ -1,5 +1,4 @@
 <script lang="ts">
-    import { pipStore } from '$lib/stores/pip'
     import { nowPlaying } from '$lib/stores/now-playing'
     import { playbackStore } from '$lib/stores/playback'
 
@@ -9,6 +8,8 @@
     import BadgeList from '$lib/components/BadgeList.svelte'
     import SpeedSlider from '$lib/components/SpeedSlider.svelte'
     import ToggleSelect from '$lib/components/ToggleSelect.svelte'
+
+    let { pip = false }: { pip?: boolean } = $props()
 
     function padSpeed(value: number | string, decimalPlace: number = 4): string {
         const parsedValue = parseFloat(value.toString())
@@ -65,13 +66,11 @@
         setupSpeed()
         return () => setupSpeed()
     })
-
-    let pip = $pipStore.open
 </script>
 
-<div class="flex w-full flex-col space-y-1">
+<div class="flex w-full flex-col space-y-2.5">
     <BadgeList list={[0.5, 0.75, 0.9818, 1, 1.2, 1.5, 2.5]} handleSelect={handleBadgeSelect} />
-    <SpeedSlider />
+    <SpeedSlider {pip} />
 
     <div class="flex w-full items-center justify-between">
         <div class="flex flex-col items-center gap-y-1.5">
@@ -116,6 +115,7 @@
         <div class="flex flex-col items-end gap-y-1.5">
             <div class="flex items-center justify-between">
                 <ToggleSelect
+                    {pip}
                     label={$playbackStore.is_default ? 'Global Speed' : 'Track Speed'}
                     list={[
                         { label: 'G', value: 'global' },

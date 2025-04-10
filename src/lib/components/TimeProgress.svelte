@@ -4,12 +4,14 @@
     import { trackObserver } from '$lib/observers/track'
     import { Progress } from '$lib/components/ui/progress'
 
-    export let pip: boolean = false
-    export let port: chrome.runtime.Port | null
-    export let id: string | undefined = 'popup-time-progress'
+    let {
+        pip = false,
+        port,
+        id = 'popup-time-progress'
+    }: { pip?: boolean; port: chrome.runtime.Port | null; id?: string } = $props()
 
-    let hoverPosition = 0
-    let isHovering = false
+    let hoverPosition = $state(0)
+    let isHovering = $state(false)
     let sliderRef: HTMLDivElement
 
     function handleMouseMove(event: MouseEvent) {
@@ -30,12 +32,12 @@
         }
     }
 
-    $: isChorus = id === 'chorus-time-progress'
-    $: progressColor = isChorus || pip ? 'bg-white' : 'bg-[var(--text)]'
-    $: textColor = isChorus || pip ? 'text-white' : 'text-[var(--text)]'
-    $: bgColor = isChorus || pip ? 'bg-gray-600' : 'bg-[var(--bg)]'
-    $: borderColor = isChorus || pip ? 'border-[#7c7c7c]' : 'border-[var(--text)]'
-    $: currentPosition = Math.round($nowPlaying.current ?? 0)
+    const isChorus = $derived(id === 'chorus-time-progress')
+    const progressColor = $derived(isChorus || pip ? 'bg-white' : 'bg-[var(--text)]')
+    const textColor = $derived(isChorus || pip ? 'text-white' : 'text-[var(--text)]')
+    const bgColor = $derived(isChorus || pip ? 'bg-gray-600' : 'bg-[var(--bg)]')
+    const borderColor = $derived(isChorus || pip ? 'border-[#7c7c7c]' : 'border-[var(--text)]')
+    const currentPosition = $derived(Math.round($nowPlaying.current ?? 0))
 </script>
 
 <div class="relative flex w-full items-center {isChorus ? 'mt-2' : ''} justify-between gap-x-3">

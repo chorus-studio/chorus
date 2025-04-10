@@ -9,4 +9,5 @@
 
 <Avatar.Root class="size-5 {className}">
     <Avatar.Image {src} {alt} />
+    <Avatar.Fallback>chorus</Avatar.Fallback>
 </Avatar.Root>

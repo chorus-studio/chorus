@@ -1,8 +1,7 @@
 <script lang="ts">
-    import { onMount, mount, unmount } from 'svelte'
+    import { mount, unmount } from 'svelte'
     import { PictureInPicture } from 'lucide-svelte'
 
-    import { pipStore } from '$lib/stores/pip'
     import { nowPlaying } from '$lib/stores/now-playing'
     import { supporterStore } from '$lib/stores/supporter'
 
@@ -46,8 +45,6 @@
     }
 
     async function togglePictureInPicture() {
-        await pipStore.update(false)
-
         if (!('documentPictureInPicture' in window)) {
             console.warn('Document Picture-in-Picture API not supported')
             return
@@ -67,8 +64,6 @@
             await applyStyles(pipWindow)
             pipWindow.document.body.appendChild(pipView)
 
-            await pipStore.update(true)
-
             // Mount the PipView component
             const app = mount(PipView, {
                 target: pipView
@@ -83,17 +78,12 @@
             })
 
             pipWindow.addEventListener('exitpictureinpicture', async (e) => {
-                await pipStore.update(false)
                 await unmount(app)
             })
         } catch (error) {
             console.error('Error opening Picture-in-Picture window:', error)
         }
     }
-
-    onMount(() => {
-        pipStore.update(false)
-    })
 </script>
 
 <div class="space-between flex border-none">

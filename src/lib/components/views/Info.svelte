@@ -1,6 +1,7 @@
 <script lang="ts">
-    import { pipStore } from '$lib/stores/pip'
     import { Button } from '$lib/components/ui/button'
+
+    let { pip = false }: { pip?: boolean } = $props()
 
     const links = {
         github: 'https://github.com/chorus-studio/chorus-dev/issues',
@@ -10,7 +11,7 @@
         }
     }
 
-    let variant = ($pipStore.open ? 'default' : 'secondary') as 'default' | 'secondary'
+    let variant = pip ? 'default' : ('secondary' as 'default' | 'secondary')
 </script>
 
 <div class="z-100 relative flex w-full flex-col justify-between gap-y-3">

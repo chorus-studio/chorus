@@ -4,6 +4,8 @@
     import TimeSlider from '$lib/components/TimeSlider.svelte'
     import SnipInputs from '$lib/components/SnipInputs.svelte'
 
+    let { pip = false }: { pip?: boolean } = $props()
+
     function setSnip() {
         snipStore.set({
             is_shared: false,
@@ -15,13 +17,13 @@
 
     onMount(() => {
         setSnip()
-        return () => snipStore.reset()
+        return () => (!pip ? snipStore.reset() : null)
     })
 </script>
 
 {#if $snipStore}
-    <div class="flex h-full w-full flex-col gap-x-1 space-y-1.5">
-        <TimeSlider />
+    <div class="flex h-full w-full flex-col gap-x-1 space-y-2.5">
+        <TimeSlider {pip} />
         <SnipInputs />
     </div>
 {/if}

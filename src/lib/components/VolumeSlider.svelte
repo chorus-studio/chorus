@@ -2,17 +2,15 @@
     import { onMount } from 'svelte'
     import { volumeStore, type VolumeType } from '$lib/stores/volume'
 
-    import { pipStore } from '$lib/stores/pip'
     import { Slider } from '$lib/components/ui/slider'
     import * as HoverCard from '$lib/components/ui/hover-card'
     import VolumeIcon from '$lib/components/VolumeIcon.svelte'
     import VolumeReset from '$lib/components/VolumeReset.svelte'
+    import ToggleSelect from '$lib/components/ToggleSelect.svelte'
     import { CustomSlider } from '$lib/components/ui/custom-slider'
+    import { Button, buttonVariants } from '$lib/components/ui/button'
 
-    import { buttonVariants } from '$lib/components/ui/button'
-    import * as ToggleGroup from '$lib/components/ui/toggle-group'
-
-    let { port }: { port: chrome.runtime.Port | null } = $props()
+    let { port, pip = false }: { port: chrome.runtime.Port | null; pip?: boolean } = $props()
 
     async function handleVolumeChange(value: number) {
         await volumeStore.updateVolume({ value })
@@ -33,8 +31,7 @@
         volumeStore.dispatchVolumeEvent()
     })
 
-    let pip = $pipStore.open
-    let Component = Slider //$pipStore.open ? CustomSlider : Slider
+    let Component = pip ? CustomSlider : Slider
 </script>
 
 <div
@@ -43,55 +40,47 @@
         ? ''
         : 'max-w-[220px]'} items-center justify-between gap-x-2 self-end"
 >
-    <VolumeReset {pip} />
+    <div class="-mt-4">
+        <VolumeReset {pip} />
+    </div>
 
-    <HoverCard.Root>
-        <HoverCard.Trigger
-            role="volume"
-            id="volume-button"
-            onclick={handleMute}
-            aria-label={$volumeStore.muted ? `Disable volume` : `Enable volume`}
-            class={buttonVariants({
-                variant: 'ghost',
-                size: 'icon',
-                class: 'relative size-8 border-none bg-transparent hover:bg-transparent [&_svg]:size-[1rem]'
-            })}
+    {#if pip}
+        <Button
+            size="icon"
+            class="relative size-8 border-none bg-transparent text-popover-foreground hover:bg-transparent [&_svg]:size-[1rem]"
         >
-            <VolumeIcon {pip} />
-        </HoverCard.Trigger>
-        <HoverCard.Content class="relative w-28">
-            <div class="flex w-full flex-col justify-between gap-2">
-                <ToggleGroup.Root
-                    type="single"
-                    value={$volumeStore.type}
-                    onValueChange={handleVolumeTypeChange}
-                >
-                    <ToggleGroup.Item
-                        value="linear"
-                        class={buttonVariants({
-                            variant: pip ? 'default' : 'ghost',
-                            size: 'icon',
-                            class: 'h-7 w-8 min-w-8 rounded-sm'
-                        })}
-                    >
-                        ln
-                    </ToggleGroup.Item>
-                    <ToggleGroup.Item
-                        value="logarithmic"
-                        class={buttonVariants({
-                            variant: pip ? 'default' : 'ghost',
-                            size: 'icon',
-                            class: 'h-7 w-8 min-w-8 rounded-sm'
-                        })}
-                    >
-                        log
-                    </ToggleGroup.Item>
-                </ToggleGroup.Root>
-
-                <p class="text-xs text-muted-foreground">{$volumeStore.type}</p>
-            </div></HoverCard.Content
-        >
-    </HoverCard.Root>
+            <VolumeIcon />
+        </Button>
+    {:else}
+        <HoverCard.Root>
+            <HoverCard.Trigger
+                role="volume"
+                id="volume-button"
+                onclick={handleMute}
+                aria-label={$volumeStore.muted ? `Disable volume` : `Enable volume`}
+                class={buttonVariants({
+                    variant: 'ghost',
+                    size: 'icon',
+                    class: 'relative size-8 border-none bg-transparent hover:bg-transparent [&_svg]:size-[1rem]'
+                })}
+            >
+                <VolumeIcon />
+            </HoverCard.Trigger>
+            <HoverCard.Content class="relative max-w-24">
+                <div class="flex w-full flex-col items-center justify-between gap-2">
+                    <ToggleSelect
+                        value={$volumeStore.type}
+                        onValueChange={handleVolumeTypeChange}
+                        list={[
+                            { label: 'ln', value: 'linear' },
+                            { label: 'log', value: 'logarithmic' }
+                        ]}
+                    />
+                    <p class="text-xs text-muted-foreground">{$volumeStore.type}</p>
+                </div></HoverCard.Content
+            >
+        </HoverCard.Root>
+    {/if}
 
     <Component
         onValueChange={(value) => handleVolumeChange(value as number)}

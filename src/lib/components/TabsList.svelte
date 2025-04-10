@@ -19,9 +19,9 @@
     import AvatarLogo from '$lib/components/AvatarLogo.svelte'
     import Support from '$lib/components/views/Support.svelte'
     import Settings from '$lib/components/views/Settings.svelte'
+
     import ActionButtons from '$lib/components/ActionButtons.svelte'
 
-    import { pipStore } from '$lib/stores/pip'
     import { dataStore } from '$lib/stores/data'
     import { snipStore } from '$lib/stores/snip'
     import { nowPlaying } from '$lib/stores/now-playing'
@@ -100,7 +100,7 @@
 
     async function getDefaultView() {
         const tab = (await storage.getItem<string>('local:chorus_default_view')) ?? filteredTabs[0]
-        defaultView = tab == 'media' && $pipStore.open ? tab : filteredTabs[0]
+        defaultView = tab == 'media' && pip ? tab : filteredTabs[0]
         activeTab = defaultView
     }
 
@@ -132,7 +132,7 @@
                 value={tab}
                 class="flex items-center justify-center {tab === 'media'
                     ? 'absolute left-0 data-[state=active]:bg-transparent'
-                    : ''} p-0"
+                    : ''} p-0 {pip ? 'gap-y-3' : ''}"
                 onclick={() => setActiveTab(tab)}
             >
                 {#if tab == 'media' && pip}
@@ -215,10 +215,10 @@
                 <TrackInfo />
             {/if}
             {@const View = components[activeTab]}
-            <View />
+            <View {pip} />
             {#if !['info', 'settings'].includes(activeTab)}
                 <div class="absolute bottom-0 flex h-6 w-full items-center justify-end gap-x-2">
-                    <Label class="text-sm">set as default view</Label>
+                    <Label class="text-sm text-muted-foreground">set default view</Label>
                     <Switch
                         checked={defaultView === activeTab}
                         onCheckedChange={handleCheckedChange}
