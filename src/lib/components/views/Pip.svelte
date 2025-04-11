@@ -26,7 +26,7 @@
 <ModeWatcher defaultMode="dark" defaultTheme="dark" track={false} />
 
 <Card.Root class="dark rounded-none">
-    <Card.Content class="h-[280px] w-[350px] p-4 pt-2">
+    <Card.Content class="h-[270px] w-[350px] p-4 pt-2">
         {#if loading}
             <div
                 class="relative inset-1/2 left-1/2 top-1/2 flex h-full w-full -translate-x-1/2 -translate-y-1/2 animate-spin items-center justify-center"
@@ -41,7 +41,7 @@
     </Card.Content>
 </Card.Root>
 
-<style>
+<style lang="postcss">
     :global(.dark) {
         color-scheme: dark;
     }

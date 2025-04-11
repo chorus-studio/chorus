@@ -47,6 +47,8 @@
     {#if pip}
         <Button
             size="icon"
+            onclick={handleMute}
+            aria-label={$volumeStore.muted ? `Disable volume` : `Enable volume`}
             class="relative size-8 border-none bg-transparent text-popover-foreground hover:bg-transparent [&_svg]:size-[1rem]"
         >
             <VolumeIcon />

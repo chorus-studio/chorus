@@ -15,15 +15,10 @@
         })
     }
 
-    onMount(() => {
-        setSnip()
-        return () => (!pip ? snipStore.reset() : null)
-    })
+    onMount(setSnip)
 </script>
 
-{#if $snipStore}
-    <div class="flex h-full w-full flex-col gap-x-1 space-y-2.5">
-        <TimeSlider {pip} />
-        <SnipInputs />
-    </div>
-{/if}
+<div class="flex h-full w-full flex-col gap-x-1 space-y-2.5">
+    <TimeSlider {pip} />
+    <SnipInputs />
+</div>

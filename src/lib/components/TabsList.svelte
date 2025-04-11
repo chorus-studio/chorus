@@ -19,7 +19,7 @@
     import AvatarLogo from '$lib/components/AvatarLogo.svelte'
     import Support from '$lib/components/views/Support.svelte'
     import Settings from '$lib/components/views/Settings.svelte'
-
+    import ToggleSelect from '$lib/components/ToggleSelect.svelte'
     import ActionButtons from '$lib/components/ActionButtons.svelte'
 
     import { dataStore } from '$lib/stores/data'
@@ -27,6 +27,7 @@
     import { nowPlaying } from '$lib/stores/now-playing'
     import { playbackStore } from '$lib/stores/playback'
     import { settingsStore } from '$lib/stores/settings'
+    import { volumeStore, type VolumeType } from '$lib/stores/volume'
 
     let { pip = false }: { pip?: boolean } = $props()
 
@@ -100,8 +101,12 @@
 
     async function getDefaultView() {
         const tab = (await storage.getItem<string>('local:chorus_default_view')) ?? filteredTabs[0]
-        defaultView = tab == 'media' && pip ? tab : filteredTabs[0]
+        defaultView = tab == 'media' && !pip ? filteredTabs[0] : tab
         activeTab = defaultView
+    }
+
+    async function handleVolumeTypeChange(value: string) {
+        await volumeStore.updateVolume({ type: value as VolumeType })
     }
 
     onMount(() => {
@@ -201,14 +206,14 @@
     {#if activeTab}
         <Tabs.Content
             value={activeTab}
-            class="relative flex {activeTab === 'media' ? 'h-[205px]' : 'h-[205px]'} {[
+            class="relative flex {activeTab === 'media' ? 'h-[210px]' : 'h-[205px]'} {[
                 'media',
                 'snip',
                 'fx',
                 'eq',
                 'speed'
             ].includes(activeTab)
-                ? 'space-y-3'
+                ? 'space-y-2'
                 : ''} w-full flex-col"
         >
             {#if !['info', 'settings', 'support', 'media'].includes(activeTab)}
@@ -216,6 +221,21 @@
             {/if}
             {@const View = components[activeTab]}
             <View {pip} />
+
+            {#if activeTab === 'media'}
+                <div class="absolute bottom-0 z-50 flex w-full items-center gap-x-2">
+                    <span class="text-sm text-muted-foreground">vol</span>
+                    <ToggleSelect
+                        {pip}
+                        value={$volumeStore.type}
+                        onValueChange={handleVolumeTypeChange}
+                        list={[
+                            { label: 'ln', value: 'linear' },
+                            { label: 'lg', value: 'logarithmic' }
+                        ]}
+                    />
+                </div>
+            {/if}
             {#if !['info', 'settings'].includes(activeTab)}
                 <div class="absolute bottom-0 flex h-6 w-full items-center justify-end gap-x-2">
                     <Label class="text-sm text-muted-foreground">set default view</Label>
