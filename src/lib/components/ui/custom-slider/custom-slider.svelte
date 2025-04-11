@@ -17,7 +17,7 @@
 
     let sliderElement: HTMLElement
     let leftInput: HTMLInputElement
-    let rightInput: HTMLInputElement
+    let rightInput: HTMLInputElement | null = $state(null)
 
     // Calculate initial percentages
     $effect(() => {
@@ -29,7 +29,7 @@
                 sliderElement.style.setProperty('--start', '0%')
                 sliderElement.style.setProperty('--stop', `${percent}%`)
                 leftInput.value = currentValue.toString()
-            } else {
+            } else if (type === 'multiple' && rightInput) {
                 let currentValue = value as number[]
                 const startPercent =
                     ((Math.min(currentValue[0], currentValue[1]) - min) / range) * 100

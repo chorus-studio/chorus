@@ -1,5 +1,6 @@
 <script lang="ts">
-    import { onMount, onDestroy } from 'svelte'
+    import { onMount } from 'svelte'
+    import { pipStore } from '$lib/stores/pip'
 
     import ChevronDown from '@lucide/svelte/icons/chevron-down'
     import { buttonVariants } from '$lib/components/ui/button'
@@ -7,20 +8,11 @@
 
     let isOpen = $state(false)
     let triggerRef: HTMLButtonElement | null = null
-    let selectRef: HTMLSelectElement | null = null
-    let containerRef: HTMLDivElement | null = null
 
     function handleChange(event: Event) {
         const select = event.target as HTMLSelectElement
         onValueChange?.(select.value)
         isOpen = false
-    }
-
-    function handleClickOutside(event: MouseEvent) {
-        const target = event.target as Node
-        if (containerRef && !containerRef.contains(target)) {
-            isOpen = false
-        }
     }
 
     function handleMouseEnter(e: Event) {
@@ -39,34 +31,42 @@
         }
     }
 
-    onMount(() => {
-        document.addEventListener('mousedown', handleClickOutside)
-    })
+    async function togglePipOpen() {
+        await pipStore.setOpen(!isOpen)
+        isOpen = !isOpen
+    }
 
-    onDestroy(() => {
-        document.removeEventListener('mousedown', handleClickOutside)
+    onMount(() => {
+        const unsubscribe = pipStore.subscribe((state) => {
+            if (!state.open) {
+                isOpen = false
+            }
+        })
+
+        return () => {
+            unsubscribe()
+        }
     })
 </script>
 
-<div class="relative flex justify-between" bind:this={containerRef}>
+<div aria-label="select" class="relative flex justify-between">
     <div class="relative min-w-40">
         <button
             bind:this={triggerRef}
             class={buttonVariants({
                 variant: 'outline',
-                class: 'flex h-7 w-full cursor-pointer appearance-none items-center justify-end justify-items-end rounded-sm border border-white bg-transparent px-2 py-1 pr-0 text-muted-foreground hover:bg-gray-800'
+                class: 'trigger flex h-7 w-full cursor-pointer appearance-none items-center justify-end justify-items-end rounded-sm border border-muted-foreground bg-transparent px-2 py-1 pr-0 text-muted-foreground hover:bg-gray-950'
             })}
-            onclick={() => (isOpen = !isOpen)}
+            onclick={togglePipOpen}
         >
-            <span class="text-end text-white">{selected}</span>
-            <ChevronDown class="mr-2 size-3 text-muted-foreground" color="white" />
+            <span class="text-end text-muted-foreground">{selected}</span>
+            <ChevronDown class="mr-2 size-3 text-muted-foreground" />
         </button>
 
         {#if isOpen}
             <select
-                bind:this={selectRef}
                 size={5}
-                class="absolute left-0 top-full z-[1000] mt-1 flex w-full cursor-pointer appearance-none items-center justify-end overflow-y-scroll rounded-sm border border-white bg-[#171717] px-2 py-1 pr-2 text-muted-foreground"
+                class="absolute left-0 top-full z-[1000] mt-1 flex w-full cursor-pointer appearance-none items-center justify-end overflow-y-scroll rounded-sm border border-muted-foreground bg-[#171717] px-2 py-1 pr-2 text-muted-foreground"
                 value={selected}
                 onchange={handleChange}
             >
@@ -91,15 +91,15 @@
 
 <style lang="postcss">
     select {
-        @apply text-sm text-white;
+        @apply text-sm text-muted-foreground;
         max-height: 100px;
     }
 
     select option {
-        @apply bg-gray-600 text-white;
+        @apply bg-gray-600 text-muted-foreground;
     }
 
     select:focus {
-        @apply outline-none ring-1 ring-white;
+        @apply outline-none ring-1 ring-muted-foreground;
     }
 </style>
