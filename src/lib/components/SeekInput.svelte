@@ -7,8 +7,11 @@
 
     export let type: 'rewind' | 'forward'
 
-    async function handleClick() {
-        const newValue = Math.min(Math.max(value + 1, 1), 60)
+    async function handleClick(e: MouseEvent) {
+        e.preventDefault()
+        const target = e.target as HTMLButtonElement
+        const operator = target.id.includes('minus') ? -1 : 1
+        const newValue = Math.min(Math.max(value + operator, 1), 60)
         await handleSeekUpdate(newValue)
     }
 
@@ -39,7 +42,7 @@
             size="icon"
             type="button"
             id={`seek-${type}-minus`}
-            onclick={() => handleClick(type, -1)}
+            onclick={handleClick}
             class="h-8 w-8 rounded-sm border-none bg-zinc-700 hover:bg-zinc-800"
         >
             <Minus color="white" size={24} />

@@ -24,7 +24,7 @@ export async function showNotification(track: NowPlaying) {
             message: `by ${track.artist}`,
             priority: 1,
             silent: true,
-            buttons: [{ title: 'Toggle Like' }, { title: 'Block' }]
+            buttons: [{ title: `${track?.liked ? 'Un' : ''}Like Track ` }, { title: 'Block' }]
         })
 
         browser.notifications.onButtonClicked.addListener(async (id, buttonIndex) => {

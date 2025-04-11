@@ -122,7 +122,7 @@
         </article>
         <Dialog.Footer>
             <div class="flex w-full justify-end gap-2">
-                <Dialog.Close asChild>
+                <Dialog.Close>
                     <Button variant="outline" class="h-8 text-base">cancel</Button>
                 </Dialog.Close>
                 {#if $supporterStore.isSupporter}

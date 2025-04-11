@@ -96,7 +96,7 @@
     {/if}
     {#if isRepeat && showDot(icon)}
         <span
-            class="absolute bottom-0.5 h-1.5 text-xs text-[var(--text)] brightness-75"
+            class="absolute bottom-0 h-1.5 text-xs text-[var(--text)] brightness-75"
             id="{icon}-dot"
             >{icon == 'loop'
                 ? $loopStore.looping

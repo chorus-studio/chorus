@@ -1,15 +1,17 @@
 <script lang="ts">
     import { nowPlaying } from '$lib/stores/now-playing'
+
     import * as Tooltip from '$lib/components/ui/tooltip'
     import * as Popover from '$lib/components/ui/popover'
     import TabsList from '$lib/components/TabsList.svelte'
+    import AvatarLogo from '$lib/components/AvatarLogo.svelte'
     import { buttonVariants } from '$lib/components/ui/button'
 
-    const src = browser.runtime.getURL('/icon/32.png')
+    let isOpen = $state(false)
 </script>
 
 <div class="space-between flex border-none">
-    <Popover.Root>
+    <Popover.Root bind:open={isOpen}>
         <Popover.Trigger
             id="chorus-settings"
             class={buttonVariants({
@@ -52,11 +54,7 @@
             class="fixed bottom-20 left-[80px] h-[270px] w-[350px] rounded-md outline-4 outline-offset-0 outline-[#28e269]"
         >
             <div class="relative flex flex-col justify-center">
-                <img
-                    {src}
-                    alt="chorus logo"
-                    class="absolute top-[0.375rem] h-5 w-5 pb-[0.125rem]"
-                />
+                <AvatarLogo class="absolute top-[0.25rem] size-5" />
                 <TabsList />
             </div>
         </Popover.Content>

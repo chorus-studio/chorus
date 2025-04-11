@@ -3,6 +3,7 @@ import { storage } from '@wxt-dev/storage'
 
 export type SettingsState = {
     ui: {
+        pip: boolean
         playlist: boolean
         volume: boolean
         progress: boolean
@@ -15,6 +16,7 @@ export type SettingsState = {
         speed: boolean
     }
     notifications: {
+        granted: boolean
         enabled: boolean
         on_track_change: boolean
     }
@@ -22,6 +24,7 @@ export type SettingsState = {
 
 const defaultSettingsState: SettingsState = {
     ui: {
+        pip: false,
         volume: true,
         progress: true,
         playlist: false
@@ -34,6 +37,7 @@ const defaultSettingsState: SettingsState = {
         seek: true
     },
     notifications: {
+        granted: false,
         enabled: false,
         on_track_change: false
     }

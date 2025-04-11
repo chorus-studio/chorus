@@ -1,6 +1,8 @@
 <script lang="ts">
     import { Button } from '$lib/components/ui/button'
 
+    let { pip = false }: { pip?: boolean } = $props()
+
     const links = {
         github: 'https://github.com/chorus-studio/chorus-dev/issues',
         review: {
@@ -80,7 +82,7 @@
             </span>
         </div>
         <div class="flex w-full items-center justify-between">
-            <Button variant="secondary" size="sm">
+            <Button size="sm" variant="secondary">
                 <a
                     class="flex items-center justify-between gap-1"
                     href={links.review.addon}
@@ -348,7 +350,7 @@
                     <span>Add-on Store</span>
                 </a>
             </Button>
-            <Button variant="secondary" size="sm">
+            <Button size="sm" variant="secondary">
                 <a
                     class="flex items-center justify-between gap-1"
                     href={links.review.cws}

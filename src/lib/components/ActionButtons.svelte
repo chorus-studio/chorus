@@ -170,7 +170,7 @@
             <Button
                 variant="outline"
                 size="sm"
-                class="h-6 rounded-[2px] border-none bg-amber-500 px-2 py-0 pb-[0.125rem] text-sm font-semibold text-primary hover:bg-amber-600"
+                class="h-6 rounded-[2px] border-none bg-amber-500 px-2 py-0 pb-[0.125rem] text-sm font-semibold text-[#fafafa] hover:bg-amber-600 hover:text-[#fafafa]"
                 onclick={handleReset}
             >
                 reset
@@ -181,7 +181,7 @@
             <Button
                 variant="outline"
                 size="sm"
-                class="h-6 rounded-[2px] border-none bg-red-500 px-2 py-0 pb-[0.125rem] text-sm font-semibold text-primary hover:bg-red-600"
+                class="h-6 rounded-[2px] border-none bg-red-500 px-2 py-0 pb-[0.125rem] text-sm font-semibold text-[#fafafa] hover:bg-red-600 hover:text-[#fafafa]"
                 onclick={handleDelete}
             >
                 delete
@@ -193,7 +193,7 @@
                 variant="outline"
                 size="sm"
                 onclick={handleSave}
-                class="h-6 rounded-[2px] border-none bg-green-700 px-2 py-0 pb-[0.125rem] text-sm font-semibold text-primary hover:bg-green-800"
+                class="h-6 rounded-[2px] border-none bg-green-700 px-2 py-0 pb-[0.125rem] text-sm font-semibold text-[#fafafa] hover:bg-green-800 hover:text-[#fafafa]"
             >
                 save
             </Button>

@@ -9,6 +9,8 @@
     import SpeedSlider from '$lib/components/SpeedSlider.svelte'
     import ToggleSelect from '$lib/components/ToggleSelect.svelte'
 
+    let { pip = false }: { pip?: boolean } = $props()
+
     function padSpeed(value: number | string, decimalPlace: number = 4): string {
         const parsedValue = parseFloat(value.toString())
         if (isNaN(parsedValue)) return value.toString()
@@ -66,9 +68,9 @@
     })
 </script>
 
-<div class="flex w-full flex-col space-y-1">
+<div class="flex w-full flex-col space-y-2.5">
     <BadgeList list={[0.5, 0.75, 0.9818, 1, 1.2, 1.5, 2.5]} handleSelect={handleBadgeSelect} />
-    <SpeedSlider />
+    <SpeedSlider {pip} />
 
     <div class="flex w-full items-center justify-between">
         <div class="flex flex-col items-center gap-y-1.5">
@@ -83,7 +85,9 @@
                     value={padSpeed($playbackStore.track.playback_rate)}
                     onchange={handleInput}
                     id="track-speed"
-                    class="h-6 w-16 rounded-none px-2 text-end text-base font-bold text-white {!$playbackStore.is_default
+                    class="h-6 {pip
+                        ? 'w-20'
+                        : 'w-16'} rounded-none px-2 text-end text-base font-bold text-white {!$playbackStore.is_default
                         ? 'border-1 border-zinc-200 bg-green-700'
                         : ''} border-none"
                 />
@@ -99,7 +103,9 @@
                     id="global-speed"
                     value={padSpeed($playbackStore.default.playback_rate)}
                     onchange={handleInput}
-                    class="h-6 w-16 rounded-none px-2 text-end text-base font-bold lowercase text-white {$playbackStore.is_default
+                    class="h-6 {pip
+                        ? 'w-20'
+                        : 'w-16'} rounded-none px-2 text-end text-base font-bold lowercase text-white {$playbackStore.is_default
                         ? 'border-1 border-zinc-200 bg-green-700'
                         : 'border-none'}"
                 />
@@ -109,6 +115,7 @@
         <div class="flex flex-col items-end gap-y-1.5">
             <div class="flex items-center justify-between">
                 <ToggleSelect
+                    {pip}
                     label={$playbackStore.is_default ? 'Global Speed' : 'Track Speed'}
                     list={[
                         { label: 'G', value: 'global' },

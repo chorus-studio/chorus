@@ -1,21 +1,28 @@
 <script lang="ts">
     import { effectsStore } from '$lib/stores/audio-effects'
-    import { customPresets, spotifyPresets } from '$lib/audio-effects/equalizer/presets'
-
     import AudioEffectInputs from '$lib/components/AudioEffectInputs.svelte'
 
-    $: customOptions = ['none', ...customPresets].map((preset) => ({
-        label: preset,
-        value: preset
-    }))
-    $: spotifyOptions = ['none', ...spotifyPresets].map((preset) => ({
-        label: preset,
-        value: preset
-    }))
-    $: topSelected = spotifyPresets.includes($effectsStore.equalizer)
+    import { customPresets, spotifyPresets } from '$lib/audio-effects/equalizer/presets'
+
+    let { pip = false }: { pip?: boolean } = $props()
+
+    const customOptions = $derived(
+        ['none', ...customPresets].map((preset) => ({
+            label: preset,
+            value: preset
+        }))
+    )
+    const spotifyOptions = $derived(
+        ['none', ...spotifyPresets].map((preset) => ({
+            label: preset,
+            value: preset
+        }))
+    )
+    const topSelected = $derived(spotifyPresets.includes($effectsStore.equalizer))
 </script>
 
 <AudioEffectInputs
+    {pip}
     type="equalizer"
     {topSelected}
     topOptions={spotifyOptions}

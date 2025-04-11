@@ -19,10 +19,6 @@ export async function executeButtonClick({
         chorusKeys[command as keyof typeof chorusKeys] ||
         mediaKeys[command as keyof typeof mediaKeys]
 
-    const isChorusCommand = Object.keys(chorusKeys).includes(command)
-
-    if (isShortCutKey && isChorusCommand) return
-
     await browser.scripting.executeScript({
         args: [selector],
         target: { tabId },

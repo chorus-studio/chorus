@@ -4,6 +4,9 @@
 
     import { secondsToTime } from '$lib/utils/time'
     import { Slider } from '$lib/components/ui/slider'
+    import { CustomSlider } from '$lib/components/ui/custom-slider'
+
+    let { pip = false }: { pip?: boolean } = $props()
 
     function handleValueChange(value: number[]) {
         const [start_time, end_time] = value
@@ -18,23 +21,24 @@
             nowPlaying.setCurrentTime(end_time)
         }
     }
+
+    let Component = pip ? CustomSlider : Slider
 </script>
 
 {#if $snipStore}
     <div class="flex w-full items-center justify-between gap-x-4">
-        <p class="text-xs text-muted-foreground">
+        <p class="w-full max-w-6 text-xs text-muted-foreground">
             {secondsToTime($snipStore?.start_time)}
         </p>
-        <Slider
-            onValueChange={(value) => handleValueChange(value)}
+        <Component
+            onValueChange={(value) => handleValueChange(value as number[])}
             type="multiple"
             value={[$snipStore?.start_time, $snipStore?.end_time]}
             min={0}
             max={$nowPlaying.duration}
             step={1}
-            class="h-6 w-full"
         />
-        <p class="text-xs text-muted-foreground">
+        <p class="w-full max-w-6 text-xs text-muted-foreground">
             {secondsToTime($snipStore?.end_time)}
         </p>
     </div>
