@@ -40,11 +40,11 @@
             <h2 class="text-base font-semibold">ui</h2>
             {#each Object.keys($settingsStore.ui) as key}
                 <div class="flex items-center justify-between gap-y-2.5">
+                    <Label>{setUILabel(key as keyof SettingsState['ui'])}</Label>
                     <Switch
                         checked={$settingsStore.ui[key as keyof SettingsState['ui']]}
                         onCheckedChange={() => toggleUISettings(key as keyof SettingsState['ui'])}
                     />
-                    <Label>{setUILabel(key as keyof SettingsState['ui'])}</Label>
                 </div>
             {/each}
         </div>
