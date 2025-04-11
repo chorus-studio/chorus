@@ -75,7 +75,7 @@
                         onValueChange={handleVolumeTypeChange}
                         list={[
                             { label: 'ln', value: 'linear' },
-                            { label: 'log', value: 'logarithmic' }
+                            { label: 'lg', value: 'logarithmic' }
                         ]}
                     />
                     <p class="text-xs text-muted-foreground">{$volumeStore.type}</p>
