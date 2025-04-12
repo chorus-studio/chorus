@@ -17,8 +17,8 @@ export type NowPlaying = SimpleTrack & {
     artist: string | null
     liked?: boolean | null
     album_id: string | null
-    textColour: string | null
-    backgroundColour: string | null
+    bg_colour: string | null
+    text_colour: string | null
 }
 
 const defaultNowPlaying: NowPlaying = {
@@ -34,8 +34,8 @@ const defaultNowPlaying: NowPlaying = {
     duration: 0,
     current: 0,
     album_id: null,
-    textColour: '#ffffff',
-    backgroundColour: '#000000'
+    text_colour: '#ffffff',
+    bg_colour: '#000000'
 }
 
 function createNowPlayingStore() {
@@ -143,6 +143,11 @@ function createNowPlayingStore() {
         await trackObserver?.initialize()
     }
 
+    async function updateState(state: Partial<NowPlaying>) {
+        update((prevState) => ({ ...prevState, ...state }))
+        await storage.setItem<NowPlaying>('local:chorus_now_playing', get(store))
+    }
+
     function disconnect() {
         observer?.disconnect()
         observer = null
@@ -161,6 +166,7 @@ function createNowPlayingStore() {
 
     return {
         update,
+        updateState,
         subscribe,
         set,
         setLiked,

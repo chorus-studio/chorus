@@ -1,6 +1,5 @@
 <script lang="ts">
     import { onMount } from 'svelte'
-    import { storage } from '@wxt-dev/storage'
     import { nowPlaying } from '$lib/stores/now-playing'
     import { settingsStore } from '$lib/stores/settings'
     import { supporterStore } from '$lib/stores/supporter'
@@ -10,8 +9,6 @@
     import BellPlus from '@lucide/svelte/icons/bell-plus'
     import BellRing from '@lucide/svelte/icons/bell-ring'
 
-    import { getImageBackgroundAndTextColours } from '$lib/utils/image-colours'
-
     import { Button } from '$lib/components/ui/button'
     import TrackInfo from '$lib/components/TrackInfo.svelte'
     import VolumeIcon from '$lib/components/VolumeIcon.svelte'
@@ -20,54 +17,16 @@
     import TimeProgress from '$lib/components/TimeProgress.svelte'
     import MediaControls from '$lib/components/MediaControls.svelte'
 
+    import { getColours } from '$lib/utils/vibrant-colors'
     import { getCheckPermissionsService } from '$lib/utils/check-permissions'
 
     let { pip = false }: { pip: boolean } = $props()
 
     let port = $state<chrome.runtime.Port | null>(null)
-    let colours = $state<{ backgroundColour: string; textColour: string }>({
-        backgroundColour: $nowPlaying.backgroundColour ?? '#000000',
-        textColour: $nowPlaying.textColour ?? '#ffffff'
+    let colours = $state<{ bg_colour: string; text_colour: string }>({
+        bg_colour: $nowPlaying.bg_colour ?? '#000000',
+        text_colour: $nowPlaying.text_colour ?? '#ffffff'
     })
-
-    function loadImage(url: string, element: HTMLImageElement): Promise<void> {
-        return new Promise((resolve, reject) => {
-            element.onload = () => resolve()
-            element.onerror = reject
-            element.src = url
-            element.crossOrigin = 'anonymous'
-        })
-    }
-
-    async function getColours() {
-        const { cover: url } = $nowPlaying
-        if (!url) {
-            colours = { backgroundColour: '#000000', textColour: '#ffffff' }
-            return
-        }
-
-        try {
-            const img = new Image(64, 64)
-            img.crossOrigin = 'anonymous'
-            await loadImage(url, img)
-
-            const canvas = document.createElement('canvas')
-            if (img.complete) {
-                const { textColour, backgroundColour } = getImageBackgroundAndTextColours({
-                    img,
-                    canvas
-                })
-                colours = { textColour, backgroundColour }
-                await storage.setItem('local:chorus_now_playing', {
-                    ...$nowPlaying,
-                    ...colours
-                })
-            }
-        } catch (error) {
-            console.error('Error loading image:', error)
-            colours = { backgroundColour: '#000000', textColour: '#ffffff' }
-        }
-    }
 
     function setupPort() {
         port = chrome.runtime.connect({ name: 'popup' })
@@ -82,14 +41,22 @@
         const cover = $nowPlaying.cover
         if (cover && cover !== currentCover) {
             currentCover = cover
-            getColours()
+            ;(async () => await loadColours())()
         }
     })
 
     $effect(() => {
-        // Update CSS custom properties whenever colours change
-        document.documentElement.style.setProperty('--bg', colours.backgroundColour)
-        document.documentElement.style.setProperty('--text', colours.textColour)
+        // Only update if values have actually changed
+        if (
+            colours.bg_colour !== ($nowPlaying.bg_colour ?? '#000000') ||
+            colours.text_colour !== ($nowPlaying.text_colour ?? '#ffffff')
+        ) {
+            colours.bg_colour = $nowPlaying.bg_colour ?? '#000000'
+            colours.text_colour = $nowPlaying.text_colour ?? '#ffffff'
+            // Update CSS custom properties
+            document.documentElement.style.setProperty('--bg', colours.bg_colour)
+            document.documentElement.style.setProperty('--text', colours.text_colour)
+        }
     })
 
     async function toggleVolumeMute() {
@@ -99,9 +66,7 @@
 
     function getCurrentState() {
         if ($settingsStore.notifications.enabled) {
-            if ($settingsStore.notifications.on_track_change) {
-                return 3
-            }
+            if ($settingsStore.notifications.on_track_change) return 3
             return 2
         }
         return 1
@@ -127,10 +92,21 @@
         })
     }
 
+    async function loadColours() {
+        if ($nowPlaying.cover) {
+            await getColours($nowPlaying.cover)
+            // Update colours state directly after getColours completes
+            colours = {
+                bg_colour: $nowPlaying.bg_colour ?? '#000000',
+                text_colour: $nowPlaying.text_colour ?? '#ffffff'
+            }
+        }
+    }
+
     onMount(() => {
         ;(async () => await supporterStore.sync())()
         setupPort()
-        getColours()
+        loadColours()
 
         return () => port?.disconnect()
     })
@@ -179,17 +155,15 @@
             {/if}
         {/if}
 
-        {#if pip}
-            <Button
-                variant={pip ? 'default' : 'ghost'}
-                size="icon"
-                aria-label="Volume"
-                onclick={toggleVolumeMute}
-                class="size-6 border-none bg-transparent text-[var(--text)] brightness-75 hover:bg-transparent hover:text-[var(--text)] [&_svg]:size-[1rem]"
-            >
-                <VolumeIcon />
-            </Button>
-        {/if}
+        <Button
+            variant={pip ? 'default' : 'ghost'}
+            size="icon"
+            aria-label="Volume"
+            onclick={toggleVolumeMute}
+            class="size-6 border-none bg-transparent text-[var(--text)] brightness-75 hover:bg-transparent hover:text-[var(--text)] [&_svg]:size-[1rem]"
+        >
+            <VolumeIcon />
+        </Button>
     </div>
     <div class="flex h-16 w-full items-center gap-x-2 {pip ? 'mt-1' : ''}">
         <CoverImage />
