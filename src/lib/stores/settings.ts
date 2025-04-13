@@ -1,6 +1,17 @@
 import { writable, get } from 'svelte/store'
 import { storage } from '@wxt-dev/storage'
 
+export type ThemeName = 'none' | 'dynamic' | 'static'
+export type ThemeMode = 'light' | 'dark'
+export type ThemeVibrancy =
+    | 'Vibrant'
+    | 'DarkVibrant'
+    | 'LightVibrant'
+    | 'DarkMuted'
+    | 'LightMuted'
+    | 'Muted'
+    | 'Auto'
+
 export type SettingsState = {
     ui: {
         pip: boolean
@@ -19,6 +30,11 @@ export type SettingsState = {
         granted: boolean
         enabled: boolean
         on_track_change: boolean
+    }
+    theme: {
+        name: ThemeName
+        mode: ThemeMode
+        vibrancy: ThemeVibrancy
     }
 }
 
@@ -40,6 +56,11 @@ const defaultSettingsState: SettingsState = {
         granted: false,
         enabled: false,
         on_track_change: false
+    },
+    theme: {
+        name: 'none' as ThemeName,
+        mode: 'dark' as ThemeMode,
+        vibrancy: 'Auto' as ThemeVibrancy
     }
 }
 
