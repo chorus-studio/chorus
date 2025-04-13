@@ -1,8 +1,9 @@
 import { Vibrant } from 'node-vibrant/browser'
 import { nowPlaying } from '$lib/stores/now-playing'
+import type { ThemeVibrancy } from '$lib/stores/settings'
 
-let text_colour: string = '#1bd954'
-let bg_colour: string = '#0a0a0a'
+let text_colour: string | null = '#1bd954'
+let bg_colour: string | null = '#0a0a0a'
 
 function isLight(hex: string): boolean {
     const [r, g, b] = hexToRgb(hex).map(Number)
@@ -93,19 +94,32 @@ function setLightness(hex: string, lightness: number) {
     return rgbToHex(hslToRgb(hsl))
 }
 
-async function getVibrant(image: HTMLImageElement) {
+async function getVibrant({
+    image,
+    vibrancy
+}: {
+    image: HTMLImageElement
+    vibrancy: ThemeVibrancy
+}) {
     try {
+        if (vibrancy == 'Auto') {
+            const variants = isLight(text_colour ?? '#1bd954')
+                ? ['Vibrant', 'DarkVibrant', 'Muted', 'LightVibrant']
+                : ['Vibrant', 'LightVibrant', 'Muted', 'DarkVibrant']
+            const palettes = await new Vibrant(image).getPalettes()
+
+            for (const variant of variants) {
+                if (palettes.default.hasOwnProperty(variant) && palettes.default[variant]) {
+                    text_colour = palettes.default[variant]!.hex
+                    bg_colour = palettes.default[variant]!.bodyTextColor
+                    break
+                }
+            }
+            return { text_colour, bg_colour }
+        }
+
         const palette = await new Vibrant(image).getPalette()
-        const variants = isLight(bg_colour)
-            ? ['Vibrant', 'DarkVibrant', 'Muted', 'LightVibrant']
-            : ['Vibrant', 'LightVibrant', 'Muted', 'DarkVibrant']
-        // for (const variant of variants) {
-        //     if (palettes[variant]) {
-        text_colour = palette.DarkVibrant!.hex
-        bg_colour = palette.DarkVibrant!.bodyTextColor
-        // }
-        // }
-        return { text_colour, bg_colour }
+        return { text_colour: palette[vibrancy]!.hex, bg_colour: palette[vibrancy]!.bodyTextColor }
     } catch (err) {
         console.error(err)
         return { text_colour, bg_colour }
@@ -121,12 +135,11 @@ function loadImage(url: string, element: HTMLImageElement): Promise<void> {
     })
 }
 
-async function getColours(url: string) {
+async function getColours({ url, vibrancy }: { url: string; vibrancy: ThemeVibrancy }) {
     let img: HTMLImageElement | null = new Image(64, 64)
     await loadImage(url, img)
 
-    const { text_colour, bg_colour } = await getVibrant(img)
-    console.log({ text_colour, bg_colour })
+    const { text_colour, bg_colour } = await getVibrant({ image: img, vibrancy })
     await nowPlaying.updateState({ text_colour, bg_colour })
     img = null
 }
