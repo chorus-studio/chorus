@@ -1,9 +1,11 @@
 <script lang="ts">
     import { onMount } from 'svelte'
-    import { nowPlaying } from '$lib/stores/now-playing'
-    import { settingsStore } from '$lib/stores/settings'
-    import { supporterStore } from '$lib/stores/supporter'
+
     import { volumeStore } from '$lib/stores/volume'
+    import { nowPlaying } from '$lib/stores/now-playing'
+    import { supporterStore } from '$lib/stores/supporter'
+    import { settingsStore, type ThemeVibrancy } from '$lib/stores/settings'
+
     import Bell from '@lucide/svelte/icons/bell'
     import BellOff from '@lucide/svelte/icons/bell-off'
     import BellPlus from '@lucide/svelte/icons/bell-plus'
@@ -16,6 +18,7 @@
     import VolumeSlider from '$lib/components/VolumeSlider.svelte'
     import TimeProgress from '$lib/components/TimeProgress.svelte'
     import MediaControls from '$lib/components/MediaControls.svelte'
+    import SelectVibrancy from '$lib/components/SelectVibrancy.svelte'
 
     import { getColours } from '$lib/utils/vibrant-colors'
     import { getCheckPermissionsService } from '$lib/utils/check-permissions'
@@ -36,6 +39,7 @@
     }
 
     let currentCover = $state('')
+    let currentVibrancy = $state<ThemeVibrancy>($settingsStore.theme.vibrancy ?? 'Auto')
 
     $effect(() => {
         const cover = $nowPlaying.cover
@@ -92,9 +96,16 @@
         })
     }
 
+    function getVibrancy(): ThemeVibrancy {
+        if (!$supporterStore.isSupporter) return 'Auto'
+
+        return $settingsStore.theme.vibrancy
+    }
+
     async function loadColours() {
         if ($nowPlaying.cover) {
-            await getColours($nowPlaying.cover)
+            const vibrancy = getVibrancy()
+            await getColours({ url: $nowPlaying.cover, vibrancy })
             // Update colours state directly after getColours completes
             colours = {
                 bg_colour: $nowPlaying.bg_colour ?? '#000000',
@@ -108,28 +119,39 @@
         setupPort()
         loadColours()
 
-        return () => port?.disconnect()
+        const unsubscribe = settingsStore.subscribe(async (state) => {
+            if (state.theme.vibrancy !== currentVibrancy) {
+                currentVibrancy = state.theme.vibrancy
+                await loadColours()
+            }
+        })
+
+        return () => unsubscribe()
     })
 </script>
 
 <main
-    class="relative flex {pip
-        ? 'h-[170px] w-full'
-        : 'h-[160px] w-[300px] bg-[var(--bg)] px-3.5 py-3'} flex-col gap-1"
+    class="relative flex h-[170px] {pip
+        ? 'w-full'
+        : 'w-[300px] bg-[var(--bg)] px-3.5 py-3'} flex-col gap-1"
 >
     <div
-        class="absolute {pip
-            ? '-top-2'
-            : 'top-0'} right-2 flex w-full items-center justify-end gap-x-0.5"
+        class="{pip
+            ? 'absolute -top-1.5 right-1'
+            : 'absolute right-1 top-0.5'} flex w-full items-center justify-end gap-x-0.5"
     >
         {#if $supporterStore.isSupporter}
+            {#if !pip}
+                <SelectVibrancy />
+            {/if}
+
             {#if !$settingsStore.notifications.granted}
                 <Button
                     size="sm"
                     variant="outline"
                     aria-label="Notifications"
                     onclick={grantNotificationPermission}
-                    class="flex h-5 items-center gap-x-1 bg-[var(--text)] px-2 text-xs text-[var(--bg)]"
+                    class="flex h-5 items-center gap-x-1 bg-[var(--text)] px-2 text-xs text-[var(--bg)] hover:bg-[var(--text)] hover:text-[var(--bg)]"
                 >
                     <BellPlus />
                     grant
@@ -165,7 +187,7 @@
             <VolumeIcon />
         </Button>
     </div>
-    <div class="flex h-16 w-full items-center gap-x-2 {pip ? 'mt-1' : ''}">
+    <div class="flex h-16 w-full items-center gap-x-2 {pip ? 'mt-1' : 'mt-2'}">
         <CoverImage />
         <div class="flex h-16 flex-col justify-center gap-y-1 overflow-hidden text-[var(--text)]">
             <TrackInfo isPopup />
