@@ -237,7 +237,9 @@
                 </div>
             {/if}
             {#if !['info', 'settings'].includes(activeTab)}
-                <div class="absolute bottom-0 flex h-6 w-full items-center justify-end gap-x-2">
+                <div
+                    class="absolute bottom-0 right-0 z-50 flex h-6 w-fit items-center justify-end gap-x-2"
+                >
                     <Label class="text-sm text-muted-foreground">set default view</Label>
                     <Switch
                         checked={defaultView === activeTab}

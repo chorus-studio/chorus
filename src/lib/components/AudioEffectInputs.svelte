@@ -4,8 +4,7 @@
     import { effectsStore } from '$lib/stores/audio-effects'
 
     import type { Selection } from '$lib/types'
-    import Selector from '$lib/components/Selector.svelte'
-    import CustomSelect from '$lib/components/ui/custom-select/custom-select.svelte'
+    import { CustomSelect } from '$lib/components/ui/custom-select'
 
     let {
         pip = false,
@@ -30,16 +29,14 @@
     }
 
     let selectedLabel = type === 'reverb' ? 'active reverb preset' : 'active equalizer preset'
-    let Component = pip ? CustomSelect : Selector
 </script>
 
 <div class="flex w-full flex-col justify-between space-y-2.5">
     <div class="flex w-full flex-col gap-x-1 gap-y-1">
         <div class="flex w-full items-center justify-between">
             <Label for="room" class="w-full text-base text-gray-400">{topLabel}</Label>
-            <Component
+            <CustomSelect
                 selected={topSelected ? $effectsStore[type] : 'none'}
-                label={topLabel}
                 options={topOptions}
                 onValueChange={handleUpdateEffect}
             />
@@ -47,9 +44,8 @@
 
         <div class="flex w-full items-center justify-between">
             <Label for="room" class="w-full text-base text-gray-400">{bottomLabel}</Label>
-            <Component
+            <CustomSelect
                 selected={!topSelected ? $effectsStore[type] : 'none'}
-                label={bottomLabel}
                 options={bottomOptions}
                 onValueChange={handleUpdateEffect}
             />

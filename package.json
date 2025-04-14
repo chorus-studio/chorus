@@ -51,6 +51,7 @@
     "dependencies": {
         "@webext-core/proxy-service": "^1.2.1",
         "mellowtel": "git@github.com:aria-studio/mellowtel-js.git#ext-mode",
-        "mode-watcher": "^0.5.1"
+        "mode-watcher": "^0.5.1",
+        "node-vibrant": "^4.0.3"
     }
 }
