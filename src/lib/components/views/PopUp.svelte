@@ -20,16 +20,13 @@
     import MediaControls from '$lib/components/MediaControls.svelte'
     import SelectVibrancy from '$lib/components/SelectVibrancy.svelte'
 
-    import { getColours } from '$lib/utils/vibrant-colors'
     import { getCheckPermissionsService } from '$lib/utils/check-permissions'
 
     let { pip = false }: { pip: boolean } = $props()
+    let currentText = $state($nowPlaying.text_colour ?? '#ffffff')
+    let currentBg = $state($nowPlaying.bg_colour ?? '#000000')
 
     let port = $state<chrome.runtime.Port | null>(null)
-    let colours = $state<{ bg_colour: string; text_colour: string }>({
-        bg_colour: $nowPlaying.bg_colour ?? '#000000',
-        text_colour: $nowPlaying.text_colour ?? '#ffffff'
-    })
 
     function setupPort() {
         port = chrome.runtime.connect({ name: 'popup' })
@@ -37,31 +34,6 @@
             if (!['enabled', 'controls'].includes(type)) return
         })
     }
-
-    let currentCover = $state('')
-    let currentVibrancy = $state<ThemeVibrancy>($settingsStore.theme.vibrancy ?? 'Auto')
-
-    $effect(() => {
-        const cover = $nowPlaying.cover
-        if (cover && cover !== currentCover) {
-            currentCover = cover
-            ;(async () => await loadColours())()
-        }
-    })
-
-    $effect(() => {
-        // Only update if values have actually changed
-        if (
-            colours.bg_colour !== ($nowPlaying.bg_colour ?? '#000000') ||
-            colours.text_colour !== ($nowPlaying.text_colour ?? '#ffffff')
-        ) {
-            colours.bg_colour = $nowPlaying.bg_colour ?? '#000000'
-            colours.text_colour = $nowPlaying.text_colour ?? '#ffffff'
-            // Update CSS custom properties
-            document.documentElement.style.setProperty('--bg', colours.bg_colour)
-            document.documentElement.style.setProperty('--text', colours.text_colour)
-        }
-    })
 
     async function toggleVolumeMute() {
         await volumeStore.updateVolume({ muted: !$volumeStore.muted })
@@ -96,33 +68,22 @@
         })
     }
 
-    function getVibrancy(): ThemeVibrancy {
-        if (!$supporterStore.isSupporter) return 'Auto'
-
-        return $settingsStore.theme.vibrancy
-    }
-
-    async function loadColours() {
-        if ($nowPlaying.cover) {
-            const vibrancy = getVibrancy()
-            await getColours({ url: $nowPlaying.cover, vibrancy })
-            // Update colours state directly after getColours completes
-            colours = {
-                bg_colour: $nowPlaying.bg_colour ?? '#000000',
-                text_colour: $nowPlaying.text_colour ?? '#ffffff'
-            }
-        }
-    }
-
     onMount(() => {
         ;(async () => await supporterStore.sync())()
         setupPort()
-        loadColours()
 
-        const unsubscribe = settingsStore.subscribe(async (state) => {
-            if (state.theme.vibrancy !== currentVibrancy) {
-                currentVibrancy = state.theme.vibrancy
-                await loadColours()
+        const unsubscribe = nowPlaying.subscribe(({ text_colour, bg_colour }) => {
+            if (
+                text_colour &&
+                bg_colour &&
+                (text_colour !== currentText || bg_colour !== currentBg)
+            ) {
+                console.log('setting text and bg', { text_colour, bg_colour })
+                currentText = text_colour
+                currentBg = bg_colour
+                document.documentElement.style = ''
+                document.documentElement.style.setProperty('--text', text_colour)
+                document.documentElement.style.setProperty('--bg', bg_colour)
             }
         })
 

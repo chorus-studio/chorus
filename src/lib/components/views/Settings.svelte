@@ -1,6 +1,7 @@
 <script lang="ts">
     import { supporterStore } from '$lib/stores/supporter'
     import { playbackObserver } from '$lib/observers/playback'
+    import { injectTheme, removeTheme } from '$lib/utils/theming'
     import { settingsStore, type SettingsState } from '$lib/stores/settings'
 
     import { Label } from '$lib/components/ui/label'
@@ -18,6 +19,15 @@
         if (key === 'progress') playbackObserver.toggleProgress()
         if (key === 'volume') playbackObserver.toggleVolumeSlider()
         if (key === 'playlist') playbackObserver.togglePlaylistButton()
+
+        if (key === 'theming') {
+            const enabled = $settingsStore.ui.theming
+            enabled ? injectTheme() : removeTheme()
+
+            await settingsStore.updateSettings({
+                theme: { ...$settingsStore.theme, enabled }
+            })
+        }
     }
 
     async function toggleViewsSettings(key: keyof SettingsState['views']) {
@@ -33,6 +43,8 @@
         if (key == 'playlist') return 'add to playlist'
         return `${key} v2`
     }
+
+    const onlySupporterKeys = ['theming', 'pip']
 </script>
 
 <div class="flex h-full w-full flex-col items-center justify-center space-y-2">
@@ -40,7 +52,7 @@
         <div class="mr-2 flex w-1/2 flex-col gap-y-2">
             <h2 class="text-base font-semibold">ui</h2>
             {#each Object.keys($settingsStore.ui) as key}
-                {#if key !== 'pip' || (key == 'pip' && $supporterStore.isSupporter)}
+                {#if !onlySupporterKeys.includes(key) || (onlySupporterKeys.includes(key) && $supporterStore.isSupporter)}
                     <div class="flex items-center justify-between gap-y-2.5">
                         <Label>{setUILabel(key as keyof SettingsState['ui'])}</Label>
                         <Switch

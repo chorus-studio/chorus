@@ -1,9 +1,7 @@
+import { get } from 'svelte/store'
 import { Vibrant } from 'node-vibrant/browser'
 import { nowPlaying } from '$lib/stores/now-playing'
 import type { ThemeVibrancy } from '$lib/stores/settings'
-
-let text_colour: string | null = '#1bd954'
-let bg_colour: string | null = '#0a0a0a'
 
 function isLight(hex: string): boolean {
     const [r, g, b] = hexToRgb(hex).map(Number)
@@ -96,10 +94,14 @@ function setLightness(hex: string, lightness: number) {
 
 async function getVibrant({
     image,
-    vibrancy
+    vibrancy,
+    text_colour,
+    bg_colour
 }: {
     image: HTMLImageElement
     vibrancy: ThemeVibrancy
+    text_colour: string | null
+    bg_colour: string | null
 }) {
     try {
         if (vibrancy == 'Auto') {
@@ -138,10 +140,20 @@ function loadImage(url: string, element: HTMLImageElement): Promise<void> {
 async function getColours({ url, vibrancy }: { url: string; vibrancy: ThemeVibrancy }) {
     let img: HTMLImageElement | null = new Image(64, 64)
     await loadImage(url, img)
+    let { text_colour, bg_colour } = get(nowPlaying)
 
-    const { text_colour, bg_colour } = await getVibrant({ image: img, vibrancy })
-    await nowPlaying.updateState({ text_colour, bg_colour })
+    const { text_colour: newText, bg_colour: newBg } = await getVibrant({
+        image: img,
+        vibrancy,
+        text_colour,
+        bg_colour
+    })
     img = null
+
+    document.documentElement.style.setProperty('--background-base', newBg)
+    document.documentElement.style.setProperty('--bg', newBg)
+    document.documentElement.style.setProperty('--text', newText)
+    return { text_colour: newText, bg_colour: newBg }
 }
 
 export {

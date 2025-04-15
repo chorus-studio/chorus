@@ -5,6 +5,8 @@ import { dataStore } from '$lib/stores/data'
 import { playback } from '$lib/utils/playback'
 import { currentSongInfo } from '$lib/utils/song'
 import { trackObserver } from '$lib/observers/track'
+import { settingsStore } from '$lib/stores/settings'
+import { getColours } from '$lib/utils/vibrant-colors'
 import type { SimpleTrack } from '$lib/stores/data/cache'
 
 export type NowPlaying = SimpleTrack & {
@@ -103,13 +105,27 @@ function createNowPlayingStore() {
     async function updateNowPlaying(songChanged = false) {
         const songInfo = getSongInfo()
         const currentData = get(store)
+        let trackColors = { text_colour: currentData.text_colour, bg_colour: currentData.bg_colour }
         if (songChanged) {
+            const vibrancy = get(settingsStore).theme.vibrancy
+            const { text_colour, bg_colour } = await getColours({
+                url: songInfo!.cover!,
+                vibrancy
+            })
+            if (text_colour && bg_colour) {
+                console.log('retrieved vibrant colours', { text_colour, bg_colour })
+                trackColors = { text_colour, bg_colour }
+                document.documentElement.style.setProperty(
+                    '--image_url',
+                    `url("${songInfo.cover}")`
+                )
+            }
             if (!songInfo?.blocked) delete currentData?.blocked
             if (!songInfo?.snip) delete currentData?.snip
             if (!songInfo?.playback) delete currentData?.playback
         }
 
-        const newState = { ...currentData, ...songInfo }
+        const newState = { ...currentData, ...songInfo, ...trackColors }
 
         let dataState: SimpleTrack | null = null
         if (newState.track_id && !dataStore.collectionObject[newState.track_id]) {

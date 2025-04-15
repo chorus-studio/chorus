@@ -117,7 +117,7 @@
             : icon == 'dj'
               ? 'fill-[#1ed760] stroke-[#1ed760] brightness-150'
               : 'brightness-75'} {icon == 'seek-forward' ? 'scale-x-[-1]' : ''} {isSeek
-            ? 'fill-none stroke-[var(--text)]'
+            ? '!fill-none stroke-[var(--text)]'
             : ''}"
     >
         {#if icon.startsWith('seek')}

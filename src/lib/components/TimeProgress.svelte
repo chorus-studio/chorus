@@ -33,16 +33,16 @@
     }
 
     const isChorus = $derived(id === 'chorus-time-progress')
-    const progressColor = $derived(isChorus || pip ? 'bg-white' : 'bg-[var(--text)]')
-    const textColor = $derived(isChorus || pip ? 'text-white' : 'text-[var(--text)]')
-    const bgColor = $derived(isChorus || pip ? 'bg-gray-600' : 'bg-[var(--bg)]')
-    const borderColor = $derived(isChorus || pip ? 'border-[#7c7c7c]' : 'border-[var(--text)]')
+    const progressColor = 'bg-[var(--text)]'
+    const textColor = 'text-[var(--text)]'
+    const bgColor = 'bg-[var(--bg)]'
+    const borderColor = 'border-[var(--text)]'
     const currentPosition = $derived(Math.round($nowPlaying.current ?? 0))
 </script>
 
 <div class="relative flex w-full items-center {isChorus ? 'mt-2' : ''} justify-between gap-x-3">
     {#if isChorus && $nowPlaying.playback}
-        <span class="min-w-7 text-xs font-semibold text-[#1ed760]">
+        <span class="min-w-7 text-xs font-semibold text-[var(--chorus-text)]">
             {$nowPlaying.playback.playback_rate}x
         </span>
     {/if}
@@ -51,7 +51,7 @@
         class="flex w-full {isChorus ? 'gap-x-3' : 'mt-3.5 flex-col'} items-center justify-between"
     >
         {#if isChorus}
-            <span class="min-w-7 text-xs font-semibold text-white">
+            <span class="min-w-7 text-xs font-semibold text-[var(--text)]">
                 {$nowPlaying.current >= 0 ? formatTime($nowPlaying.current) : '-:--'}
             </span>
         {/if}
@@ -86,7 +86,7 @@
                           {
                               start: $nowPlaying.snip?.start_time,
                               end: $nowPlaying.snip?.end_time,
-                              color: '#1ed760'
+                              color: 'var(--chorus-button)'
                           }
                       ]
                     : []}
@@ -102,22 +102,22 @@
         </div>
 
         {#if isChorus}
-            <span class="min-w-7 text-xs font-semibold text-white">
+            <span class="min-w-7 text-xs font-semibold text-[var(--chorus-text)]">
                 {$nowPlaying.duration ? formatTime($nowPlaying.duration) : '-:--'}
             </span>
         {:else}
             <div class="flex w-full items-center justify-between gap-1">
-                <span class="text-xs font-semibold text-[var(--text)] brightness-75">
+                <span class="text-xs font-semibold text-[var(--chorus-text)] brightness-75">
                     {$nowPlaying.current >= 0 ? formatTime($nowPlaying.current) : '-:--'}
                 </span>
 
                 {#if $nowPlaying.playback}
-                    <span class="text-xs font-semibold text-[var(--text)] brightness-75">
+                    <span class="text-xs font-semibold text-[var(--chorus-text)] brightness-75">
                         {$nowPlaying.playback.playback_rate}x
                     </span>
                 {/if}
 
-                <span class="text-xs font-semibold text-[var(--text)] brightness-75">
+                <span class="text-xs font-semibold text-[var(--chorus-text)] brightness-75">
                     {$nowPlaying.duration ? formatTime($nowPlaying.duration) : '-:--'}
                 </span>
             </div>

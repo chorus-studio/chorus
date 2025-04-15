@@ -34,9 +34,13 @@
                 class: 'size-7 border-none bg-transparent stroke-current hover:bg-transparent [&_svg]:size-[1.125rem]'
             })}
         >
-            <Ban role="block" size={24} color={isBlocked ? '#1ed760' : 'currentColor'} />
+            <Ban
+                role="block"
+                size={24}
+                class={isBlocked ? 'stroke-[var(--chorus-button)]' : 'stroke-current'}
+            />
         </Tooltip.Trigger>
-        <Tooltip.Content class="bg-background p-2 text-sm text-white">
+        <Tooltip.Content class="bg-[var(--chorus-button)] p-2 text-sm text-[var(--chorus-text)]">
             <p>{isBlocked ? 'Unblock Track' : 'Block Track'}</p>
         </Tooltip.Content>
     </Tooltip.Root>

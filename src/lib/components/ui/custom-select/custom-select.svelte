@@ -1,5 +1,4 @@
 <script lang="ts">
-    import { cn } from '$lib/utils.js'
     import { onMount } from 'svelte'
     import { pipStore } from '$lib/stores/pip'
     import { clickOutside } from '$lib/utils/click-outside'

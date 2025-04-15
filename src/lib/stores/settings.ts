@@ -15,6 +15,7 @@ export type ThemeVibrancy =
 export type SettingsState = {
     ui: {
         pip: boolean
+        theming: boolean
         playlist: boolean
         volume: boolean
         progress: boolean
@@ -32,6 +33,7 @@ export type SettingsState = {
         on_track_change: boolean
     }
     theme: {
+        enabled: boolean
         name: ThemeName
         mode: ThemeMode
         vibrancy: ThemeVibrancy
@@ -42,6 +44,7 @@ const defaultSettingsState: SettingsState = {
     ui: {
         pip: false,
         volume: true,
+        theming: false,
         progress: true,
         playlist: false
     },
@@ -58,6 +61,7 @@ const defaultSettingsState: SettingsState = {
         on_track_change: false
     },
     theme: {
+        enabled: false,
         name: 'none' as ThemeName,
         mode: 'dark' as ThemeMode,
         vibrancy: 'Auto' as ThemeVibrancy

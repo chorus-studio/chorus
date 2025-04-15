@@ -155,11 +155,12 @@
         >
             <Heart
                 size={24}
-                fill={$nowPlaying.liked ? '#1ed760' : 'none'}
-                color={$nowPlaying.liked ? '#1ed760' : 'currentColor'}
+                class={$nowPlaying.liked
+                    ? 'fill-[var(--chorus-button)] stroke-[var(--chorus-button)]'
+                    : 'fill-none stroke-current'}
             />
         </Tooltip.Trigger>
-        <Tooltip.Content class="bg-background p-2 text-sm text-white">
+        <Tooltip.Content class="bg-[var(--chorus-button)] p-2 text-sm text-[var(--chorus-text)]">
             <p>{$nowPlaying.liked ? 'Remove from Liked Songs' : 'Add to Liked Songs'}</p>
         </Tooltip.Content>
     </Tooltip.Root>

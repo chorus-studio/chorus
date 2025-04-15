@@ -60,12 +60,12 @@
             <Heart
                 role="heart"
                 size={24}
-                class={`${isLiked ? 'fill-[#1ed760]' : 'fill-transparent'} ${
-                    isLiked ? 'stroke-[#1ed760]' : 'stroke-current'
+                class={`${isLiked ? 'fill-[var(--chorus-button)]' : 'fill-transparent'} ${
+                    isLiked ? 'stroke-[var(--chorus-button)]' : 'stroke-current'
                 }`}
             />
         </Tooltip.Trigger>
-        <Tooltip.Content class="bg-background p-2 text-sm text-white">
+        <Tooltip.Content class="bg-[var(--chorus-button)] p-2 text-sm text-[var(--chorus-text)]">
             <p>{isLiked ? 'Remove from Liked Songs' : 'Add to Liked Songs'}</p>
         </Tooltip.Content>
     </Tooltip.Root>

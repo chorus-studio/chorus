@@ -39,7 +39,7 @@
     })
 </script>
 
-<ModeWatcher defaultMode="light" track={false} />
+<ModeWatcher defaultMode="dark" track={false} />
 
 <div id="chorus-ui" class="flex items-center justify-between">
     <HeartButton />
@@ -47,3 +47,10 @@
     <SkipButton />
     <PipButton />
 </div>
+
+<style lang="postcss">
+    :root {
+        --text: #ffffff;
+        --bg: #000000;
+    }
+</style>

@@ -3,4 +3,4 @@
     import PopUp from '$lib/components/views/PopUp.svelte'
 </script>
 
-<PopUp popup />
+<PopUp pip={false} />

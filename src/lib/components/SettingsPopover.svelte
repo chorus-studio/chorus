@@ -31,7 +31,7 @@
                             <g
                                 class="stroke-linecap-round stroke-2 {$nowPlaying?.snip ||
                                 $nowPlaying?.playback
-                                    ? 'fill-green-400 stroke-green-400'
+                                    ? 'fill-[var(--chorus-text)] stroke-[var(--chorus-text)]'
                                     : 'fill-current stroke-current'}"
                             >
                                 <path d="M3 5h4m14 0H11m-8 7h12m6 0h-2M3 19h2m16 0H9" />
@@ -41,7 +41,9 @@
                             </g>
                         </svg>
                     </Tooltip.Trigger>
-                    <Tooltip.Content class="bg-background p-2 text-sm text-white">
+                    <Tooltip.Content
+                        class="bg-[var(--chorus-button)] p-2 text-sm text-[var(--chorus-text)]"
+                    >
                         <p>Settings</p>
                     </Tooltip.Content>
                 </Tooltip.Root>
@@ -51,7 +53,7 @@
             customAnchor="[data-testid='CoverSlotCollapsed__container']"
             side="left"
             align="end"
-            class="fixed bottom-20 left-[80px] h-[270px] w-[350px] rounded-md outline-4 outline-offset-0 outline-[#28e269]"
+            class="fixed bottom-20 left-[80px] h-[270px] w-[350px] rounded-md outline-4 outline-offset-0 outline-[var(--chorus-button)]"
         >
             <div class="relative flex flex-col justify-center">
                 <AvatarLogo class="absolute top-[0.25rem] size-5" />

@@ -1,4 +1,8 @@
 import { get } from 'svelte/store'
+
+import { updateColours } from '$lib/utils/theming'
+import { getColours } from '$lib/utils/vibrant-colors'
+
 import { loopStore } from '$lib/stores/loop'
 import { queue } from '$lib/observers/queue'
 import { seekStore } from '$lib/stores/seek'
@@ -39,6 +43,13 @@ export class TrackObserver {
         await this.updateTrackType()
         this.setPlayback()
         effectsStore.dispatchEffect()
+        if (this.isSupporter) {
+            await getColours({
+                url: this.currentSong.cover!,
+                vibrancy: this.settings.theme.vibrancy
+            })
+            updateColours()
+        }
     }
 
     setPlayback() {
@@ -157,7 +168,10 @@ export class TrackObserver {
         this.setPlayback()
         await queue.refreshQueue()
         await this.updateTrackType()
-        if (this.isSupporter) await this.showNotification(songInfo)
+        if (this.isSupporter) {
+            updateColours()
+            await this.showNotification(songInfo)
+        }
     }
 
     private async showNotification(songInfo: NowPlaying) {

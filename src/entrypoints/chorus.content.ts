@@ -1,6 +1,12 @@
+import { storage } from '@wxt-dev/storage'
 import { mount, unmount } from 'svelte'
 
+import type { SettingsState } from '$lib/stores/settings'
+import { injectTheme, removeTheme } from '$lib/utils/theming'
+
 import '../app.css'
+import './dynamic-theme.content.css'
+
 import App from '../App.svelte'
 import Alert from '$lib/components/Alert.svelte'
 import LoopButton from '$lib/components/LoopButton.svelte'
@@ -11,6 +17,8 @@ export default defineContentScript({
 
     async main(ctx) {
         await injectScript('/media-override.js')
+        const settings = await storage.getItem<SettingsState>('local:chorus_settings')
+        settings?.ui?.theming ? injectTheme() : removeTheme()
 
         const ui = createIntegratedUi(ctx, {
             position: 'inline',

@@ -58,9 +58,9 @@
                 class: 'size-7 border-none bg-transparent stroke-current hover:bg-transparent [&_svg]:size-[1.125rem]'
             })}
         >
-            <Ban size={24} />
+            <Ban size={24} class="stroke-[var(--chorus-button)]" />
         </Tooltip.Trigger>
-        <Tooltip.Content class="bg-background p-2 text-sm text-white">
+        <Tooltip.Content class="bg-[var(--chorus-button)] p-2 text-sm text-[var(--chorus-text)]">
             <p>Block Track</p>
         </Tooltip.Content>
     </Tooltip.Root>
