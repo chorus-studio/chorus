@@ -1,8 +1,11 @@
-import { mount, unmount, SvelteComponent } from 'svelte'
 import { get } from 'svelte/store'
+import { mount, unmount, SvelteComponent } from 'svelte'
+
 import { mediaStore } from '$lib/stores/media'
-import { settingsStore } from '$lib/stores/settings'
 import { nowPlaying } from '$lib/stores/now-playing'
+import { settingsStore } from '$lib/stores/settings'
+import { supporterStore } from '$lib/stores/supporter'
+
 import TimeProgress from '$lib/components/TimeProgress.svelte'
 import VolumeSlider from '$lib/components/VolumeSlider.svelte'
 
@@ -81,7 +84,10 @@ export class PlaybackObserver {
         const root = container.parentElement?.parentElement
         if (!root) return
         root.style.flexDirection = 'column'
-        this.volumeSlider = mount(VolumeSlider, { target: root })
+        this.volumeSlider = mount(VolumeSlider, {
+            target: root,
+            props: { id: 'chorus-volume', port: null }
+        }) as SvelteComponent
     }
 
     private async checkForDJ() {
@@ -93,6 +99,10 @@ export class PlaybackObserver {
         if ((!djUI && media.dj) || (djUI && !media.dj)) {
             await mediaStore.updateState()
         }
+    }
+
+    get supporter() {
+        return get(supporterStore)
     }
 
     get settings() {
@@ -181,7 +191,7 @@ export class PlaybackObserver {
         this.timeProgress = mount(TimeProgress, {
             target: container,
             props: { id: 'chorus-time-progress', port: null }
-        })
+        }) as SvelteComponent
     }
 
     private handleMutation = async (mutations: MutationRecord[]) => {

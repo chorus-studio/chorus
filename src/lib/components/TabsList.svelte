@@ -27,6 +27,7 @@
     import { nowPlaying } from '$lib/stores/now-playing'
     import { playbackStore } from '$lib/stores/playback'
     import { settingsStore } from '$lib/stores/settings'
+    import { supporterStore } from '$lib/stores/supporter'
     import { volumeStore, type VolumeType } from '$lib/stores/volume'
 
     let { pip = false }: { pip?: boolean } = $props()
@@ -118,6 +119,8 @@
         const unsubscribeSettingsViews = settingsStore.subscribe((state) => {
             const settingsViews = state.views
             filteredTabs = tabs.filter((tab) => {
+                if (!$supporterStore.isSupporter) return true
+
                 if (!Object.keys(settingsViews).includes(tab)) return true
                 return settingsViews[tab as keyof typeof settingsViews]
             })

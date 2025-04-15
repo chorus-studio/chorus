@@ -10,8 +10,6 @@
     import { Button } from './ui/button'
     import SupportAlert from './SupportAlert.svelte'
 
-    export let triggerText: string = 'Manage'
-
     let mellowtelLink = ''
     let dialogOpen = false
 
@@ -79,7 +77,9 @@
 
 <Dialog.Root bind:open={dialogOpen}>
     <Dialog.Trigger>
-        <Button variant="outline" size="sm" class="h-8 text-sm">{triggerText}</Button>
+        <Button variant="default" size="sm" class="h-6 text-sm">
+            {$supporterStore.isSupporter ? 'Manage' : 'Support'}
+        </Button>
     </Dialog.Trigger>
 
     <Dialog.Content class="flex w-full flex-col rounded-lg bg-primary-foreground p-4">

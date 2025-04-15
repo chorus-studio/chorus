@@ -131,7 +131,7 @@
 </script>
 
 <main
-    class="relative flex h-[170px] {pip
+    class="relative flex {$supporterStore.isSupporter ? 'h-[170px]' : 'h-[130px]'} {pip
         ? 'w-full'
         : 'w-[300px] bg-[var(--bg)] px-3.5 py-3'} flex-col gap-1"
 >
@@ -194,10 +194,13 @@
         </div>
     </div>
 
-    <TimeProgress {port} {pip} />
+    {#if $supporterStore.isSupporter}
+        <TimeProgress {port} {pip} />
+    {/if}
+
     <MediaControls {port} {pip} />
 
-    {#if pip}
+    {#if $supporterStore.isSupporter && pip}
         <div class="pt-1">
             <VolumeSlider {port} {pip} />
         </div>

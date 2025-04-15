@@ -1,8 +1,9 @@
 <script lang="ts">
     import { toast } from 'svelte-sonner'
     import { mellowtel } from '$lib/utils/mellowtel'
-    import { supporterStore } from '$lib/stores/supporter'
 
+    import { supporterStore } from '$lib/stores/supporter'
+    import { settingsStore } from '$lib/stores/settings'
     import { buttonVariants } from '$lib/components/ui/button'
     import * as AlertDialog from '$lib/components/ui/alert-dialog'
 
@@ -26,7 +27,9 @@
                     onClick: async () => await handleOptIn()
                 }
             })
+
             await supporterStore.sync()
+            await settingsStore.rescindSupport()
         } catch (error) {
             console.error(error)
             toast.error('Failed to opt out')
