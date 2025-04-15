@@ -1,0 +1,630 @@
+:root {
+    --image_url: '';
+    --is_light: 0;
+    --system_is_dark: 1;
+    --player-bar-height: 120px;
+    --chorus-text: '#FFFFFF';
+    --chorus-subtext: '#DEDEDE';
+    --chorus-main: '#2E2837';
+    --chorus-sidebar: '#2E2837';
+    --chorus-player: '#2E2837';
+    --chorus-card: '#483b5b';
+    --chorus-shadow: '#202020';
+    --chorus-selected-row: '#cdcdcd';
+    --chorus-button: '#00e089';
+    --chorus-button-active: '#483b5b';
+    --chorus-button-disabled: '#535353';
+    --chorus-tab-active: '#483b5b';
+    --chorus-notification: '#00e089';
+    --chorus-notification-error: '#e22134';
+    --chorus-misc: '#BFBFBF';
+    --text: '#FFFFFF';
+    --bg: '#000000';
+}
+
+@media (prefers-color-scheme: light) {
+    :root {
+        --system_is_dark: 0;
+    }
+}
+
+.Y8edH1Yjo4xrW_58czQj {
+    background: unset;
+}
+
+input {
+    /* background-color: unset !important; */
+    /* border-bottom: solid 1px var(--chorus-text) !important;
+	border-radius: 0 !important;
+	padding: 6px 10px 6px 48px; */
+    color: var(--chorus-text) !important;
+}
+
+.H6jh9Xd7DNOq3NsLDmCB,
+.aCQCOVyiFROs_qr_DvQ4,
+.ZtY42R4YSo_W7VMeAg9m {
+    color: var(--chorus-text) !important;
+}
+
+.HsbczDqu9qjcYr7EIdHR,
+.S4OmZ_IZexmZ5dasPqW5,
+.x-entityHeader-overlay,
+.x-actionBarBackground-background,
+.CoLO4pdSl8LGWyVZA00t,
+.PkOz5g82CaoKk1J3GX0e,
+.xYgjMpAjE5XT05aRIezb,
+.I0bVSxvqA3rm5HvciMap,
+.yhlH4Dsjqw56Z58EOwvQ,
+.gHImFiUWOg93pvTefeAD,
+.PeLrpasyfBW8ql_bmoAi {
+    background-color: unset !important;
+    background-image: unset !important;
+}
+
+.IeLnf2wUHVKqxhzBcBoM,
+.PFgcCoJSWC3KjhZxHDYH.KOoUMuC7IxI_1Pi4r4m5 {
+    color: white;
+}
+
+.connect-title,
+.connect-header {
+    display: none;
+}
+
+.connect-device-list {
+    margin: 0px -5px;
+}
+
+/* Remove Topbar background colour */
+.T1xI1RTSFU7Wu94UuvE6 {
+    background-color: unset !important;
+}
+.EvIR4O7jOSbNmxtMdIQ0 {
+    background-color: var(--chorus-main);
+}
+
+._EShSNaBK1wUIaZQFJJQ,
+.connect-device-list-container {
+    box-shadow: 0 4px 20px rgba(var(--chorus-rgb-shadow), 0.2);
+}
+
+.n5XwsUqagSoVk8oMiw1x,
+.DZJJ5SCypi2mREbjy5bx {
+    filter: grayscale(1);
+}
+
+.h4HgbO_Uu1JYg5UGANeQ,
+.IjYxRc5luMiDPhKhZVUH.iSbqnFdjb1SuyJ3uWydl,
+.ZgAJecvDDVREPXktThbA:hover .VpYFchIiPg3tPhBGyynT,
+.ucB9avGYvzsmzXUOw0S7,
+.h4HgbO_Uu1JYg5UGANeQ,
+.IjYxRc5luMiDPhKhZVUH.iSbqnFdjb1SuyJ3uWydl,
+.ZgAJecvDDVREPXktThbA:hover .t_yrXoUO3qGsJS4Y6iXX,
+.btE2c3IKaOXZ4VNAb8WQ,
+.h4HgbO_Uu1JYg5UGANeQ,
+.IjYxRc5luMiDPhKhZVUH.iSbqnFdjb1SuyJ3uWydl,
+.ZgAJecvDDVREPXktThbA:focus-within .VpYFchIiPg3tPhBGyynT,
+.ucB9avGYvzsmzXUOw0S7,
+.h4HgbO_Uu1JYg5UGANeQ,
+.IjYxRc5luMiDPhKhZVUH.iSbqnFdjb1SuyJ3uWydl,
+.ZgAJecvDDVREPXktThbA:focus-within .t_yrXoUO3qGsJS4Y6iXX,
+.btE2c3IKaOXZ4VNAb8WQ {
+    color: var(--chorus-button);
+}
+
+.RANLXG3qKB61Bh33I0r2,
+.main-duration-container {
+    color: var(--chorus-subtext);
+}
+
+span.b0NcxAbHvRbqgs2S8QDg svg:nth-child(1) {
+    fill: black;
+}
+
+/* Full window artist background */
+.MyW8tKEekj9lKQsviDdP,
+.i_kMOBXfnweAkv8s97Yc.k2I8B0MzXkAJ6_s8okM7,
+.sv5suqIPUwjgUF_BzM41 {
+    opacity: 0.3;
+}
+
+.NXiYChVp4Oydfxd7rT5r.XPjEhsPyuOvMZ9NsDrxT,
+.MyW8tKEekj9lKQsviDdP,
+.i_kMOBXfnweAkv8s97Yc,
+.MyW8tKEekj9lKQsviDdP,
+.i_kMOBXfnweAkv8s97Yc.xYgjMpAjE5XT05aRIezb,
+.I0bVSxvqA3rm5HvciMap,
+.yhlH4Dsjqw56Z58EOwvQ:after {
+    height: 100vh;
+}
+
+.XPjEhsPyuOvMZ9NsDrxT .RP2rRchy4i8TIp1CTmb7 {
+    justify-content: center;
+}
+
+.NXiYChVp4Oydfxd7rT5r.RMDSGDMFrx8eXHpFphqG.XPjEhsPyuOvMZ9NsDrxT {
+    padding-left: 9%;
+}
+
+.MyW8tKEekj9lKQsviDdP,
+.i_kMOBXfnweAkv8s97Yc.xYgjMpAjE5XT05aRIezb,
+.I0bVSxvqA3rm5HvciMap,
+.yhlH4Dsjqw56Z58EOwvQ:after {
+    background-image:
+        linear-gradient(transparent, transparent),
+        linear-gradient(var(--chorus-main), var(--chorus-main));
+}
+
+.NLaDALU71zxOtBUbsrfH .XPjEhsPyuOvMZ9NsDrxT h1 {
+    font-size: 175px !important;
+    line-height: 175px !important;
+}
+
+/** Hightlight selected playlist */
+.utSR0FVkHnII_aL8TOcu.K8Rs3qAYirS8wJ1hR8gn {
+    background: var(--chorus-button);
+    border-radius: 4px;
+    padding: 0 10px;
+    margin: 0 5px 0 -10px;
+}
+
+.moDRd9td0KtitPDzR7OJ {
+    background: var(--chorus-button);
+}
+
+div.GlueDropTarget.personal-library > *.active {
+    background: var(--chorus-button) !important;
+}
+
+.SboKmDrCTZng7t4EgNoM,
+.k4sYYpEpX2f7RMAPHv3F,
+.NbcaczStd8vD2rHWwaKv {
+    background-color: var(--chorus-button-active);
+}
+
+.re2d5HDzt6T4XBgqcBhi,
+.qUeWph4VP9DwR4xOfabh,
+.wC9sIed7pfp47wZbmU6m,
+.SN9k988q2Seb_joCaEny,
+.mWj8N7D_OlsbDgtQx5GW,
+.wC9sIed7pfp47wZbmU6m,
+.SN9k988q2Seb_joCaEny,
+.mWj8N7D_OlsbDgtQx5GW:not(.pzkhLqffqF_4hucrVVQA, .jJzb9peSGYsUDKbc5QBy):focus,
+.wC9sIed7pfp47wZbmU6m,
+.SN9k988q2Seb_joCaEny,
+.mWj8N7D_OlsbDgtQx5GW:not(.pzkhLqffqF_4hucrVVQA, .jJzb9peSGYsUDKbc5QBy):hover {
+    color: var(--chorus-text);
+}
+
+.vnCew8qzJq3cVGlYFXRI {
+    background-color: var(--chorus-button);
+    color: white;
+}
+
+/** Queue page header */
+.queue-queue-title,
+.DG9CsoFIptJhAneKoo_F,
+.H3Puuvc2nV0GoZRrfpRS,
+.HckHyQocDDePWQL2baOY,
+.queue-playHistory-title {
+    color: var(--chorus-text) !important;
+}
+
+/** Cards */
+.g4PZpjkqEh5g7xDpCr2K {
+    background-color: transparent;
+}
+
+/** Sidebar */
+.FBPrcmuqo3yv5UfWSRl5 {
+    margin-bottom: 8px;
+}
+
+.tojGvx6tcIBmKlICMJAZ {
+    padding: 0;
+}
+
+#spicetify-playlist-list {
+    padding-top: 8px;
+}
+.r9YzlaAPnM2LGK97GSfa .bFQ9NOIn1bDs8tTH0ebQ,
+.r9YzlaAPnM2LGK97GSfa .ot6VAZq1Xfbw2Vh8Qt_A {
+    opacity: 1;
+}
+
+.cUwQnQoE3OqXqSYLT0hv,
+.VUXMMFKWudUWE1kIXZoS {
+    color: var(--chorus-text);
+}
+
+/** Player bar */
+.OCY4jHBlCVZEyGvtSv0J,
+.udArIAqnfUQPQew2VAns {
+    height: var(--player-bar-height);
+}
+
+/** Buddy bar */
+._Xe25F2aC59Kljgqyw3G .mthrc5U9wb8F4zMBqlPy a,
+._Xe25F2aC59Kljgqyw3G .ktMuChpoidaEvECE7y8f a,
+._Xe25F2aC59Kljgqyw3G .hnEmEncF7kB2TnE_Uyja {
+    color: var(--chorus-text);
+}
+
+/* remove left sidebar background */
+.EZFyDnuQnx5hw78phLqP,
+.lHJd4oSttKLxkxuoZ0Lr,
+.BdcvqBAid96FaHAmPYw_,
+.Y8edH1Yjo4xrW_58czQj {
+    background: unset;
+}
+
+/* h1-like titles */
+h1,
+.wCkmVGEQh3je1hrbsFBY,
+.rEN7ncpaUeSGL9z0NGQR,
+.MfVrtIzQJ7iZXfRWg6eM,
+.TypeElement-canon-textBase-type {
+    color: var(--chorus-subtext) !important;
+}
+
+/* Remove Topbar background colour */
+.T1xI1RTSFU7Wu94UuvE6 {
+    --background-base: transparent !important;
+}
+.EvIR4O7jOSbNmxtMdIQ0 {
+    background-color: rgba(var(--chorus-rgb-main), 0.9);
+}
+
+._EShSNaBK1wUIaZQFJJQ,
+.SboKmDrCTZng7t4EgNoM,
+.k4sYYpEpX2f7RMAPHv3F,
+.NbcaczStd8vD2rHWwaKv,
+.connect-device-list-container {
+    box-shadow: 0 4px 20px #21212130;
+}
+
+/* animated equaliser/heart icons */
+img.uWvwXlS0Da1bWsRX6KOw,
+.KdGUk56d2SlrvrUsFjB1,
+.control-button-heart svg,
+.Fm7C3gdh5Lsc9qSXrQwO,
+.RbsCNNM9a0WkFCM2UzBA,
+.n5XwsUqagSoVk8oMiw1x,
+.DZJJ5SCypi2mREbjy5bx,
+.VpYFchIiPg3tPhBGyynT,
+.ucB9avGYvzsmzXUOw0S7 img,
+.tGKwoPuvNBNK3TzCS5OH,
+.GcODM2Bp3srQqJzi8Tzs svg:not(.Svg-img-16-icon),
+.eSg4ntPU2KQLfpLGXAww > button:hover,
+.aaFQbW0j0N40v_siz0kX > button:hover,
+.kzlksKUC9aLBM62Bckxo > button:hover,
+.VKCcyYujazVPj6VkksPM > svg,
+.gv7Rcc2ouDRSd0pto7Df {
+    filter: var(--colourmatrix);
+}
+
+/* translucid background cover */
+@keyframes rotate {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+.xYgjMpAjE5XT05aRIezb,
+.I0bVSxvqA3rm5HvciMap,
+.yhlH4Dsjqw56Z58EOwvQ,
+.nRSfonXHVr6utXYgk2Ui,
+.wp7mZFPzV7Qmo51F0NA_ {
+    background-color: transparent;
+}
+
+.encore-dark-theme,
+.encore-dark-theme .encore-base-set {
+    --background-base: transparent;
+}
+
+#main {
+    position: fixed;
+}
+
+#main::before,
+.ZQftYELq0aOsg6tPbVbV::before {
+    content: '';
+    background-image: var(--image_url);
+    background-size: 100%;
+    background-position: center center;
+    position: absolute;
+    display: block;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    filter: blur(50px) contrast(3) saturate(1.5);
+    pointer-events: none;
+    backface-visibility: hidden;
+    transition: background-image linear 0.35s;
+    opacity: calc(var(--is_light) * 0.05 + 0.12);
+    width: 150%;
+    border-radius: 40%;
+}
+
+/* Animate background if option is on */
+@container style(--chorus-animation: #010101) {
+    #main::before,
+    .ZQftYELq0aOsg6tPbVbV::before {
+        will-change: transform;
+        animation-duration: 45s;
+        animation-name: rotate;
+        animation-timing-function: steps(450);
+        animation-iteration-count: infinite;
+    }
+
+    .ZQftYELq0aOsg6tPbVbV::before {
+        animation-delay: 10s;
+    }
+}
+
+#main::before {
+    translate: -35%;
+}
+
+.ZQftYELq0aOsg6tPbVbV::before {
+    translate: 15%;
+}
+
+/* context menu */
+.SboKmDrCTZng7t4EgNoM,
+.k4sYYpEpX2f7RMAPHv3F,
+.NbcaczStd8vD2rHWwaKv {
+    border: 1px solid var(--chorus-tab-active);
+}
+
+/* notification toaster */
+.AOaoydTb5lrGytHbTAAy .vQNZsbpzoUFSW5fsFOAw {
+    color: #ffffff;
+    background-color: var(--chorus-text);
+}
+
+.AOaoydTb5lrGytHbTAAy .TypeElement-balladBold-textBase-type {
+    color: #ffffff;
+}
+
+/* lyrics */
+.y7xcnM6yyOOrMwI77d5t,
+.tr8V5eHsUaIkOYVw7eSG,
+.FUYNhisXTCmbzt9IDxnT,
+.I2WIloMMjsBeMaIS8H3v {
+    margin-top: unset;
+    --lyrics-color-background: rgba(var(--chorus-rgb-main), 0.5) !important;
+    --lyrics-color-active: var(--chorus-text) !important;
+    --lyrics-color-inactive: var(--chorus-main-elevated) !important;
+    --lyrics-color-passed: rgba(var(--chorus-rgb-subtext), 0.8) !important;
+}
+
+.gpDSOimnzH4zTJmE7UR5 .N9Xjnxz8vGgWwbEBE5g7 {
+    color: var(--chorus-text);
+    min-height: 32px;
+}
+
+/* explicit lyrics icon */
+.sQcIERaiZKFhOM1LrSmX,
+._7_yPy5jfb9kzk3gijq6A > span,
+.kpGMQq1KFz620g_BD_dS {
+    color: var(--chorus-subtext);
+    background-color: rgba(var(--chorus-rgb-subtext), 0.2) !important;
+}
+
+/* album year info */
+.main-trackInfo-release {
+    font-size: 0.6875rem;
+    grid-row: 4;
+    grid-column: 1 / 3;
+}
+
+/* fix discography buttons */
+.encore-dark-theme .encore-inverted-light-set {
+    --background-highlight: var(--chorus-button-active);
+}
+
+/* highlight current playing song */
+.iSbqnFdjb1SuyJ3uWydl,
+.ZgAJecvDDVREPXktThbA {
+    background-color: rgba(var(--chorus-rgb-selected-row), 0.2) !important;
+}
+
+/* new navbar interface */
+.nRSfonXHVr6utXYgk2Ui,
+.wp7mZFPzV7Qmo51F0NA_ .IAyWaeDamLJLjxuPeVKw,
+.WtC1lGbmQRplD6JBhNFU {
+    color: var(--chorus-selected-row);
+}
+
+.odcjv30UQnjaTv4sylc0,
+.KAq2kDjXj2VS4eXrFL4i,
+.jdlOKroADlFeZZQeTdp8,
+.dIfr5oVr5kotAi0HsIsW {
+    background-color: transparent !important;
+}
+
+.XTk61Y8OkBdUT6Wj4F6i {
+    background-color: var(--background-tinted-highlight);
+}
+
+/* bottom bar background */
+.OCY4jHBlCVZEyGvtSv0J,
+.udArIAqnfUQPQew2VAns {
+    background-color: rgba(var(--chorus-rgb-shadow), 0.5);
+}
+
+.OCY4jHBlCVZEyGvtSv0J,
+.udArIAqnfUQPQew2VAns,
+.tT6x7wFZmjldiCeh6HzO {
+    border-radius: 8px;
+}
+
+/* Topbar text padding */
+.G7zO58ORUHxcUw0sXktM {
+    padding-left: 8px;
+}
+
+/* Tooltip cards */
+.encore-announcement-set,
+.encore-announcement-set button {
+    color: white;
+}
+
+.tippy-box {
+    color: var(--chorus-text);
+    border-color: var(--chorus-text);
+    background-color: var(--chorus-shadow) !important;
+}
+
+.tippy-arrow {
+    color: var(--chorus-text);
+}
+
+/* verified badge */
+.bn2UNQDs5GLY5rjp5Ljh {
+    background-color: var(--chorus-main);
+}
+
+.b0NcxAbHvRbqgs2S8QDg {
+    fill: var(--chorus-button);
+}
+
+/* Remove blue outline in confirmation popup */
+.X05XDhpQJ7THPHfgbUk1 button:focus {
+    outline: 5px auto white;
+}
+
+/* Playlist tips popup */
+.StyledPopover-dialog-popover {
+    --background-elevated-base: var(--chorus-text) !important;
+}
+
+/* Playlist filter pills */
+.ChipInnerComponent-selected-secondary {
+    background: var(--essential-subdued) !important;
+}
+
+/* Adding border Radius to Navbar/topbar Container */
+.facDIsOQo9q7kiWc4jSg.coBkWVskipFo8KxLKief .T1xI1RTSFU7Wu94UuvE6 {
+    border-radius: 8px;
+}
+
+.facDIsOQo9q7kiWc4jSg {
+    border-radius: 8px !important;
+}
+
+/* Remove weird gradient in right sidebar */
+.aaFQbW0j0N40v_siz0kX:before {
+    background: none !important;
+}
+
+/* Tone done gradients */
+.under-main-view,
+[style*='background-color']:not(.Z4InHgCs2uhk0MU93y_a [style*='background-color']) {
+    opacity: 0;
+}
+
+/* Fix forced subdue */
+[style*='--text-subdued'] {
+    --text-subdued: var(--chorus-subtext) !important;
+}
+
+/* Fix search cards text color */
+.Z4InHgCs2uhk0MU93y_a [style*='background-color'] {
+    color: var(--chorus-main);
+}
+
+/* Fix play button hover color */
+.encore-dark-theme .encore-inverted-light-set,
+.encore-dark-theme .encore-bright-accent-set {
+    --background-highlight: var(--background-press) !important;
+    --background-press: var(--chorus-subtext) !important;
+    --decorative-subdued: var(--chorus-subtext) !important;
+}
+
+/* Fix avatar icon */
+.odcjv30UQnjaTv4sylc0,
+.KAq2kDjXj2VS4eXrFL4i {
+    opacity: 1 !important;
+}
+
+/* Fix artist & album page gradient */
+.main-view-container div[style*='background-base'] {
+    --background-base: rgba(var(--chorus-rgb-text), 0.1) !important;
+    --background-base-min-contrast: rgba(var(--chorus-rgb-text), 0.2) !important;
+    --background-base-70: rgba(var(--chorus-rgb-text), 0.2) !important;
+}
+
+/* testing. move to dynamic.css */
+
+span > a,
+span.e-9800-text.encore-text-body-medium,
+div > .e-9800-text.encore-text-body-medium,
+span.e-9800-text.encore-text-body-medium-bold,
+span.e-9800-text.encore-text-body-small-bold,
+div > .e-9800-text.encore-text-body-small,
+div > .e-9800-text.encore-text-body-small > a {
+    color: var(--chorus-button) !important;
+}
+
+button[data-encore-id='chip'] {
+    color: var(--chorus-text) !important;
+}
+
+button[data-encore-id='chip'][aria-checked='true'] {
+    background-color: var(--chorus-button) !important;
+}
+/* end of testing */
+
+/* smooth color transitions */
+@property --chorus-sidebar {
+    syntax: '<color>';
+    initial-value: magenta;
+    inherits: true;
+}
+
+@property --chorus-main {
+    syntax: '<color>';
+    initial-value: magenta;
+    inherits: true;
+}
+
+@property --chorus-text {
+    syntax: '<color>';
+    initial-value: magenta;
+    inherits: true;
+}
+
+@property --chorus-subtext {
+    syntax: '<color>';
+    initial-value: magenta;
+    inherits: true;
+}
+
+@property --chorus-button {
+    syntax: '<color>';
+    initial-value: magenta;
+    inherits: true;
+}
+
+@property --chorus-player {
+    syntax: '<color>';
+    initial-value: magenta;
+    inherits: true;
+}
+
+html {
+    transition:
+        --chorus-sidebar 0.5s,
+        --chorus-main 0.5s,
+        --chorus-text 0.5s,
+        --chorus-subtext 0.5s,
+        --chorus-button 0.5s,
+        --chorus-player 0.5s;
+}

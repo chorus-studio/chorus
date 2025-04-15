@@ -21,7 +21,7 @@ export default defineConfig({
                     '/sounds/*',
                     '/processor.js',
                     '/pip/*',
-                    '/content-scripts/chorus.css'
+                    '/content-scripts/*.css'
                 ],
                 matches: ['*://open.spotify.com/*']
             },
