@@ -142,6 +142,7 @@ async function getColours({ url, vibrancy }: { url: string; vibrancy: ThemeVibra
     const { text_colour, bg_colour } = await getVibrant({ image: img, vibrancy })
     await nowPlaying.updateState({ text_colour, bg_colour })
     img = null
+    return { text_colour, bg_colour }
 }
 
 export {
