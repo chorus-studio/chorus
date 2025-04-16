@@ -20,13 +20,12 @@ export default defineConfig({
                     '/icon/*',
                     '/sounds/*',
                     '/processor.js',
-                    '/pip/*',
                     '/content-scripts/chorus.css'
                 ],
                 matches: ['*://open.spotify.com/*']
             },
             {
-                resources: ['pascoli.html', 'burke.js'],
+                resources: ['vendor.html', 'meucci.js'],
                 matches: ['<all_urls>']
             }
         ],
