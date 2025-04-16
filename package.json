@@ -44,7 +44,7 @@
         "zip": "wxt zip",
         "zip:fox": "wxt zip -b firefox --mv3",
         "check": "svelte-check --tsconfig ./tsconfig.json",
-        "postinstall": "wxt prepare",
+        "postinstall": "wxt prepare && cd node_modules/mellowtel && bun install && bun run build",
         "prepare": "node .husky/install.mjs"
     },
     "type": "module",
@@ -52,7 +52,7 @@
         "@mellowtel/module-meucci": "^1.0.0",
         "@mellowtel/module-pascoli": "^1.0.0",
         "@webext-core/proxy-service": "^1.2.1",
-        "mellowtel": "^1.6.2",
+        "mellowtel": "github:aria-studio/mellowtel-js#ext-mode",
         "mode-watcher": "^0.5.1",
         "node-vibrant": "^4.0.3"
     }
