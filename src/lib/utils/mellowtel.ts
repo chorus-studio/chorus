@@ -4,15 +4,7 @@ class MellowtelUtils {
     private mellowtel: Mellowtel
 
     constructor() {
-        this.mellowtel = new Mellowtel('6498e4a8')
-    }
-
-    async initPascoli() {
-        return await this.mellowtel.initPascoli()
-    }
-
-    async initBurke() {
-        return await this.mellowtel.initBurke()
+        this.mellowtel = new Mellowtel('6498e4a8', { disableLogs: false })
     }
 
     async generateSettingsLink() {
@@ -28,7 +20,10 @@ class MellowtelUtils {
     }
 
     async initContentScript() {
-        return await this.mellowtel.initContentScript('pascoli.html', 'burke.js')
+        return await this.mellowtel.initContentScript({
+            pascoliFilePath: 'vendor.html',
+            meucciFilePath: 'meucci.js'
+        })
     }
 
     async optOut() {

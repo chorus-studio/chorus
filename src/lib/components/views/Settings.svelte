@@ -33,23 +33,24 @@
         if (key == 'playlist') return 'add to playlist'
         return `${key} v2`
     }
+
+    $: isSupporter = $supporterStore.isSupporter
 </script>
 
 <div class="flex h-full w-full flex-col items-center justify-center space-y-2">
+    <h2 class="-mt-2 text-left text-base font-semibold">Note: only available for supporters</h2>
     <div class="flex w-full justify-between">
         <div class="mr-2 flex w-1/2 flex-col gap-y-2">
             <h2 class="text-base font-semibold">ui</h2>
             {#each Object.keys($settingsStore.ui) as key}
-                {#if key !== 'pip' || (key == 'pip' && $supporterStore.isSupporter)}
-                    <div class="flex items-center justify-between gap-y-2.5">
-                        <Label>{setUILabel(key as keyof SettingsState['ui'])}</Label>
-                        <Switch
-                            checked={$settingsStore.ui[key as keyof SettingsState['ui']]}
-                            onCheckedChange={() =>
-                                toggleUISettings(key as keyof SettingsState['ui'])}
-                        />
-                    </div>
-                {/if}
+                <div class="flex items-center justify-between gap-y-2.5">
+                    <Label>{setUILabel(key as keyof SettingsState['ui'])}</Label>
+                    <Switch
+                        disabled={!isSupporter}
+                        checked={isSupporter && $settingsStore.ui[key as keyof SettingsState['ui']]}
+                        onCheckedChange={() => toggleUISettings(key as keyof SettingsState['ui'])}
+                    />
+                </div>
             {/each}
         </div>
 
@@ -60,7 +61,9 @@
             {#each Object.keys($settingsStore.views) as key}
                 <div class="gapy-y-2.5 flex items-center justify-between">
                     <Switch
-                        checked={$settingsStore.views[key as keyof SettingsState['views']]}
+                        disabled={!isSupporter}
+                        checked={isSupporter &&
+                            $settingsStore.views[key as keyof SettingsState['views']]}
                         onCheckedChange={() =>
                             toggleViewsSettings(key as keyof SettingsState['views'])}
                     />

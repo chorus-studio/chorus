@@ -10,8 +10,6 @@
     import { Button } from './ui/button'
     import SupportAlert from './SupportAlert.svelte'
 
-    export let triggerText: string = 'Manage'
-
     let mellowtelLink = ''
     let dialogOpen = false
 
@@ -67,7 +65,7 @@
         await updateOptInStatus()
         dialogOpen = false
         toast.success('Thanks for supporting chorus!', {
-            description: 'Your continued support helps keep Chorus free and running for everyone.'
+            description: 'You can unlock new features from the settings (⚙️) tab.'
         })
     }
 
@@ -79,15 +77,17 @@
 
 <Dialog.Root bind:open={dialogOpen}>
     <Dialog.Trigger>
-        <Button variant="outline" size="sm" class="h-8 text-sm">{triggerText}</Button>
+        <Button variant="outline" size="sm" class="h-6 text-sm">
+            {$supporterStore.isSupporter ? 'Manage' : 'Support'}
+        </Button>
     </Dialog.Trigger>
 
     <Dialog.Content class="flex w-full flex-col rounded-lg bg-primary-foreground p-4">
         <Dialog.Header class="flex flex-col flex-wrap space-y-2">
             <Dialog.Title class="text-left text-lg">Support Chorus Development</Dialog.Title>
             <Dialog.Description class="flex-wrap text-left text-base">
-                TLDR: Opt in to support new features, bug fixes, and updates.<br /> Get PRO features
-                FREE.
+                TLDR: Opt in to support new features, bug fixes, and updates.<br /> Get EXCLUSIVE features
+                for FREE.
             </Dialog.Description>
         </Dialog.Header>
         <article
@@ -109,8 +109,7 @@
                 </Button> library. In return, you'll:
             </p>
             <ul class="flex flex-col gap-y-2">
-                <li>🔓 Get PRO features for FREE.</li>
-                <li>✨ Help keep PRO features free for everyone.</li>
+                <li>🔓 Get EXCLUSIVE features for FREE.</li>
                 <li>🚀 Support ongoing development.</li>
             </ul>
             <p>
@@ -123,16 +122,19 @@
         <Dialog.Footer>
             <div class="flex w-full justify-end gap-2">
                 <Dialog.Close>
-                    <Button variant="outline" class="h-8 text-base">cancel</Button>
+                    <Button variant="secondary" size="sm" class="h-7 text-sm">cancel</Button>
                 </Dialog.Close>
                 {#if $supporterStore.isSupporter}
                     <SupportAlert closeDialog={() => (dialogOpen = false)} />
                 {:else if !$permissionGranted}
-                    <Button variant="default" onclick={grantPermission} class="h-8 text-base"
-                        >accept & opt in</Button
+                    <Button
+                        variant="default"
+                        onclick={grantPermission}
+                        size="sm"
+                        class="h-7 text-sm">accept & opt in</Button
                     >
                 {:else}
-                    <Button onclick={handleOptIn} variant="default" class="h-8 text-base"
+                    <Button onclick={handleOptIn} variant="default" size="sm" class="h-7 text-sm"
                         >opt in</Button
                     >
                 {/if}

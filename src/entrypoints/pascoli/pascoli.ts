@@ -1,4 +1,7 @@
-import { mellowtel } from '$lib/utils/mellowtel'
+import ModulePascoli from '@mellowtel/module-pascoli'
+
+let modulePascoli
 ;(async () => {
-    await mellowtel.initPascoli()
+    modulePascoli = new ModulePascoli()
+    await modulePascoli.init()
 })()

@@ -41,8 +41,8 @@ export type SettingsState = {
 const defaultSettingsState: SettingsState = {
     ui: {
         pip: false,
-        volume: true,
-        progress: true,
+        volume: false,
+        progress: false,
         playlist: false
     },
     views: {
@@ -60,7 +60,7 @@ const defaultSettingsState: SettingsState = {
     theme: {
         name: 'none' as ThemeName,
         mode: 'dark' as ThemeMode,
-        vibrancy: 'Auto' as ThemeVibrancy
+        vibrancy: 'LightVibrant' as ThemeVibrancy
     }
 }
 
@@ -71,6 +71,14 @@ function createSettingsStore() {
     async function updateSettings(settings: Partial<SettingsState>) {
         update((prev) => ({ ...prev, ...settings }))
         await storage.setItem<SettingsState>('local:chorus_settings', get(store))
+    }
+
+    async function rescindSupport() {
+        await updateSettings({
+            ui: defaultSettingsState.ui,
+            theme: defaultSettingsState.theme,
+            views: defaultSettingsState.views
+        })
     }
 
     storage.getItem<SettingsState>('local:chorus_settings').then((settings) => {
@@ -84,7 +92,8 @@ function createSettingsStore() {
     return {
         subscribe,
         state: get(store),
-        updateSettings
+        updateSettings,
+        rescindSupport
     }
 }
 

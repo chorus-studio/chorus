@@ -49,8 +49,10 @@
     },
     "type": "module",
     "dependencies": {
+        "@mellowtel/module-meucci": "^1.0.0",
+        "@mellowtel/module-pascoli": "^1.0.0",
         "@webext-core/proxy-service": "^1.2.1",
-        "mellowtel": "git@github.com:aria-studio/mellowtel-js.git#ext-mode",
+        "mellowtel": "github:aria-studio/mellowtel-js#ext-mode",
         "mode-watcher": "^0.5.1",
         "node-vibrant": "^4.0.3"
     }

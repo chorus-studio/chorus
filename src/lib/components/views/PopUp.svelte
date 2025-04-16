@@ -26,10 +26,6 @@
     let { pip = false }: { pip: boolean } = $props()
 
     let port = $state<chrome.runtime.Port | null>(null)
-    let colours = $state<{ bg_colour: string; text_colour: string }>({
-        bg_colour: $nowPlaying.bg_colour ?? '#000000',
-        text_colour: $nowPlaying.text_colour ?? '#ffffff'
-    })
 
     function setupPort() {
         port = chrome.runtime.connect({ name: 'popup' })
@@ -38,30 +34,8 @@
         })
     }
 
-    let currentCover = $state('')
+    let currentCover = $state($nowPlaying.cover)
     let currentVibrancy = $state<ThemeVibrancy>($settingsStore.theme.vibrancy ?? 'Auto')
-
-    $effect(() => {
-        const cover = $nowPlaying.cover
-        if (cover && cover !== currentCover) {
-            currentCover = cover
-            ;(async () => await loadColours())()
-        }
-    })
-
-    $effect(() => {
-        // Only update if values have actually changed
-        if (
-            colours.bg_colour !== ($nowPlaying.bg_colour ?? '#000000') ||
-            colours.text_colour !== ($nowPlaying.text_colour ?? '#ffffff')
-        ) {
-            colours.bg_colour = $nowPlaying.bg_colour ?? '#000000'
-            colours.text_colour = $nowPlaying.text_colour ?? '#ffffff'
-            // Update CSS custom properties
-            document.documentElement.style.setProperty('--bg', colours.bg_colour)
-            document.documentElement.style.setProperty('--text', colours.text_colour)
-        }
-    })
 
     async function toggleVolumeMute() {
         await volumeStore.updateVolume({ muted: !$volumeStore.muted })
@@ -105,12 +79,13 @@
     async function loadColours() {
         if ($nowPlaying.cover) {
             const vibrancy = getVibrancy()
-            await getColours({ url: $nowPlaying.cover, vibrancy })
-            // Update colours state directly after getColours completes
-            colours = {
-                bg_colour: $nowPlaying.bg_colour ?? '#000000',
-                text_colour: $nowPlaying.text_colour ?? '#ffffff'
-            }
+            const { bg_colour = '#e3e3e3', text_colour = '#fafafa' } = await getColours({
+                url: $nowPlaying.cover,
+                vibrancy
+            })
+
+            document.documentElement.style.setProperty('--bg', bg_colour)
+            document.documentElement.style.setProperty('--text', text_colour)
         }
     }
 
@@ -119,19 +94,29 @@
         setupPort()
         loadColours()
 
-        const unsubscribe = settingsStore.subscribe(async (state) => {
+        const unsubscribeCover = nowPlaying.subscribe(async (state) => {
+            if (state.cover !== currentCover) {
+                currentCover = state.cover
+                await loadColours()
+            }
+        })
+
+        const unsubscribeVibrancy = settingsStore.subscribe(async (state) => {
             if (state.theme.vibrancy !== currentVibrancy) {
                 currentVibrancy = state.theme.vibrancy
                 await loadColours()
             }
         })
 
-        return () => unsubscribe()
+        return () => {
+            unsubscribeCover()
+            unsubscribeVibrancy()
+        }
     })
 </script>
 
 <main
-    class="relative flex h-[170px] {pip
+    class="relative flex {$supporterStore.isSupporter ? 'h-[170px]' : 'h-[130px]'} {pip
         ? 'w-full'
         : 'w-[300px] bg-[var(--bg)] px-3.5 py-3'} flex-col gap-1"
 >
@@ -194,10 +179,13 @@
         </div>
     </div>
 
-    <TimeProgress {port} {pip} />
+    {#if $supporterStore.isSupporter}
+        <TimeProgress {port} {pip} />
+    {/if}
+
     <MediaControls {port} {pip} />
 
-    {#if pip}
+    {#if $supporterStore.isSupporter && pip}
         <div class="pt-1">
             <VolumeSlider {port} {pip} />
         </div>

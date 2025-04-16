@@ -1,8 +1,9 @@
 <script lang="ts">
     import { toast } from 'svelte-sonner'
     import { mellowtel } from '$lib/utils/mellowtel'
-    import { supporterStore } from '$lib/stores/supporter'
 
+    import { supporterStore } from '$lib/stores/supporter'
+    import { settingsStore } from '$lib/stores/settings'
     import { buttonVariants } from '$lib/components/ui/button'
     import * as AlertDialog from '$lib/components/ui/alert-dialog'
 
@@ -26,7 +27,9 @@
                     onClick: async () => await handleOptIn()
                 }
             })
+
             await supporterStore.sync()
+            await settingsStore.rescindSupport()
         } catch (error) {
             console.error(error)
             toast.error('Failed to opt out')
@@ -36,7 +39,7 @@
 
 <AlertDialog.Root>
     <AlertDialog.Trigger
-        class={buttonVariants({ variant: 'destructive', size: 'sm', class: 'text-sm' })}
+        class={buttonVariants({ variant: 'destructive', size: 'sm', class: 'h-7 text-sm' })}
     >
         opt out
     </AlertDialog.Trigger>
@@ -51,14 +54,17 @@
         <AlertDialog.Footer>
             <div class="flex w-full items-center justify-end gap-2">
                 <AlertDialog.Cancel
-                    class={buttonVariants({ variant: 'outline', size: 'sm', class: 'text-sm' })}
+                    class={buttonVariants({ variant: 'outline', size: 'sm', class: 'h-7 text-sm' })}
                 >
                     cancel
                 </AlertDialog.Cancel>
                 <AlertDialog.Action
                     onclick={handleOptOut}
-                    variant="destructive"
-                    class={buttonVariants({ variant: 'destructive', size: 'sm', class: 'text-sm' })}
+                    class={buttonVariants({
+                        variant: 'destructive',
+                        size: 'sm',
+                        class: 'h-7 text-sm'
+                    })}
                 >
                     confirm
                 </AlertDialog.Action>
