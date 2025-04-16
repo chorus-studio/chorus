@@ -38,6 +38,7 @@
 </script>
 
 <div class="flex h-full w-full flex-col items-center justify-center space-y-2">
+    <h2 class="-mt-2 text-left text-base font-semibold">Note: only available for supporters</h2>
     <div class="flex w-full justify-between">
         <div class="mr-2 flex w-1/2 flex-col gap-y-2">
             <h2 class="text-base font-semibold">ui</h2>
