@@ -1,6 +1,6 @@
 <script lang="ts">
     import { onMount } from 'svelte'
-    import { ModeWatcher } from 'mode-watcher'
+    import { ModeWatcher, setMode } from 'mode-watcher'
     import { mediaStore } from '$lib/stores/media'
     import { nowPlaying } from '$lib/stores/now-playing'
     import { QueueObserver } from '$lib/observers/queue'
@@ -15,6 +15,7 @@
     import SettingsPopover from '$lib/components/SettingsPopover.svelte'
 
     async function init() {
+        setMode('dark')
         await nowPlaying.observe()
         await mediaStore.observe()
         playbackObserver.observe()
@@ -39,9 +40,9 @@
     })
 </script>
 
-<ModeWatcher defaultMode="light" track={false} />
+<ModeWatcher defaultMode="dark" track={false} />
 
-<div id="chorus-ui" class="flex items-center justify-between">
+<div id="chorus-ui" class="dark flex items-center justify-between">
     <HeartButton />
     <SettingsPopover />
     <SkipButton />
