@@ -21,10 +21,17 @@ export async function showNotification(track: NowPlaying) {
             type: 'basic',
             iconUrl: track.cover || '/icon/48.png',
             title: track.title,
-            message: `by ${track.artist}`,
+            message: `${track.artist}`,
             priority: 1,
-            silent: true,
-            buttons: [{ title: `${track?.liked ? 'Un' : ''}Like Track ` }, { title: 'Block' }]
+            ...(import.meta.env.FIREFOX
+                ? {}
+                : {
+                      silent: true,
+                      buttons: [
+                          { title: `${track?.liked ? 'Un' : ''}Like Track ` },
+                          { title: 'Block' }
+                      ]
+                  })
         })
 
         browser.notifications.onButtonClicked.addListener(async (id, buttonIndex) => {

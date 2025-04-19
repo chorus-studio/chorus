@@ -63,7 +63,8 @@
 
     async function grantNotificationPermission() {
         const checkPermissionsService = getCheckPermissionsService()
-        const granted = await checkPermissionsService.verifyPermission('notifications')
+        let granted = await checkPermissionsService.verifyPermission('notifications')
+        if (import.meta.env.FIREFOX) granted = true
 
         await settingsStore.updateSettings({
             notifications: { ...$settingsStore.notifications, granted, enabled: granted }
