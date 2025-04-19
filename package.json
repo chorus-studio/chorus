@@ -3,7 +3,6 @@
     "version": "2.3.0-beta",
     "devDependencies": {
         "@lucide/svelte": "^0.486.0",
-        "@tailwindcss/container-queries": "^0.1.1",
         "@tailwindcss/vite": "^4.0.0",
         "@tsconfig/svelte": "^5.0.4",
         "@types/chrome": "^0.0.280",
