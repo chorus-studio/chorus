@@ -4,7 +4,7 @@ class MellowtelUtils {
     private mellowtel: Mellowtel
 
     constructor() {
-        this.mellowtel = new Mellowtel('6498e4a8', { disableLogs: false })
+        this.mellowtel = new Mellowtel('6498e4a8')
     }
 
     async generateSettingsLink() {
