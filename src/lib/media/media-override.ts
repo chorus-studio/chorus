@@ -21,6 +21,61 @@ export default class MediaOverride {
         this.equalizer = options.equalizer
         this.reverb = options.reverb
         this.audioManager = options.audioManager
+
+        // Override playbackRate and preservesPitch properties
+        this.overrideMediaProperty('playbackRate', this.handlePlaybackRateSetting)
+        this.overrideMediaProperty('preservesPitch', this.handlePreservesPitchSetting)
+    }
+
+    // Function to override media element properties
+    private overrideMediaProperty(
+        propertyName: string,
+        handler: (this: HTMLMediaElement, value: any) => any
+    ) {
+        const descriptor = Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, propertyName)
+
+        if (!descriptor || (descriptor as any)._isOverridden) return
+
+        Object.defineProperty(this.source, propertyName, {
+            set: (value) => {
+                const newValue = handler.call(this.source, value)
+                if (descriptor.set) {
+                    descriptor.set.call(this.source, newValue ?? value)
+                }
+            },
+            get: descriptor.get,
+            enumerable: descriptor.enumerable,
+            configurable: descriptor.configurable
+        })
+
+        Object.defineProperty(descriptor, '_isOverridden', {
+            value: true,
+            writable: false,
+            enumerable: false,
+            configurable: false
+        })
+    }
+
+    // Handler for playbackRate property
+    private handlePlaybackRateSetting(this: HTMLMediaElement, value: any) {
+        // Check if the value is coming from our code
+        if (value?.source === 'chorus') {
+            return value.value
+        }
+
+        // If not from our code, return the current value to prevent changes
+        return this.playbackRate
+    }
+
+    // Handler for preservesPitch property
+    private handlePreservesPitchSetting(this: HTMLMediaElement, value: any) {
+        // Check if the value is coming from our code
+        if (value?.source === 'chorus') {
+            return value.value
+        }
+
+        // If not from our code, return the current value to prevent changes
+        return this.preservesPitch
     }
 
     addSource(source: HTMLMediaElement): void {
@@ -30,20 +85,13 @@ export default class MediaOverride {
     }
 
     updatePlaybackSettings(value: { playback_rate: number; preserves_pitch: boolean }): void {
-        this.source.defaultPlaybackRate = 1
-        this.source.playbackRate = value.playback_rate
-        this.source.preservesPitch = value.preserves_pitch
-    }
+        // Use our property override mechanism with a special format
+        const playbackRateValue = { source: 'chorus', value: value.playback_rate }
+        const preservesPitchValue = { source: 'chorus', value: value.preserves_pitch }
 
-    updateSeek(data: { type: 'skip_back' | 'skip_forward'; value: number }): void {
-        if (data.type === 'skip_back') {
-            this.source.currentTime = Math.max(this.source.currentTime - data.value, 0)
-        } else if (data.type === 'skip_forward') {
-            this.source.currentTime = Math.min(
-                this.source.currentTime + data.value,
-                this.source.duration
-            )
-        }
+        // Use type assertion to bypass TypeScript's type checking
+        ;(this.source as any).playbackRate = playbackRateValue
+        ;(this.source as any).preservesPitch = preservesPitchValue
     }
 
     updateVolume(data: { value: number; muted: boolean; type: 'linear' | 'logarithmic' }): void {

@@ -110,15 +110,6 @@ function mediaOverride() {
                     }
                     break
 
-                case 'FROM_SEEK_LISTENER':
-                    if (mediaElement) {
-                        mediaElement.mediaOverride.updateSeek({
-                            type: String(data?.type) as 'skip_back' | 'skip_forward',
-                            value: Number(data?.value) || 0
-                        })
-                    }
-                    break
-
                 case 'FROM_EFFECTS_LISTENER':
                     if (mediaElement) {
                         mediaElement.updateAudioEffect({

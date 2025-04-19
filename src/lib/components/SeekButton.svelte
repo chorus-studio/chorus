@@ -1,20 +1,25 @@
 <script lang="ts">
     import { seekStore } from '$lib/stores/seek'
+    import { nowPlaying } from '$lib/stores/now-playing'
     import * as Tooltip from '$lib/components/ui/tooltip'
     import { buttonVariants } from '$lib/components/ui/button'
 
     export let role: 'seek-forward' | 'seek-backward'
 
     function handleSeek() {
-        const type = role == 'seek-forward' ? 'skip_forward' : 'skip_back'
-        const value = isForward
+        const offset = isForward
             ? isLongForm
                 ? $seekStore.long_form.forward
                 : $seekStore.default.forward
             : isLongForm
               ? $seekStore.long_form.rewind
               : $seekStore.default.rewind
-        window.postMessage({ type: 'FROM_SEEK_LISTENER', data: { type, value } }, '*')
+
+        const value = isForward
+            ? Math.min($nowPlaying.current + offset, $nowPlaying.duration)
+            : Math.max($nowPlaying.current - offset, 0)
+
+        window.postMessage({ type: 'FROM_CURRENT_TIME_LISTENER', data: value }, '*')
     }
 
     const id = role == 'seek-forward' ? 'seek-player-ff-button' : 'seek-player-rw-button'
