@@ -1,4 +1,29 @@
-import { defineConfig } from 'wxt'
+import { defineConfig, UserManifest } from 'wxt'
+
+const BASE_PERMISSIONS = [
+    'storage',
+    'activeTab',
+    'tabs',
+    'scripting',
+    'unlimitedStorage',
+    'webRequest',
+    'declarativeNetRequest'
+]
+
+const perBrowserManifest: Record<string, UserManifest> = {
+    chrome: {
+        permissions: BASE_PERMISSIONS,
+        optional_permissions: ['notifications', 'declarativeNetRequestWithHostAccess']
+    },
+    firefox: {
+        permissions: [...BASE_PERMISSIONS, 'notifications', 'declarativeNetRequestWithHostAccess'],
+        browser_specific_settings: {
+            gecko: {
+                id: 'chorus@cdrani.dev'
+            }
+        }
+    }
+}
 
 // See https://wxt.dev/api/config.html
 export default defineConfig({
@@ -8,9 +33,9 @@ export default defineConfig({
     alias: {
         $lib: 'src/lib'
     },
-    manifest: {
-        short_name: 'chorus BETA',
-        name: 'Chorus - Spotify Enhancer BETA',
+    manifest: ({ browser }) => ({
+        short_name: 'chorus',
+        name: 'Chorus - Spotify Enhancer',
         description:
             'Enhance Spotify with controls to save favourite snips, auto-skip tracks, and set global and custom speed. More to come!',
         web_accessible_resources: [
@@ -29,18 +54,9 @@ export default defineConfig({
                 matches: ['<all_urls>']
             }
         ],
-        permissions: [
-            'storage',
-            'activeTab',
-            'tabs',
-            'scripting',
-            'unlimitedStorage',
-            'webRequest',
-            'declarativeNetRequest'
-        ],
+        ...perBrowserManifest[browser],
         host_permissions: ['*://*.spotify.com/*'],
-        optional_host_permissions: ['https://*/*'],
-        optional_permissions: ['notifications', 'declarativeNetRequestWithHostAccess'],
+        optional_host_permissions: ['<all_urls>'],
         commands: {
             'on/off': {
                 description: 'Toggle Extension On/Off'
@@ -85,5 +101,5 @@ export default defineConfig({
                 description: 'Show current track as a notification'
             }
         }
-    }
+    })
 })
