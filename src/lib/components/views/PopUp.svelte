@@ -126,7 +126,7 @@
             : 'absolute right-1 top-0.5'} flex w-full items-center justify-end gap-x-0.5"
     >
         {#if $supporterStore.isSupporter}
-            {#if !pip}
+            {#if !pip && $settingsStore.ui.popup}
                 <SelectVibrancy />
             {/if}
 

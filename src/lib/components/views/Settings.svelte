@@ -31,14 +31,15 @@
 
     function setUILabel(key: keyof SettingsState['ui']) {
         if (key == 'playlist') return 'add to playlist'
-        return `${key} v2`
+
+        return `v2 ${key} `
     }
 
     $: isSupporter = $supporterStore.isSupporter
 </script>
 
-<div class="flex h-full w-full flex-col items-center justify-center space-y-2">
-    <h2 class="-mt-2 text-left text-base font-semibold">Note: only available for supporters</h2>
+<div class="flex h-full w-full flex-col items-center space-y-2">
+    <h2 class="text-left text-base font-semibold">Note: only available for supporters</h2>
     <div class="flex w-full justify-between">
         <div class="mr-2 flex w-1/2 flex-col gap-y-2">
             <h2 class="text-base font-semibold">ui</h2>

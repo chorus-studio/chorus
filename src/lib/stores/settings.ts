@@ -15,6 +15,7 @@ export type ThemeVibrancy =
 export type SettingsState = {
     ui: {
         pip: boolean
+        popup: boolean
         playlist: boolean
         volume: boolean
         progress: boolean
@@ -41,6 +42,7 @@ export type SettingsState = {
 const defaultSettingsState: SettingsState = {
     ui: {
         pip: false,
+        popup: false,
         volume: false,
         progress: false,
         playlist: false
