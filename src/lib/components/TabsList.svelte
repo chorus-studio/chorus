@@ -239,7 +239,7 @@
                     />
                 </div>
             {/if}
-            {#if !['info', 'settings'].includes(activeTab)}
+            {#if activeTab !== 'info'}
                 <div
                     class="absolute bottom-0 right-0 z-50 flex h-6 w-fit items-center justify-end gap-x-2"
                 >
