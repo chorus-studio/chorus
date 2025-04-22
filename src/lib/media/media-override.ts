@@ -3,9 +3,9 @@ import Equalizer from '$lib/audio-effects/equalizer'
 import AudioManager from '$lib/audio-effects/audio-manager'
 
 type MediaOverrideOptions = {
-    source: HTMLMediaElement
-    equalizer: Equalizer
     reverb: Reverb
+    equalizer: Equalizer
+    source: HTMLMediaElement
     audioManager: AudioManager
 }
 
@@ -18,8 +18,8 @@ export default class MediaOverride {
 
     constructor(options: MediaOverrideOptions) {
         this.source = options.source
-        this.equalizer = options.equalizer
         this.reverb = options.reverb
+        this.equalizer = options.equalizer
         this.audioManager = options.audioManager
 
         // Override playbackRate and preservesPitch properties
@@ -59,9 +59,7 @@ export default class MediaOverride {
     // Handler for playbackRate property
     private handlePlaybackRateSetting(this: HTMLMediaElement, value: any) {
         // Check if the value is coming from our code
-        if (value?.source === 'chorus') {
-            return value.value
-        }
+        if (value?.source === 'chorus') return value.value
 
         // If not from our code, return the current value to prevent changes
         return this.playbackRate
@@ -70,9 +68,7 @@ export default class MediaOverride {
     // Handler for preservesPitch property
     private handlePreservesPitchSetting(this: HTMLMediaElement, value: any) {
         // Check if the value is coming from our code
-        if (value?.source === 'chorus') {
-            return value.value
-        }
+        if (value?.source === 'chorus') return value.value
 
         // If not from our code, return the current value to prevent changes
         return this.preservesPitch
@@ -111,15 +107,25 @@ export default class MediaOverride {
         this.source.currentTime = data
     }
 
+    async updateSoundTouch(data: { pitch: number; semitone: number }) {
+        if (!this.audioManager) return
+
+        try {
+            await this.audioManager.ensureAudioChainReady()
+
+            this.audioManager.applySoundTouch(data)
+        } catch (error) {
+            console.error('Error updating sound touch:', error)
+        }
+    }
+
     async updateAudioEffect(effect: { clear?: boolean; reverb?: string; equalizer?: string }) {
         if (!this.audioManager || !this.equalizer || !this.reverb) return
 
         try {
-            // Ensure audio chain is ready
             await this.audioManager.ensureAudioChainReady()
-
-            // Disconnect everything first
             this.audioManager.disconnect()
+
             if (effect.clear) return
 
             // Apply effects if specified

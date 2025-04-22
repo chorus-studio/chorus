@@ -3,39 +3,33 @@ import Reverb from '$lib/audio-effects/reverb'
 import Equalizer from '$lib/audio-effects/equalizer'
 import AudioManager from '$lib/audio-effects/audio-manager'
 
-interface MediaElementOptions {
-    source: HTMLMediaElement
-    equalizer: Equalizer
-    reverb: Reverb
-    audioManager: AudioManager
-}
-
 export default class MediaElement {
     private source: HTMLMediaElement
     private _reverb: Reverb | null = null
+    public mediaOverride: MediaOverride | null = null
     private _equalizer: Equalizer | null = null
     private _audioManager: AudioManager | null = null
-    public mediaOverride: MediaOverride
 
-    constructor(options: MediaElementOptions) {
-        this.source = options.source
+    constructor(source: HTMLMediaElement) {
+        this.source = source
         this.source.crossOrigin = 'anonymous'
+        this.setupEventListeners()
+    }
+
+    private loadMediaOverride(): void {
+        if (this.mediaOverride) return
 
         // Initialize audio effects
-        this._audioManager = options.audioManager
-        this._equalizer = options.equalizer
-        this._reverb = options.reverb
+        this._audioManager = new AudioManager(this.source)
+        this._reverb = new Reverb(this._audioManager)
+        this._equalizer = new Equalizer(this._audioManager)
 
-        // Create MediaOverride with the correct parameters
         this.mediaOverride = new MediaOverride({
             source: this.source,
-            equalizer: this._equalizer!,
             reverb: this._reverb!,
+            equalizer: this._equalizer!,
             audioManager: this._audioManager!
         })
-
-        // Set up event listeners
-        this.setupEventListeners()
     }
 
     private setupEventListeners(): void {
@@ -48,6 +42,19 @@ export default class MediaElement {
             )
         })
 
+        this.source.addEventListener('play', () => {
+            if (this.mediaOverride) return
+            this.loadMediaOverride()
+
+            window.postMessage(
+                {
+                    type: 'FROM_SOUNDTOUCH_LISTENER',
+                    data: { pitch: 1, semitone: -2 }
+                },
+                '*'
+            )
+        })
+
         // Set up window message listener
         window.addEventListener('message', (event) => {
             // Verify the origin for security
@@ -56,19 +63,20 @@ export default class MediaElement {
 
             try {
                 const { type, data } = event.data
+                if (!this.mediaOverride) return
 
                 switch (type) {
+                    case 'FROM_SOUNDTOUCH_LISTENER':
+                        this.mediaOverride.updateSoundTouch({
+                            pitch: Number(data?.pitch) || 0,
+                            semitone: Number(data?.semitone) || 0
+                        })
+                        break
+
                     case 'FROM_PLAYBACK_LISTENER':
                         this.mediaOverride.updatePlaybackSettings({
                             playback_rate: Number(data?.playback_rate) || 1,
                             preserves_pitch: Boolean(data?.preserves_pitch)
-                        })
-                        break
-
-                    case 'FROM_SEEK_LISTENER':
-                        this.mediaOverride.updateSeek({
-                            type: String(data?.type) as 'skip_back' | 'skip_forward',
-                            value: Number(data?.value) || 0
                         })
                         break
 
@@ -112,36 +120,5 @@ export default class MediaElement {
 
     get element(): HTMLMediaElement {
         return this.source
-    }
-
-    async updateAudioEffect(effect: {
-        clear?: boolean
-        reverb?: string
-        equalizer?: string
-    }): Promise<void> {
-        if (!this._audioManager || !this._equalizer || !this._reverb) return
-
-        try {
-            // Ensure audio chain is ready
-            await this._audioManager.ensureAudioChainReady()
-
-            // Disconnect everything first
-            this._audioManager.disconnect()
-
-            if (effect.clear) return
-
-            // Apply effects if specified
-            if (effect.equalizer && effect.equalizer !== 'none') {
-                this._equalizer.setEQEffect(effect.equalizer)
-            }
-
-            if (effect.reverb && effect.reverb !== 'none') {
-                await this._reverb.setReverbEffect(effect.reverb)
-            }
-        } catch (error) {
-            console.error('Error updating audio effects:', error)
-            // On error, ensure audio still works by connecting directly
-            this._audioManager.disconnect()
-        }
     }
 }
