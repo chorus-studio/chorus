@@ -18,7 +18,7 @@
 </script>
 
 <CustomSelect
-    small
+    size="sm"
     {options}
     selected={$settingsStore.theme.vibrancy}
     onValueChange={setVibrancy}

@@ -8,8 +8,7 @@
     import { Label } from '$lib/components/ui/label'
     import { Switch } from '$lib/components/ui/switch'
 
-    import FX from '$lib/components/views/FX.svelte'
-    import EQ from '$lib/components/views/EQ.svelte'
+    import FXEQ from '$lib/components/views/FXEQ.svelte'
     import Info from '$lib/components/views/Info.svelte'
     import Snip from '$lib/components/views/Snip.svelte'
     import Seek from '$lib/components/views/Seek.svelte'
@@ -36,8 +35,7 @@
         pip ? 'media' : '',
         'snip',
         'speed',
-        'fx',
-        'eq',
+        'fx|eq',
         'seek',
         'settings',
         'info',
@@ -51,8 +49,7 @@
 
     const components: Record<string, Component> = {
         snip: Snip,
-        fx: FX,
-        eq: EQ,
+        'fx|eq': FXEQ,
         seek: Seek,
         speed: Speed,
         info: Info,
@@ -212,14 +209,13 @@
             class="relative flex {activeTab === 'media' ? 'h-[210px]' : 'h-[205px]'} {[
                 'media',
                 'snip',
-                'fx',
-                'eq',
+                'fx|eq',
                 'speed'
             ].includes(activeTab)
                 ? 'space-y-2'
                 : ''} w-full flex-col"
         >
-            {#if !['info', 'settings', 'support', 'media'].includes(activeTab)}
+            {#if !['info', 'settings', 'support', 'media', 'fx|eq'].includes(activeTab)}
                 <TrackInfo />
             {/if}
             {@const View = components[activeTab]}

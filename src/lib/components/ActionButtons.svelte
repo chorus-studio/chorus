@@ -12,8 +12,7 @@
 
     function getStore() {
         switch (tab) {
-            case 'fx':
-            case 'eq':
+            case 'fx|eq':
                 return effectsStore
             case 'snip':
                 return snipStore
@@ -134,9 +133,8 @@
         const store = getStore()
         if (!store) return
 
-        if (['fx', 'eq'].includes(tab)) {
-            const key = tab === 'fx' ? 'reverb' : 'equalizer'
-            await store?.reset(key)
+        if (tab === 'fx|eq') {
+            await store?.reset()
         } else if (tab == 'snip') {
             resetSnip()
         } else if (tab == 'speed') {
@@ -165,7 +163,7 @@
 </script>
 
 <div class="absolute bottom-0 flex items-center gap-x-2">
-    {#if ['fx', 'eq', 'snip', 'speed', 'seek'].includes(tab)}
+    {#if ['fx|eq', 'snip', 'speed', 'seek'].includes(tab)}
         {#if !showDelete}
             <Button
                 variant="outline"

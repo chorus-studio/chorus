@@ -1,5 +1,4 @@
 <script lang="ts">
-    import { cn } from '$lib/utils.js'
     import { onMount } from 'svelte'
     import { pipStore } from '$lib/stores/pip'
     import { clickOutside } from '$lib/utils/click-outside'
@@ -8,11 +7,12 @@
     import { buttonVariants } from '$lib/components/ui/button'
 
     let {
+        pip = false,
+        size = 'default',
         selected = 'none',
         onValueChange,
         options = [],
-        class: className = '',
-        small = false
+        class: className = ''
     } = $props()
 
     let isOpen = $state(false)
@@ -53,20 +53,22 @@
     }
 
     async function togglePipOpen() {
-        await pipStore.setOpen(!isOpen)
-        isOpen = !isOpen
+        const newState = !$pipStore.open
+        isOpen = newState
+        await pipStore.setOpen(newState)
     }
+
+    const small = size === 'sm'
+    const medium = size === 'md'
 
     onMount(() => {
         const unsubscribe = pipStore.subscribe((state) => {
-            if (!state.open) {
+            if (pip && !state.open) {
                 isOpen = false
             }
         })
 
-        return () => {
-            unsubscribe()
-        }
+        return () => unsubscribe()
     })
 </script>
 
@@ -75,7 +77,7 @@
     aria-label="select"
     class="relative flex justify-between {className}"
 >
-    <div class="relative {small ? 'min-w-28' : 'min-w-40'} w-full">
+    <div class="relative {small ? 'min-w-28' : medium ? 'min-w-32' : 'min-w-40'} w-full">
         <button
             bind:this={triggerRef}
             class={buttonVariants({
