@@ -90,8 +90,10 @@
         if ($nowPlaying?.playback) {
             await playbackStore.updatePlayback({
                 track: {
-                    playback_rate: $nowPlaying.playback.playback_rate,
-                    preserves_pitch: $nowPlaying.playback.preserves_pitch
+                    rate: $nowPlaying.playback.rate,
+                    pitch: $nowPlaying.playback.pitch,
+                    tempo: $nowPlaying.playback.tempo,
+                    semitone: $nowPlaying.playback.semitone
                 }
             })
         }
@@ -215,7 +217,7 @@
                 ? 'space-y-2'
                 : ''} w-full flex-col"
         >
-            {#if !['info', 'settings', 'support', 'media', 'fx|eq'].includes(activeTab)}
+            {#if !['speed', 'info', 'settings', 'support', 'media', 'fx|eq'].includes(activeTab)}
                 <TrackInfo />
             {/if}
             {@const View = components[activeTab]}

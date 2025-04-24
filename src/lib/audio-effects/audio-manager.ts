@@ -1,4 +1,6 @@
 import SoundTouch from './soundtouch'
+import { SoundTouchData } from '$lib/stores/playback'
+
 export default class AudioManager {
     private _gainNode?: GainNode
     private _soundTouchNode?: AudioNode
@@ -283,9 +285,9 @@ export default class AudioManager {
         this._soundTouchNode!.connect(this.destination!)
     }
 
-    applySoundTouch({ pitch, semitone }: { pitch: number; semitone: number }) {
+    applySoundTouch(settings: SoundTouchData) {
         if (!this._soundTouchManager) return
-        this._soundTouchManager.applySettings({ pitch, semitone })
+        this._soundTouchManager.applySettings(settings)
     }
 
     cleanup() {

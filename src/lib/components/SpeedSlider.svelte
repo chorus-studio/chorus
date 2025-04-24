@@ -21,7 +21,7 @@
             ...state,
             [type]: {
                 ...state[type],
-                playback_rate: Number(padSpeed(newValue))
+                rate: Number(padSpeed(newValue))
             }
         }))
         playbackStore.dispatchPlaybackSettings($playbackStore[type])
@@ -36,16 +36,14 @@
             await playbackStore.updatePlayback({
                 [type]: {
                     ...$playbackStore[type],
-                    playback_rate: Number(padSpeed(newValue))
+                    rate: Number(padSpeed(newValue))
                 }
             })
         }, 100)
     }
 
     const value = $derived(
-        $playbackStore.is_default
-            ? $playbackStore.default.playback_rate
-            : $playbackStore.track.playback_rate
+        $playbackStore.is_default ? $playbackStore.default.rate : $playbackStore.track.rate
     )
 
     let Component = pip ? CustomSlider : Slider

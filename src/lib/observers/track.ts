@@ -21,11 +21,13 @@ export class TrackObserver {
     private notificationService: NotificationService
     private songChangeTimeout: NodeJS.Timeout | null = null
     private boundProcessTimeUpdate: (event: CustomEvent) => void
+    private boundProcessMediaPlayInit: (event: CustomEvent) => void
 
     constructor() {
         this.playerService = getPlayerService()
         this.notificationService = getNotificationService()
         this.boundProcessTimeUpdate = this.processTimeUpdate.bind(this)
+        this.boundProcessMediaPlayInit = this.processMediaPlayInit.bind(this)
     }
 
     async initialize() {
@@ -36,6 +38,13 @@ export class TrackObserver {
             'FROM_MEDIA_TIMEUPDATE',
             this.boundProcessTimeUpdate as EventListener
         )
+        document.addEventListener(
+            'FROM_MEDIA_PLAY_INIT',
+            this.boundProcessMediaPlayInit as EventListener
+        )
+    }
+
+    private async processMediaPlayInit() {
         await this.updateTrackType()
         this.setPlayback()
         effectsStore.dispatchEffect()
@@ -206,6 +215,10 @@ export class TrackObserver {
         document.removeEventListener(
             'FROM_MEDIA_TIMEUPDATE',
             this.boundProcessTimeUpdate as EventListener
+        )
+        document.removeEventListener(
+            'FROM_MEDIA_PLAY_INIT',
+            this.boundProcessMediaPlayInit as EventListener
         )
     }
 }

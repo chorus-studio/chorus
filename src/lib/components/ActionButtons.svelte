@@ -26,7 +26,7 @@
     }
 
     async function resetSpeed() {
-        const defaultPlayback = { playback_rate: 1, preserves_pitch: true }
+        const defaultPlayback = { rate: 1, pitch: 0, tempo: 0, semitone: 0 }
         await playbackStore.updatePlayback({ default: defaultPlayback })
         playbackStore.dispatchPlaybackSettings(defaultPlayback)
     }
@@ -40,7 +40,7 @@
             value: { playback: null }
         })
 
-        const defaultPlayback = { playback_rate: 1, preserves_pitch: true }
+        const defaultPlayback = { rate: 1, pitch: 0, tempo: 0, semitone: 0 }
         delete $nowPlaying.playback
 
         playbackStore.updatePlayback({ track: defaultPlayback })
@@ -159,7 +159,9 @@
                 $snipStore?.end_time !== $nowPlaying?.duration)) ||
         (tab == 'speed' &&
             !$playbackStore.is_default &&
-            ($playbackStore.track.playback_rate != 1 || !$playbackStore.track.preserves_pitch))
+            ($playbackStore.track.rate != 1 ||
+                $playbackStore.track.pitch != 1 ||
+                $playbackStore.track.semitone != 0))
 </script>
 
 <div class="absolute bottom-0 flex items-center gap-x-2">

@@ -1,7 +1,7 @@
 import { storage } from '@wxt-dev/storage'
 import type { NowPlaying } from '$lib/stores/now-playing'
 import { CacheStore, COLLECTION_KEY, USER_COLLECTION_KEY } from './cache'
-import type { Collection, SimpleTrack, UserCollection, Playback, Snip } from './cache'
+import type { Collection, SimpleTrack, UserCollection, Snip } from './cache'
 
 interface OldTrackData {
     id?: string
@@ -11,9 +11,8 @@ interface OldTrackData {
     startTime?: number
     endTime?: number
     url?: string
-    preservesPitch?: boolean
-    playbackSpeed?: number
 }
+
 class DataStore {
     private cache: CacheStore
     private LEGACY_KEYS = {
@@ -66,14 +65,6 @@ class DataStore {
                   }
                 : ({} as Snip)
 
-        const playback =
-            trackData.playbackSpeed && trackData.playbackSpeed !== 1
-                ? {
-                      preserves_pitch: trackData.preservesPitch ?? false,
-                      playback_rate: trackData.playbackSpeed
-                  }
-                : ({} as Playback)
-
         const blocked = trackData.isSkipped ? { blocked: true } : {}
 
         return {
@@ -81,7 +72,6 @@ class DataStore {
             liked: false,
             track_id: trackData.trackId!,
             ...snip,
-            ...playback,
             ...blocked
         }
     }

@@ -6,7 +6,7 @@ import AudioManager from '$lib/audio-effects/audio-manager'
 export default class MediaElement {
     private source: HTMLMediaElement
     private _reverb: Reverb | null = null
-    public mediaOverride: MediaOverride | null = null
+    public mediaOverride?: MediaOverride
     private _equalizer: Equalizer | null = null
     private _audioManager: AudioManager | null = null
 
@@ -42,17 +42,10 @@ export default class MediaElement {
             )
         })
 
-        this.source.addEventListener('play', () => {
+        this.source.addEventListener('play', async () => {
             if (this.mediaOverride) return
             this.loadMediaOverride()
-
-            window.postMessage(
-                {
-                    type: 'FROM_SOUNDTOUCH_LISTENER',
-                    data: { pitch: 1, semitone: -2 }
-                },
-                '*'
-            )
+            document.dispatchEvent(new CustomEvent('FROM_MEDIA_PLAY_INIT'))
         })
 
         // Set up window message listener
@@ -66,20 +59,6 @@ export default class MediaElement {
                 if (!this.mediaOverride) return
 
                 switch (type) {
-                    case 'FROM_SOUNDTOUCH_LISTENER':
-                        this.mediaOverride.updateSoundTouch({
-                            pitch: Number(data?.pitch) || 0,
-                            semitone: Number(data?.semitone) || 0
-                        })
-                        break
-
-                    case 'FROM_PLAYBACK_LISTENER':
-                        this.mediaOverride.updatePlaybackSettings({
-                            playback_rate: Number(data?.playback_rate) || 1,
-                            preserves_pitch: Boolean(data?.preserves_pitch)
-                        })
-                        break
-
                     case 'FROM_EFFECTS_LISTENER':
                         this.mediaOverride.updateAudioEffect({
                             clear: Boolean(data?.clear),

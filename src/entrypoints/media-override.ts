@@ -84,10 +84,11 @@ function mediaOverride() {
 
             switch (type) {
                 case 'FROM_PLAYBACK_LISTENER':
-                    mediaElement.mediaOverride.updatePlaybackSettings({
-                        playback_rate: Number(data?.playback_rate) || 1,
-                        preserves_pitch: Boolean(data?.preserves_pitch)
+                    mediaElement.mediaOverride.updateSoundTouch({
+                        pitch: Number(data?.pitch) || 1,
+                        semitone: Number(data?.semitone) || 0
                     })
+                    mediaElement.mediaOverride.updatePlaybackSettings(Number(data?.rate) || 1)
                     break
 
                 case 'FROM_EFFECTS_LISTENER':

@@ -1,3 +1,5 @@
+import type { SoundTouchData } from '$lib/stores/playback'
+
 export default class SoundTouch {
     audioContext: AudioContext
     soundtouchNode?: AudioWorkletNode
@@ -16,13 +18,7 @@ export default class SoundTouch {
 
             await this.audioContext.audioWorklet.addModule(modulePath)
 
-            this.soundtouchNode = new AudioWorkletNode(this.audioContext, 'soundtouch-processor', {
-                numberOfInputs: 1,
-                numberOfOutputs: 1,
-                channelCount: 2,
-                channelCountMode: 'clamped-max',
-                channelInterpretation: 'speakers'
-            })
+            this.soundtouchNode = new AudioWorkletNode(this.audioContext, 'soundtouch-processor')
         } catch (error) {
             console.error('Error loading SoundTouch module:', error)
             this.disconnect()
@@ -30,19 +26,16 @@ export default class SoundTouch {
         }
     }
 
-    async applySettings({ pitch, semitone }: { pitch: number; semitone: number }) {
+    async applySettings(settings: SoundTouchData) {
         if (!this.soundtouchNode) await this.loadModule()
-
-        this.setPitchTranspose({ pitch, semitone })
+        this.setPitchTranspose(settings)
     }
 
-    setPitchTranspose({ pitch, semitone }: { pitch: number; semitone: number }) {
+    setPitchTranspose(settings: SoundTouchData) {
         if (!this.soundtouchNode || !this.audioContext) return
 
-        // this.soundtouchNode.parameters.get('rate')!.value = rate
-        // this.soundtouchNode.parameters.get('tempo')!.value = tempo
-        this.soundtouchNode.parameters.get('pitch')!.value = pitch
-        this.soundtouchNode.parameters.get('pitchSemitones')!.value = semitone
+        this.soundtouchNode.parameters.get('pitch')!.value = settings.pitch
+        this.soundtouchNode.parameters.get('pitchSemitones')!.value = settings.semitone
     }
 
     disconnect() {
