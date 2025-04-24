@@ -1395,6 +1395,11 @@ var SoundTouchWorklet = (function (_AudioWorkletProcesso) {
                     for (var _i = 0; _i < leftInput.length; _i++) {
                         leftOutput[_i] = processedSamples[_i * 2]
                         rightOutput[_i] = processedSamples[_i * 2 + 1]
+
+                        if (isNaN(leftOutput[_i]) || isNaN(rightOutput[_i])) {
+                            leftOutput[_i] = 0
+                            rightOutput[_i] = 0
+                        }
                     }
                     return true
                 }
