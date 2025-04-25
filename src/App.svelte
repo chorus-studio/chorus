@@ -20,6 +20,7 @@
         await mediaStore.observe()
         playbackObserver.observe()
         await supporterStore.sync()
+        await mediaStore.setActive(false)
     }
 
     onMount(() => {

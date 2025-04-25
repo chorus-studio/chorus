@@ -22,6 +22,7 @@ export default defineBackground(() => {
 
         const CUSTOM_EVENTS = {
             volume: 'FROM_VOLUME_LISTENER',
+            init_media: 'FROM_MEDIA_PLAY_INIT',
             current_time: 'FROM_CURRENT_TIME_LISTENER'
         }
 
@@ -44,7 +45,11 @@ export default defineBackground(() => {
                 ],
                 target: { tabId },
                 func: (data) => {
-                    window.postMessage({ type: data.type, data: data.value }, '*')
+                    if (data.type == 'init_media') {
+                        document.dispatchEvent(new CustomEvent('FROM_MEDIA_PLAY_INIT'))
+                    } else {
+                        window.postMessage({ type: data.type, data: data?.value }, '*')
+                    }
                 }
             })
         })

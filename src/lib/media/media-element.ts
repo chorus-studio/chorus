@@ -14,6 +14,7 @@ export default class MediaElement {
         this.source = source
         this.source.crossOrigin = 'anonymous'
         this.setupEventListeners()
+        this.loadMediaOverride()
     }
 
     private loadMediaOverride(): void {
@@ -43,8 +44,6 @@ export default class MediaElement {
         })
 
         this.source.addEventListener('play', async () => {
-            if (this.mediaOverride) return
-            this.loadMediaOverride()
             document.dispatchEvent(new CustomEvent('FROM_MEDIA_PLAY_INIT'))
         })
 
@@ -59,6 +58,14 @@ export default class MediaElement {
                 if (!this.mediaOverride) return
 
                 switch (type) {
+                    case 'FROM_PLAYBACK_LISTENER':
+                        this.mediaOverride.updateSoundTouch({
+                            pitch: Number(data?.pitch) || 1,
+                            semitone: Number(data?.semitone) || 0
+                        })
+                        this.mediaOverride.updatePlaybackSettings(Number(data?.rate) || 1)
+                        break
+
                     case 'FROM_EFFECTS_LISTENER':
                         this.mediaOverride.updateAudioEffect({
                             clear: Boolean(data?.clear),
