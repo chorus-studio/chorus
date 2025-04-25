@@ -23,7 +23,7 @@
     import { getColours } from '$lib/utils/vibrant-colors'
     import { getCheckPermissionsService } from '$lib/utils/check-permissions'
 
-    let { pip = false }: { pip: boolean } = $props()
+    let { pip = false }: { pip?: boolean } = $props()
 
     let port = $state<chrome.runtime.Port | null>(null)
 

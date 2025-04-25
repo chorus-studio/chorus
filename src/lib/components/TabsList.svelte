@@ -31,14 +31,16 @@
 
     let { pip = false }: { pip?: boolean } = $props()
 
+    const VIEW_KEY = 'local:chorus_view'
+
     let tabs = [
-        pip ? 'media' : '',
+        pip ? 'player' : '',
         'snip',
         'speed',
         'fx|eq',
         'seek',
         'settings',
-        'info',
+        pip ? '' : 'info',
         pip ? '' : 'support'
     ].filter(Boolean)
 
@@ -55,14 +57,14 @@
         info: Info,
         settings: Settings,
         support: Support,
-        media: PopUp
+        player: PopUp
     }
 
     async function handleCheckedChange(checked: boolean) {
         if (!activeTab) return
         if (checked) {
             defaultView = activeTab
-            await storage.setItem('local:chorus_default_view', activeTab)
+            await storage.setItem(VIEW_KEY, activeTab)
         }
     }
 
@@ -92,7 +94,6 @@
                 track: {
                     rate: $nowPlaying.playback.rate,
                     pitch: $nowPlaying.playback.pitch,
-                    tempo: $nowPlaying.playback.tempo,
                     semitone: $nowPlaying.playback.semitone
                 }
             })
@@ -100,8 +101,8 @@
     }
 
     async function getDefaultView() {
-        const tab = (await storage.getItem<string>('local:chorus_default_view')) ?? filteredTabs[0]
-        defaultView = tab == 'media' && !pip ? filteredTabs[0] : tab
+        const tab = (await storage.getItem<string>(VIEW_KEY)) ?? filteredTabs[0]
+        defaultView = tab == 'player' && !pip ? filteredTabs[0] : tab
         activeTab = defaultView
     }
 
@@ -134,73 +135,71 @@
 
 <Tabs.Root value={activeTab} class="h-7 w-full p-0">
     <Tabs.List class="flex h-full items-center justify-end gap-x-1.5 bg-transparent p-0">
+        {#if pip}
+            <div class="absolute left-0">
+                <AvatarLogo class="bg-black" />
+            </div>
+        {/if}
+
         {#each filteredTabs as tab (tab)}
             <Tabs.Trigger
                 value={tab}
-                class="flex items-center justify-center {tab === 'media'
-                    ? 'absolute left-0 data-[state=active]:bg-transparent'
-                    : ''} p-0 {pip ? 'gap-y-3' : ''}"
+                class="flex items-center justify-center  p-0 {pip ? 'gap-y-3' : ''}"
                 onclick={() => setActiveTab(tab)}
             >
-                {#if tab == 'media' && pip}
-                    <AvatarLogo class="bg-black" />
-                {:else}
-                    <Badge
-                        variant="outline"
-                        class="rounded-[2px] text-[#fafafa] {[
-                            'settings',
-                            'info',
-                            'support'
-                        ].includes(tab)
-                            ? 'p-0'
-                            : 'px-1.5 py-0 pb-[0.125rem]'} text-sm font-semibold leading-[18px] {activeTab ===
+                <Badge
+                    variant="outline"
+                    class="rounded-[2px] text-[#fafafa] {['settings', 'info', 'support'].includes(
                         tab
-                            ? 'bg-green-700 hover:bg-green-800'
-                            : 'bg-zinc-700 hover:bg-zinc-500'}"
-                    >
-                        {#if tab === 'settings'}
-                            <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                class="lucide lucide-settings-icon lucide-settings h-5 w-5 fill-none stroke-2 p-1"
-                                ><path
-                                    d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"
-                                /><circle cx="12" cy="12" r="3" /></svg
-                            >
-                        {:else if tab === 'info'}
-                            <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                class="lucide lucide-circle-help-icon lucide-circle-help h-5 w-5 fill-none stroke-2 p-1"
-                                ><circle cx="12" cy="12" r="10" /><path
-                                    d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"
-                                /><path d="M12 17h.01" /></svg
-                            >
-                        {:else if tab === 'support'}
-                            <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                class="lucide lucide-coffee-icon lucide-coffee h-5 w-5 fill-none stroke-2 p-1"
-                                ><path d="M10 2v2" /><path d="M14 2v2" /><path
-                                    d="M16 8a1 1 0 0 1 1 1v8a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1h14a4 4 0 1 1 0 8h-1"
-                                /><path d="M6 2v2" /></svg
-                            >
-                        {:else}
-                            {tab}
-                        {/if}
-                    </Badge>
-                {/if}
+                    )
+                        ? 'p-0'
+                        : 'px-1.5 py-0 pb-[0.125rem]'} text-sm font-semibold leading-[18px] {activeTab ===
+                    tab
+                        ? 'bg-green-700 hover:bg-green-800'
+                        : 'bg-zinc-700 hover:bg-zinc-500'}"
+                >
+                    {#if tab === 'settings'}
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            class="lucide lucide-settings-icon lucide-settings h-5 w-5 fill-none stroke-2 p-1"
+                            ><path
+                                d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"
+                            /><circle cx="12" cy="12" r="3" /></svg
+                        >
+                    {:else if tab === 'info'}
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            class="lucide lucide-circle-help-icon lucide-circle-help h-5 w-5 fill-none stroke-2 p-1"
+                            ><circle cx="12" cy="12" r="10" /><path
+                                d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"
+                            /><path d="M12 17h.01" /></svg
+                        >
+                    {:else if tab === 'support'}
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            class="lucide lucide-coffee-icon lucide-coffee h-5 w-5 fill-none stroke-2 p-1"
+                            ><path d="M10 2v2" /><path d="M14 2v2" /><path
+                                d="M16 8a1 1 0 0 1 1 1v8a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1h14a4 4 0 1 1 0 8h-1"
+                            /><path d="M6 2v2" /></svg
+                        >
+                    {:else}
+                        {tab}
+                    {/if}
+                </Badge>
             </Tabs.Trigger>
         {/each}
     </Tabs.List>
@@ -208,8 +207,8 @@
     {#if activeTab}
         <Tabs.Content
             value={activeTab}
-            class="relative flex {activeTab === 'media' ? 'h-[210px]' : 'h-[205px]'} {[
-                'media',
+            class="relative flex {activeTab === 'player' ? 'h-[210px]' : 'h-[205px]'} {[
+                'player',
                 'snip',
                 'fx|eq',
                 'speed'
@@ -217,13 +216,13 @@
                 ? 'space-y-2'
                 : ''} w-full flex-col"
         >
-            {#if !['speed', 'info', 'settings', 'support', 'media', 'fx|eq'].includes(activeTab)}
+            {#if !['speed', 'info', 'settings', 'support', 'player', 'fx|eq'].includes(activeTab)}
                 <TrackInfo />
             {/if}
             {@const View = components[activeTab]}
             <View {pip} />
 
-            {#if activeTab === 'media'}
+            {#if activeTab === 'player'}
                 <div class="absolute bottom-0 z-50 flex w-full items-center gap-x-2">
                     <span class="text-sm text-muted-foreground">vol</span>
                     <ToggleSelect
