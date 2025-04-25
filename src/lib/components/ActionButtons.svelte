@@ -2,9 +2,9 @@
     import { seekStore } from '$lib/stores/seek'
     import { snipStore } from '$lib/stores/snip'
     import { dataStore } from '$lib/stores/data'
-    import { playbackStore } from '$lib/stores/playback'
     import { nowPlaying } from '$lib/stores/now-playing'
     import { effectsStore } from '$lib/stores/audio-effects'
+    import { playbackStore, defaultPlayback } from '$lib/stores/playback'
 
     import { Button } from '$lib/components/ui/button'
 
@@ -26,7 +26,6 @@
     }
 
     async function resetSpeed() {
-        const defaultPlayback = { rate: 1, pitch: 0, tempo: 0, semitone: 0 }
         await playbackStore.updatePlayback({ default: defaultPlayback })
         playbackStore.dispatchPlaybackSettings(defaultPlayback)
     }
@@ -40,11 +39,10 @@
             value: { playback: null }
         })
 
-        const defaultPlayback = { rate: 1, pitch: 0, tempo: 0, semitone: 0 }
         delete $nowPlaying.playback
 
-        playbackStore.updatePlayback({ track: defaultPlayback })
         nowPlaying.set({ ...$nowPlaying, playback: null })
+        await playbackStore.updatePlayback({ track: defaultPlayback })
         playbackStore.dispatchPlaybackSettings(defaultPlayback)
     }
 
@@ -170,7 +168,7 @@
             <Button
                 variant="outline"
                 size="sm"
-                class="h-6 rounded-[2px] border-none bg-amber-500 px-2 py-0 pb-[0.125rem] text-sm font-semibold text-[#fafafa] hover:bg-amber-600 hover:text-[#fafafa]"
+                class="h-5 rounded-[2px] border-none bg-amber-500 px-2 py-0 pb-[0.125rem] text-sm font-semibold text-[#fafafa] hover:bg-amber-600 hover:text-[#fafafa]"
                 onclick={handleReset}
             >
                 reset
@@ -181,7 +179,7 @@
             <Button
                 variant="outline"
                 size="sm"
-                class="h-6 rounded-[2px] border-none bg-red-500 px-2 py-0 pb-[0.125rem] text-sm font-semibold text-[#fafafa] hover:bg-red-600 hover:text-[#fafafa]"
+                class="h-5 rounded-[2px] border-none bg-red-500 px-2 py-0 pb-[0.125rem] text-sm font-semibold text-[#fafafa] hover:bg-red-600 hover:text-[#fafafa]"
                 onclick={handleDelete}
             >
                 delete
@@ -193,7 +191,7 @@
                 variant="outline"
                 size="sm"
                 onclick={handleSave}
-                class="h-6 rounded-[2px] border-none bg-green-700 px-2 py-0 pb-[0.125rem] text-sm font-semibold text-[#fafafa] hover:bg-green-800 hover:text-[#fafafa]"
+                class="h-5 rounded-[2px] border-none bg-green-700 px-2 py-0 pb-[0.125rem] text-sm font-semibold text-[#fafafa] hover:bg-green-800 hover:text-[#fafafa]"
             >
                 save
             </Button>

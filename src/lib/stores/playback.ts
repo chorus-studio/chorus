@@ -23,18 +23,22 @@ type PlaybackSettings = {
 
 export const defaultPlayback: Playback = { rate: 1, pitch: 1, semitone: 0 }
 
+const STORAGE_KEY = 'local:chorus_playback'
+
 const defaultPlaybackSettings: PlaybackSettings = {
     is_default: true,
     track: defaultPlayback,
     default: defaultPlayback,
     frequents: {
         pitch: [
+            { value: 0.25, pinned: false },
             { value: 0.5, pinned: false },
             { value: 0.75, pinned: false },
             { value: 1, pinned: false },
             { value: 1.25, pinned: false }
         ],
         rate: [
+            { value: 0.5, pinned: false },
             { value: 0.9818, pinned: false },
             { value: 1, pinned: false },
             { value: 1.2, pinned: false },
@@ -44,7 +48,8 @@ const defaultPlaybackSettings: PlaybackSettings = {
             { value: -2, pinned: false },
             { value: -1, pinned: false },
             { value: 0, pinned: false },
-            { value: 1, pinned: false }
+            { value: 1, pinned: false },
+            { value: 2, pinned: false }
         ]
     }
 }
@@ -62,16 +67,13 @@ function createPlaybackStore() {
     async function updatePlayback(playback: Partial<PlaybackSettings>) {
         update((state) => ({ ...state, ...playback }))
         const newState = get(store)
-        await storage.setItem<PlaybackSettings>('local:chorus_playback_settings', newState)
+        await storage.setItem<PlaybackSettings>(STORAGE_KEY, newState)
         dispatchPlaybackSettings()
     }
 
     async function reset() {
         set(defaultPlaybackSettings)
-        await storage.setItem<PlaybackSettings>(
-            'local:chorus_playback_settings',
-            defaultPlaybackSettings
-        )
+        await storage.setItem<PlaybackSettings>(STORAGE_KEY, defaultPlaybackSettings)
         dispatchPlaybackSettings()
     }
 
@@ -86,7 +88,7 @@ function createPlaybackStore() {
                 return state
             }
 
-            if (frequents.length < 4) {
+            if (frequents.length < 5) {
                 // If we have space, add the new value unpinned
                 frequents.push({ value, pinned: false })
             } else {
@@ -100,7 +102,7 @@ function createPlaybackStore() {
             return { ...state, frequents: { ...state.frequents, [key]: frequents } }
         })
         const newState = get(store)
-        await storage.setItem<PlaybackSettings>('local:chorus_playback_settings', newState)
+        await storage.setItem<PlaybackSettings>(STORAGE_KEY, newState)
     }
 
     async function togglePin(key: keyof Playback, value: number) {
@@ -113,29 +115,28 @@ function createPlaybackStore() {
             return { ...state, frequents: { ...state.frequents, [key]: frequents } }
         })
         const newState = get(store)
-        await storage.setItem<PlaybackSettings>('local:chorus_playback_settings', newState)
+        await storage.setItem<PlaybackSettings>(STORAGE_KEY, newState)
     }
 
     storage
-        .getItem<PlaybackSettings>('local:chorus_playback_settings', {
+        .getItem<PlaybackSettings>(STORAGE_KEY, {
             fallback: defaultPlaybackSettings
         })
         .then((newValues) => {
             if (newValues) set(newValues)
         })
 
-    storage.watch('local:chorus_playback_settings', (newValues) => {
+    storage.watch(STORAGE_KEY, (newValues) => {
         if (newValues) store.set(newValues as PlaybackSettings)
     })
 
     return {
         reset,
-        update,
+        togglePin,
         subscribe,
         updatePlayback,
-        dispatchPlaybackSettings,
         addFrequentValue,
-        togglePin
+        dispatchPlaybackSettings
     }
 }
 

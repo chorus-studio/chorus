@@ -14,11 +14,12 @@
 
     let { key, list }: { key: keyof Playback; list: Frequent[] } = $props()
 
-    function padSpeed(value: number | string, decimalPlace: number = 3): string {
+    function padSpeed(value: number | string): string {
         const parsedValue = parseFloat(value.toString())
         if (isNaN(parsedValue)) return value.toString()
 
         // Use toFixed to ensure we get the exact number of decimal places
+        const decimalPlace = key == 'rate' ? 3 : 2
         return parsedValue.toFixed(decimalPlace)
     }
 
@@ -81,7 +82,7 @@
     )
 </script>
 
-<div class="flex w-full flex-col space-y-1.5">
+<div class="flex w-full flex-col space-y-2">
     <h2 class="text-sm text-gray-400">{getTitle(key)}</h2>
     <BadgeList
         {list}

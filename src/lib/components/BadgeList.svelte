@@ -20,7 +20,7 @@
 <div
     class="flex w-full items-center justify-between {isFrequentList
         ? 'gap-x-1'
-        : 'gap-x-0.5'} overflow-x-auto"
+        : 'gap-x-0.5'} no-scrollbar overflow-x-auto"
 >
     {#each list as item}
         <div class="relative flex items-center">
