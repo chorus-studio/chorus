@@ -1,3 +1,4 @@
+import { get } from 'svelte/store'
 import { mount, unmount } from 'svelte'
 import { pipStore } from '$lib/stores/pip'
 import PipView from '$lib/components/views/Pip.svelte'
@@ -70,8 +71,9 @@ export async function togglePictureInPicture() {
             const target = event.composedPath().at(0) as HTMLElement
             if (!target) return
 
-            const isTrigger = target.classList.contains('trigger')
-            if (!isTrigger) await pipStore.setOpen(false)
+            const { key } = get(pipStore)
+            const isTrigger = key && target.id === key
+            if (!isTrigger) await pipStore.updatePip({ key: null })
         })
 
         pipWindow.addEventListener('pagehide', async () => {

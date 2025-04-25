@@ -30,14 +30,15 @@
 </script>
 
 <div class="flex w-full flex-col gap-y-1">
-    <h2 class="text-base text-gray-400">{type}</h2>
+    <h2 class="text-base leading-none text-gray-400">{type}</h2>
 
-    <div class="flex w-full flex-col gap-y-2">
+    <div class="flex w-full flex-col gap-y-1">
         <div class="flex flex-col">
             <Label for="room" class="w-full text-sm text-gray-400">{topLabel}</Label>
             <CustomSelect
                 {pip}
                 size="md"
+                key={`${type}-top`}
                 selected={topSelected ? $effectsStore[type] : 'none'}
                 options={topOptions}
                 onValueChange={handleUpdateEffect}
@@ -49,6 +50,7 @@
             <CustomSelect
                 {pip}
                 size="md"
+                key={`${type}-bottom`}
                 selected={!topSelected ? $effectsStore[type] : 'none'}
                 options={bottomOptions}
                 onValueChange={handleUpdateEffect}
@@ -56,7 +58,7 @@
         </div>
     </div>
 
-    <Separator class="h-0.5 w-full" />
+    <Separator class="mt-1.5 h-0.5 w-full" />
 
     <p class="inline-flex w-full justify-between text-base text-gray-400">
         {type} <span class="justify-end text-base text-white">{$effectsStore[type]}</span>

@@ -8,6 +8,7 @@
 
     let {
         pip = false,
+        key = '',
         size = 'default',
         selected = 'none',
         onValueChange,
@@ -18,10 +19,11 @@
     let isOpen = $state(false)
     let triggerRef: HTMLButtonElement | null = null
 
-    function handleChange(event: Event) {
+    async function handleChange(event: Event) {
         const select = event.target as HTMLSelectElement
         onValueChange?.(select.value)
         isOpen = false
+        if (pip) await pipStore.updatePip({ key: null })
     }
 
     function handleMouseEnter(e: Event) {
@@ -53,9 +55,13 @@
     }
 
     async function togglePipOpen() {
-        const newState = !$pipStore.open
-        isOpen = newState
-        await pipStore.setOpen(newState)
+        isOpen = !isOpen
+        if (pip) await pipStore.updatePip({ key: isOpen ? key : null })
+    }
+
+    async function handleClickOutside() {
+        isOpen = false
+        if (pip) await pipStore.updatePip({ key: null })
     }
 
     const small = size === 'sm'
@@ -63,9 +69,7 @@
 
     onMount(() => {
         const unsubscribe = pipStore.subscribe((state) => {
-            if (pip && !state.open) {
-                isOpen = false
-            }
+            if (pip && (!state.key || state.key !== key)) isOpen = false
         })
 
         return () => unsubscribe()
@@ -73,16 +77,17 @@
 </script>
 
 <div
-    use:clickOutside={() => (isOpen = false)}
+    use:clickOutside={handleClickOutside}
     aria-label="select"
     class="relative flex justify-between {className}"
 >
     <div class="relative {small ? 'min-w-28' : medium ? 'min-w-32' : 'min-w-40'} w-full">
         <button
+            id={key}
             bind:this={triggerRef}
             class={buttonVariants({
                 variant: 'outline',
-                class: `trigger flex w-full ${small ? 'hover:bg-[var(--bg)]/20 h-5 bg-[var(--bg)] p-0 text-[var(--text)]' : 'h-7 w-full bg-transparent px-2 py-1 hover:bg-gray-700'} cursor-pointer appearance-none items-center justify-end justify-items-end rounded-sm border border-muted-foreground pr-0`
+                class: `relative z-50 flex w-full ${small ? 'hover:bg-[var(--bg)]/20 h-5 bg-[var(--bg)] p-0 text-[var(--text)]' : 'h-7 w-full bg-transparent px-2 py-1 hover:bg-[#3e3d3d]'} cursor-pointer appearance-none items-center justify-end justify-items-end rounded-sm border border-muted-foreground pr-0`
             })}
             onclick={togglePipOpen}
         >
@@ -100,7 +105,7 @@
 
         {#if isOpen}
             <select
-                size={5}
+                size={3}
                 class="absolute left-0 top-full z-[1000] mt-1 flex w-full cursor-pointer appearance-none items-center justify-end overflow-y-scroll rounded-sm border border-muted-foreground {small
                     ? '!bg-[var(--bg)] !text-[var(--text)]'
                     : 'bg-[#171717] text-muted-foreground'} px-2 py-1 pr-2"
