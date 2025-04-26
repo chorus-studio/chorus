@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { onMount } from 'svelte'
     import { supporterStore } from '$lib/stores/supporter'
     import { playbackObserver } from '$lib/observers/playback'
     import { settingsStore, type SettingsState } from '$lib/stores/settings'
@@ -35,7 +36,9 @@
         return `v2 ${key} `
     }
 
-    $: isSupporter = $supporterStore.isSupporter
+    const checkOptInStatus = async () => await supporterStore.sync()
+
+    onMount(() => checkOptInStatus())
 </script>
 
 <div class="flex h-full w-full flex-col items-center space-y-2">
@@ -47,8 +50,9 @@
                 <div class="flex items-center justify-between gap-y-2.5">
                     <Label>{setUILabel(key as keyof SettingsState['ui'])}</Label>
                     <Switch
-                        disabled={!isSupporter}
-                        checked={isSupporter && $settingsStore.ui[key as keyof SettingsState['ui']]}
+                        disabled={!$supporterStore.isSupporter}
+                        checked={$supporterStore.isSupporter &&
+                            $settingsStore.ui[key as keyof SettingsState['ui']]}
                         onCheckedChange={() => toggleUISettings(key as keyof SettingsState['ui'])}
                     />
                 </div>
@@ -62,8 +66,8 @@
             {#each Object.keys($settingsStore.views) as key}
                 <div class="gapy-y-2.5 flex items-center justify-between">
                     <Switch
-                        disabled={!isSupporter}
-                        checked={isSupporter &&
+                        disabled={!$supporterStore.isSupporter}
+                        checked={$supporterStore.isSupporter &&
                             $settingsStore.views[key as keyof SettingsState['views']]}
                         onCheckedChange={() =>
                             toggleViewsSettings(key as keyof SettingsState['views'])}
