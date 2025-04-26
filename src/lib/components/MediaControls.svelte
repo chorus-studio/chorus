@@ -56,8 +56,12 @@
         }
     }
 
-    function handleClick(role: string) {
+    async function handleClick(role: string) {
         port?.postMessage({ type: 'controls', key: role })
+        if (role == 'play' && !$mediaStore.playing && !$mediaStore.active) {
+            await mediaStore.setActive(true)
+            port?.postMessage({ type: 'init_media' })
+        }
     }
 
     onMount(() => {

@@ -1,11 +1,18 @@
+import SoundTouch from './soundtouch'
+import { SoundTouchData } from '$lib/stores/playback'
+
 export default class AudioManager {
     private _gainNode?: GainNode
+    private _soundTouchNode?: AudioNode
     private _audioContext?: AudioContext
+    private _soundTouchManager?: SoundTouch
     private _destination?: AudioDestinationNode
-    private _element: HTMLMediaElement | MediaStream
-    private _source?: MediaStreamAudioSourceNode | MediaElementAudioSourceNode
+
     private _setupPromise?: Promise<void>
     private _isInitialized: boolean = false
+
+    private _element: HTMLMediaElement | MediaStream
+    private _source?: MediaStreamAudioSourceNode | MediaElementAudioSourceNode
     private _sourceMap: Map<HTMLMediaElement, MediaElementAudioSourceNode> = new Map()
 
     private _currentVolume: number = 1
@@ -14,6 +21,12 @@ export default class AudioManager {
     constructor(element: HTMLVideoElement | HTMLAudioElement) {
         this._element = element
         this._setupPromise = this.initialize()
+    }
+
+    private async loadSoundTouch() {
+        this._soundTouchManager = new SoundTouch(this.audioContext!)
+        await this._soundTouchManager.loadModule()
+        this._soundTouchNode = this._soundTouchManager.soundtouchNode
     }
 
     private async initialize(): Promise<void> {
@@ -118,15 +131,20 @@ export default class AudioManager {
             // Create gain node if it doesn't exist
             if (!this._gainNode) {
                 this._gainNode = this._audioContext.createGain()
+                this._gainNode.channelCount = 2
+                this._gainNode.channelCountMode = 'clamped-max'
             }
+
+            if (!this._soundTouchNode) await this.loadSoundTouch()
 
             this._destination = this._audioContext.destination
 
             // Set up default audio chain with gain node
-            if (this._source && this._gainNode && this._destination) {
+            if (this._source && this._gainNode && this._soundTouchNode && this._destination) {
                 this._source.connect(this._gainNode)
-                this._gainNode.connect(this._destination)
-                // Initialize with current volume instead of default 1
+                this._gainNode.connect(this._soundTouchNode)
+                this._soundTouchNode.connect(this._destination)
+
                 this.setGain(this._currentVolume, this._volumeType)
             } else {
                 throw new Error('Failed to create audio chain nodes')
@@ -156,7 +174,7 @@ export default class AudioManager {
             await this._audioContext.resume()
         }
 
-        if (!this._source || !this._gainNode || !this._destination) {
+        if (!this._source || !this._destination) {
             throw new Error('Audio chain nodes are not properly initialized')
         }
     }
@@ -212,50 +230,64 @@ export default class AudioManager {
         return this._volumeType
     }
 
-    connectReverb({ gain, reverb }: { gain: AudioNode; reverb: AudioNode }) {
-        if (!this.source || !this.destination) return
-
-        // Disconnect existing chain
-        this.disconnect()
-
-        // Connect new chain with effects
-        this.source.connect(this._gainNode!) // First connect to gain node for volume control
-        this._gainNode!.connect(gain) // Then connect gain to reverb chain
-        gain.connect(reverb)
-        reverb.connect(this.destination)
+    get isConnectable() {
+        return this.source && this.destination && this._gainNode && this._soundTouchNode
     }
 
-    connectEqualizer(node: AudioNode) {
-        if (!this.source || !this._destination) return
+    connectReverb({
+        reverbGainNode,
+        reverbWorkletNode
+    }: {
+        reverbGainNode: AudioNode
+        reverbWorkletNode: AudioNode
+    }) {
+        if (!this.isConnectable) return
 
-        // Disconnect existing chain
-        this.disconnect()
+        // Disconnect soundTouchNode from destination
+        this._soundTouchNode!.disconnect()
+        this._gainNode!.disconnect()
 
-        // Connect new chain with equalizer
-        this.source.connect(this._gainNode!) // First connect to gain node for volume control
-        this._gainNode!.connect(node) // Then connect gain to equalizer
-        node.connect(this._destination)
+        // Connect gain node to reverb chain
+        this._gainNode!.connect(reverbGainNode)
+        reverbGainNode.connect(reverbWorkletNode)
+
+        // Connect reverb to soundTouchNode and soundTouchNode to destination
+        reverbWorkletNode.connect(this._soundTouchNode!)
+        this._soundTouchNode!.connect(this.destination!)
+    }
+
+    connectEqualizer(equalizerNode: AudioNode) {
+        if (!this.isConnectable) return
+
+        // Disconnect soundTouchNode from destination
+        this._soundTouchNode!.disconnect()
+        this._gainNode!.disconnect()
+
+        // Connect gain node to equalizer
+        this._gainNode!.connect(equalizerNode)
+
+        // Connect equalizer to soundTouchNode and soundTouchNode to destination
+        equalizerNode.connect(this._soundTouchNode!)
+        this._soundTouchNode!.connect(this.destination!)
     }
 
     disconnect() {
-        if (!this.source || !this._destination || !this._gainNode) return
+        if (!this.isConnectable) return
 
-        // Store current gain value before disconnecting
-        const currentGain = this._gainNode.gain.value
+        // Disconnect soundTouchNode from destination
+        this._soundTouchNode!.disconnect()
+        this._gainNode!.disconnect()
 
-        // Disconnect all nodes
-        this.source.disconnect()
-        this._gainNode.disconnect()
-        this.destination?.disconnect()
+        // Reconnect gain node directly to soundTouchNode
+        this._gainNode!.connect(this._soundTouchNode!)
 
-        // Reconnect basic chain with gain
-        if (!(this.source && this._gainNode && this.destination)) return
+        // Reconnect soundTouchNode to destination
+        this._soundTouchNode!.connect(this.destination!)
+    }
 
-        this.source.connect(this._gainNode)
-        this._gainNode.connect(this.destination)
-
-        // Immediately set the gain value to maintain volume state
-        this._gainNode.gain.value = currentGain
+    applySoundTouch(settings: SoundTouchData) {
+        if (!this._soundTouchManager) return
+        this._soundTouchManager.applySettings(settings)
     }
 
     cleanup() {
@@ -277,9 +309,7 @@ export default class AudioManager {
 
     dispose() {
         this.cleanup()
-        if (this.audioContext?.state !== 'closed') {
-            this.audioContext?.close()
-        }
+        if (this.audioContext?.state !== 'closed') this.audioContext?.close()
     }
 
     set source(source) {

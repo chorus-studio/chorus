@@ -14,7 +14,7 @@
             pipWindow.close()
             pipWindow = undefined
         } else {
-            await pipStore.setActive(!$pipStore.active)
+            await pipStore.updatePip({ active: !$pipStore.active })
             pipWindow = await togglePictureInPicture()
         }
     }

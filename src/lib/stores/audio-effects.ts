@@ -26,8 +26,10 @@ function createAudioEffectsStore() {
         dispatchEffect()
     }
 
-    async function reset(key: keyof AudioEffect) {
-        await updateEffect({ key, value: 'none' })
+    async function reset() {
+        set(defaultAudioEffect)
+        await storage.setItem<AudioEffect>('local:chorus_audio_effects', defaultAudioEffect)
+        dispatchEffect()
     }
 
     storage

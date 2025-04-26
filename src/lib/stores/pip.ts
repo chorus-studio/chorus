@@ -2,12 +2,12 @@ import { writable, get } from 'svelte/store'
 import { storage } from '@wxt-dev/storage'
 
 type PIP = {
-    open: boolean
     active: boolean
+    key: null | string
 }
 
 const defaultPIP: PIP = {
-    open: false,
+    key: null,
     active: false
 }
 
@@ -20,14 +20,8 @@ function createPipStore() {
         await storage.setItem<PIP>('local:chorus_pip', defaultPIP)
     }
 
-    async function setOpen(open: boolean) {
-        update((prev) => ({ ...prev, open }))
-        const state = get(store)
-        await storage.setItem<PIP>('local:chorus_pip', state)
-    }
-
-    async function setActive(active: boolean) {
-        update((prev) => ({ ...prev, active }))
+    async function updatePip(pip: Partial<PIP>) {
+        update((prev) => ({ ...prev, ...pip }))
         const state = get(store)
         await storage.setItem<PIP>('local:chorus_pip', state)
     }
@@ -42,8 +36,7 @@ function createPipStore() {
 
     return {
         reset,
-        setOpen,
-        setActive,
+        updatePip,
         subscribe
     }
 }

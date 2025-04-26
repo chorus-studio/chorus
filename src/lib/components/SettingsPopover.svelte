@@ -51,10 +51,13 @@
             customAnchor="[data-testid='CoverSlotCollapsed__container']"
             side="left"
             align="end"
-            class="fixed bottom-20 left-[80px] h-[270px] w-[350px] rounded-md outline-4 outline-offset-0 outline-[#28e269]"
+            class="fixed bottom-20 left-[80px] h-[280px] w-[360px] p-0"
         >
-            <div class="relative flex flex-col justify-center">
-                <AvatarLogo class="absolute top-[0.25rem] size-5" />
+            <div
+                style="border: 4px solid #28e269 !important"
+                class="relative flex h-full w-full flex-col rounded-md p-4"
+            >
+                <AvatarLogo class="absolute top-[1.25rem] size-5" />
                 <TabsList />
             </div>
         </Popover.Content>

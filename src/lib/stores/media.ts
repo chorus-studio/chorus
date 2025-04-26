@@ -2,6 +2,7 @@ import { storage } from '@wxt-dev/storage'
 import { writable, get } from 'svelte/store'
 
 export type Media = {
+    active: boolean
     dj: boolean
     saved: boolean
     playing: boolean
@@ -10,6 +11,7 @@ export type Media = {
 }
 
 const defaultMedia: Media = {
+    active: false,
     dj: false,
     saved: false,
     playing: false,
@@ -94,6 +96,11 @@ function createMediaStore() {
         await storage.setItem('local:chorus_media', get(store))
     }
 
+    async function setActive(active: boolean) {
+        update((state) => ({ ...state, active }))
+        await storage.setItem('local:chorus_media', get(store))
+    }
+
     storage.getItem<Media>('local:chorus_media', { fallback: defaultMedia }).then((value) => {
         if (value) set(value)
     })
@@ -112,7 +119,8 @@ function createMediaStore() {
         set,
         observe,
         updateState,
-        disconnect
+        disconnect,
+        setActive
     }
 }
 

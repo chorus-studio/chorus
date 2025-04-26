@@ -27,24 +27,30 @@
     async function handleUpdateEffect(value: string) {
         await effectsStore.updateEffect({ key: type, value })
     }
-
-    let selectedLabel = type === 'reverb' ? 'active reverb preset' : 'active equalizer preset'
 </script>
 
-<div class="flex w-full flex-col justify-between space-y-2.5">
-    <div class="flex w-full flex-col gap-x-1 gap-y-1">
-        <div class="flex w-full items-center justify-between">
-            <Label for="room" class="w-full text-base text-gray-400">{topLabel}</Label>
+<div class="flex w-full flex-col gap-y-1">
+    <h2 class="text-base leading-none text-gray-400">{type}</h2>
+
+    <div class="flex w-full flex-col gap-y-1">
+        <div class="flex flex-col">
+            <Label for="room" class="w-full text-sm text-gray-400">{topLabel}</Label>
             <CustomSelect
+                {pip}
+                size="md"
+                key={`${type}-top`}
                 selected={topSelected ? $effectsStore[type] : 'none'}
                 options={topOptions}
                 onValueChange={handleUpdateEffect}
             />
         </div>
 
-        <div class="flex w-full items-center justify-between">
-            <Label for="room" class="w-full text-base text-gray-400">{bottomLabel}</Label>
+        <div class="flex flex-col">
+            <Label for="room" class="w-full text-sm text-gray-400">{bottomLabel}</Label>
             <CustomSelect
+                {pip}
+                size="md"
+                key={`${type}-bottom`}
                 selected={!topSelected ? $effectsStore[type] : 'none'}
                 options={bottomOptions}
                 onValueChange={handleUpdateEffect}
@@ -52,8 +58,9 @@
         </div>
     </div>
 
-    <Separator class="h-0.5 w-full bg-white" />
-    <p class="pr-[0.125rem inline-flex w-full justify-between text-base text-gray-400">
-        {selectedLabel} <span class="mr-5 text-base text-white">{$effectsStore[type]}</span>
+    <Separator class="mt-1.5 h-0.5 w-full" />
+
+    <p class="inline-flex w-full justify-between text-base text-gray-400">
+        {type} <span class="justify-end text-base text-white">{$effectsStore[type]}</span>
     </p>
 </div>

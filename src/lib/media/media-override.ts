@@ -1,11 +1,12 @@
 import Reverb from '$lib/audio-effects/reverb'
 import Equalizer from '$lib/audio-effects/equalizer'
 import AudioManager from '$lib/audio-effects/audio-manager'
+import type { SoundTouchData } from '$lib/stores/playback'
 
 type MediaOverrideOptions = {
-    source: HTMLMediaElement
-    equalizer: Equalizer
     reverb: Reverb
+    equalizer: Equalizer
+    source: HTMLMediaElement
     audioManager: AudioManager
 }
 
@@ -18,8 +19,8 @@ export default class MediaOverride {
 
     constructor(options: MediaOverrideOptions) {
         this.source = options.source
-        this.equalizer = options.equalizer
         this.reverb = options.reverb
+        this.equalizer = options.equalizer
         this.audioManager = options.audioManager
 
         // Override playbackRate and preservesPitch properties
@@ -59,9 +60,7 @@ export default class MediaOverride {
     // Handler for playbackRate property
     private handlePlaybackRateSetting(this: HTMLMediaElement, value: any) {
         // Check if the value is coming from our code
-        if (value?.source === 'chorus') {
-            return value.value
-        }
+        if (value?.source === 'chorus') return value.value
 
         // If not from our code, return the current value to prevent changes
         return this.playbackRate
@@ -70,9 +69,7 @@ export default class MediaOverride {
     // Handler for preservesPitch property
     private handlePreservesPitchSetting(this: HTMLMediaElement, value: any) {
         // Check if the value is coming from our code
-        if (value?.source === 'chorus') {
-            return value.value
-        }
+        if (value?.source === 'chorus') return value.value
 
         // If not from our code, return the current value to prevent changes
         return this.preservesPitch
@@ -84,10 +81,10 @@ export default class MediaOverride {
         this._sources.push(source)
     }
 
-    updatePlaybackSettings(value: { playback_rate: number; preserves_pitch: boolean }): void {
+    updatePlaybackSettings(rate: number): void {
         // Use our property override mechanism with a special format
-        const playbackRateValue = { source: 'chorus', value: value.playback_rate }
-        const preservesPitchValue = { source: 'chorus', value: value.preserves_pitch }
+        const playbackRateValue = { source: 'chorus', value: rate }
+        const preservesPitchValue = { source: 'chorus', value: true }
 
         // Use type assertion to bypass TypeScript's type checking
         ;(this.source as any).playbackRate = playbackRateValue
@@ -111,15 +108,24 @@ export default class MediaOverride {
         this.source.currentTime = data
     }
 
+    async updateSoundTouch(data: SoundTouchData) {
+        if (!this.audioManager) return
+
+        try {
+            await this.audioManager.ensureAudioChainReady()
+            this.audioManager.applySoundTouch(data)
+        } catch (error) {
+            console.error('Error updating sound touch:', error)
+        }
+    }
+
     async updateAudioEffect(effect: { clear?: boolean; reverb?: string; equalizer?: string }) {
         if (!this.audioManager || !this.equalizer || !this.reverb) return
 
         try {
-            // Ensure audio chain is ready
             await this.audioManager.ensureAudioChainReady()
-
-            // Disconnect everything first
             this.audioManager.disconnect()
+
             if (effect.clear) return
 
             // Apply effects if specified

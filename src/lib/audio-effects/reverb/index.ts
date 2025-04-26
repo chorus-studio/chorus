@@ -5,8 +5,8 @@ export default class Reverb {
     _internal: boolean
     _audioManager: AudioManager
     _audioContext?: AudioContext
-    _gain?: GainNode
-    _reverb?: AudioWorkletNode
+    _reverbGainNode?: GainNode
+    _reverbWorkletNode?: AudioWorkletNode
     _convolverNode?: ConvolverNode
 
     constructor(audioManager: AudioManager, internal = false) {
@@ -28,9 +28,7 @@ export default class Reverb {
         }
 
         this._audioContext = this._audioManager.audioContext
-        if (effect === 'none') {
-            return this.disconnect()
-        }
+        if (effect === 'none') return this._audioManager.disconnect()
 
         try {
             const isDigital = this.isDigital(effect)
@@ -41,19 +39,19 @@ export default class Reverb {
             this.applyReverbEffect(effect)
         } catch (error) {
             console.error('Error setting reverb effect:', error)
-            this.disconnect()
+            this._audioManager.disconnect()
             throw error
         }
     }
 
     connect() {
-        if (!this._gain || !this._reverb) {
+        if (!this._reverbGainNode || !this._reverbWorkletNode) {
             throw new Error('Audio nodes not properly initialized')
         }
 
         this._audioManager.connectReverb({
-            gain: this._gain,
-            reverb: this._reverb
+            reverbGainNode: this._reverbGainNode,
+            reverbWorkletNode: this._reverbWorkletNode
         })
     }
 
@@ -70,11 +68,11 @@ export default class Reverb {
         await this._audioContext.audioWorklet.addModule(modulePath)
 
         // Create gain node if it doesn't exist
-        this._gain = this._gain ?? this._audioContext.createGain()
+        this._reverbGainNode = this._reverbGainNode ?? this._audioContext.createGain()
 
         // Create reverb node if it doesn't exist
-        this._reverb =
-            this._reverb ??
+        this._reverbWorkletNode =
+            this._reverbWorkletNode ??
             new AudioWorkletNode(this._audioContext, 'DattorroReverb', {
                 channelCountMode: 'explicit',
                 channelCount: 1,
@@ -88,7 +86,7 @@ export default class Reverb {
         }
 
         // Create gain node if it doesn't exist
-        this._gain = this._gain ?? this._audioContext.createGain()
+        this._reverbGainNode = this._reverbGainNode ?? this._audioContext.createGain()
 
         // Create convolver node if it doesn't exist
         this._convolverNode = this._convolverNode ?? this._audioContext.createConvolver()
@@ -106,25 +104,19 @@ export default class Reverb {
         const arraybuffer = await response.arrayBuffer()
         this._convolverNode.buffer = await this._audioContext.decodeAudioData(arraybuffer)
 
-        if (!this._audioManager.source || !this._convolverNode || !this._gain) {
+        if (!this._audioManager.source || !this._convolverNode || !this._reverbGainNode) {
             throw new Error('Audio nodes not properly initialized')
         }
 
         // Use AudioManager's connectReverb instead of direct connections
         this._audioManager.connectReverb({
-            gain: this._gain,
-            reverb: this._convolverNode
+            reverbGainNode: this._reverbGainNode,
+            reverbWorkletNode: this._convolverNode
         })
     }
 
-    disconnect() {
-        this._audioManager.disconnect()
-    }
-
     async applyReverbEffect(effect: string) {
-        if (effect === 'none') {
-            return this.disconnect()
-        }
+        if (effect === 'none') return this._audioManager.disconnect()
 
         try {
             this.applyReverbEffectParams(effect)
@@ -135,13 +127,13 @@ export default class Reverb {
     }
 
     applyReverbEffectParams(effect: string) {
-        if (!this._reverb || !this._audioContext) {
+        if (!this._reverbWorkletNode || !this._audioContext) {
             throw new Error('Reverb node or AudioContext not initialized')
         }
 
         const paramsList = getParamsListForEffect(effect)
         paramsList.forEach(({ name, value }: { name: string; value: number }) => {
-            const param = this._reverb?.parameters.get(name)
+            const param = this._reverbWorkletNode?.parameters.get(name)
             if (param && this._audioContext) {
                 param.linearRampToValueAtTime(value, this._audioContext.currentTime + 0.195)
             }

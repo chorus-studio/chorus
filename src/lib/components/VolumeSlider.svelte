@@ -2,7 +2,6 @@
     import { onMount } from 'svelte'
     import { volumeStore, type VolumeType } from '$lib/stores/volume'
 
-    import { Slider } from '$lib/components/ui/slider'
     import * as HoverCard from '$lib/components/ui/hover-card'
     import VolumeIcon from '$lib/components/VolumeIcon.svelte'
     import VolumeReset from '$lib/components/VolumeReset.svelte'
@@ -30,8 +29,6 @@
     onMount(() => {
         volumeStore.dispatchVolumeEvent()
     })
-
-    let Component = pip ? CustomSlider : Slider
 </script>
 
 <div
@@ -84,14 +81,13 @@
         </HoverCard.Root>
     {/if}
 
-    <Component
+    <CustomSlider
         onValueChange={(value) => handleVolumeChange(value as number)}
         type="single"
         value={$volumeStore.muted ? 0 : $volumeStore.value}
         min={0}
         max={300}
         step={1}
-        class="pointer-events-auto h-6 w-full"
     />
     <div class="flex flex-col items-end gap-1">
         <p class="text-xs text-muted-foreground">

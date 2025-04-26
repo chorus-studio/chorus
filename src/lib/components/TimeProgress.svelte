@@ -43,7 +43,7 @@
 <div class="relative flex w-full items-center {isChorus ? 'mt-2' : ''} justify-between gap-x-3">
     {#if isChorus && $nowPlaying.playback}
         <span class="min-w-7 text-xs font-semibold text-[#1ed760]">
-            {$nowPlaying.playback.playback_rate}x
+            {$nowPlaying.playback.rate}x
         </span>
     {/if}
 
@@ -113,7 +113,7 @@
 
                 {#if $nowPlaying.playback}
                     <span class="text-xs font-semibold text-[var(--text)] brightness-75">
-                        {$nowPlaying.playback.playback_rate}x
+                        {$nowPlaying.playback.rate}x
                     </span>
                 {/if}
 

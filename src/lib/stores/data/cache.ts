@@ -1,10 +1,7 @@
+import type { Playback } from '$lib/stores/playback'
+
 type CacheItem<T> = {
     value: T
-}
-
-export type Playback = {
-    playback_rate: number
-    preserves_pitch: boolean
 }
 
 export type Snip = {

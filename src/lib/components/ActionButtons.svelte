@@ -2,9 +2,9 @@
     import { seekStore } from '$lib/stores/seek'
     import { snipStore } from '$lib/stores/snip'
     import { dataStore } from '$lib/stores/data'
-    import { playbackStore } from '$lib/stores/playback'
     import { nowPlaying } from '$lib/stores/now-playing'
     import { effectsStore } from '$lib/stores/audio-effects'
+    import { playbackStore, defaultPlayback } from '$lib/stores/playback'
 
     import { Button } from '$lib/components/ui/button'
 
@@ -12,8 +12,7 @@
 
     function getStore() {
         switch (tab) {
-            case 'fx':
-            case 'eq':
+            case 'fx|eq':
                 return effectsStore
             case 'snip':
                 return snipStore
@@ -27,7 +26,6 @@
     }
 
     async function resetSpeed() {
-        const defaultPlayback = { playback_rate: 1, preserves_pitch: true }
         await playbackStore.updatePlayback({ default: defaultPlayback })
         playbackStore.dispatchPlaybackSettings(defaultPlayback)
     }
@@ -41,11 +39,10 @@
             value: { playback: null }
         })
 
-        const defaultPlayback = { playback_rate: 1, preserves_pitch: true }
         delete $nowPlaying.playback
 
-        playbackStore.updatePlayback({ track: defaultPlayback })
         nowPlaying.set({ ...$nowPlaying, playback: null })
+        await playbackStore.updatePlayback({ track: defaultPlayback })
         playbackStore.dispatchPlaybackSettings(defaultPlayback)
     }
 
@@ -134,9 +131,8 @@
         const store = getStore()
         if (!store) return
 
-        if (['fx', 'eq'].includes(tab)) {
-            const key = tab === 'fx' ? 'reverb' : 'equalizer'
-            await store?.reset(key)
+        if (tab === 'fx|eq') {
+            await store?.reset()
         } else if (tab == 'snip') {
             resetSnip()
         } else if (tab == 'speed') {
@@ -161,16 +157,18 @@
                 $snipStore?.end_time !== $nowPlaying?.duration)) ||
         (tab == 'speed' &&
             !$playbackStore.is_default &&
-            ($playbackStore.track.playback_rate != 1 || !$playbackStore.track.preserves_pitch))
+            ($playbackStore.track.rate != 1 ||
+                $playbackStore.track.pitch != 1 ||
+                $playbackStore.track.semitone != 0))
 </script>
 
 <div class="absolute bottom-0 flex items-center gap-x-2">
-    {#if ['fx', 'eq', 'snip', 'speed', 'seek'].includes(tab)}
+    {#if ['fx|eq', 'snip', 'speed', 'seek'].includes(tab)}
         {#if !showDelete}
             <Button
                 variant="outline"
                 size="sm"
-                class="h-6 rounded-[2px] border-none bg-amber-500 px-2 py-0 pb-[0.125rem] text-sm font-semibold text-[#fafafa] hover:bg-amber-600 hover:text-[#fafafa]"
+                class="h-5 rounded-[2px] border-none bg-amber-500 px-2 py-0 pb-[0.125rem] text-sm font-semibold text-[#fafafa] hover:bg-amber-600 hover:text-[#fafafa]"
                 onclick={handleReset}
             >
                 reset
@@ -181,7 +179,7 @@
             <Button
                 variant="outline"
                 size="sm"
-                class="h-6 rounded-[2px] border-none bg-red-500 px-2 py-0 pb-[0.125rem] text-sm font-semibold text-[#fafafa] hover:bg-red-600 hover:text-[#fafafa]"
+                class="h-5 rounded-[2px] border-none bg-red-500 px-2 py-0 pb-[0.125rem] text-sm font-semibold text-[#fafafa] hover:bg-red-600 hover:text-[#fafafa]"
                 onclick={handleDelete}
             >
                 delete
@@ -193,7 +191,7 @@
                 variant="outline"
                 size="sm"
                 onclick={handleSave}
-                class="h-6 rounded-[2px] border-none bg-green-700 px-2 py-0 pb-[0.125rem] text-sm font-semibold text-[#fafafa] hover:bg-green-800 hover:text-[#fafafa]"
+                class="h-5 rounded-[2px] border-none bg-green-700 px-2 py-0 pb-[0.125rem] text-sm font-semibold text-[#fafafa] hover:bg-green-800 hover:text-[#fafafa]"
             >
                 save
             </Button>
