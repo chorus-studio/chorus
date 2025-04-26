@@ -1,5 +1,8 @@
 import { writable, get } from 'svelte/store'
 import { storage } from '@wxt-dev/storage'
+import { syncWithType } from '$lib/utils/store-utils'
+
+const VOLUME_STORE_KEY = 'local:chorus_volume'
 
 export type VolumeType = 'linear' | 'logarithmic'
 export type VolumeState = {
@@ -25,6 +28,7 @@ const defaultVolumeState: VolumeState = {
 function createVolumeStore() {
     const store = writable(defaultVolumeState)
     const { subscribe, set, update } = store
+    let isUpdatingStorage = false
 
     function mute() {
         update((prev) => ({ ...prev, muted: true }))
@@ -45,27 +49,70 @@ function createVolumeStore() {
 
     async function updateDefaultVolume(state: Partial<VolumeState>) {
         update((prev) => ({ ...prev, default_volume: { ...prev.default_volume, ...state } }))
-        await storage.setItem<VolumeState>('local:chorus_volume', get(store))
+        const newState = get(store)
+        isUpdatingStorage = true
+        try {
+            await storage.setItem<VolumeState>(VOLUME_STORE_KEY, newState)
+        } catch (error) {
+            console.error('Error updating default volume in storage:', error)
+        } finally {
+            isUpdatingStorage = false
+        }
     }
 
     async function updateVolume(state: Partial<VolumeState>) {
         update((prev) => ({ ...prev, ...state }))
-        await storage.setItem<VolumeState>('local:chorus_volume', get(store))
+        const newState = get(store)
+        isUpdatingStorage = true
+        try {
+            await storage.setItem<VolumeState>(VOLUME_STORE_KEY, newState)
+        } catch (error) {
+            console.error('Error updating volume in storage:', error)
+        } finally {
+            isUpdatingStorage = false
+        }
         dispatchVolumeEvent()
     }
 
     async function resetVolume() {
         update((prev) => ({ ...prev, value: prev.default_volume[prev.type] }))
-        await storage.setItem<VolumeState>('local:chorus_volume', get(store))
+        const newState = get(store)
+        isUpdatingStorage = true
+        try {
+            await storage.setItem<VolumeState>(VOLUME_STORE_KEY, newState)
+        } catch (error) {
+            console.error('Error resetting volume in storage:', error)
+        } finally {
+            isUpdatingStorage = false
+        }
         dispatchVolumeEvent()
     }
 
-    storage.getItem<VolumeState>('local:chorus_volume').then((volume) => {
-        if (volume) set(volume)
+    storage.getItem<VolumeState>(VOLUME_STORE_KEY).then((volume) => {
+        if (!volume) return
+
+        // Sync the stored volume with the current type definition
+        const syncedVolume = syncWithType(volume, defaultVolumeState)
+        set(syncedVolume)
+
+        // Update storage with synced volume
+        isUpdatingStorage = true
+        storage
+            .setItem<VolumeState>(VOLUME_STORE_KEY, syncedVolume)
+            .then(() => {
+                isUpdatingStorage = false
+            })
+            .catch((error) => {
+                console.error('Error updating storage:', error)
+                isUpdatingStorage = false
+            })
     })
 
-    storage.watch<VolumeState>('local:chorus_volume', (volume) => {
-        if (volume) set(volume)
+    storage.watch<VolumeState>(VOLUME_STORE_KEY, (volume) => {
+        if (!volume || isUpdatingStorage) return
+
+        const syncedVolume = syncWithType(volume, defaultVolumeState)
+        set(syncedVolume)
     })
 
     return {

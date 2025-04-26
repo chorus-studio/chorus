@@ -1,5 +1,6 @@
 import { get, writable } from 'svelte/store'
 import { storage } from '@wxt-dev/storage'
+import { syncWithType } from '$lib/utils/store-utils'
 
 export type Playback = {
     rate: number
@@ -23,7 +24,7 @@ type PlaybackSettings = {
 
 export const defaultPlayback: Playback = { rate: 1, pitch: 1, semitone: 0 }
 
-const STORAGE_KEY = 'local:chorus_playback'
+const PLAYBACK_STORE_KEY = 'local:chorus_playback'
 
 const defaultPlaybackSettings: PlaybackSettings = {
     is_default: true,
@@ -57,6 +58,7 @@ const defaultPlaybackSettings: PlaybackSettings = {
 function createPlaybackStore() {
     const store = writable<PlaybackSettings>(defaultPlaybackSettings)
     const { subscribe, set, update } = store
+    let isUpdatingStorage = false
 
     function dispatchPlaybackSettings(playback?: Playback) {
         const state = get(store)
@@ -67,13 +69,27 @@ function createPlaybackStore() {
     async function updatePlayback(playback: Partial<PlaybackSettings>) {
         update((state) => ({ ...state, ...playback }))
         const newState = get(store)
-        await storage.setItem<PlaybackSettings>(STORAGE_KEY, newState)
+        isUpdatingStorage = true
+        try {
+            await storage.setItem<PlaybackSettings>(PLAYBACK_STORE_KEY, newState)
+        } catch (error) {
+            console.error('Error updating playback in storage:', error)
+        } finally {
+            isUpdatingStorage = false
+        }
         dispatchPlaybackSettings()
     }
 
     async function reset() {
         set(defaultPlaybackSettings)
-        await storage.setItem<PlaybackSettings>(STORAGE_KEY, defaultPlaybackSettings)
+        isUpdatingStorage = true
+        try {
+            await storage.setItem<PlaybackSettings>(PLAYBACK_STORE_KEY, defaultPlaybackSettings)
+        } catch (error) {
+            console.error('Error resetting playback in storage:', error)
+        } finally {
+            isUpdatingStorage = false
+        }
         dispatchPlaybackSettings()
     }
 
@@ -102,7 +118,14 @@ function createPlaybackStore() {
             return { ...state, frequents: { ...state.frequents, [key]: frequents } }
         })
         const newState = get(store)
-        await storage.setItem<PlaybackSettings>(STORAGE_KEY, newState)
+        isUpdatingStorage = true
+        try {
+            await storage.setItem<PlaybackSettings>(PLAYBACK_STORE_KEY, newState)
+        } catch (error) {
+            console.error('Error adding frequent value in storage:', error)
+        } finally {
+            isUpdatingStorage = false
+        }
     }
 
     async function togglePin(key: keyof Playback, value: number) {
@@ -115,19 +138,45 @@ function createPlaybackStore() {
             return { ...state, frequents: { ...state.frequents, [key]: frequents } }
         })
         const newState = get(store)
-        await storage.setItem<PlaybackSettings>(STORAGE_KEY, newState)
+        isUpdatingStorage = true
+        try {
+            await storage.setItem<PlaybackSettings>(PLAYBACK_STORE_KEY, newState)
+        } catch (error) {
+            console.error('Error toggling pin in storage:', error)
+        } finally {
+            isUpdatingStorage = false
+        }
     }
 
     storage
-        .getItem<PlaybackSettings>(STORAGE_KEY, {
+        .getItem<PlaybackSettings>(PLAYBACK_STORE_KEY, {
             fallback: defaultPlaybackSettings
         })
         .then((newValues) => {
-            if (newValues) set(newValues)
+            if (!newValues) return
+
+            // Sync the stored playback settings with the current type definition
+            const syncedValues = syncWithType(newValues, defaultPlaybackSettings)
+            set(syncedValues)
+
+            // Update storage with synced values
+            isUpdatingStorage = true
+            storage
+                .setItem<PlaybackSettings>(PLAYBACK_STORE_KEY, syncedValues)
+                .then(() => {
+                    isUpdatingStorage = false
+                })
+                .catch((error) => {
+                    console.error('Error updating storage:', error)
+                    isUpdatingStorage = false
+                })
         })
 
-    storage.watch(STORAGE_KEY, (newValues) => {
-        if (newValues) store.set(newValues as PlaybackSettings)
+    storage.watch<PlaybackSettings>(PLAYBACK_STORE_KEY, (newValues) => {
+        if (!newValues || isUpdatingStorage) return
+
+        const syncedValues = syncWithType(newValues, defaultPlaybackSettings)
+        set(syncedValues)
     })
 
     return {

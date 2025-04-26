@@ -1,5 +1,8 @@
 import { storage } from '@wxt-dev/storage'
 import { writable, get } from 'svelte/store'
+import { syncWithType } from '$lib/utils/store-utils'
+
+const MEDIA_STORE_KEY = 'local:chorus_media'
 
 export type Media = {
     active: boolean
@@ -22,6 +25,7 @@ const defaultMedia: Media = {
 function createMediaStore() {
     const store = writable<Media>(defaultMedia)
     const { subscribe, set, update } = store
+    let isUpdatingStorage = false
 
     let observer: MutationObserver | null = null
 
@@ -93,20 +97,53 @@ function createMediaStore() {
                 updateStateByKeys({ key: targetMap[key as keyof typeof targetMap], target })
             }
         }
-        await storage.setItem('local:chorus_media', get(store))
+        isUpdatingStorage = true
+        try {
+            await storage.setItem(MEDIA_STORE_KEY, get(store))
+        } catch (error) {
+            console.error('Error updating media state in storage:', error)
+        } finally {
+            isUpdatingStorage = false
+        }
     }
 
     async function setActive(active: boolean) {
         update((state) => ({ ...state, active }))
-        await storage.setItem('local:chorus_media', get(store))
+        isUpdatingStorage = true
+        try {
+            await storage.setItem(MEDIA_STORE_KEY, get(store))
+        } catch (error) {
+            console.error('Error setting active state in storage:', error)
+        } finally {
+            isUpdatingStorage = false
+        }
     }
 
-    storage.getItem<Media>('local:chorus_media', { fallback: defaultMedia }).then((value) => {
-        if (value) set(value)
+    storage.getItem<Media>(MEDIA_STORE_KEY, { fallback: defaultMedia }).then((value) => {
+        if (!value) return
+
+        // Sync the stored media with the current type definition
+        const syncedValue = syncWithType(value, defaultMedia)
+        set(syncedValue)
+
+        // Update storage with synced value
+        isUpdatingStorage = true
+        storage
+            .setItem<Media>(MEDIA_STORE_KEY, syncedValue)
+            .then(() => {
+                isUpdatingStorage = false
+            })
+            .catch((error) => {
+                console.error('Error updating storage:', error)
+                isUpdatingStorage = false
+            })
     })
 
-    storage.watch<Media>('local:chorus_media', (value) => {
-        if (value) set(value)
+    storage.watch<Media>(MEDIA_STORE_KEY, (value) => {
+        if (!value || isUpdatingStorage) return
+
+        const syncedValue = syncWithType(value, defaultMedia)
+        set(syncedValue)
     })
 
     function disconnect() {

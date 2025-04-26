@@ -1,5 +1,8 @@
 import { writable, get } from 'svelte/store'
 import { storage } from '@wxt-dev/storage'
+import { syncWithType } from '$lib/utils/store-utils'
+
+export const SETTINGS_STORE_KEY = 'local:chorus_settings'
 
 export type ThemeName = 'none' | 'dynamic' | 'static'
 export type ThemeMode = 'light' | 'dark'
@@ -21,11 +24,10 @@ export type SettingsState = {
         progress: boolean
     }
     views: {
-        fx: boolean
-        eq: boolean
         snip: boolean
         seek: boolean
         speed: boolean
+        'fx|eq': boolean
     }
     notifications: {
         granted: boolean
@@ -48,11 +50,10 @@ const defaultSettingsState: SettingsState = {
         playlist: false
     },
     views: {
-        fx: true,
-        eq: true,
         speed: true,
         snip: true,
-        seek: true
+        seek: true,
+        'fx|eq': true
     },
     notifications: {
         granted: false,
@@ -70,9 +71,21 @@ function createSettingsStore() {
     const store = writable<SettingsState>(defaultSettingsState)
     const { subscribe, update, set } = store
 
+    // Flag to prevent infinite loops when updating storage
+    let isUpdatingStorage = false
+
     async function updateSettings(settings: Partial<SettingsState>) {
         update((prev) => ({ ...prev, ...settings }))
-        await storage.setItem<SettingsState>('local:chorus_settings', get(store))
+
+        const currentState = get(store)
+        isUpdatingStorage = true
+        try {
+            await storage.setItem<SettingsState>(SETTINGS_STORE_KEY, currentState)
+        } catch (error) {
+            console.error('Error updating settings storage:', error)
+        } finally {
+            isUpdatingStorage = false
+        }
     }
 
     async function rescindSupport() {
@@ -83,12 +96,31 @@ function createSettingsStore() {
         })
     }
 
-    storage.getItem<SettingsState>('local:chorus_settings').then((settings) => {
-        if (settings) set(settings)
+    storage.getItem<SettingsState>(SETTINGS_STORE_KEY).then((settings) => {
+        if (!settings) return
+
+        // Sync the stored settings with the current type definition
+        const syncedSettings = syncWithType(settings, defaultSettingsState)
+        set(syncedSettings)
+
+        // Update storage with synced settings
+        isUpdatingStorage = true
+        storage
+            .setItem<SettingsState>(SETTINGS_STORE_KEY, syncedSettings)
+            .then(() => {
+                isUpdatingStorage = false
+            })
+            .catch((error) => {
+                console.error('Error updating storage:', error)
+                isUpdatingStorage = false
+            })
     })
 
-    storage.watch<SettingsState>('local:chorus_settings', (settings) => {
-        if (settings) set(settings)
+    storage.watch<SettingsState>(SETTINGS_STORE_KEY, (settings) => {
+        if (!settings || isUpdatingStorage) return
+
+        const syncedSettings = syncWithType(settings, defaultSettingsState)
+        set(syncedSettings)
     })
 
     return {

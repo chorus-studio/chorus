@@ -17,6 +17,13 @@ export default defineBackground(() => {
         if (hasOptedIn) await mellowtel.start()
     })()
 
+    const STORE_KEYS = {
+        NOW_PLAYING: 'local:chorus_now_playing' as const,
+        DEVICE_ID: 'local:chorus_device_id' as const,
+        CONNECTION_ID: 'local:chorus_connection_id' as const,
+        AUTH_TOKEN: 'local:chorus_auth_token' as const
+    }
+
     browser.runtime.onConnect.addListener(async (port) => {
         if (port.name !== 'popup') return
 
@@ -74,11 +81,11 @@ export default defineBackground(() => {
 
                 storage.setItems([
                     {
-                        key: 'local:chorus_device_id',
+                        key: STORE_KEYS.DEVICE_ID,
                         value: data.device.device_id
                     },
                     {
-                        key: 'local:chorus_connection_id',
+                        key: STORE_KEYS.CONNECTION_ID,
                         value: data.connection_id
                     }
                 ])
@@ -105,12 +112,12 @@ export default defineBackground(() => {
                 const trackDetails = getTrackId(details.url)
                 if (!trackDetails) return
 
-                storage.getItem('local:chorus_now_playing').then((nowPlaying) => {
+                storage.getItem(STORE_KEYS.NOW_PLAYING).then((nowPlaying) => {
                     if (!nowPlaying) return
 
                     const currentState = nowPlaying as NowPlaying
                     currentState.track_id = trackDetails
-                    storage.setItem('local:chorus_now_playing', currentState)
+                    storage.setItem(STORE_KEYS.NOW_PLAYING, currentState)
                 })
             }
 
@@ -119,7 +126,7 @@ export default defineBackground(() => {
             )
             if (!authHeader) return
 
-            storage.setItem('local:chorus_auth_token', authHeader?.value ?? '')
+            storage.setItem(STORE_KEYS.AUTH_TOKEN, authHeader?.value ?? '')
         },
         {
             urls: [
@@ -136,10 +143,10 @@ export default defineBackground(() => {
             const isSupporter = await mellowtel.getOptInStatus()
             if (!isSupporter) return
 
-            const settings = await storage.getItem<SettingsState>('local:chorus_settings')
+            const settings = await storage.getItem<SettingsState>(SETTINGS_STORE_KEY)
             if (!settings?.notifications?.enabled) return
 
-            const nowPlaying = await storage.getItem<NowPlaying>('local:chorus_now_playing')
+            const nowPlaying = await storage.getItem<NowPlaying>(STORE_KEYS.NOW_PLAYING)
             if (nowPlaying) await showNotification(nowPlaying)
             return
         }

@@ -1,11 +1,14 @@
 import { get, writable } from 'svelte/store'
 import { storage } from '@wxt-dev/storage'
+import { syncWithType } from '$lib/utils/store-utils'
 
 import { dataStore } from '$lib/stores/data'
 import { playback } from '$lib/utils/playback'
 import { currentSongInfo } from '$lib/utils/song'
 import { trackObserver } from '$lib/observers/track'
 import type { SimpleTrack } from '$lib/stores/data/cache'
+
+export const NOW_PLAYING_STORE_KEY = 'local:chorus_now_playing'
 
 export type NowPlaying = SimpleTrack & {
     current: number
@@ -41,6 +44,7 @@ const defaultNowPlaying: NowPlaying = {
 function createNowPlayingStore() {
     let observer: MutationObserver | null = null
     let currentSongId: string | null = null
+    let isUpdatingStorage = false
 
     const store = writable<NowPlaying>(defaultNowPlaying)
     const { subscribe, set, update } = store
@@ -117,9 +121,17 @@ function createNowPlayingStore() {
             dataState = dataStore.collectionObject[newState.track_id] ?? {}
         }
 
-        update(() => ({ ...newState, ...dataState }))
+        const updatedState = { ...newState, ...dataState }
+        update(() => updatedState)
 
-        await storage.setItem<NowPlaying>('local:chorus_now_playing', newState)
+        isUpdatingStorage = true
+        try {
+            await storage.setItem<NowPlaying>(NOW_PLAYING_STORE_KEY, updatedState)
+        } catch (error) {
+            console.error('Error updating now playing storage:', error)
+        } finally {
+            isUpdatingStorage = false
+        }
     }
 
     function setCurrentTime(time: number) {
@@ -129,8 +141,14 @@ function createNowPlayingStore() {
     async function setLiked(liked: boolean) {
         update((state) => ({ ...state, liked }))
         const newState = get(store)
-
-        await storage.setItem<NowPlaying>('local:chorus_now_playing', newState)
+        isUpdatingStorage = true
+        try {
+            await storage.setItem<NowPlaying>(NOW_PLAYING_STORE_KEY, newState)
+        } catch (error) {
+            console.error('Error updating liked state in storage:', error)
+        } finally {
+            isUpdatingStorage = false
+        }
     }
 
     async function observe() {
@@ -145,7 +163,15 @@ function createNowPlayingStore() {
 
     async function updateState(state: Partial<NowPlaying>) {
         update((prevState) => ({ ...prevState, ...state }))
-        await storage.setItem<NowPlaying>('local:chorus_now_playing', get(store))
+        const newState = get(store)
+        isUpdatingStorage = true
+        try {
+            await storage.setItem<NowPlaying>(NOW_PLAYING_STORE_KEY, newState)
+        } catch (error) {
+            console.error('Error updating now playing state in storage:', error)
+        } finally {
+            isUpdatingStorage = false
+        }
     }
 
     function disconnect() {
@@ -155,13 +181,32 @@ function createNowPlayingStore() {
     }
 
     storage
-        .getItem<NowPlaying>('local:chorus_now_playing', { fallback: defaultNowPlaying })
+        .getItem<NowPlaying>(NOW_PLAYING_STORE_KEY, { fallback: defaultNowPlaying })
         .then((savedState) => {
-            if (savedState) store.set(savedState)
+            if (!savedState) return
+
+            // Sync the stored state with the current type definition
+            const syncedState = syncWithType(savedState, defaultNowPlaying)
+            set(syncedState)
+
+            // Update storage with synced state
+            isUpdatingStorage = true
+            storage
+                .setItem<NowPlaying>(NOW_PLAYING_STORE_KEY, syncedState)
+                .then(() => {
+                    isUpdatingStorage = false
+                })
+                .catch((error) => {
+                    console.error('Error updating storage:', error)
+                    isUpdatingStorage = false
+                })
         })
 
-    storage.watch('local:chorus_now_playing', (newValues) => {
-        if (newValues) store.set(newValues as NowPlaying)
+    storage.watch<NowPlaying>(NOW_PLAYING_STORE_KEY, (newValues) => {
+        if (!newValues || isUpdatingStorage) return
+
+        const syncedState = syncWithType(newValues, defaultNowPlaying)
+        set(syncedState)
     })
 
     return {
