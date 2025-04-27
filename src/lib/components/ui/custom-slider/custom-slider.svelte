@@ -37,8 +37,8 @@
                     ((Math.max(currentValue[0], currentValue[1]) - min) / range) * 100
                 sliderElement.style.setProperty('--start', `${startPercent}%`)
                 sliderElement.style.setProperty('--stop', `${stopPercent}%`)
-                leftInput.value = currentValue[0].toString()
-                rightInput.value = currentValue[1].toString()
+                leftInput.value = Math.min(currentValue[0], currentValue[1]).toString()
+                rightInput.value = Math.max(currentValue[0], currentValue[1]).toString()
             }
         }
     })
@@ -50,7 +50,19 @@
         let next
         if (type === 'multiple') {
             next = [...(value as number[])]
-            next[index] = newValue
+
+            // Prevent crossing by constraining the values
+            if (index === 0) {
+                // Left thumb - cannot go beyond right thumb
+                next[0] = Math.min(newValue, next[1])
+                // Update the input value to reflect the constraint
+                target.value = next[0].toString()
+            } else {
+                // Right thumb - cannot go below left thumb
+                next[1] = Math.max(newValue, next[0])
+                // Update the input value to reflect the constraint
+                target.value = next[1].toString()
+            }
         }
         onValueChange(next ?? newValue)
 
@@ -134,6 +146,7 @@
         );
     }
 
+    /* Default state - no box-shadow */
     .slider ::-moz-range-thumb {
         cursor: pointer;
         pointer-events: auto;
@@ -141,12 +154,26 @@
         height: 10px;
         border-radius: 50%;
         background: white;
-        box-shadow: 0 0 0 4px #22c55e;
         -webkit-appearance: none;
         appearance: none;
-        margin-top: -2px;
+        margin-top: -1px;
+        box-shadow: none;
+        transition: box-shadow 0.2s ease;
     }
 
+    /* Hover state */
+    .slider ::-moz-range-thumb:hover {
+        box-shadow: 0 0 0 3px #22c55e;
+    }
+
+    /* Active/focus state */
+    .slider ::-moz-range-thumb:active,
+    .slider ::-moz-range-thumb:focus {
+        box-shadow: 0 0 0 3px #22c55e;
+        outline: none;
+    }
+
+    /* Default state - no box-shadow */
     .slider ::-webkit-slider-thumb {
         cursor: pointer;
         pointer-events: auto;
@@ -154,9 +181,22 @@
         height: 10px;
         border-radius: 50%;
         background: white;
-        box-shadow: 0 0 0 4px #22c55e;
         -webkit-appearance: none;
         appearance: none;
-        margin-top: -2px;
+        margin-top: -1px;
+        box-shadow: none;
+        transition: box-shadow 0.2s ease;
+    }
+
+    /* Hover state */
+    .slider ::-webkit-slider-thumb:hover {
+        box-shadow: 0 0 0 3px #22c55e;
+    }
+
+    /* Active/focus state */
+    .slider ::-webkit-slider-thumb:active,
+    .slider ::-webkit-slider-thumb:focus {
+        box-shadow: 0 0 0 3px #22c55e;
+        outline: none;
     }
 </style>
