@@ -5,18 +5,46 @@
     import { secondsToTime } from '$lib/utils/time'
     import { CustomSlider } from '$lib/components/ui/custom-slider'
 
+    // Debounce timer for setCurrentTime calls
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null
+
+    // Debounced function to update the current time
+    function debouncedSetCurrentTime(time: number) {
+        nowPlaying.setCurrentTime(time)
+    }
+
+    // Helper function to update a specific time value
+    function updateTimeValue({
+        value,
+        last_updated
+    }: {
+        value: number
+        last_updated: 'start' | 'end'
+    }) {
+        const key = last_updated === 'start' ? 'start_time' : 'end_time'
+        const currentValue = $snipStore![key]
+        if (value == currentValue) return
+
+        snipStore.set({ ...$snipStore!, [key]: value, last_updated: last_updated })
+
+        // Debounce the setCurrentTime call
+        if (debounceTimer) clearTimeout(debounceTimer)
+
+        debounceTimer = setTimeout(() => {
+            debouncedSetCurrentTime(value)
+            debounceTimer = null
+        }, 150)
+    }
+
     function handleValueChange(value: number[]) {
         const [start_time, end_time] = value
         if (!$snipStore) return
 
-        if (start_time !== $snipStore.start_time) {
-            snipStore.set({ ...$snipStore, start_time, last_updated: 'start' })
-            nowPlaying.setCurrentTime(start_time)
-        }
-        if (end_time !== $snipStore.end_time) {
-            snipStore.set({ ...$snipStore, end_time, last_updated: 'end' })
-            nowPlaying.setCurrentTime(end_time)
-        }
+        // Update start time if changed
+        updateTimeValue({ value: start_time, last_updated: 'start' })
+
+        // Update end time if changed
+        updateTimeValue({ value: end_time, last_updated: 'end' })
     }
 </script>
 
