@@ -21,7 +21,7 @@ class MellowtelUtils {
 
     async initContentScript() {
         return await this.mellowtel.initContentScript({
-            pascoliFilePath: 'vendor.html',
+            pascoliFilePath: 'pascoli.html',
             meucciFilePath: 'meucci.js'
         })
     }

@@ -51,7 +51,7 @@ export default defineConfig({
                 matches: ['*://open.spotify.com/*']
             },
             {
-                resources: ['vendor.html', 'meucci.js'],
+                resources: ['pascoli.html', 'meucci.js'],
                 matches: ['<all_urls>']
             }
         ],
