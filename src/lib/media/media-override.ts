@@ -57,21 +57,19 @@ export default class MediaOverride {
         })
     }
 
-    // Handler for playbackRate property
     private handlePlaybackRateSetting(this: HTMLMediaElement, value: any) {
-        // Check if the value is coming from our code
+        // Check if the value is coming from chorus
         if (value?.source === 'chorus') return value.value
 
-        // If not from our code, return the current value to prevent changes
+        // from spotify
         return this.playbackRate
     }
 
-    // Handler for preservesPitch property
     private handlePreservesPitchSetting(this: HTMLMediaElement, value: any) {
-        // Check if the value is coming from our code
+        // Check if the value is coming from chorus
         if (value?.source === 'chorus') return value.value
 
-        // If not from our code, return the current value to prevent changes
+        // from spotify
         return this.preservesPitch
     }
 
@@ -96,10 +94,8 @@ export default class MediaOverride {
         const scaledValue = data.value / 100
 
         if (this.audioManager) {
-            // Use the audio manager to set gain
             this.audioManager.setGain(data.muted ? 0 : scaledValue, data.type)
         } else {
-            // Fallback to direct volume control
             this.source.volume = data.muted ? 0 : Math.min(1, scaledValue)
         }
     }
@@ -112,8 +108,7 @@ export default class MediaOverride {
         if (!this.audioManager) return
 
         try {
-            await this.audioManager.ensureAudioChainReady()
-            this.audioManager.applySoundTouch(data)
+            await this.audioManager.applySoundTouch(data)
         } catch (error) {
             console.error('Error updating sound touch:', error)
         }
@@ -123,12 +118,8 @@ export default class MediaOverride {
         if (!this.audioManager || !this.equalizer || !this.reverb) return
 
         try {
-            await this.audioManager.ensureAudioChainReady()
-            this.audioManager.disconnect()
-
             if (effect.clear) return
 
-            // Apply effects if specified
             if (effect?.equalizer && effect.equalizer !== 'none') {
                 this.equalizer.setEQEffect(effect.equalizer)
             }
@@ -138,7 +129,6 @@ export default class MediaOverride {
             }
         } catch (error) {
             console.error('Error updating audio effects:', error)
-            // On error, ensure audio still works by connecting directly
             this.audioManager.disconnect()
         }
     }
