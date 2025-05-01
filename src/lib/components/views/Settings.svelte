@@ -4,10 +4,11 @@
     import { playbackObserver } from '$lib/observers/playback'
     import { settingsStore, type SettingsState, type SettingsKey } from '$lib/stores/settings'
 
-    import { Label } from '$lib/components/ui/label'
-    import { Switch } from '$lib/components/ui/switch'
+    import { Badge } from '$lib/components/ui/badge'
     import { Separator } from '$lib/components/ui/separator'
     import SettingsSwitch from '$lib/components/SettingsSwitch.svelte'
+
+    let settingsView = $state('general')
 
     async function toggleSettings({
         type,
@@ -31,7 +32,13 @@
     function setUILabel(key: keyof SettingsState[SettingsKey]) {
         if (key in $settingsStore.views) return `show ${key} tab`
         if (key == 'playlist') return 'add to playlist'
+        if (key == 'playback') return 'prioritize playback'
         return `v2 ${key} `
+    }
+
+    function toggleView(event: MouseEvent) {
+        const target = event.target as HTMLButtonElement
+        settingsView = target.id
     }
 
     const checkOptInStatus = async () => await supporterStore.sync()
@@ -40,24 +47,53 @@
 </script>
 
 <div class="flex h-full w-full flex-col items-center space-y-2">
-    <h2 class="text-left text-base font-semibold">Note: only available for supporters</h2>
-    <div class="flex w-full justify-between">
-        <SettingsSwitch
-            list={Object.keys($settingsStore.ui)}
-            title="ui"
-            type="ui"
-            setLabel={setUILabel}
-            handleCheckedChange={toggleSettings}
-        />
+    {#if $supporterStore.isSupporter}
+        <div class="flex w-full justify-end gap-x-2">
+            <Badge
+                id="general"
+                onclick={toggleView}
+                variant="default"
+                class="h-5 rounded-[2px] px-1 text-sm">general</Badge
+            >
+            <Badge
+                id="supporter"
+                onclick={toggleView}
+                variant="default"
+                class="h-5 rounded-[2px] px-1 text-sm">supporter</Badge
+            >
+        </div>
+    {/if}
 
-        <Separator orientation="vertical" class="mx-2 w-0.5 space-x-2" />
+    {#if settingsView === 'general'}
+        <div class="!mt-4 flex w-full justify-between gap-x-2">
+            <SettingsSwitch
+                list={Object.keys($settingsStore.base)}
+                title="base"
+                type="base"
+                className="mr-0"
+                setLabel={setUILabel}
+                handleCheckedChange={toggleSettings}
+            />
 
-        <SettingsSwitch
-            list={Object.keys($settingsStore.views)}
-            title="views"
-            type="views"
-            setLabel={setUILabel}
-            handleCheckedChange={toggleSettings}
-        />
-    </div>
+            <SettingsSwitch
+                list={Object.keys($settingsStore.views)}
+                title="views"
+                type="views"
+                className="mr-0"
+                setLabel={setUILabel}
+                handleCheckedChange={toggleSettings}
+            />
+        </div>
+    {:else}
+        <div class="flex w-full justify-between">
+            <SettingsSwitch
+                title="ui"
+                type="ui"
+                className="w-full"
+                setLabel={setUILabel}
+                handleCheckedChange={toggleSettings}
+                list={Object.keys($settingsStore.ui)}
+            />
+        </div>
+    {/if}
 </div>

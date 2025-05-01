@@ -8,12 +8,14 @@
         list,
         title,
         type,
+        className,
         setLabel,
         handleCheckedChange
     }: {
         list: string[]
         title: string
         type: SettingsKey
+        className?: string
         setLabel: (key: keyof SettingsState[SettingsKey]) => string
         handleCheckedChange: ({
             type,
@@ -25,10 +27,10 @@
     } = $props()
 </script>
 
-<div class="mr-2 flex w-1/2 flex-col gap-y-2">
+<div class="mr-2 flex w-1/2 flex-col gap-y-2 {className}">
     <h2 class="text-base font-semibold">{title}</h2>
     {#each list as key}
-        <div class="flex items-center gap-2.5">
+        <div class="flex items-center gap-2">
             <Switch
                 disabled={!$supporterStore.isSupporter}
                 checked={$supporterStore.isSupporter &&
