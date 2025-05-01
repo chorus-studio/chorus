@@ -2,13 +2,13 @@
     import { onMount } from 'svelte'
     import { supporterStore } from '$lib/stores/supporter'
     import { playbackObserver } from '$lib/observers/playback'
-    import { settingsStore, type SettingsState, type SettingsKey } from '$lib/stores/settings'
+    import { settingsStore } from '$lib/stores/settings'
+    import type { SettingsState, SettingsKey, SettingsType } from '$lib/stores/settings'
 
     import { Badge } from '$lib/components/ui/badge'
-    import { Separator } from '$lib/components/ui/separator'
     import SettingsSwitch from '$lib/components/SettingsSwitch.svelte'
 
-    let settingsView = $state('general')
+    let pipSupported = $state(false)
 
     async function toggleSettings({
         type,
@@ -36,14 +36,28 @@
         return `v2 ${key} `
     }
 
-    function toggleView(event: MouseEvent) {
+    async function toggleView(event: MouseEvent) {
         const target = event.target as HTMLButtonElement
-        settingsView = target.id
+        await settingsStore.updateSettings({ type: target.id as SettingsType })
     }
 
-    const checkOptInStatus = async () => await supporterStore.sync()
+    const checkOptInStatus = async () => {
+        await supporterStore.sync()
+        if (!$supporterStore?.isSupporter && $settingsStore.type === 'supporter') {
+            await settingsStore.updateSettings({ type: 'general' })
+        }
+    }
 
-    onMount(() => checkOptInStatus())
+    function checkIfPipSupported() {
+        if (typeof window !== 'undefined' && 'pictureInPictureEnabled' in document) {
+            pipSupported = document.pictureInPictureEnabled
+        }
+    }
+
+    onMount(() => {
+        checkIfPipSupported()
+        checkOptInStatus()
+    })
 </script>
 
 <div class="flex h-full w-full flex-col items-center space-y-2">
@@ -64,7 +78,7 @@
         </div>
     {/if}
 
-    {#if settingsView === 'general'}
+    {#if $settingsStore.type === 'general'}
         <div class="!mt-4 flex w-full justify-between gap-x-2">
             <SettingsSwitch
                 list={Object.keys($settingsStore.base)}
@@ -92,7 +106,9 @@
                 className="w-full"
                 setLabel={setUILabel}
                 handleCheckedChange={toggleSettings}
-                list={Object.keys($settingsStore.ui)}
+                list={Object.keys($settingsStore.ui).filter((key) =>
+                    key == 'pip' ? pipSupported : true
+                )}
             />
         </div>
     {/if}
