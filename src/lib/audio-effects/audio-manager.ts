@@ -5,7 +5,7 @@ export default class AudioManager {
     private _gainNode?: GainNode
     private _soundTouchNode?: AudioNode
     private _audioContext?: AudioContext
-    private _soundTouchManager?: SoundTouch
+    private _soundTouchManager?: SoundTouch | null
     private _destination?: AudioDestinationNode
 
     private _setupPromise?: Promise<void>
@@ -21,12 +21,6 @@ export default class AudioManager {
     constructor(element: HTMLVideoElement | HTMLAudioElement) {
         this._element = element
         this._setupPromise = this.initialize()
-    }
-
-    private async loadSoundTouch() {
-        this._soundTouchManager = new SoundTouch(this.audioContext!)
-        await this._soundTouchManager.loadModule()
-        this._soundTouchNode = this._soundTouchManager.soundtouchNode
     }
 
     private async initialize(): Promise<void> {
@@ -135,15 +129,12 @@ export default class AudioManager {
                 this._gainNode.channelCountMode = 'clamped-max'
             }
 
-            if (!this._soundTouchNode) await this.loadSoundTouch()
-
             this._destination = this._audioContext.destination
 
             // Set up default audio chain with gain node
-            if (this._source && this._gainNode && this._soundTouchNode && this._destination) {
+            if (this._source && this._gainNode && this._destination) {
                 this._source.connect(this._gainNode)
-                this._gainNode.connect(this._soundTouchNode)
-                this._soundTouchNode.connect(this._destination)
+                this._gainNode.connect(this._destination)
 
                 this.setGain(this._currentVolume, this._volumeType)
             } else {
@@ -231,7 +222,7 @@ export default class AudioManager {
     }
 
     get isConnectable() {
-        return this.source && this.destination && this._gainNode && this._soundTouchNode
+        return this.source && this.destination && this._gainNode
     }
 
     connectReverb({
@@ -243,51 +234,58 @@ export default class AudioManager {
     }) {
         if (!this.isConnectable) return
 
-        // Disconnect soundTouchNode from destination
-        this._soundTouchNode!.disconnect()
-        this._gainNode!.disconnect()
+        this.disconnect()
 
-        // Connect gain node to reverb chain
+        this.source?.connect(this._gainNode!)
         this._gainNode!.connect(reverbGainNode)
         reverbGainNode.connect(reverbWorkletNode)
-
-        // Connect reverb to soundTouchNode and soundTouchNode to destination
-        reverbWorkletNode.connect(this._soundTouchNode!)
-        this._soundTouchNode!.connect(this.destination!)
+        reverbWorkletNode.connect(this.destination!)
     }
 
     connectEqualizer(equalizerNode: AudioNode) {
         if (!this.isConnectable) return
 
-        // Disconnect soundTouchNode from destination
-        this._soundTouchNode!.disconnect()
-        this._gainNode!.disconnect()
+        this.disconnect()
 
-        // Connect gain node to equalizer
+        this.source?.connect(this._gainNode!)
         this._gainNode!.connect(equalizerNode)
-
-        // Connect equalizer to soundTouchNode and soundTouchNode to destination
-        equalizerNode.connect(this._soundTouchNode!)
-        this._soundTouchNode!.connect(this.destination!)
+        equalizerNode.connect(this.destination!)
     }
 
     disconnect() {
         if (!this.isConnectable) return
 
-        // Disconnect soundTouchNode from destination
-        this._soundTouchNode!.disconnect()
+        const currentGain = this._gainNode!.gain.value
+
+        this._source!.disconnect()
         this._gainNode!.disconnect()
+        this._destination!.disconnect()
 
-        // Reconnect gain node directly to soundTouchNode
-        this._gainNode!.connect(this._soundTouchNode!)
+        this.source?.connect(this._gainNode!)
+        this._gainNode!.connect(this.destination!)
 
-        // Reconnect soundTouchNode to destination
-        this._soundTouchNode!.connect(this.destination!)
+        this._gainNode!.gain.value = currentGain
     }
 
-    applySoundTouch(settings: SoundTouchData) {
-        if (!this._soundTouchManager) return
-        this._soundTouchManager.applySettings(settings)
+    private async loadSoundTouch() {
+        this._soundTouchManager = new SoundTouch(this.audioContext!)
+        await this._soundTouchManager.loadModule()
+        this._soundTouchNode = this._soundTouchManager.soundtouchNode
+    }
+
+    async applySoundTouch(settings: SoundTouchData) {
+        if (!this._soundTouchManager) {
+            this.disconnect()
+
+            await this.loadSoundTouch()
+
+            this._source!.disconnect()
+            this._source!.connect(this._soundTouchNode!)
+            this._soundTouchNode!.connect(this._gainNode!)
+            this._gainNode!.connect(this._destination!)
+        }
+
+        this._soundTouchManager?.applySettings(settings)
     }
 
     cleanup() {
