@@ -2,7 +2,7 @@
     import { Label } from '$lib/components/ui/label'
     import { Switch } from '$lib/components/ui/switch'
     import { supporterStore } from '$lib/stores/supporter'
-    import { type SettingsState, settingsStore } from '$lib/stores/settings'
+    import { type SettingsState, settingsStore, type SettingsKey } from '$lib/stores/settings'
 
     let {
         list,
@@ -13,14 +13,14 @@
     }: {
         list: string[]
         title: string
-        type: 'ui' | 'views'
-        setLabel: (key: keyof SettingsState['ui'] | keyof SettingsState['views']) => string
+        type: SettingsKey
+        setLabel: (key: keyof SettingsState[SettingsKey]) => string
         handleCheckedChange: ({
             type,
             key
         }: {
-            type: 'ui' | 'views'
-            key: keyof SettingsState['ui'] | keyof SettingsState['views']
+            type: SettingsKey
+            key: keyof SettingsState[SettingsKey]
         }) => void
     } = $props()
 </script>

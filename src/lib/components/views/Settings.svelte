@@ -2,7 +2,7 @@
     import { onMount } from 'svelte'
     import { supporterStore } from '$lib/stores/supporter'
     import { playbackObserver } from '$lib/observers/playback'
-    import { settingsStore, type SettingsState } from '$lib/stores/settings'
+    import { settingsStore, type SettingsState, type SettingsKey } from '$lib/stores/settings'
 
     import { Label } from '$lib/components/ui/label'
     import { Switch } from '$lib/components/ui/switch'
@@ -13,13 +13,13 @@
         type,
         key
     }: {
-        type: 'ui' | 'views'
-        key: keyof SettingsState['ui'] | keyof SettingsState['views']
+        type: SettingsKey
+        key: keyof SettingsState[SettingsKey]
     }) {
         await settingsStore.updateSettings({
             [type]: {
                 ...$settingsStore[type],
-                [key]: !$settingsStore[type as 'ui' | 'views'][key]
+                [key]: !$settingsStore[type][key]
             }
         })
 
@@ -28,16 +28,7 @@
         if (key === 'playlist') playbackObserver.togglePlaylistButton()
     }
 
-    async function toggleViewsSettings(key: keyof SettingsState['views']) {
-        await settingsStore.updateSettings({
-            views: {
-                ...$settingsStore.views,
-                [key]: !$settingsStore.views[key]
-            }
-        })
-    }
-
-    function setUILabel(key: keyof SettingsState['ui'] | keyof SettingsState['views']) {
+    function setUILabel(key: keyof SettingsState[SettingsKey]) {
         if (key in $settingsStore.views) return `show ${key} tab`
         if (key == 'playlist') return 'add to playlist'
         return `v2 ${key} `

@@ -4,6 +4,7 @@ import { syncWithType } from '$lib/utils/store-utils'
 
 export const SETTINGS_STORE_KEY = 'local:chorus_settings'
 
+export type SettingsKey = 'ui' | 'views' | 'notifications' | 'theme'
 export type ThemeName = 'none' | 'dynamic' | 'static'
 export type ThemeMode = 'light' | 'dark'
 export type ThemeVibrancy =
