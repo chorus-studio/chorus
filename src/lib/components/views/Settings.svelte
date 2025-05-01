@@ -54,6 +54,8 @@
         }
     }
 
+    const isGeneral = $derived($settingsStore.type === 'general')
+
     onMount(() => {
         checkIfPipSupported()
         checkOptInStatus()
@@ -66,14 +68,14 @@
             <Badge
                 id="general"
                 onclick={toggleView}
-                variant="default"
-                class="h-5 rounded-[2px] px-1 text-sm">general</Badge
+                variant={isGeneral ? 'default' : 'secondary'}
+                class="h-5 cursor-pointer rounded-[2px] px-1.5 text-sm">general</Badge
             >
             <Badge
                 id="supporter"
                 onclick={toggleView}
-                variant="default"
-                class="h-5 rounded-[2px] px-1 text-sm">supporter</Badge
+                variant={isGeneral ? 'secondary' : 'default'}
+                class="h-5 cursor-pointer rounded-[2px] px-1.5 text-sm">supporter</Badge
             >
         </div>
     {/if}
