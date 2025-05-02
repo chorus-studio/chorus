@@ -21,7 +21,6 @@ export type SettingsState = {
     type: SettingsType
     base: {
         playlist: boolean
-        playback: boolean
     }
     ui: {
         pip: boolean
@@ -50,8 +49,7 @@ export type SettingsState = {
 const defaultSettingsState: SettingsState = {
     type: 'general',
     base: {
-        playlist: false,
-        playback: true
+        playlist: false
     },
     ui: {
         pip: false,

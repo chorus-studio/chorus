@@ -32,7 +32,6 @@
     function setUILabel(key: keyof SettingsState[SettingsKey]) {
         if (key in $settingsStore.views) return `show ${key} tab`
         if (key == 'playlist') return 'add to playlist'
-        if (key == 'playback') return 'prioritize playback'
         return `v2 ${key} `
     }
 
