@@ -1,5 +1,6 @@
 <script lang="ts">
     import { onMount } from 'svelte'
+    import { getActiveTab } from '$lib/utils/messaging'
 
     import { volumeStore } from '$lib/stores/volume'
     import { nowPlaying } from '$lib/stores/now-playing'
@@ -26,6 +27,8 @@
     let { pip = false }: { pip?: boolean } = $props()
 
     let port = $state<chrome.runtime.Port | null>(null)
+
+    let isSpotifyTabOpen = $state(true)
 
     function setupPort() {
         port = chrome.runtime.connect({ name: 'popup' })
@@ -90,8 +93,25 @@
         }
     }
 
+    function openSpotify() {
+        try {
+            chrome.tabs.create({ url: 'https://open.spotify.com' })
+            isSpotifyTabOpen = true
+        } catch (error) {
+            console.error(error)
+        }
+    }
+
+    async function getSpotifyTabStatus() {
+        const activeTab = await getActiveTab()
+        isSpotifyTabOpen = activeTab?.url?.includes('open.spotify.com') ?? false
+    }
+
     onMount(() => {
-        ;(async () => await supporterStore.sync())()
+        ;(async () => {
+            await supporterStore.sync()
+            if (pip) await getSpotifyTabStatus()
+        })()
         setupPort()
         loadColours()
 
@@ -126,6 +146,18 @@
             ? 'absolute -top-1.5 right-1'
             : 'absolute right-1 top-0.5'} flex w-full items-center justify-end gap-x-0.5"
     >
+        {#if !pip && !isSpotifyTabOpen}
+            <Button
+                variant="link"
+                class="absolute -top-3 left-8 text-xs text-[var(--text)] underline"
+                size="icon"
+                aria-label="Open Spotify"
+                onclick={openSpotify}
+            >
+                open spotify
+            </Button>
+        {/if}
+
         {#if $supporterStore.isSupporter}
             {#if !pip && $settingsStore.ui.popup}
                 <SelectVibrancy />
