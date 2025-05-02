@@ -35,7 +35,7 @@ export default class Reverb {
             await (isDigital ? this.createDigitalReverb() : this.createImpulseReverb(effect))
             if (!isDigital) return
 
-            this.connect()
+            this.connectDigitalReverb()
             this.applyReverbEffect(effect)
         } catch (error) {
             console.error('Error setting reverb effect:', error)
@@ -44,15 +44,12 @@ export default class Reverb {
         }
     }
 
-    connect() {
-        if (!this._reverbGainNode || !this._reverbWorkletNode) {
+    connectDigitalReverb() {
+        if (!this._reverbWorkletNode) {
             throw new Error('Audio nodes not properly initialized')
         }
 
-        this._audioManager.connectReverb({
-            reverbGainNode: this._reverbGainNode,
-            reverbWorkletNode: this._reverbWorkletNode
-        })
+        this._audioManager.connectDigitalReverb(this._reverbWorkletNode!)
     }
 
     async createDigitalReverb() {
@@ -85,9 +82,6 @@ export default class Reverb {
             throw new Error('AudioContext not initialized')
         }
 
-        // Create gain node if it doesn't exist
-        this._reverbGainNode = this._reverbGainNode ?? this._audioContext.createGain()
-
         // Create convolver node if it doesn't exist
         this._convolverNode = this._convolverNode ?? this._audioContext.createConvolver()
 
@@ -104,15 +98,12 @@ export default class Reverb {
         const arraybuffer = await response.arrayBuffer()
         this._convolverNode.buffer = await this._audioContext.decodeAudioData(arraybuffer)
 
-        if (!this._audioManager.source || !this._convolverNode || !this._reverbGainNode) {
+        if (!this._audioManager.source || !this._convolverNode) {
             throw new Error('Audio nodes not properly initialized')
         }
 
         // Use AudioManager's connectReverb instead of direct connections
-        this._audioManager.connectReverb({
-            reverbGainNode: this._reverbGainNode,
-            reverbWorkletNode: this._convolverNode
-        })
+        this._audioManager.connectImpulseReverb({ convolverNode: this._convolverNode, effect })
     }
 
     async applyReverbEffect(effect: string) {
