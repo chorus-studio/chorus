@@ -2,8 +2,8 @@
     import { seekStore } from '$lib/stores/seek'
     import { snipStore } from '$lib/stores/snip'
     import { dataStore } from '$lib/stores/data'
+    import { effectsStore } from '$lib/stores/effects'
     import { nowPlaying } from '$lib/stores/now-playing'
-    import { effectsStore } from '$lib/stores/audio-effects'
     import { playbackStore, defaultPlayback } from '$lib/stores/playback'
 
     import { Button } from '$lib/components/ui/button'

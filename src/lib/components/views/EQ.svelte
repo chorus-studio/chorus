@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { effectsStore } from '$lib/stores/audio-effects'
+    import { effectsStore } from '$lib/stores/effects'
     import AudioEffectInputs from '$lib/components/AudioEffectInputs.svelte'
 
     import { customPresets, spotifyPresets } from '$lib/audio-effects/equalizer/presets'

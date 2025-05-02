@@ -1,9 +1,9 @@
 <script lang="ts">
-    import { Label } from '$lib/components/ui/label'
-    import { Separator } from '$lib/components/ui/separator'
-    import { effectsStore } from '$lib/stores/audio-effects'
+    import { effectsStore } from '$lib/stores/effects'
 
     import type { Selection } from '$lib/types'
+    import { Label } from '$lib/components/ui/label'
+    import { Separator } from '$lib/components/ui/separator'
     import { CustomSelect } from '$lib/components/ui/custom-select'
 
     let {

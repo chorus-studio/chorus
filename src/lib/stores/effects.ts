@@ -37,6 +37,10 @@ function createAudioEffectsStore() {
         dispatchEffect()
     }
 
+    function isDefault() {
+        return get(store) === defaultAudioEffect
+    }
+
     async function reset() {
         set(defaultAudioEffect)
         isUpdatingStorage = true
@@ -78,6 +82,7 @@ function createAudioEffectsStore() {
     return {
         set,
         reset,
+        isDefault,
         subscribe,
         updateEffect,
         dispatchEffect

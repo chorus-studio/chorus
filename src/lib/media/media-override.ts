@@ -108,6 +108,7 @@ export default class MediaOverride {
         if (!this.audioManager) return
 
         try {
+            await this.audioManager.ensureAudioChainReady()
             await this.audioManager.applySoundTouch(data)
         } catch (error) {
             console.error('Error updating sound touch:', error)
@@ -118,6 +119,9 @@ export default class MediaOverride {
         if (!this.audioManager || !this.equalizer || !this.reverb) return
 
         try {
+            await this.audioManager.ensureAudioChainReady()
+            this.audioManager.disconnect()
+
             if (effect.clear) return
 
             if (effect?.equalizer && effect.equalizer !== 'none') {
