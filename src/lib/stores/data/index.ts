@@ -37,7 +37,6 @@ class DataStore {
     }
 
     async initialize() {
-        sessionStorage.setItem('chorus:sounds_dir', chrome.runtime.getURL('sounds/'))
         sessionStorage.setItem('chorus:reverb_path', chrome.runtime.getURL('processor.js'))
         sessionStorage.setItem('chorus:soundtouch_path', chrome.runtime.getURL('soundtouch.js'))
 
