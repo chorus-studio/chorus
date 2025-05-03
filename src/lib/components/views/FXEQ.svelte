@@ -6,7 +6,7 @@
     let { pip = false }: { pip?: boolean } = $props()
 </script>
 
-<div class="flex h-full w-full gap-x-2">
+<div class="flex h-full w-full justify-center gap-x-2">
     <FX {pip} />
     <Separator orientation="vertical" class="h-full w-0.5" />
     <EQ {pip} />

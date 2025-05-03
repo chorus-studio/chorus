@@ -2,24 +2,25 @@
     import { onMount } from 'svelte'
     import { supporterStore } from '$lib/stores/supporter'
     import { playbackObserver } from '$lib/observers/playback'
-    import { settingsStore, type SettingsState } from '$lib/stores/settings'
+    import { settingsStore } from '$lib/stores/settings'
+    import type { SettingsState, SettingsKey, SettingsType } from '$lib/stores/settings'
 
-    import { Label } from '$lib/components/ui/label'
-    import { Switch } from '$lib/components/ui/switch'
-    import { Separator } from '$lib/components/ui/separator'
+    import { Badge } from '$lib/components/ui/badge'
     import SettingsSwitch from '$lib/components/SettingsSwitch.svelte'
+
+    let pipSupported = $state(false)
 
     async function toggleSettings({
         type,
         key
     }: {
-        type: 'ui' | 'views'
-        key: keyof SettingsState['ui'] | keyof SettingsState['views']
+        type: SettingsKey
+        key: keyof SettingsState[SettingsKey]
     }) {
         await settingsStore.updateSettings({
             [type]: {
                 ...$settingsStore[type],
-                [key]: !$settingsStore[type as 'ui' | 'views'][key]
+                [key]: !$settingsStore[type][key]
             }
         })
 
@@ -28,45 +29,88 @@
         if (key === 'playlist') playbackObserver.togglePlaylistButton()
     }
 
-    async function toggleViewsSettings(key: keyof SettingsState['views']) {
-        await settingsStore.updateSettings({
-            views: {
-                ...$settingsStore.views,
-                [key]: !$settingsStore.views[key]
-            }
-        })
-    }
-
-    function setUILabel(key: keyof SettingsState['ui'] | keyof SettingsState['views']) {
+    function setUILabel(key: keyof SettingsState[SettingsKey]) {
         if (key in $settingsStore.views) return `show ${key} tab`
         if (key == 'playlist') return 'add to playlist'
         return `v2 ${key} `
     }
 
-    const checkOptInStatus = async () => await supporterStore.sync()
+    async function toggleView(event: MouseEvent) {
+        const target = event.target as HTMLButtonElement
+        await settingsStore.updateSettings({ type: target.id as SettingsType })
+    }
 
-    onMount(() => checkOptInStatus())
+    const checkOptInStatus = async () => {
+        await supporterStore.sync()
+        if (!$supporterStore?.isSupporter && $settingsStore.type === 'supporter') {
+            await settingsStore.updateSettings({ type: 'general' })
+        }
+    }
+
+    function checkIfPipSupported() {
+        if (typeof window !== 'undefined' && 'pictureInPictureEnabled' in document) {
+            pipSupported = document.pictureInPictureEnabled
+        }
+    }
+
+    const isGeneral = $derived($settingsStore.type === 'general')
+
+    onMount(() => {
+        checkIfPipSupported()
+        checkOptInStatus()
+    })
 </script>
 
 <div class="flex h-full w-full flex-col items-center space-y-2">
-    <h2 class="text-left text-base font-semibold">Note: only available for supporters</h2>
-    <div class="flex w-full justify-between">
-        <SettingsSwitch
-            list={Object.keys($settingsStore.ui)}
-            title="ui"
-            type="ui"
-            setLabel={setUILabel}
-            handleCheckedChange={toggleSettings}
-        />
+    {#if $supporterStore.isSupporter}
+        <div class="flex w-full justify-end gap-x-2">
+            <Badge
+                id="general"
+                onclick={toggleView}
+                variant={isGeneral ? 'default' : 'secondary'}
+                class="h-5 cursor-pointer rounded-[2px] px-1.5 text-sm">general</Badge
+            >
+            <Badge
+                id="supporter"
+                onclick={toggleView}
+                variant={isGeneral ? 'secondary' : 'default'}
+                class="h-5 cursor-pointer rounded-[2px] px-1.5 text-sm">supporter</Badge
+            >
+        </div>
+    {/if}
 
-        <Separator orientation="vertical" class="mx-2 w-0.5 space-x-2" />
+    {#if $settingsStore.type === 'general'}
+        <div class="!mt-4 flex w-full justify-between gap-x-2">
+            <SettingsSwitch
+                list={Object.keys($settingsStore.base)}
+                title="base"
+                type="base"
+                className="mr-0"
+                setLabel={setUILabel}
+                handleCheckedChange={toggleSettings}
+            />
 
-        <SettingsSwitch
-            list={Object.keys($settingsStore.views)}
-            title="views"
-            type="views"
-            setLabel={setUILabel}
-            handleCheckedChange={toggleSettings}
-        />
-    </div>
+            <SettingsSwitch
+                list={Object.keys($settingsStore.views)}
+                title="views"
+                type="views"
+                className="mr-0"
+                setLabel={setUILabel}
+                handleCheckedChange={toggleSettings}
+            />
+        </div>
+    {:else}
+        <div class="flex w-full justify-between">
+            <SettingsSwitch
+                title="ui"
+                type="ui"
+                className="w-full"
+                setLabel={setUILabel}
+                handleCheckedChange={toggleSettings}
+                list={Object.keys($settingsStore.ui).filter((key) =>
+                    key == 'pip' ? pipSupported : true
+                )}
+            />
+        </div>
+    {/if}
 </div>

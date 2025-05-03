@@ -26,12 +26,7 @@ export default class SoundTouch {
         }
     }
 
-    async applySettings(settings: SoundTouchData) {
-        if (!this.soundtouchNode) await this.loadModule()
-        this.setPitchTranspose(settings)
-    }
-
-    setPitchTranspose(settings: SoundTouchData) {
+    applySettings(settings: SoundTouchData) {
         if (!this.soundtouchNode || !this.audioContext) return
 
         this.soundtouchNode.parameters.get('pitch')!.value = settings.pitch
@@ -46,8 +41,6 @@ export default class SoundTouch {
     }
 
     reset() {
-        if (!this.soundtouchNode) return
-        this.soundtouchNode.parameters.get('pitch')!.value = 0
-        this.soundtouchNode.parameters.get('semitone')!.value = 0
+        this.applySettings({ pitch: 1, semitone: 0 })
     }
 }

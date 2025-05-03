@@ -116,7 +116,7 @@ export class PlaybackObserver {
 
         if (!addToPlaylistButtons?.length) return
 
-        const show = this.settings.ui.playlist
+        const show = this.settings.base.playlist
         addToPlaylistButtons.forEach((button) => {
             const shouldShow = show ? 'visible' : 'hidden'
             const visibility = button.style.visibility
@@ -202,7 +202,7 @@ export class PlaybackObserver {
 
             await this.checkForDJ()
             await nowPlaying.updateNowPlaying()
-            if (this.settings.ui.playlist) this.togglePlaylistButton()
+            this.togglePlaylistButton()
         }
     }
 

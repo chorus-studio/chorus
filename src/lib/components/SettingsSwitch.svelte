@@ -2,33 +2,35 @@
     import { Label } from '$lib/components/ui/label'
     import { Switch } from '$lib/components/ui/switch'
     import { supporterStore } from '$lib/stores/supporter'
-    import { type SettingsState, settingsStore } from '$lib/stores/settings'
+    import { type SettingsState, settingsStore, type SettingsKey } from '$lib/stores/settings'
 
     let {
         list,
         title,
         type,
+        className,
         setLabel,
         handleCheckedChange
     }: {
         list: string[]
         title: string
-        type: 'ui' | 'views'
-        setLabel: (key: keyof SettingsState['ui'] | keyof SettingsState['views']) => string
+        type: SettingsKey
+        className?: string
+        setLabel: (key: keyof SettingsState[SettingsKey]) => string
         handleCheckedChange: ({
             type,
             key
         }: {
-            type: 'ui' | 'views'
-            key: keyof SettingsState['ui'] | keyof SettingsState['views']
+            type: SettingsKey
+            key: keyof SettingsState[SettingsKey]
         }) => void
     } = $props()
 </script>
 
-<div class="mr-2 flex w-1/2 flex-col gap-y-2">
+<div class="mr-2 flex w-1/2 flex-col gap-y-2 {className}">
     <h2 class="text-base font-semibold">{title}</h2>
     {#each list as key}
-        <div class="flex items-center gap-2.5">
+        <div class="flex items-center gap-2">
             <Switch
                 disabled={!$supporterStore.isSupporter}
                 checked={$supporterStore.isSupporter &&

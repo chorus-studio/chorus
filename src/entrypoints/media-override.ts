@@ -73,48 +73,6 @@ function mediaOverride() {
     })
     observer.observe(document, { childList: true, subtree: true })
     addPlayListener()
-
-    window.addEventListener('message', (event) => {
-        // Verify the origin for security
-        if (event.source !== window) return
-        if (!mediaElement?.mediaOverride) return
-
-        try {
-            const { type, data } = event.data
-
-            switch (type) {
-                case 'FROM_PLAYBACK_LISTENER':
-                    mediaElement.mediaOverride.updateSoundTouch({
-                        pitch: Number(data?.pitch) || 1,
-                        semitone: Number(data?.semitone) || 0
-                    })
-                    mediaElement.mediaOverride.updatePlaybackSettings(Number(data?.rate) || 1)
-                    break
-
-                case 'FROM_EFFECTS_LISTENER':
-                    mediaElement.mediaOverride.updateAudioEffect({
-                        clear: Boolean(data?.clear),
-                        reverb: data?.reverb ? String(data.reverb) : undefined,
-                        equalizer: data?.equalizer ? String(data.equalizer) : undefined
-                    })
-                    break
-
-                case 'FROM_VOLUME_LISTENER':
-                    mediaElement.mediaOverride.updateVolume({
-                        value: Number(data?.value) || 0,
-                        muted: Boolean(data?.muted),
-                        type: String(data?.type) as 'linear' | 'logarithmic'
-                    })
-                    break
-
-                case 'FROM_CURRENT_TIME_LISTENER':
-                    mediaElement.mediaOverride.updateCurrentTime(Number(data) || 0)
-                    break
-            }
-        } catch (error) {
-            console.warn('Error handling message:', error)
-        }
-    })
 }
 
 export default defineUnlistedScript({

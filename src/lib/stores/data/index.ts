@@ -37,7 +37,7 @@ class DataStore {
     }
 
     async initialize() {
-        sessionStorage.setItem('chorus:sounds_dir', chrome.runtime.getURL('sounds/'))
+        sessionStorage.setItem('chorus:sounds_path', chrome.runtime.getURL('sounds/'))
         sessionStorage.setItem('chorus:reverb_path', chrome.runtime.getURL('processor.js'))
         sessionStorage.setItem('chorus:soundtouch_path', chrome.runtime.getURL('soundtouch.js'))
 
@@ -109,35 +109,24 @@ class DataStore {
     }
 
     private async migrateCollection(collection: Collection): Promise<void> {
-        if (Object.keys(collection).length === 0) {
-            console.log('No tracks to migrate')
-            return
-        }
+        if (Object.keys(collection).length === 0) return
 
         this.mergeCollection(collection)
         await this.populateFromExtensionStorage(collection)
-        console.log(`Migration completed: ${Object.keys(collection).length} tracks migrated`)
     }
 
     async sync(): Promise<void> {
         try {
             const migrationVersion = await storage.getItem('local:chorus_migration_version')
-            if (migrationVersion === '2.0.0') {
-                console.log('Migration already completed')
-                return
-            }
+            if (migrationVersion === '2.0.0') return
 
             const oldData = await chrome.storage.local.get(null)
-            if (!oldData || Object.keys(oldData).length === 0) {
-                console.log('No old data found to migrate')
-                return
-            }
+            if (!oldData || Object.keys(oldData).length === 0) return
 
             const newCollection = await this.processTrackData(oldData)
             await this.migrateCollection(newCollection)
             await this.cleanupLegacyData()
 
-            // Mark migration as complete
             await storage.setItem('local:chorus_migration_version', '2.0.0')
         } catch (error) {
             console.error('Migration failed:', error)

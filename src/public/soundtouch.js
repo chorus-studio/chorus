@@ -1254,7 +1254,8 @@ var onUpdate = function onUpdate(sourcePosition) {
             set: function set(perc) {
                 this._filter.sourcePosition = parseInt(perc * this.duration * this.sampleRate)
                 this.sourcePosition = this._filter.sourcePosition
-                this.timePlayed = this.sourcePosition / this.sampleRate
+                this.timePlayed =
+                    this.shifter._filter.sourceSound._position / this.shifter.sampleRate
             }
         },
         {
