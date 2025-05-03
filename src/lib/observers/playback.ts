@@ -202,7 +202,7 @@ export class PlaybackObserver {
 
             await this.checkForDJ()
             await nowPlaying.updateNowPlaying()
-            if (this.settings.base.playlist) this.togglePlaylistButton()
+            this.togglePlaylistButton()
         }
     }
 
