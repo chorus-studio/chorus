@@ -3,6 +3,8 @@
 
     import type { Selection } from '$lib/types'
     import { Label } from '$lib/components/ui/label'
+    import { Button } from '$lib/components/ui/button'
+    import RotateCcw from '@lucide/svelte/icons/rotate-ccw'
     import { Separator } from '$lib/components/ui/separator'
     import { CustomSelect } from '$lib/components/ui/custom-select'
 
@@ -60,7 +62,17 @@
 
     <Separator class="mt-1 h-0.5 w-full" />
 
-    <p class="inline-flex w-full justify-end text-sm text-white">
-        {$effectsStore[type]}
-    </p>
+    <div class="flex w-full justify-between">
+        <Button
+            size="icon"
+            variant="ghost"
+            class="size-5 w-7 rounded-none [&_svg]:size-4"
+            onclick={() => handleUpdateEffect('none')}
+        >
+            <RotateCcw class="size-4" />
+        </Button>
+        <p class="inline-flex w-full justify-end text-sm text-white">
+            {$effectsStore[type]}
+        </p>
+    </div>
 </div>
