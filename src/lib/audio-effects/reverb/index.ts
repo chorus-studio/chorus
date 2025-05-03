@@ -1,11 +1,12 @@
 import AudioManager from '../audio-manager'
-import { customPresets, getParamsListForEffect } from './presets'
+import { customPresets, getParamsListForEffect, impulsePresets } from './presets'
 
 export default class Reverb {
     _internal: boolean
     _audioManager: AudioManager
     _audioContext?: AudioContext
     _reverbGainNode?: GainNode
+    _convolverNode?: ConvolverNode
     _reverbWorkletNode?: AudioWorkletNode
 
     constructor(audioManager: AudioManager, internal = false) {
@@ -15,6 +16,10 @@ export default class Reverb {
 
     isCustom(effect: string) {
         return customPresets.includes(effect)
+    }
+
+    isImpulse(effect: string) {
+        return impulsePresets.includes(effect)
     }
 
     async setReverbEffect(effect: string) {
@@ -29,15 +34,47 @@ export default class Reverb {
         }
 
         try {
-            await this.createDigitalReverb()
-            this.connectDigitalReverb()
-            this.applyReverbEffect(effect)
+            const isImpulse = this.isImpulse(effect)
+            if (isImpulse) {
+                await this.createImpulseReverb(effect)
+            } else {
+                await this.createDigitalReverb()
+                this.connectDigitalReverb()
+                this.applyReverbEffect(effect)
+            }
         } catch (error) {
             console.error('Error setting reverb effect:', error)
             this.cleanup()
             this._audioManager.disconnect()
             throw error
         }
+    }
+
+    async createImpulseReverb(effect: string) {
+        if (!this._audioContext) throw new Error('AudioContext not initialized')
+
+        // Create convolver node if it doesn't exist
+        this._convolverNode = this._convolverNode ?? this._audioContext.createConvolver()
+
+        const soundsDir = sessionStorage.getItem('chorus:sounds_path')
+        if (!soundsDir) throw new Error('Sounds directory path not found in session storage')
+
+        const filename = effect.replace('_ir', '')
+        const response = await fetch(`${soundsDir}${filename}.wav`)
+        if (!response.ok) throw new Error(`Failed to load impulse response: ${effect}`)
+
+        const arraybuffer = await response.arrayBuffer()
+        this._convolverNode.buffer = await this._audioContext.decodeAudioData(arraybuffer)
+
+        if (!this._audioManager.source || !this._convolverNode) {
+            throw new Error('Audio nodes not properly initialized')
+        }
+
+        // Use AudioManager's connectReverb instead of direct connections
+        this._audioManager.connectImpulseReverb({
+            convolverNode: this._convolverNode,
+            effect
+        })
     }
 
     private cleanup() {
