@@ -2,7 +2,7 @@
     import { effectsStore } from '$lib/stores/effects'
     import AudioEffectInputs from '$lib/components/AudioEffectInputs.svelte'
 
-    import { roomPresets, customPresets } from '$lib/audio-effects/reverb/presets'
+    import { roomPresets, customPresets, impulsePresets } from '$lib/audio-effects/reverb/presets'
 
     let { pip = false }: { pip?: boolean } = $props()
 
@@ -10,7 +10,7 @@
         ['none', ...roomPresets].map((preset) => ({ label: preset, value: preset }))
     )
     const customOptions = $derived(
-        ['none', ...customPresets].map((preset) => ({
+        ['none', ...impulsePresets, ...customPresets].map((preset) => ({
             label: preset,
             value: preset
         }))
