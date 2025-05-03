@@ -124,13 +124,8 @@ export default class MediaOverride {
 
             if (effect.clear) return
 
-            if (effect?.equalizer && effect.equalizer !== 'none') {
-                this.equalizer.setEQEffect(effect.equalizer)
-            }
-
-            if (effect?.reverb && effect.reverb !== 'none') {
-                await this.reverb.setReverbEffect(effect.reverb)
-            }
+            if (effect?.equalizer) this.equalizer.setEQEffect(effect.equalizer)
+            if (effect?.reverb) await this.reverb.setReverbEffect(effect.reverb)
         } catch (error) {
             console.error('Error updating audio effects:', error)
             this.audioManager.disconnect()
