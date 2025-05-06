@@ -1,7 +1,6 @@
 <script lang="ts">
     import { Label } from '$lib/components/ui/label'
     import { Switch } from '$lib/components/ui/switch'
-    import { supporterStore } from '$lib/stores/supporter'
     import { type SettingsState, settingsStore, type SettingsKey } from '$lib/stores/settings'
 
     let {
@@ -32,9 +31,7 @@
     {#each list as key}
         <div class="flex items-center gap-2">
             <Switch
-                disabled={!$supporterStore.isSupporter}
-                checked={$supporterStore.isSupporter &&
-                    $settingsStore[type][key as keyof SettingsState[typeof type]]}
+                checked={$settingsStore[type][key as keyof SettingsState[typeof type]]}
                 onCheckedChange={() =>
                     handleCheckedChange({ type, key: key as keyof SettingsState[typeof type] })}
             />
