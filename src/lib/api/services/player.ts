@@ -21,6 +21,7 @@ export class PlayerService implements PlayerService {
                 uris: [`spotify:track:${track_id}`]
             }
             const options = await setOptions({ method: 'PUT', body })
+            if (!options) throw new Error('No options found')
 
             const url = `${API_URL}/play?device_id=${device_id}`
             return await request({ url, options })
@@ -33,9 +34,10 @@ export class PlayerService implements PlayerService {
     async seekTrackToPosition(position: number) {
         try {
             const options = await setOptions({ method: 'PUT' })
+            if (!options) throw new Error('No options found')
+
             const device_id = await storage.getItem('local:chorus_device_id')
             if (!device_id) throw new Error('No device id found')
-
             const url = `${API_URL}/seek?position_ms=${position}&device_id=${device_id}`
             return await request({ url, options })
         } catch (error) {

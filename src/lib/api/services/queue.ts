@@ -27,6 +27,8 @@ export class QueueService implements QueueService {
             }
 
             const options = await setOptions({ method: 'PUT', body, connect: true })
+            if (!options) throw new Error('No options found')
+
             const device_id = await storage.getItem('local:chorus_device_id')
             const url = `${GET_QUEUE_API_URL}${device_id}`
 
@@ -41,6 +43,8 @@ export class QueueService implements QueueService {
             const body = { command: { endpoint: 'set_queue', next_tracks } }
 
             const options = await setOptions({ method: 'POST', body })
+            if (!options) throw new Error('No options found')
+
             const device_id = await storage.getItem('local:chorus_device_id')
             const url = `${SET_QUEUE_API_URL}from/${device_id}/to/${device_id}`
 

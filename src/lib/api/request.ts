@@ -4,14 +4,10 @@ type RequestOptions = {
     connect?: boolean
 }
 
-type SetOptionsResponse = RequestInit & {
+type SetOptionsResponse = {
     method: string
     body: string | null
-    headers: {
-        Authorization: string
-        'Content-Type': string
-        'X-Spotify-Connection-Id': string | null
-    }
+    headers: Record<string, string>
 }
 
 export const setOptions = async ({
@@ -24,27 +20,32 @@ export const setOptions = async ({
         'local:chorus_connection_id'
     ])
     const authHeader = authToken?.value
-    const connectHeader = connect ? connectionId?.value : null
+    const connectHeader = connect ? connectionId?.value : undefined
 
-    if (!authHeader || (connect && !connectHeader)) return
+    if (!authHeader || (connect && !connectHeader)) return undefined
+
+    const headers: Record<string, string> = {
+        Authorization: authHeader,
+        'Content-Type': 'application/json'
+    }
+
+    if (connectHeader) {
+        headers['X-Spotify-Connection-Id'] = connectHeader
+    }
 
     return {
         method,
         body: body ? JSON.stringify(body) : null,
-        headers: {
-            Authorization: authHeader,
-            'Content-Type': 'application/json',
-            ...(connect && { 'X-Spotify-Connection-Id': connectHeader })
-        }
+        headers
     }
 }
 
 type RequestParams = {
     url: string
-    options: RequestInit
+    options: SetOptionsResponse
 }
 
-type ApiResponse<T> = T | 'empty response'
+type ApiResponse<T> = T | null
 
 export const request = async <T>({ url, options }: RequestParams): Promise<ApiResponse<T>> => {
     try {
@@ -59,9 +60,12 @@ export const request = async <T>({ url, options }: RequestParams): Promise<ApiRe
         try {
             return (await response.json()) as T
         } catch (err) {
-            return 'empty response'
+            return null
         }
     } catch (error) {
-        throw error
+        if (error instanceof Error) {
+            throw new Error(`Request failed: ${error.message}`)
+        }
+        throw new Error('Request failed with unknown error')
     }
 }
