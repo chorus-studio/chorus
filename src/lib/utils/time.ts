@@ -83,3 +83,17 @@ export function formatTime(time: number, basic: boolean = false): string {
     }
     return formattedTime
 }
+
+export function formatDate(timestamp: string) {
+    const date = new Date(Number(timestamp))
+    // Check if the date is valid (not NaN and within reasonable range)
+    if (isNaN(date.getTime()) || date.getFullYear() < 1970 || date.getFullYear() > 2100) {
+        return timestamp
+    }
+
+    return new Intl.DateTimeFormat('en-US', {
+        month: 'long',
+        day: 'numeric',
+        year: 'numeric'
+    }).format(date)
+}
