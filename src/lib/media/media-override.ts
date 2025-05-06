@@ -1,7 +1,7 @@
 import Reverb from '$lib/audio-effects/reverb'
 import Equalizer from '$lib/audio-effects/equalizer'
 import AudioManager from '$lib/audio-effects/audio-manager'
-import type { SoundTouchData } from '$lib/stores/playback'
+import type { SoundTouchData, Rate } from '$lib/stores/playback'
 
 type MediaOverrideOptions = {
     reverb: Reverb
@@ -79,10 +79,10 @@ export default class MediaOverride {
         this._sources.push(source)
     }
 
-    updatePlaybackSettings(rate: number): void {
+    updatePlaybackSettings(rate: Rate): void {
         // Use our property override mechanism with a special format
-        const playbackRateValue = { source: 'chorus', value: rate }
-        const preservesPitchValue = { source: 'chorus', value: true }
+        const playbackRateValue = { source: 'chorus', value: rate.value }
+        const preservesPitchValue = { source: 'chorus', value: rate.preserves_pitch }
 
         // Use type assertion to bypass TypeScript's type checking
         ;(this.source as any).playbackRate = playbackRateValue

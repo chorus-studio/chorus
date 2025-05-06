@@ -1,8 +1,8 @@
 import MediaOverride from './media-override'
 import Reverb from '$lib/audio-effects/reverb'
+import type { Rate } from '$lib/stores/playback'
 import Equalizer from '$lib/audio-effects/equalizer'
 import AudioManager from '$lib/audio-effects/audio-manager'
-
 export default class MediaElement {
     private source: HTMLMediaElement
     private _reverb: Reverb | null = null
@@ -63,7 +63,7 @@ export default class MediaElement {
                             pitch: Number(data?.pitch) || 1,
                             semitone: Number(data?.semitone) || 0
                         })
-                        this.mediaOverride.updatePlaybackSettings(Number(data?.rate) || 1)
+                        this.mediaOverride.updatePlaybackSettings(data.rate as Rate)
                         break
 
                     case 'FROM_EFFECTS_LISTENER':
