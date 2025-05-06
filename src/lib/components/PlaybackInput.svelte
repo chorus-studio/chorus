@@ -1,13 +1,10 @@
 <script lang="ts">
-    import {
-        defaultPlayback,
-        playbackStore,
-        type Frequent,
-        type Playback
-    } from '$lib/stores/playback'
+    import { defaultPlayback, playbackStore } from '$lib/stores/playback'
+    import type { Rate, Playback, Frequent } from '$lib/stores/playback'
 
     import { Label } from '$lib/components/ui/label'
     import { Input } from '$lib/components/ui/input'
+    import { Switch } from '$lib/components/ui/switch'
     import { Button } from '$lib/components/ui/button'
     import RotateCcw from '@lucide/svelte/icons/rotate-ccw'
     import BadgeList from '$lib/components/BadgeList.svelte'
@@ -15,8 +12,9 @@
     let { key, list }: { key: keyof Playback; list: Frequent[] } = $props()
 
     function padSpeed(value: number | string): string {
-        const parsedValue = parseFloat(value.toString())
-        if (isNaN(parsedValue)) return value.toString()
+        const defaultRate = typeof value !== 'undefined' ? value?.toString() : '1'
+        const parsedValue = parseFloat(defaultRate)
+        if (isNaN(parsedValue)) return defaultRate
 
         // Use toFixed to ensure we get the exact number of decimal places
         const decimalPlace = key == 'rate' ? 3 : 2
@@ -37,12 +35,10 @@
         const input = event.target as HTMLInputElement
         const value = validateInput(input.value)
         const type = $playbackStore.is_default ? 'default' : 'track'
-
+        const updateValue =
+            key == 'rate' ? { [key]: { ...$playbackStore[type][key], value } } : { [key]: value }
         await playbackStore.updatePlayback({
-            [type]: {
-                ...$playbackStore[type],
-                [key]: Number(value)
-            }
+            [type]: { ...$playbackStore[type], ...updateValue }
         })
 
         // Add the new value to frequents
@@ -52,8 +48,10 @@
 
     async function handleBadgeSelect({ key, value }: { key: string; value: number }) {
         const type = $playbackStore.is_default ? 'default' : 'track'
+        const updateValue =
+            key == 'rate' ? { [key]: { ...$playbackStore[type][key], value } } : { [key]: value }
         await playbackStore.updatePlayback({
-            [type]: { ...$playbackStore[type], [key]: value }
+            [type]: { ...$playbackStore[type], ...updateValue }
         })
         playbackStore.dispatchPlaybackSettings($playbackStore[type])
     }
@@ -76,14 +74,37 @@
         await playbackStore.togglePin(key, value.value)
     }
 
+    async function handlePitchPreservation(value: boolean) {
+        const type = $playbackStore.is_default ? 'default' : 'track'
+
+        await playbackStore.updatePlayback({
+            [type]: {
+                ...$playbackStore[type],
+                [key]: {
+                    preserves_pitch: value,
+                    value: ($playbackStore[type][key] as Rate).value ?? 1
+                }
+            }
+        })
+        playbackStore.dispatchPlaybackSettings($playbackStore[type])
+    }
+
     let type: 'default' | 'track' = $derived($playbackStore.is_default ? 'default' : 'track')
     let value: number = $derived(
-        $playbackStore[type][key as keyof (typeof $playbackStore)[typeof type]] as number
+        key == 'rate'
+            ? ($playbackStore[type][key] as Rate).value
+            : ($playbackStore[type][key] as number)
     )
+    let preservesPitch: boolean = $derived($playbackStore[type].rate.preserves_pitch)
 </script>
 
 <div class="flex w-full flex-col space-y-2">
-    <h2 class="text-sm text-gray-400">{getTitle(key)}</h2>
+    <div class="flex items-center {key == 'rate' ? 'justify-between' : 'justify-start'}">
+        <h2 class="text-sm text-gray-400">{getTitle(key)}</h2>
+        {#if key == 'rate'}
+            <Switch checked={preservesPitch} onCheckedChange={handlePitchPreservation} />
+        {/if}
+    </div>
     <BadgeList
         {list}
         {handlePin}
@@ -96,7 +117,7 @@
                 <Button
                     size="icon"
                     variant="ghost"
-                    class="size-5 w-6 rounded-none [&_svg]:size-4"
+                    class="size-6 w-7 rounded-none [&_svg]:size-4"
                     onclick={handleReset}
                 >
                     <RotateCcw class="size-4" />

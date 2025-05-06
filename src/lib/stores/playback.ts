@@ -2,13 +2,18 @@ import { get, writable } from 'svelte/store'
 import { storage } from '@wxt-dev/storage'
 import { syncWithType } from '$lib/utils/store-utils'
 
+export type Rate = {
+    value: number
+    preserves_pitch: boolean
+}
+
 export type Playback = {
-    rate: number
+    rate: Rate
     pitch: number
     semitone: number
 }
 
-export type SoundTouchData = Pick<Playback, 'pitch' | 'semitone'>
+export type SoundTouchData = Omit<Playback, 'rate'>
 export type Frequent = { value: number; pinned: boolean }
 
 type PlaybackSettings = {
@@ -22,7 +27,11 @@ type PlaybackSettings = {
     is_default: boolean
 }
 
-export const defaultPlayback: Playback = { rate: 1, pitch: 1, semitone: 0 }
+export const defaultPlayback: Playback = {
+    rate: { value: 1, preserves_pitch: true },
+    pitch: 1,
+    semitone: 0
+}
 
 const PLAYBACK_STORE_KEY = 'local:chorus_playback'
 
