@@ -66,7 +66,7 @@
         <Button
             size="icon"
             variant="ghost"
-            class="size-5 w-7 rounded-none [&_svg]:size-4"
+            class="size-6 w-7 rounded-none [&_svg]:size-4"
             onclick={() => handleUpdateEffect('none')}
         >
             <RotateCcw class="size-4" />
