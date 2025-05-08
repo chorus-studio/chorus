@@ -42,6 +42,7 @@ export default defineConfig({
             {
                 resources: [
                     '/media-override.js',
+                    '/router.js',
                     '/icon/*',
                     '/sounds/*',
                     '/processor.js',

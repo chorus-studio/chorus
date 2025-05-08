@@ -5,6 +5,7 @@
     export let text: string
     export let as: string = 'span'
     export let className: string = ''
+    export let handleClick: () => void = () => {}
 
     let containerEl: HTMLDivElement
     let measureEl: HTMLSpanElement
@@ -42,7 +43,12 @@
     {text}
 </span>
 
-<div bind:this={containerEl} class="relative w-full overflow-hidden whitespace-nowrap">
+<div
+    role={as === 'a' ? 'link' : undefined}
+    onclick={handleClick}
+    bind:this={containerEl}
+    class="relative w-full overflow-hidden whitespace-nowrap"
+>
     {#if scroll}
         <slot {as} class={cn(baseClasses, 'marquee', className)}>
             <span class={cn(baseClasses, 'marquee inline-block text-[var(--text)]', className)}>

@@ -1,16 +1,15 @@
-export function groupBy<T extends Record<string, any>, K extends keyof T>(
+export function groupBy<T extends Record<string, any>>(
     array: T[],
-    key: K
-): Record<T[K], T[]> {
-    return array.reduce(
-        (acc, item) => {
-            const groupKey = item[key]
-            if (!acc[groupKey]) {
-                acc[groupKey] = []
-            }
-            acc[groupKey].push(item)
-            return acc
-        },
-        {} as Record<T[K], T[]>
-    )
+    key: string
+): Record<string, T[]> {
+    return array.reduce<Record<string, T[]>>((acc, item) => {
+        const groupKey = key.split('.').reduce<any>((obj, k) => obj?.[k], item)
+        const keyStr = String(groupKey ?? 'undefined')
+
+        if (!acc[keyStr]) {
+            acc[keyStr] = []
+        }
+        acc[keyStr].push(item)
+        return acc
+    }, {})
 }

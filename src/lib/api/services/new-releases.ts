@@ -1,5 +1,12 @@
 import { storage } from '@wxt-dev/storage'
 import { setOptions, request } from '../request'
+import {
+    type Range,
+    type Filter,
+    type NewReleases,
+    defaultFilters,
+    NEW_RELEASES_STORE_KEY
+} from '$lib/stores/new-releases'
 import { defineProxyService } from '@webext-core/proxy-service'
 
 const API_URL = 'https://api-partner.spotify.com/pathfinder/v2/query'
@@ -66,7 +73,12 @@ export async function getArtistDiscography(artist: Artist): Promise<TrackMetadat
 
     try {
         const response = (await request({ url: API_URL, options })) as any
-        return parseArtistDiscography({ data: response.data, artist })
+        const store = await storage.getItem<NewReleases>(NEW_RELEASES_STORE_KEY)
+        return parseArtistDiscography({
+            data: response.data,
+            artist,
+            config: { filters: store?.filters ?? defaultFilters, range: store?.range ?? 'week' }
+        })
     } catch (error) {
         console.error(error)
         return []
@@ -94,7 +106,7 @@ type Track = {
 }
 
 export type TrackMetadata = {
-    type?: string
+    type: string
     title: string
     artist: Artist
     imageUrl: string
@@ -103,16 +115,24 @@ export type TrackMetadata = {
     uri: string
 }
 
+const rangeMap: Record<Range, number> = {
+    week: 7,
+    month: 30,
+    yesterday: 1
+}
+
 function getTrackMetadata({
     artist,
-    track
+    track,
+    range
 }: {
     artist: Artist
     track: Track
+    range: Range
 }): TrackMetadata | null {
     const time = Date.parse(track.date.isoString)
     const today = Date.now()
-    const limitInMs = 24 * 3600 * 1000 * 30 // 30 days
+    const limitInMs = 24 * 3600 * 1000 * rangeMap[range]
 
     if (today - time >= limitInMs || !track.playability.playable) return null
 
@@ -139,16 +159,27 @@ type Release = {
     tracks: { totalCount: number }
 }
 
-function parseArtistDiscography({ data, artist }: { data: any; artist: Artist }): any[] {
+function parseArtistDiscography({
+    data,
+    artist,
+    config
+}: {
+    data: any
+    artist: Artist
+    config: { filters: Filter; range: Range }
+}): any[] {
     const releases = data.artistUnion.discography.all.items.flatMap(
         (item: any) => item.releases.items
     )
     const list = []
     const types = [
-        [true, releases.filter((release: Release) => release.type === 'ALBUM')],
-        [true, releases.filter((release: Release) => release.type === 'COMPILATION')],
+        [config.filters.albums, releases.filter((release: Release) => release.type === 'ALBUM')],
         [
-            true,
+            config.filters.compilations,
+            releases.filter((release: Release) => release.type === 'COMPILATION')
+        ],
+        [
+            config.filters.singles,
             releases.filter(
                 (release: Release) => release.type === 'SINGLE' || release.type === 'EP'
             )
@@ -158,7 +189,7 @@ function parseArtistDiscography({ data, artist }: { data: any; artist: Artist })
     for (const type of types) {
         if (type[0] && type[1]) {
             for (const track of type[1]) {
-                const trackMeta = getTrackMetadata({ artist, track })
+                const trackMeta = getTrackMetadata({ artist, track, range: config.range })
                 if (!trackMeta) continue
 
                 trackMeta.type = track.type
@@ -201,8 +232,7 @@ export class NewReleasesService implements NewReleasesService {
 
     async getMusicReleases() {
         try {
-            const response = await getArtistReleases()
-            return response
+            return await getArtistReleases()
         } catch (error) {
             console.error(error)
             return []

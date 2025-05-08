@@ -10,6 +10,7 @@ import NewReleasesIcon from '$lib/components/NewReleasesIcon.svelte'
 const watchPattern = new MatchPattern('*://open.spotify.com/*')
 
 async function injectChorusUI(ctx: ContentScriptContext) {
+    await injectScript('/router.js', { keepInDom: true })
     await injectScript('/media-override.js')
 
     const ui = createIntegratedUi(ctx, {

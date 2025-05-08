@@ -1,7 +1,7 @@
-export function clickOutside(node: HTMLElement, callback: () => void) {
+export function clickOutside(node: HTMLElement, callback: (event: MouseEvent) => void) {
     const handleClick = (event: MouseEvent) => {
         if (!node.contains(event.target as Node)) {
-            callback()
+            callback(event)
         }
     }
 
@@ -10,6 +10,9 @@ export function clickOutside(node: HTMLElement, callback: () => void) {
     return {
         destroy() {
             document.removeEventListener('click', handleClick, true)
+        },
+        update(newCallback: (event: MouseEvent) => void) {
+            callback = newCallback
         }
     }
 }
