@@ -2,6 +2,7 @@
     import type { Component } from 'svelte'
     import { mount, unmount, onMount } from 'svelte'
     import { clickOutside } from '$lib/utils/click-outside'
+    import { supporterStore } from '$lib/stores/supporter'
     import { newReleasesStore, newReleasesUIStore, type Range } from '$lib/stores/new-releases'
 
     import Tippy from '$lib/components/Tippy.svelte'
@@ -115,19 +116,21 @@
     onMount(refreshReleases)
 </script>
 
-<div use:clickOutside={registerClickOutside} class="relative z-[999999]">
-    <Tippy
-        side="bottom"
-        text="new releases"
-        id="chorus-new-releases-icon"
-        onTrigger={toggleNewReleasesUI}
-        class="relative h-8 w-12 cursor-pointer border-white bg-transparent py-0 hover:bg-transparent [&_svg]:size-5"
-    >
-        <BellPlus class="stroke-red-500" />
-
-        <span
-            class="rounded-4 h-4 w-10 rounded-md bg-red-500 px-2 text-center text-xs font-semibold text-white"
-            >{$newReleasesStore.count}</span
+{#if $supporterStore.isSupporter}
+    <div use:clickOutside={registerClickOutside} class="relative z-[999999]">
+        <Tippy
+            side="bottom"
+            text="new releases"
+            id="chorus-new-releases-icon"
+            onTrigger={toggleNewReleasesUI}
+            class="relative h-8 w-12 cursor-pointer border-white bg-transparent py-0 hover:bg-transparent [&_svg]:size-5"
         >
-    </Tippy>
-</div>
+            <BellPlus class="stroke-red-500" />
+
+            <span
+                class="rounded-4 h-4 w-10 rounded-md bg-red-500 px-2 text-center text-xs font-semibold text-white"
+                >{$newReleasesStore.count}</span
+            >
+        </Tippy>
+    </div>
+{/if}

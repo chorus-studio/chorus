@@ -19,10 +19,12 @@ export default defineBackground(() => {
     })()
 
     const STORE_KEYS = {
-        NOW_PLAYING: 'local:chorus_now_playing' as const,
+        SETTINGS: 'local:chorus_settings' as const,
+        RELEASES: 'local:chorus_releases' as const,
         DEVICE_ID: 'local:chorus_device_id' as const,
-        CONNECTION_ID: 'local:chorus_connection_id' as const,
-        AUTH_TOKEN: 'local:chorus_auth_token' as const
+        AUTH_TOKEN: 'local:chorus_auth_token' as const,
+        NOW_PLAYING: 'local:chorus_now_playing' as const,
+        CONNECTION_ID: 'local:chorus_connection_id' as const
     }
 
     browser.runtime.onConnect.addListener(async (port) => {
@@ -141,18 +143,23 @@ export default defineBackground(() => {
     )
 
     browser.commands.onCommand.addListener(async (command) => {
-        if (command === 'show-track') {
-            const isSupporter = await mellowtel.getOptInStatus()
-            if (!isSupporter) return
+        if (!['show-track', 'toggle-new-releases'].includes(command)) {
+            return await executeButtonClick({ command, isShortCutKey: true })
+        }
 
-            const settings = await storage.getItem<SettingsState>(SETTINGS_STORE_KEY)
+        const isSupporter = await mellowtel.getOptInStatus()
+        if (!isSupporter) return
+
+        if (command === 'show-track') {
+            const settings = await storage.getItem<SettingsState>(STORE_KEYS.SETTINGS)
             if (!settings?.notifications?.enabled) return
 
             const nowPlaying = await storage.getItem<NowPlaying>(STORE_KEYS.NOW_PLAYING)
             if (nowPlaying) await showNotification(nowPlaying)
-            return
         }
 
-        await executeButtonClick({ command, isShortCutKey: true })
+        if (command === 'toggle-new-releases') {
+            await executeButtonClick({ command, isShortCutKey: true })
+        }
     })
 })
