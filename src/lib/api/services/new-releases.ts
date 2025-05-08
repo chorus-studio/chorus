@@ -77,7 +77,11 @@ export async function getArtistDiscography(artist: Artist): Promise<TrackMetadat
         return parseArtistDiscography({
             data: response.data,
             artist,
-            config: { filters: store?.filters ?? defaultFilters, range: store?.range ?? 'week' }
+            config: {
+                filters: store?.filters ?? defaultFilters,
+                range: store?.range ?? 'week',
+                updated_at: store?.updated_at ?? new Date()
+            }
         })
     } catch (error) {
         console.error(error)
@@ -118,21 +122,36 @@ export type TrackMetadata = {
 const rangeMap: Record<Range, number> = {
     week: 7,
     month: 30,
-    yesterday: 1
+    yesterday: 1,
+    since_last_update: 0
+}
+
+function getRangeLimit(updated_at: string) {
+    const last_updated = new Date(updated_at)
+    const today = new Date()
+    const diffTime = Math.abs(today.getTime() - last_updated.getTime())
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+    return diffDays > 0 ? diffDays : 0
 }
 
 function getTrackMetadata({
     artist,
     track,
-    range
+    config
 }: {
     artist: Artist
     track: Track
-    range: Range
+    config: { range: Range; updated_at: string }
 }): TrackMetadata | null {
     const time = Date.parse(track.date.isoString)
     const today = Date.now()
-    const limitInMs = 24 * 3600 * 1000 * rangeMap[range]
+    const limitInMs =
+        24 *
+        3600 *
+        1000 *
+        (config.range === 'since_last_update'
+            ? getRangeLimit(config.updated_at)
+            : rangeMap[config.range])
 
     if (today - time >= limitInMs || !track.playability.playable) return null
 
@@ -166,7 +185,7 @@ function parseArtistDiscography({
 }: {
     data: any
     artist: Artist
-    config: { filters: Filter; range: Range }
+    config: { filters: Filter; range: Range; updated_at: string }
 }): any[] {
     const releases = data.artistUnion.discography.all.items.flatMap(
         (item: any) => item.releases.items
@@ -189,7 +208,11 @@ function parseArtistDiscography({
     for (const type of types) {
         if (type[0] && type[1]) {
             for (const track of type[1]) {
-                const trackMeta = getTrackMetadata({ artist, track, range: config.range })
+                const trackMeta = getTrackMetadata({
+                    artist,
+                    track,
+                    config: { range: config.range, updated_at: config.updated_at }
+                })
                 if (!trackMeta) continue
 
                 trackMeta.type = track.type
@@ -215,8 +238,8 @@ export async function getArtistReleases() {
 }
 
 export interface NewReleasesService {
-    getArtistList(): Promise<any>
-    getArtistReleases(): Promise<any>
+    getArtistList(): Promise<Artist[]>
+    getArtistReleases(): Promise<TrackMetadata[]>
 }
 
 export class NewReleasesService implements NewReleasesService {

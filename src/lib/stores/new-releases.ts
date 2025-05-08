@@ -12,16 +12,16 @@ export type Filter = {
     albums: boolean
 }
 export type GroupBy = 'artist' | 'date' | 'type'
-export type Range = 'yesterday' | 'week' | 'month'
+export type Range = 'yesterday' | 'week' | 'month' | 'since_last_update'
 
 export type NewReleases = {
     range: Range
     count: number
     filters: Filter
     loading: boolean
+    updated_at: string
     group_by: GroupBy
     dismissed: string[]
-    last_updated: Date
     data: TrackMetadata[]
     release_id: string | null
     releases?: Record<string, TrackMetadata[]>
@@ -43,7 +43,7 @@ const defaultNewReleases: NewReleases = {
     group_by: 'type',
     release_id: null,
     filters: defaultFilters,
-    last_updated: new Date()
+    updated_at: new Date().toISOString()
 }
 
 export const NEW_RELEASES_STORE_KEY = 'local:chorus_new_releases'
@@ -91,7 +91,13 @@ function createNewReleasesStore() {
                 count = response.length
             }
         } finally {
-            await updateState({ data, releases, count, loading: false, last_updated: new Date() })
+            await updateState({
+                data,
+                releases,
+                count,
+                loading: false,
+                updated_at: new Date().toISOString()
+            })
         }
     }
 

@@ -1,11 +1,10 @@
 <script lang="ts">
     import type { Component } from 'svelte'
-    import { mount, unmount } from 'svelte'
+    import { mount, unmount, onMount } from 'svelte'
     import { clickOutside } from '$lib/utils/click-outside'
-    import { newReleasesStore, newReleasesUIStore } from '$lib/stores/new-releases'
+    import { newReleasesStore, newReleasesUIStore, type Range } from '$lib/stores/new-releases'
 
     import Tippy from '$lib/components/Tippy.svelte'
-    import { Button } from '$lib/components/ui/button'
     import BellPlus from '@lucide/svelte/icons/bell-plus'
     import NewReleasesView from '$lib/components/views/NewReleases.svelte'
     import NewReleasesHeader from '$lib/components/NewReleasesHeader.svelte'
@@ -83,15 +82,46 @@
             toggleNewReleasesUI()
         }
     })
+
+    const rangeMap: Record<Range, number> = {
+        week: 7,
+        month: 30,
+        yesterday: 1,
+        since_last_update: 0
+    }
+
+    const WHOLE_DAY = 24 * 60 * 60 * 1000
+
+    function getRangeLimit(updated_at: string) {
+        const last_updated = new Date(updated_at)
+        const today = new Date()
+        const diffTime = Math.abs(today.getTime() - last_updated.getTime())
+        const diffDays = Math.ceil(diffTime / WHOLE_DAY)
+        return diffDays > 0 ? diffDays : 0
+    }
+
+    async function refreshReleases() {
+        const { updated_at, range } = $newReleasesStore
+        const last_updated = new Date(updated_at)
+        const today = Date.now()
+        const rangeLimit =
+            range === 'since_last_update' ? getRangeLimit(updated_at) : rangeMap[range]
+        const diffTime = Math.abs(today - (last_updated.getTime() + rangeLimit * WHOLE_DAY))
+        const diffDays = Math.floor(diffTime / WHOLE_DAY)
+
+        if (diffDays > rangeLimit) await newReleasesStore.getNewReleases(true)
+    }
+
+    onMount(refreshReleases)
 </script>
 
-<div use:clickOutside={registerClickOutside}>
+<div use:clickOutside={registerClickOutside} class="relative z-[999999]">
     <Tippy
         side="bottom"
         text="new releases"
         id="chorus-new-releases-icon"
         onTrigger={toggleNewReleasesUI}
-        class="relative h-8 w-12 cursor-pointer border-white bg-transparent hover:bg-transparent [&_svg]:size-5"
+        class="relative h-8 w-12 cursor-pointer border-white bg-transparent py-0 hover:bg-transparent [&_svg]:size-5"
     >
         <BellPlus class="stroke-red-500" />
 
