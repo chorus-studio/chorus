@@ -80,7 +80,7 @@ export async function getArtistDiscography(artist: Artist): Promise<TrackMetadat
             config: {
                 filters: store?.filters ?? defaultFilters,
                 range: store?.range ?? 'week',
-                updated_at: store?.updated_at ?? new Date()
+                updated_at: store?.updated_at ?? new Date().toISOString()
             }
         })
     } catch (error) {
@@ -130,7 +130,7 @@ function getRangeLimit(updated_at: string) {
     const last_updated = new Date(updated_at)
     const today = new Date()
     const diffTime = Math.abs(today.getTime() - last_updated.getTime())
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
     return diffDays > 0 ? diffDays : 0
 }
 
@@ -240,6 +240,7 @@ export async function getArtistReleases() {
 export interface NewReleasesService {
     getArtistList(): Promise<Artist[]>
     getArtistReleases(): Promise<TrackMetadata[]>
+    updateLibrary({ uri, remove }: { uri: string; remove: boolean }): Promise<void>
 }
 
 export class NewReleasesService implements NewReleasesService {
@@ -259,6 +260,28 @@ export class NewReleasesService implements NewReleasesService {
         } catch (error) {
             console.error(error)
             return []
+        }
+    }
+
+    async updateLibrary({ uri, remove = false }: { uri: string; remove: boolean }) {
+        const body = {
+            variables: { uris: [uri] },
+            operationName: remove ? 'removeFromLibrary' : 'addToLibrary',
+            extensions: {
+                persistedQuery: {
+                    version: 1,
+                    sha256Hash: 'a3c1ff58e6a36fec5fe1e3a193dc95d9071d96b9ba53c5ba9c1494fb1ee73915'
+                }
+            }
+        }
+
+        const options = await setOptions({ method: 'POST', body })
+        if (!options) throw new Error('Failed to set request options: missing authentication')
+
+        try {
+            await request({ url: API_URL, options })
+        } catch (error) {
+            console.error(error)
         }
     }
 }

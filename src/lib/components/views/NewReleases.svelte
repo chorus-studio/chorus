@@ -2,12 +2,14 @@
     import { onMount } from 'svelte'
     import { formatDate } from '$lib/utils/time'
     import { mediaStore } from '$lib/stores/media'
-    import { registerQueueService } from '$lib/api/services/queue'
+    import { getQueueService } from '$lib/api/services/queue'
     import { newReleasesStore, newReleasesUIStore } from '$lib/stores/new-releases'
 
     import X from '@lucide/svelte/icons/x'
     import { Button } from '$lib/components/ui/button'
     import AvatarLogo from '$lib/components/AvatarLogo.svelte'
+    import CirclePlus from '@lucide/svelte/icons/circle-plus'
+    import CircleCheck from '@lucide/svelte/icons/circle-check'
     import ScrollingText from '$lib/components/ScrollingText.svelte'
 
     async function getArtistReleases() {
@@ -30,13 +32,16 @@
     async function playTrack(uri: string) {
         if ($newReleasesStore.release_id === uri) return pauseTrack()
 
-        const queueService = registerQueueService()
         try {
-            await queueService.playRelease(uri)
+            await getQueueService().playRelease(uri)
             await newReleasesStore.updateState({ release_id: uri })
         } catch (error) {
             console.error('Error playing track:', error)
         }
+    }
+
+    async function updateLibrary(uri: string) {
+        await newReleasesStore.updateLibrary(uri)
     }
 
     async function dismissRelease({
@@ -72,9 +77,7 @@
     function getPath(path: string) {
         return {
             play: '<path d="M3 1.713a.7.7 0 0 1 1.05-.607l10.89 6.288a.7.7 0 0 1 0 1.212L4.05 14.894A.7.7 0 0 1 3 14.288V1.713z"/>',
-            pause: '<path d="M2.7 1a.7.7 0 0 0-.7.7v12.6a.7.7 0 0 0 .7.7h2.6a.7.7 0 0 0 .7-.7V1.7a.7.7 0 0 0-.7-.7H2.7zm8 0a.7.7 0 0 0-.7.7v12.6a.7.7 0 0 0 .7.7h2.6a.7.7 0 0 0 .7-.7V1.7a.7.7 0 0 0-.7-.7h-2.6z"/>',
-            'save/unsave':
-                '<path d="M15.724 4.22A4.313 4.313 0 0 0 12.192.814a4.269 4.269 0 0 0-3.622 1.13.837.837 0 0 1-1.14 0 4.272 4.272 0 0 0-6.21 5.855l5.916 7.05a1.128 1.128 0 0 0 1.727 0l5.916-7.05a4.228 4.228 0 0 0 .945-3.577z"/>'
+            pause: '<path d="M2.7 1a.7.7 0 0 0-.7.7v12.6a.7.7 0 0 0 .7.7h2.6a.7.7 0 0 0 .7-.7V1.7a.7.7 0 0 0-.7-.7H2.7zm8 0a.7.7 0 0 0-.7.7v12.6a.7.7 0 0 0 .7.7h2.6a.7.7 0 0 0 .7-.7V1.7a.7.7 0 0 0-.7-.7h-2.6z"/>'
         }[path]
     }
 
@@ -144,15 +147,16 @@
                                         <Button
                                             size="icon"
                                             variant="ghost"
+                                            onclick={() => updateLibrary(track.uri)}
                                             class="bg:transparent flex size-5 items-center justify-center rounded-full [&_svg]:size-5"
                                         >
-                                            <svg
-                                                xmlns="http://www.w3.org/2000/svg"
-                                                viewBox="-3 -5 24 24"
-                                                class="size-5 fill-white stroke-2 brightness-100"
-                                            >
-                                                {@html getPath('save/unsave')}
-                                            </svg>
+                                            {#if $newReleasesStore.library.includes(track.uri)}
+                                                <CircleCheck
+                                                    class="size-5 fill-green-500 stroke-white stroke-1"
+                                                />
+                                            {:else}
+                                                <CirclePlus class="size-5 fill-none stroke-1" />
+                                            {/if}
                                         </Button>
 
                                         <Button

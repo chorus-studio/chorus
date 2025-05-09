@@ -21,6 +21,7 @@ export type NewReleases = {
     loading: boolean
     updated_at: string
     group_by: GroupBy
+    library: string[]
     dismissed: string[]
     data: TrackMetadata[]
     release_id: string | null
@@ -39,6 +40,7 @@ const defaultNewReleases: NewReleases = {
     range: 'week',
     releases: {},
     loading: true,
+    library: [],
     dismissed: [],
     group_by: 'type',
     release_id: null,
@@ -72,9 +74,8 @@ function createNewReleasesStore() {
     }
 
     async function getNewReleases(force = false) {
-        let data = get(store).data
-        let releases = get(store).releases
-        if (force && !data.length) {
+        let { data, releases, group_by } = get(store)
+        if (!force && data.length) {
             set({ ...get(store), loading: false })
             return
         }
@@ -84,10 +85,9 @@ function createNewReleasesStore() {
         try {
             const response = await getNewReleasesService().getMusicReleases()
             if (response.length) {
-                const group = get(store).group_by
-                const grouping = groupByMap[group]
-                data = sortReleases(response, group)
-                releases = groupBy(data, grouping)
+                const grouping = groupByMap[group_by]
+                data = response
+                releases = groupBy(sortReleases(data, group_by), grouping)
                 count = response.length
             }
         } finally {
@@ -171,6 +171,33 @@ function createNewReleasesStore() {
         await getNewReleases(true)
     }
 
+    function search(search: string) {
+        const { data, group_by } = get(store)
+        const filteredData = data.filter((item) => {
+            return (
+                item.artist.name.toLowerCase().match(new RegExp(search.toLowerCase(), 'i')) ||
+                item.title.toLowerCase().match(new RegExp(search.toLowerCase(), 'i'))
+            )
+        })
+        const releases = groupBy(sortReleases(filteredData, group_by), groupByMap[group_by])
+        update((state) => ({ ...state, releases }))
+    }
+
+    function resetSearch() {
+        const { data, group_by } = get(store)
+        const releases = groupBy(sortReleases(data, group_by), groupByMap[group_by])
+        update((state) => ({ ...state, releases }))
+    }
+
+    async function updateLibrary(uri: string) {
+        const { library } = get(store)
+        const remove = library.includes(uri)
+        await getNewReleasesService().updateLibrary({ uri, remove })
+        await updateState({
+            library: remove ? library.filter((item) => item !== uri) : [...library, uri]
+        })
+    }
+
     storage
         .getItem<NewReleases>(NEW_RELEASES_STORE_KEY, {
             fallback: defaultNewReleases
@@ -210,11 +237,14 @@ function createNewReleasesStore() {
 
     return {
         reset,
+        search,
         subscribe,
         updateState,
         undoDismiss,
-        dismissRelease,
+        resetSearch,
+        updateLibrary,
         updateGroupBy,
+        dismissRelease,
         getNewReleases
     }
 }

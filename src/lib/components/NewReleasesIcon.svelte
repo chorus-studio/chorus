@@ -1,8 +1,8 @@
 <script lang="ts">
     import type { Component } from 'svelte'
     import { mount, unmount, onMount } from 'svelte'
-    import { clickOutside } from '$lib/utils/click-outside'
     import { supporterStore } from '$lib/stores/supporter'
+    import { clickOutside } from '$lib/utils/click-outside'
     import { newReleasesStore, newReleasesUIStore, type Range } from '$lib/stores/new-releases'
 
     import Tippy from '$lib/components/Tippy.svelte'
@@ -97,12 +97,19 @@
         const last_updated = new Date(updated_at)
         const today = new Date()
         const diffTime = Math.abs(today.getTime() - last_updated.getTime())
-        const diffDays = Math.ceil(diffTime / WHOLE_DAY)
+        const diffDays = Math.floor(diffTime / WHOLE_DAY)
         return diffDays > 0 ? diffDays : 0
     }
 
+    async function checkIfSupporter() {
+        await supporterStore.sync()
+        if ($supporterStore.isSupporter) await refreshReleases()
+    }
+
     async function refreshReleases() {
-        const { updated_at, range } = $newReleasesStore
+        const { updated_at, range, data } = $newReleasesStore
+        if (!data?.length) return await newReleasesStore.getNewReleases(true)
+
         const last_updated = new Date(updated_at)
         const today = Date.now()
         const rangeLimit =
@@ -113,7 +120,8 @@
         if (diffDays > rangeLimit) await newReleasesStore.getNewReleases(true)
     }
 
-    onMount(refreshReleases)
+    const count = $derived($newReleasesStore.count)
+    onMount(checkIfSupporter)
 </script>
 
 {#if $supporterStore.isSupporter}
@@ -129,7 +137,7 @@
 
             <span
                 class="rounded-4 h-4 w-10 rounded-md bg-red-500 px-2 text-center text-xs font-semibold text-white"
-                >{$newReleasesStore.count}</span
+                >{count}</span
             >
         </Tippy>
     </div>

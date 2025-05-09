@@ -1,10 +1,16 @@
 <script lang="ts">
+    import { onDestroy } from 'svelte'
     import { newReleasesStore } from '$lib/stores/new-releases'
 
+    import X from '@lucide/svelte/icons/x'
     import Undo from '@lucide/svelte/icons/undo'
     import Tippy from '$lib/components/Tippy.svelte'
+    import { Input } from '$lib/components/ui/input'
+    import { Button } from '$lib/components/ui/button'
     import RefreshCw from '@lucide/svelte/icons/refresh-cw'
     import NewReleasesDialog from '$lib/components/NewReleasesDialog.svelte'
+
+    let search = $state('')
 
     async function refresh() {
         await newReleasesStore.getNewReleases(true)
@@ -14,7 +20,22 @@
         await newReleasesStore.undoDismiss()
     }
 
+    function handleSearch(event: Event) {
+        const input = event.target as HTMLInputElement
+        search = input.value
+        newReleasesStore.search(search.trim())
+    }
+
+    function resetSearch() {
+        search = ''
+        newReleasesStore.resetSearch()
+    }
+
     const disabled = $derived($newReleasesStore.dismissed.length == 0)
+
+    onDestroy(() => {
+        if (search.trim() !== '') newReleasesStore.resetSearch()
+    })
 </script>
 
 <div
@@ -29,7 +50,24 @@
             </p>
         </div>
 
-        <div class="flex h-8 items-center justify-end gap-2">
+        <div class="flex h-9 items-center justify-end gap-2">
+            <div class="relative flex items-center">
+                <Input
+                    class="mr-6 h-9 w-96"
+                    placeholder="search"
+                    bind:value={search}
+                    onkeydown={handleSearch}
+                />
+
+                <Button
+                    size="icon"
+                    variant="ghost"
+                    onclick={resetSearch}
+                    class="bg:transparent absolute right-8 z-50 flex size-5 items-center justify-center rounded-full [&_svg]:size-5"
+                >
+                    <X class="size-5 fill-white stroke-2 brightness-100" />
+                </Button>
+            </div>
             {#if $newReleasesStore.dismissed.length > 0}
                 <Tippy {disabled} text="undo dismiss" onTrigger={undoDismiss} side="bottom">
                     <Undo />
