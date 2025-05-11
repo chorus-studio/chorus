@@ -6,10 +6,10 @@
     import { getQueueService } from '$lib/api/services/queue'
     import type { TrackMetadata } from '$lib/api/services/new-releases'
     import {
-        newReleasesStore,
-        newReleasesUIStore,
+        groupByMap,
         sortReleases,
-        groupByMap
+        newReleasesStore,
+        newReleasesUIStore
     } from '$lib/stores/new-releases'
 
     import X from '@lucide/svelte/icons/x'
@@ -32,16 +32,12 @@
             return
 
         try {
-            if (type === 'music') await newReleasesStore.getMusicReleases()
-            else if (type === 'shows&podcasts') await newReleasesStore.getShowsReleases()
-            else {
-                await Promise.all([
-                    newReleasesStore.getMusicReleases(),
-                    newReleasesStore.getShowsReleases()
-                ])
-            }
+            newReleasesUIStore.setLoading(true)
+            await newReleasesStore.refreshAllReleases()
         } catch (error) {
             console.error('Error fetching music releases:', error)
+        } finally {
+            newReleasesUIStore.setLoading(false)
         }
     }
 
@@ -87,10 +83,14 @@
                   : groupReleases()) ?? {}
     }
 
-    const isLoading = $derived(
-        $newReleasesStore.loading ||
-            (!$newReleasesStore.music_data.length && !$newReleasesStore.shows_data.length)
-    )
+    function updatedAtSet() {
+        const { music_updated_at, shows_updated_at, release_type } = $newReleasesStore
+        if (release_type === 'music') return music_updated_at
+        if (release_type === 'shows&podcasts') return shows_updated_at
+        return music_updated_at && shows_updated_at
+    }
+
+    const isLoading = $derived($newReleasesUIStore.loading || !updatedAtSet())
 
     function pluralize(count: number, word: string) {
         return `${count} ${word}${count === 1 ? '' : 's'}`
@@ -103,7 +103,7 @@
 
     function goTo(uri: string) {
         const path = parseUri(uri)
-        newReleasesUIStore.set(false)
+        newReleasesUIStore.setVisible(false)
         window.postMessage({ type: 'FROM_NEW_RELEASES', data: path }, '*')
     }
 
@@ -150,7 +150,7 @@
 <div class="flex h-full w-full" id="chorus-new-releases-view">
     <div class="mt-28 flex h-full w-full flex-col items-center justify-center bg-[#121212]">
         <div
-            class="mx-auto flex h-full min-h-dvh w-full max-w-screen-4xl flex-col gap-8 p-10 px-10 py-6"
+            class="xl:min-h-dvh mx-auto flex h-full w-full max-w-screen-4xl flex-col gap-8 p-10 px-10 py-6"
         >
             {#if isLoading}
                 {#each Array(3) as _, i}
@@ -172,6 +172,15 @@
                         </div>
                     </div>
                 {/each}
+            {:else if !Object.keys(releases).length}
+                <div
+                    class="xl:min-h-dvh xl:top-1/4 absolute left-1/2 top-0 flex h-full w-full -translate-x-1/2 flex-col items-center justify-center"
+                >
+                    <p class="text-center text-3xl text-muted-foreground">No releases found</p>
+                    <p class="text-center text-3xl text-muted-foreground">
+                        Update config to refetch with different filters
+                    </p>
+                </div>
             {:else}
                 {#each Object.entries(releases ?? {}) as [key, tracks]}
                     <div class="md:flex-row flex w-full flex-col justify-center gap-4">

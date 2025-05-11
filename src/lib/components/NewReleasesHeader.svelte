@@ -1,6 +1,7 @@
 <script lang="ts">
     import { onDestroy } from 'svelte'
-    import { newReleasesStore } from '$lib/stores/new-releases'
+    import { toast } from 'svelte-sonner'
+    import { newReleasesStore, newReleasesUIStore } from '$lib/stores/new-releases'
 
     import X from '@lucide/svelte/icons/x'
     import Undo from '@lucide/svelte/icons/undo'
@@ -28,16 +29,15 @@
     }, 300)
 
     async function refresh() {
-        const type = $newReleasesStore.release_type
-        if (type == 'music') {
-            await newReleasesStore.getMusicReleases(true)
-        } else if (type == 'shows&podcasts') {
-            await newReleasesStore.getShowsReleases(true)
-        } else {
-            await Promise.all([
-                newReleasesStore.getMusicReleases(true),
-                newReleasesStore.getShowsReleases(true)
-            ])
+        try {
+            newReleasesUIStore.setLoading(true)
+            await newReleasesStore.refreshAllReleases(true)
+        } catch (error) {
+            console.error('Error refreshing releases:', error)
+            toast.error('Error refreshing releases')
+        } finally {
+            toast.success('Refreshed releases')
+            newReleasesUIStore.setLoading(false)
         }
     }
 

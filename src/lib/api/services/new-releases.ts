@@ -111,6 +111,13 @@ async function getPodcastInfo(show: Show) {
     }
 }
 
+const rangeMap: Record<Range, number> = {
+    week: 7,
+    today: 0,
+    month: 30,
+    yesterday: 1
+}
+
 function parsePodcastInfo({
     data,
     show,
@@ -122,17 +129,6 @@ function parsePodcastInfo({
 }) {
     const list = []
     for (const episode of data) {
-        const time = Date.parse(episode.releaseDate.isoString)
-        const today = Date.now()
-        const limitInMs =
-            24 *
-            3600 *
-            1000 *
-            (config.range === 'since_last_update'
-                ? getRangeLimit(config.updated_at)
-                : rangeMap[config.range])
-        if (today - time >= limitInMs) continue
-
         const trackMeta = getTrackMetadata({
             artist: { uri: show.uri, name: show.name },
             track: episode,
@@ -240,22 +236,19 @@ export type TrackMetadata = {
     trackCount?: number
 }
 
-const rangeMap: Record<Range, number> = {
-    week: 7,
-    month: 30,
-    yesterday: 1,
-    since_last_update: 0
-}
-
-function getRangeLimit(updated_at: string) {
-    const last_updated = new Date(updated_at)
+function getRangeLimit(range: Range) {
     const today = new Date()
-    const diffTime = Math.abs(today.getTime() - last_updated.getTime())
-    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
-    return diffDays > 0 ? diffDays : 0
+    today.setHours(0, 0, 0, 0)
+    today.setDate(today.getDate() - rangeMap[range])
+    return today.getTime()
 }
 
 export type ShowMetadata = Omit<TrackMetadata, 'trackCount'>
+
+function getDiffBetweenDates(date1: number, date2: number) {
+    const diffTime = Math.abs(date1 - date2)
+    return Math.floor(diffTime / (1000 * 60 * 60 * 24))
+}
 
 function getTrackMetadata({
     artist,
@@ -270,16 +263,15 @@ function getTrackMetadata({
     if (date === '') return null
 
     const time = Date.parse(date)
-    const today = Date.now()
-    const limitInMs =
-        24 *
-        3600 *
-        1000 *
-        (config.range === 'since_last_update'
-            ? getRangeLimit(config.updated_at)
-            : rangeMap[config.range])
+    const today = new Date()
+    const limitInMs = 24 * 3600 * 1000 * rangeMap[config.range]
+    const trackDate = new Date(time)
 
-    if (today - time >= limitInMs || !track.playability.playable) return null
+    if (config.range === 'today') {
+        trackDate.setHours(0, 0, 0, 0)
+        today.setHours(0, 0, 0, 0)
+        if (today.getTime() !== trackDate.getTime()) return null
+    } else if (today.getTime() - time >= limitInMs || !track.playability.playable) return null
 
     return {
         type: track.type,

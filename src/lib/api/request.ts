@@ -60,6 +60,7 @@ export const request = async <T>({ url, options }: RequestParams): Promise<ApiRe
         try {
             return (await response.json()) as T
         } catch (err) {
+            console.error('error 1: ', err)
             return null
         }
     } catch (error) {

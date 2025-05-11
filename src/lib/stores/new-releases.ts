@@ -12,14 +12,13 @@ export type Filter = {
     albums: boolean
 }
 export type GroupBy = 'artist' | 'date' | 'type'
-export type Range = 'yesterday' | 'week' | 'month' | 'since_last_update'
+export type Range = 'yesterday' | 'week' | 'month' | 'today'
 export type ReleaseType = 'music' | 'shows&podcasts' | 'all'
 export type ReleaseFilter = { created_at: string; uri: string }
 
 export type NewReleases = {
     range: Range
     filters: Filter
-    loading: boolean
     group_by: GroupBy
     music_count: number
     shows_count: number
@@ -28,8 +27,8 @@ export type NewReleases = {
     dismissed: ReleaseFilter[]
     music_data: TrackMetadata[]
     shows_data: TrackMetadata[]
-    music_updated_at: string
-    shows_updated_at: string
+    music_updated_at?: string
+    shows_updated_at?: string
     release_id: string | null
     music_releases?: Record<string, TrackMetadata[]>
     shows_releases?: Record<string, TrackMetadata[]>
@@ -43,21 +42,18 @@ export const defaultFilters: Filter = {
 
 const defaultNewReleases: NewReleases = {
     library: [],
-    loading: true,
     music_data: [],
     shows_data: [],
     music_count: 0,
     shows_count: 0,
     range: 'week',
     dismissed: [],
-    group_by: 'type',
+    group_by: 'date',
     release_id: null,
     music_releases: {},
     shows_releases: {},
     release_type: 'music',
-    filters: defaultFilters,
-    music_updated_at: new Date().toISOString(),
-    shows_updated_at: new Date().toISOString()
+    filters: defaultFilters
 }
 
 export const NEW_RELEASES_STORE_KEY = 'local:chorus_new_releases'
@@ -86,65 +82,55 @@ function createNewReleasesStore() {
     let isUpdatingStorage = false
 
     async function getShowsReleases(force = false) {
-        let { shows_data, shows_releases, group_by, dismissed, release_type } = get(store)
-        if (!force && shows_data.length) {
-            set({ ...get(store), loading: false })
-            return
-        }
-
-        let shows_count = 0
-        set({ ...get(store), loading: true })
+        let { shows_data, shows_count, shows_releases, group_by, dismissed } = get(store)
+        if (!force && shows_data.length) return
 
         try {
             const response = await getNewReleasesService().getShowsReleases()
-            if (response.length) {
-                const grouping = groupByMap[group_by]
-                shows_data = response.filter(
-                    (item) => !dismissed.find((filter) => filter.uri === item.uri)
-                )
-                shows_releases = groupBy(sortReleases(shows_data, group_by), grouping)
-                shows_count = shows_data.length
-            }
+            const grouping = groupByMap[group_by]
+            shows_data = response.filter(
+                (item) => !dismissed.find((filter) => filter.uri === item.uri)
+            )
+            shows_releases = groupBy(sortReleases(shows_data, group_by), grouping)
+            shows_count = shows_data.length
         } finally {
             await updateState({
                 shows_data,
                 shows_releases,
                 shows_count,
-                loading: false,
-                shows_updated_at: new Date().toISOString(),
-                ...(release_type !== 'all' && { music_count: 0 })
+                shows_updated_at: new Date().toISOString()
             })
         }
     }
 
     async function getMusicReleases(force = false) {
-        let { music_data, music_releases, group_by, dismissed, release_type } = get(store)
-        if (!force && music_data.length) {
-            set({ ...get(store), loading: false })
-            return
-        }
+        let { music_data, music_releases, music_count, group_by, dismissed } = get(store)
+        if (!force && music_data.length) return
 
-        let music_count = 0
-        set({ ...get(store), loading: true })
         try {
             const response = await getNewReleasesService().getMusicReleases()
-            if (response.length) {
-                const grouping = groupByMap[group_by]
-                music_data = response.filter(
-                    (item) => !dismissed.find((filter) => filter.uri === item.uri)
-                )
-                music_releases = groupBy(sortReleases(music_data, group_by), grouping)
-                music_count = music_data.length
-            }
+            const grouping = groupByMap[group_by]
+            music_data = response.filter(
+                (item) => !dismissed.find((filter) => filter.uri === item.uri)
+            )
+            music_releases = groupBy(sortReleases(music_data, group_by), grouping)
+            music_count = music_data.length
         } finally {
             await updateState({
                 music_data,
                 music_releases,
                 music_count,
-                loading: false,
-                music_updated_at: new Date().toISOString(),
-                ...(release_type !== 'all' && { shows_count: 0 })
+                music_updated_at: new Date().toISOString()
             })
+        }
+    }
+
+    async function refreshAllReleases(force = false) {
+        const { release_type } = get(store)
+        if (release_type === 'music') await getMusicReleases(force)
+        else if (release_type === 'shows&podcasts') await getShowsReleases(force)
+        else {
+            await Promise.all([getMusicReleases(force), getShowsReleases(force)])
         }
     }
 
@@ -325,10 +311,7 @@ function createNewReleasesStore() {
             fallback: defaultNewReleases
         })
         .then((newValues) => {
-            if (!newValues) {
-                update((state) => ({ ...state, loading: false }))
-                return
-            }
+            if (!newValues) return
 
             // Sync the stored playback settings with the current type definition
             const syncedValues = syncWithType(newValues, defaultNewReleases)
@@ -342,8 +325,7 @@ function createNewReleasesStore() {
                 music_data,
                 music_releases,
                 shows_data,
-                shows_releases,
-                loading: false
+                shows_releases
             })
 
             // Update storage with synced values
@@ -383,18 +365,20 @@ function createNewReleasesStore() {
         updateGroupBy,
         dismissRelease,
         getShowsReleases,
-        getMusicReleases
+        getMusicReleases,
+        refreshAllReleases
     }
 }
 
 export const newReleasesStore = createNewReleasesStore()
 
 export const newReleasesUIStore = (() => {
-    const { subscribe, set, update } = writable(false)
+    const { subscribe, update } = writable({ loading: false, visible: false })
 
     return {
         subscribe,
-        toggle: () => update((value) => !value),
-        set: (value: boolean) => set(value)
+        setLoading: (loading: boolean) => update((value) => ({ ...value, loading })),
+        toggle: () => update((value) => ({ ...value, visible: !value.visible })),
+        setVisible: (visible: boolean) => update((value) => ({ ...value, visible }))
     }
 })()

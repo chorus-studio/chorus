@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { newReleasesStore } from '$lib/stores/new-releases'
+    import { newReleasesStore, newReleasesUIStore } from '$lib/stores/new-releases'
     import type { GroupBy, Filter, Range, ReleaseType } from '$lib/stores/new-releases'
 
     import Tippy from '$lib/components/Tippy.svelte'
@@ -12,8 +12,13 @@
 
     async function selectRange(range: Range) {
         await newReleasesStore.updateState({ range })
-        if ($newReleasesStore.release_type === 'music')
-            await newReleasesStore.getMusicReleases(true)
+
+        try {
+            newReleasesUIStore.setLoading(true)
+            await newReleasesStore.refreshAllReleases(true)
+        } finally {
+            newReleasesUIStore.setLoading(false)
+        }
     }
 
     async function selectFilter({ filter, checked }: { filter: keyof Filter; checked: boolean }) {
@@ -23,19 +28,21 @@
                 [filter]: checked
             }
         })
-        if ($newReleasesStore.release_type === 'music')
-            await newReleasesStore.getMusicReleases(true)
+
+        if ($newReleasesStore.release_type === 'shows&podcasts') return
+
+        newReleasesUIStore.setLoading(true)
+        await newReleasesStore.getMusicReleases(true)
+        newReleasesUIStore.setLoading(false)
     }
 
     async function selectReleaseType(release_type: ReleaseType) {
         await newReleasesStore.updateState({ release_type })
-        if (release_type === 'music') await newReleasesStore.getMusicReleases(true)
-        else if (release_type === 'shows&podcasts') await newReleasesStore.getShowsReleases(true)
-        else {
-            await Promise.all([
-                newReleasesStore.getMusicReleases(true),
-                newReleasesStore.getShowsReleases(true)
-            ])
+        try {
+            newReleasesUIStore.setLoading(true)
+            await newReleasesStore.refreshAllReleases(true)
+        } finally {
+            newReleasesUIStore.setLoading(false)
         }
     }
 
@@ -77,6 +84,7 @@
                 <div class="flex w-full items-center justify-end">
                     <CustomSelect
                         options={[
+                            { label: 'today', value: 'today' },
                             { label: 'yesterday', value: 'yesterday' },
                             { label: 'week', value: 'week' },
                             { label: 'month', value: 'month' }

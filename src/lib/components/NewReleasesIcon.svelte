@@ -32,7 +32,7 @@
             if (parent) {
                 releasesHeaderComponent = mount(NewReleasesHeader, { target: parent }) as Component
                 showReleases = true
-                newReleasesUIStore.set(true)
+                newReleasesUIStore.setVisible(true)
             }
         } else {
             mainEl.style.display = 'block'
@@ -48,12 +48,12 @@
             releasesViewComponent = null
             releasesHeaderComponent = null
             showReleases = false
-            newReleasesUIStore.set(false)
+            newReleasesUIStore.setVisible(false)
         }
     }
 
     function registerClickOutside(event: MouseEvent) {
-        if (!$newReleasesUIStore) return
+        if (!$newReleasesUIStore.visible) return
 
         const target = event.composedPath() as HTMLElement[]
         if (!target?.length) return
@@ -79,7 +79,7 @@
 
     // Subscribe to store changes
     $effect(() => {
-        if (!$newReleasesUIStore && showReleases) {
+        if (!$newReleasesUIStore.visible && showReleases) {
             toggleNewReleasesUI()
         }
     })
@@ -88,40 +88,63 @@
         week: 7,
         month: 30,
         yesterday: 1,
-        since_last_update: 0
+        today: 0
     }
 
-    const WHOLE_DAY = 24 * 60 * 60 * 1000
-
-    function getRangeLimit(updated_at: string) {
-        const last_updated = new Date(updated_at)
-        const today = new Date()
-        const diffTime = Math.abs(today.getTime() - last_updated.getTime())
-        const diffDays = Math.floor(diffTime / WHOLE_DAY)
-        return diffDays > 0 ? diffDays : 0
-    }
+    const WHOLE_DAY = 24 * 3600 * 1000
 
     async function checkIfSupporter() {
         await supporterStore.sync()
-        if ($supporterStore.isSupporter) await refreshMusicReleases()
+        if (!$supporterStore.isSupporter) return
+
+        try {
+            const { release_type } = $newReleasesStore
+            newReleasesUIStore.setLoading(true)
+            if (release_type === 'music') await refreshMusicReleases()
+            else if (release_type === 'shows&podcasts') await refreshShowsReleases()
+            else {
+                await Promise.all([refreshMusicReleases(), refreshShowsReleases()])
+            }
+        } finally {
+            newReleasesUIStore.setLoading(false)
+        }
+    }
+
+    function getDiffDays({ updated_at, limit }: { updated_at: string; limit: number }) {
+        const last_updated_date = new Date(updated_at)
+        const today = Date.now()
+        const diffTime = Math.abs(today - (last_updated_date.getTime() + limit * WHOLE_DAY))
+        return Math.floor(diffTime / WHOLE_DAY)
+    }
+
+    async function refreshShowsReleases() {
+        const { shows_updated_at, range, shows_data } = $newReleasesStore
+        if (!shows_data?.length || !shows_updated_at)
+            return await newReleasesStore.getShowsReleases(true)
+
+        const rangeLimit = rangeMap[range]
+        const diffDays = getDiffDays({ updated_at: shows_updated_at, limit: rangeLimit })
+        if (diffDays > rangeLimit) await newReleasesStore.getShowsReleases(true)
     }
 
     async function refreshMusicReleases() {
         const { music_updated_at, range, music_data } = $newReleasesStore
-        if (!music_data?.length) return await newReleasesStore.getMusicReleases(true)
+        if (!music_data?.length || !music_updated_at)
+            return await newReleasesStore.getMusicReleases(true)
 
-        const last_updated = new Date(music_updated_at)
-        const today = Date.now()
-        const rangeLimit =
-            range === 'since_last_update' ? getRangeLimit(music_updated_at) : rangeMap[range]
-        const diffTime = Math.abs(today - (last_updated.getTime() + rangeLimit * WHOLE_DAY))
-        const diffDays = Math.floor(diffTime / WHOLE_DAY)
+        const rangeLimit = rangeMap[range]
+        const diffDays = getDiffDays({ updated_at: music_updated_at, limit: rangeLimit })
 
         if (diffDays > rangeLimit) await newReleasesStore.getMusicReleases(true)
     }
 
-    const music_count = $derived($newReleasesStore.music_count)
-    const shows_count = $derived($newReleasesStore.shows_count)
+    let music_count = $state($newReleasesStore.music_count)
+    let shows_count = $state($newReleasesStore.shows_count)
+
+    $effect(() => {
+        music_count = $newReleasesStore.music_count
+        shows_count = $newReleasesStore.shows_count
+    })
 
     onMount(checkIfSupporter)
 </script>
