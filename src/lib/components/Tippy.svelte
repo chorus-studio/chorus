@@ -32,12 +32,16 @@
             class={buttonVariants({
                 variant: 'ghost',
                 size: 'icon',
-                className: `size-7 bg-transparent hover:bg-transparent [&_svg]:size-5 ${className}`
+                className: `relative size-7 bg-transparent hover:bg-transparent [&_svg]:size-5 ${className}`
             })}
         >
             {@render children()}
         </Tooltip.Trigger>
-        <Tooltip.Content {side} class="z-[99999] bg-muted p-2 text-sm text-white">
+        <Tooltip.Content
+            {side}
+            style="position: absolute !important"
+            class="relative z-[99999] bg-muted p-2 text-sm text-white"
+        >
             {text}
         </Tooltip.Content>
     </Tooltip.Root>

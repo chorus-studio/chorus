@@ -11,9 +11,34 @@
     import NewReleasesDialog from '$lib/components/NewReleasesDialog.svelte'
 
     let search = $state('')
+    let debounceTimer: ReturnType<typeof setTimeout>
+
+    function debounce<T extends (...args: any[]) => any>(
+        func: T,
+        wait: number
+    ): (...args: Parameters<T>) => void {
+        return (...args: Parameters<T>) => {
+            clearTimeout(debounceTimer)
+            debounceTimer = setTimeout(() => func(...args), wait)
+        }
+    }
+
+    const debouncedSearch = debounce((searchTerm: string) => {
+        newReleasesStore.search(searchTerm.trim())
+    }, 300)
 
     async function refresh() {
-        await newReleasesStore.getNewReleases(true)
+        const type = $newReleasesStore.release_type
+        if (type == 'music') {
+            await newReleasesStore.getMusicReleases(true)
+        } else if (type == 'shows&podcasts') {
+            await newReleasesStore.getShowsReleases(true)
+        } else {
+            await Promise.all([
+                newReleasesStore.getMusicReleases(true),
+                newReleasesStore.getShowsReleases(true)
+            ])
+        }
     }
 
     async function undoDismiss() {
@@ -23,7 +48,7 @@
     function handleSearch(event: Event) {
         const input = event.target as HTMLInputElement
         search = input.value
-        newReleasesStore.search(search.trim())
+        debouncedSearch(search)
     }
 
     function resetSearch() {
@@ -35,6 +60,7 @@
 
     onDestroy(() => {
         if (search.trim() !== '') newReleasesStore.resetSearch()
+        clearTimeout(debounceTimer)
     })
 </script>
 
@@ -50,13 +76,13 @@
             </p>
         </div>
 
-        <div class="flex h-9 items-center justify-end gap-2">
+        <div class="relative flex h-9 items-center justify-end gap-2">
             <div class="relative flex items-center">
                 <Input
                     class="mr-6 h-9 w-96"
                     placeholder="search"
                     bind:value={search}
-                    onkeydown={handleSearch}
+                    oninput={handleSearch}
                 />
 
                 <Button
@@ -73,12 +99,12 @@
                     <Undo />
                 </Tippy>
             {/if}
-            <div>
-                <Tippy text="resync" onTrigger={refresh} side="left">
+            <div class="relative flex items-center gap-2">
+                <Tippy text="resync" onTrigger={refresh} side="bottom" class="relative">
                     <RefreshCw />
                 </Tippy>
+                <NewReleasesDialog />
             </div>
-            <NewReleasesDialog />
         </div>
     </div>
 </div>

@@ -103,24 +103,26 @@
 
     async function checkIfSupporter() {
         await supporterStore.sync()
-        if ($supporterStore.isSupporter) await refreshReleases()
+        if ($supporterStore.isSupporter) await refreshMusicReleases()
     }
 
-    async function refreshReleases() {
-        const { updated_at, range, data } = $newReleasesStore
-        if (!data?.length) return await newReleasesStore.getNewReleases(true)
+    async function refreshMusicReleases() {
+        const { music_updated_at, range, music_data } = $newReleasesStore
+        if (!music_data?.length) return await newReleasesStore.getMusicReleases(true)
 
-        const last_updated = new Date(updated_at)
+        const last_updated = new Date(music_updated_at)
         const today = Date.now()
         const rangeLimit =
-            range === 'since_last_update' ? getRangeLimit(updated_at) : rangeMap[range]
+            range === 'since_last_update' ? getRangeLimit(music_updated_at) : rangeMap[range]
         const diffTime = Math.abs(today - (last_updated.getTime() + rangeLimit * WHOLE_DAY))
         const diffDays = Math.floor(diffTime / WHOLE_DAY)
 
-        if (diffDays > rangeLimit) await newReleasesStore.getNewReleases(true)
+        if (diffDays > rangeLimit) await newReleasesStore.getMusicReleases(true)
     }
 
-    const count = $derived($newReleasesStore.count)
+    const music_count = $derived($newReleasesStore.music_count)
+    const shows_count = $derived($newReleasesStore.shows_count)
+
     onMount(checkIfSupporter)
 </script>
 
@@ -131,13 +133,13 @@
             text="new releases"
             id="chorus-new-releases-icon"
             onTrigger={toggleNewReleasesUI}
-            class="relative h-8 w-12 cursor-pointer border-white bg-transparent py-0 hover:bg-transparent [&_svg]:size-5"
+            class="relative h-8 w-12 cursor-pointer border-white bg-transparent py-0 hover:bg-transparent [&_svg]:size-[18px]"
         >
-            <BellPlus class="stroke-red-500" />
+            <BellPlus class="size-[18px] stroke-red-500" />
 
             <span
-                class="rounded-4 h-4 w-10 rounded-md bg-red-500 px-2 text-center text-xs font-semibold text-white"
-                >{count}</span
+                class="h-4 w-10 rounded-md bg-red-500 px-2 text-center text-xs font-semibold text-white"
+                >{music_count + shows_count}</span
             >
         </Tippy>
     </div>

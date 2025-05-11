@@ -1,6 +1,6 @@
 <script lang="ts">
     import { newReleasesStore } from '$lib/stores/new-releases'
-    import type { GroupBy, Filter, Range } from '$lib/stores/new-releases'
+    import type { GroupBy, Filter, Range, ReleaseType } from '$lib/stores/new-releases'
 
     import Tippy from '$lib/components/Tippy.svelte'
     import { Label } from '$lib/components/ui/label'
@@ -11,10 +11,9 @@
     import { CustomSelect } from '$lib/components/ui/custom-select'
 
     async function selectRange(range: Range) {
-        await newReleasesStore.updateState({
-            range
-        })
-        await newReleasesStore.getNewReleases(true)
+        await newReleasesStore.updateState({ range })
+        if ($newReleasesStore.release_type === 'music')
+            await newReleasesStore.getMusicReleases(true)
     }
 
     async function selectFilter({ filter, checked }: { filter: keyof Filter; checked: boolean }) {
@@ -24,7 +23,20 @@
                 [filter]: checked
             }
         })
-        await newReleasesStore.getNewReleases(true)
+        if ($newReleasesStore.release_type === 'music')
+            await newReleasesStore.getMusicReleases(true)
+    }
+
+    async function selectReleaseType(release_type: ReleaseType) {
+        await newReleasesStore.updateState({ release_type })
+        if (release_type === 'music') await newReleasesStore.getMusicReleases(true)
+        else if (release_type === 'shows&podcasts') await newReleasesStore.getShowsReleases(true)
+        else {
+            await Promise.all([
+                newReleasesStore.getMusicReleases(true),
+                newReleasesStore.getShowsReleases(true)
+            ])
+        }
     }
 
     async function toggleGroupBy(group_by: GroupBy) {
@@ -45,6 +57,21 @@
         <Dialog.Title>New Releases Settings</Dialog.Title>
         <Separator class="h-0.5 w-full" />
         <div class="flex flex-col gap-4">
+            <div class="flex w-full gap-4">
+                <p class="w-full text-sm font-medium">release types</p>
+                <div class="flex w-full items-center justify-end">
+                    <CustomSelect
+                        options={[
+                            { label: 'music', value: 'music' },
+                            { label: 'shows&podcasts', value: 'shows&podcasts' },
+                            { label: 'all', value: 'all' }
+                        ]}
+                        selected={$newReleasesStore.release_type}
+                        onValueChange={(value: ReleaseType) => selectReleaseType(value)}
+                    />
+                </div>
+            </div>
+
             <div class="flex w-full gap-4">
                 <p class="w-full text-sm font-medium">date range</p>
                 <div class="flex w-full items-center justify-end">

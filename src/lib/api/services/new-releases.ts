@@ -17,8 +17,8 @@ type Artist = {
     name: string
 }
 
-export async function getArtistList() {
-    const body = {
+function getRequestBody(type: 'music' | 'shows') {
+    return {
         operationName: 'libraryV3',
         extensions: {
             persistedQuery: {
@@ -27,13 +27,35 @@ export async function getArtistList() {
             }
         },
         variables: {
-            filters: ['Artists'],
+            filters: [type === 'music' ? 'Artists' : 'Podcasts & Shows'],
             limit: 50_000,
             textFilter: '',
             offset: 0,
-            order: 'Alphabetical'
+            order: type === 'music' ? 'Alphabetical' : 'Recents'
         }
     }
+}
+
+export async function getShowsList() {
+    const body = getRequestBody('shows')
+    const options = await setOptions({ method: 'POST', body })
+
+    if (!options) throw new Error('Failed to set request options: missing authentication')
+
+    try {
+        const response = (await request({ url: API_URL, options })) as any
+        return response.data.me.libraryV3.items.map((item: any) => ({
+            uri: item.item.data.uri,
+            name: item.item.data.name
+        }))
+    } catch (error) {
+        console.error(error)
+        return []
+    }
+}
+
+export async function getArtistList() {
+    const body = getRequestBody('music')
     const options = await setOptions({ method: 'POST', body })
 
     if (!options) throw new Error('Failed to set request options: missing authentication')
@@ -48,6 +70,102 @@ export async function getArtistList() {
         console.error(error)
         return []
     }
+}
+
+async function getPodcastInfo(show: Show) {
+    const body = {
+        variables: { uri: show.uri, offset: 0, limit: 100 },
+        operationName: 'queryPodcastEpisodes',
+        extensions: {
+            persistedQuery: {
+                version: 1,
+                sha256Hash: '89c3f9e7216f39cefa5c097821a31015e0bc3079e4c11013d457de4314395168'
+            }
+        }
+    }
+
+    const options = await setOptions({ method: 'POST', body })
+    if (!options) throw new Error('Failed to set request options: missing authentication')
+
+    try {
+        const response = (await request({ url: API_URL, options })) as any
+        if (!response) throw new Error('Failed to get podcast info')
+
+        const episodes = response.data.podcastUnionV2.episodesV2.items.map((item: any) => {
+            return item.entity.data
+        })
+
+        const store = await storage.getItem<NewReleases>(NEW_RELEASES_STORE_KEY)
+
+        return parsePodcastInfo({
+            data: episodes,
+            show,
+            config: {
+                range: store?.range ?? 'week',
+                updated_at: store?.shows_updated_at ?? new Date().toISOString()
+            }
+        })
+    } catch (error) {
+        console.error(error)
+        return []
+    }
+}
+
+function parsePodcastInfo({
+    data,
+    show,
+    config
+}: {
+    show: Show
+    data: any[]
+    config: { range: Range; updated_at: string }
+}) {
+    const list = []
+    for (const episode of data) {
+        const time = Date.parse(episode.releaseDate.isoString)
+        const today = Date.now()
+        const limitInMs =
+            24 *
+            3600 *
+            1000 *
+            (config.range === 'since_last_update'
+                ? getRangeLimit(config.updated_at)
+                : rangeMap[config.range])
+        if (today - time >= limitInMs) continue
+
+        const trackMeta = getTrackMetadata({
+            artist: { uri: show.uri, name: show.name },
+            track: episode,
+            config: {
+                range: config?.range ?? 'week',
+                updated_at: config?.updated_at ?? new Date().toISOString()
+            }
+        }) as ShowMetadata | null
+
+        if (!trackMeta) continue
+
+        list.push(trackMeta)
+    }
+
+    return list
+}
+
+export type Show = {
+    uri: string
+    name: string
+}
+
+export async function fetchShowsReleases() {
+    const shows = (await getShowsList()) as Array<Show>
+    const podcastRequests = shows.map(async (show) => {
+        return await getPodcastInfo(show).catch((error) => {
+            console.error(error)
+            return []
+        })
+    })
+
+    const responses = await Promise.all(podcastRequests)
+    return responses.flat().filter((release): release is TrackMetadata => release !== undefined)
 }
 
 export async function getArtistDiscography(artist: Artist): Promise<TrackMetadata[]> {
@@ -80,7 +198,7 @@ export async function getArtistDiscography(artist: Artist): Promise<TrackMetadat
             config: {
                 filters: store?.filters ?? defaultFilters,
                 range: store?.range ?? 'week',
-                updated_at: store?.updated_at ?? new Date().toISOString()
+                updated_at: store?.music_updated_at ?? new Date().toISOString()
             }
         })
     } catch (error) {
@@ -93,7 +211,10 @@ type Track = {
     type: 'ALBUM' | 'COMPILATION' | 'SINGLE' | 'EP'
     uri: string
     name: string
-    date: {
+    date?: {
+        isoString: string
+    }
+    releaseDate?: {
         isoString: string
     }
     coverArt: {
@@ -101,7 +222,7 @@ type Track = {
             url: string
         }[]
     }
-    tracks: {
+    tracks?: {
         totalCount: number
     }
     playability: {
@@ -110,13 +231,13 @@ type Track = {
 }
 
 export type TrackMetadata = {
+    uri: string
+    time: number
     type: string
     title: string
     artist: Artist
     imageUrl: string
-    time: number
-    trackCount: number
-    uri: string
+    trackCount?: number
 }
 
 const rangeMap: Record<Range, number> = {
@@ -134,6 +255,8 @@ function getRangeLimit(updated_at: string) {
     return diffDays > 0 ? diffDays : 0
 }
 
+export type ShowMetadata = Omit<TrackMetadata, 'trackCount'>
+
 function getTrackMetadata({
     artist,
     track,
@@ -143,7 +266,10 @@ function getTrackMetadata({
     track: Track
     config: { range: Range; updated_at: string }
 }): TrackMetadata | null {
-    const time = Date.parse(track.date.isoString)
+    const date = track?.date?.isoString ?? track.releaseDate?.isoString ?? ''
+    if (date === '') return null
+
+    const time = Date.parse(date)
     const today = Date.now()
     const limitInMs =
         24 *
@@ -165,7 +291,7 @@ function getTrackMetadata({
         },
         imageUrl: track.coverArt.sources.at(1)!.url, // 64X64
         time,
-        trackCount: track.tracks.totalCount
+        ...(track?.tracks && { trackCount: track.tracks.totalCount })
     }
 }
 
@@ -224,7 +350,7 @@ function parseArtistDiscography({
     return list
 }
 
-export async function getArtistReleases() {
+export async function fetchMusicReleases() {
     const artists = (await getArtistList()) as Array<Artist>
     const releaseRequests = artists.map(async (artist: Artist) => {
         return await getArtistDiscography(artist).catch((error) => {
@@ -238,25 +364,24 @@ export async function getArtistReleases() {
 }
 
 export interface NewReleasesService {
-    getArtistList(): Promise<Artist[]>
+    getShowsReleases(): Promise<ShowMetadata[]>
     getArtistReleases(): Promise<TrackMetadata[]>
     updateLibrary({ uri, remove }: { uri: string; remove: boolean }): Promise<void>
 }
 
 export class NewReleasesService implements NewReleasesService {
-    async getArtistList() {
+    async getMusicReleases() {
         try {
-            const response = (await getArtistList()) as any
-            return response.data.me.libraryV3.items
+            return await fetchMusicReleases()
         } catch (error) {
             console.error(error)
             return []
         }
     }
 
-    async getMusicReleases() {
+    async getShowsReleases() {
         try {
-            return await getArtistReleases()
+            return await fetchShowsReleases()
         } catch (error) {
             console.error(error)
             return []

@@ -2,8 +2,15 @@
     import { onMount } from 'svelte'
     import { formatDate } from '$lib/utils/time'
     import { mediaStore } from '$lib/stores/media'
+    import { groupBy } from '$lib/utils/groupings'
     import { getQueueService } from '$lib/api/services/queue'
-    import { newReleasesStore, newReleasesUIStore } from '$lib/stores/new-releases'
+    import type { TrackMetadata } from '$lib/api/services/new-releases'
+    import {
+        newReleasesStore,
+        newReleasesUIStore,
+        sortReleases,
+        groupByMap
+    } from '$lib/stores/new-releases'
 
     import X from '@lucide/svelte/icons/x'
     import { Button } from '$lib/components/ui/button'
@@ -12,13 +19,29 @@
     import CircleCheck from '@lucide/svelte/icons/circle-check'
     import ScrollingText from '$lib/components/ScrollingText.svelte'
 
-    async function getArtistReleases() {
-        if ($newReleasesStore.data.length) return
+    let releases: Record<string, TrackMetadata[]> = $state({})
+
+    async function getReleases() {
+        const type = $newReleasesStore.release_type
+        if (type === 'music' && $newReleasesStore.music_data.length) return
+        if (type === 'shows&podcasts' && $newReleasesStore.shows_data.length) return
+        if (
+            (type === 'all' && $newReleasesStore.music_data.length) ||
+            $newReleasesStore.shows_data.length
+        )
+            return
 
         try {
-            await newReleasesStore.getNewReleases()
+            if (type === 'music') await newReleasesStore.getMusicReleases()
+            else if (type === 'shows&podcasts') await newReleasesStore.getShowsReleases()
+            else {
+                await Promise.all([
+                    newReleasesStore.getMusicReleases(),
+                    newReleasesStore.getShowsReleases()
+                ])
+            }
         } catch (error) {
-            console.error('Error fetching new releases:', error)
+            console.error('Error fetching music releases:', error)
         }
     }
 
@@ -55,9 +78,19 @@
     }) {
         event.stopPropagation()
         await newReleasesStore.dismissRelease({ uri, key })
+
+        releases =
+            ($newReleasesStore.release_type === 'music'
+                ? $newReleasesStore.music_releases
+                : $newReleasesStore.release_type === 'shows&podcasts'
+                  ? $newReleasesStore.shows_releases
+                  : groupReleases()) ?? {}
     }
 
-    $: isLoading = $newReleasesStore.loading || !$newReleasesStore.data.length
+    const isLoading = $derived(
+        $newReleasesStore.loading ||
+            (!$newReleasesStore.music_data.length && !$newReleasesStore.shows_data.length)
+    )
 
     function pluralize(count: number, word: string) {
         return `${count} ${word}${count === 1 ? '' : 's'}`
@@ -81,8 +114,33 @@
         }[path]
     }
 
+    function groupReleases() {
+        const { music_releases, shows_releases, group_by } = $newReleasesStore
+        const grouping = groupByMap[group_by]
+        const music = Object.values(music_releases ?? {}).flat()
+        const shows = Object.values(shows_releases ?? {}).flat()
+        return groupBy(sortReleases([...music, ...shows], group_by), grouping)
+    }
+
+    releases =
+        ($newReleasesStore.release_type === 'music'
+            ? $newReleasesStore.music_releases
+            : $newReleasesStore.release_type === 'shows&podcasts'
+              ? $newReleasesStore.shows_releases
+              : groupReleases()) ?? {}
+
+    $effect(() => {
+        releases =
+            ($newReleasesStore.release_type === 'music'
+                ? $newReleasesStore.music_releases
+                : $newReleasesStore.release_type === 'shows&podcasts'
+                  ? $newReleasesStore.shows_releases
+                  : groupReleases()) ?? {}
+    })
+
     onMount(() => {
-        getArtistReleases()
+        getReleases()
+
         return () => {
             newReleasesStore.updateState({ release_id: null })
         }
@@ -91,7 +149,9 @@
 
 <div class="flex h-full w-full" id="chorus-new-releases-view">
     <div class="mt-28 flex h-full w-full flex-col items-center justify-center bg-[#121212]">
-        <div class="mx-auto flex w-full max-w-screen-4xl flex-col gap-8 p-10 px-10 py-6">
+        <div
+            class="mx-auto flex h-full min-h-dvh w-full max-w-screen-4xl flex-col gap-8 p-10 px-10 py-6"
+        >
             {#if isLoading}
                 {#each Array(3) as _, i}
                     <div class="flex flex-col gap-4">
@@ -113,7 +173,7 @@
                     </div>
                 {/each}
             {:else}
-                {#each Object.entries($newReleasesStore.releases ?? {}) as [key, tracks]}
+                {#each Object.entries(releases ?? {}) as [key, tracks]}
                     <div class="md:flex-row flex w-full flex-col justify-center gap-4">
                         <h1 class="md:min-w-28 w-full text-left text-2xl font-bold">
                             {formatDate(key)}
@@ -122,18 +182,18 @@
                             {#each tracks as track}
                                 <div class="relative flex h-16 w-full gap-2">
                                     <div
-                                        class="flex h-16 w-6 cursor-pointer flex-col items-center justify-evenly border border-white"
+                                        class="flex h-16 w-6 cursor-pointer flex-col items-center justify-between border border-white"
                                     >
                                         <Button
                                             size="icon"
                                             variant="ghost"
                                             onclick={() => playTrack(track.uri)}
-                                            class="bg:transparent flex size-5 items-center justify-center rounded-full [&_svg]:size-5"
+                                            class="bg:transparent flex size-5 items-center justify-center rounded-full hover:bg-transparent [&_svg]:size-6"
                                         >
                                             <svg
                                                 xmlns="http://www.w3.org/2000/svg"
                                                 viewBox="-4 -4 24 24"
-                                                class="size-5 fill-white stroke-1 brightness-100"
+                                                class="size-6 fill-current brightness-100 hover:fill-white"
                                             >
                                                 {@html getPath(
                                                     $newReleasesStore.release_id === track.uri &&
@@ -148,14 +208,14 @@
                                             size="icon"
                                             variant="ghost"
                                             onclick={() => updateLibrary(track.uri)}
-                                            class="bg:transparent flex size-5 items-center justify-center rounded-full [&_svg]:size-5"
+                                            class="bg:transparent flex size-5 items-center justify-center rounded-full hover:bg-transparent [&_svg]:size-4"
                                         >
-                                            {#if $newReleasesStore.library.includes(track.uri)}
-                                                <CircleCheck
-                                                    class="size-5 fill-green-500 stroke-white stroke-1"
-                                                />
+                                            {#if $newReleasesStore.library.find((filter) => filter.uri === track.uri)}
+                                                <CircleCheck class="size-4  stroke-green-500" />
                                             {:else}
-                                                <CirclePlus class="size-5 fill-none stroke-1" />
+                                                <CirclePlus
+                                                    class="size-4 stroke-current hover:stroke-white hover:brightness-200"
+                                                />
                                             {/if}
                                         </Button>
 
@@ -168,9 +228,11 @@
                                                     uri: track.uri,
                                                     key
                                                 })}
-                                            class="bg:transparent flex size-5 items-center justify-center rounded-full [&_svg]:size-5"
+                                            class="bg:transparent flex size-5 items-center justify-center rounded-full hover:bg-transparent [&_svg]:size-[18px]"
                                         >
-                                            <X class="size-5 fill-white stroke-2 brightness-100" />
+                                            <X
+                                                class="size-[18px] stroke-current stroke-2 brightness-100 hover:stroke-white"
+                                            />
                                         </Button>
                                     </div>
                                     <AvatarLogo src={track.imageUrl} class="size-16 rounded-none" />
@@ -178,17 +240,21 @@
                                         <ScrollingText
                                             as="a"
                                             text={track.title}
-                                            className="text-base chorus-release-text leading-none cursor-pointer text-muted-foreground  hover:underline"
+                                            className="text-base chorus-release-text leading-none cursor-pointer text-muted-foreground hover:text-white hover:underline"
                                             handleClick={() => goTo(track.uri)}
                                         />
                                         <ScrollingText
                                             as="a"
                                             text={track.artist.name}
-                                            className="text-base chorus-release-text leading-none cursor-pointer text-muted-foreground hover:underline"
+                                            className="text-base chorus-release-text leading-none cursor-pointer text-muted-foreground hover:text-white hover:underline"
                                             handleClick={() => goTo(track.artist.uri)}
                                         />
                                         <ScrollingText
-                                            text={`${track.type} | ${pluralize(track.trackCount, 'track')}`}
+                                            text={`${track.type}${
+                                                track?.trackCount
+                                                    ? ` | ${pluralize(track.trackCount, 'track')}`
+                                                    : ''
+                                            }`}
                                             className="!text-base chorus-release-text text-muted-foreground leading-none lowercase"
                                         />
                                     </div>
