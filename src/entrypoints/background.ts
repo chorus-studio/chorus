@@ -7,6 +7,7 @@ import type { SettingsState } from '$lib/stores/settings'
 import { registerTrackService } from '$lib/api/services/track'
 import { registerQueueService } from '$lib/api/services/queue'
 import { registerPlayerService } from '$lib/api/services/player'
+import { registerNewReleasesService } from '$lib/api/services/new-releases'
 import { registerCheckPermissionsService } from '$lib/utils/check-permissions'
 import { registerNotificationService, showNotification } from '$lib/utils/notifications'
 
@@ -18,10 +19,12 @@ export default defineBackground(() => {
     })()
 
     const STORE_KEYS = {
-        NOW_PLAYING: 'local:chorus_now_playing' as const,
+        SETTINGS: 'local:chorus_settings' as const,
+        RELEASES: 'local:chorus_releases' as const,
         DEVICE_ID: 'local:chorus_device_id' as const,
-        CONNECTION_ID: 'local:chorus_connection_id' as const,
-        AUTH_TOKEN: 'local:chorus_auth_token' as const
+        AUTH_TOKEN: 'local:chorus_auth_token' as const,
+        NOW_PLAYING: 'local:chorus_now_playing' as const,
+        CONNECTION_ID: 'local:chorus_connection_id' as const
     }
 
     browser.runtime.onConnect.addListener(async (port) => {
@@ -66,6 +69,7 @@ export default defineBackground(() => {
     registerPlayerService()
     registerQueueService()
     registerNotificationService()
+    registerNewReleasesService()
     registerCheckPermissionsService()
 
     browser.webRequest.onBeforeRequest.addListener(
@@ -139,18 +143,23 @@ export default defineBackground(() => {
     )
 
     browser.commands.onCommand.addListener(async (command) => {
-        if (command === 'show-track') {
-            const isSupporter = await mellowtel.getOptInStatus()
-            if (!isSupporter) return
+        if (!['show-track', 'toggle-new-releases'].includes(command)) {
+            return await executeButtonClick({ command, isShortCutKey: true })
+        }
 
-            const settings = await storage.getItem<SettingsState>(SETTINGS_STORE_KEY)
+        const isSupporter = await mellowtel.getOptInStatus()
+        if (!isSupporter) return
+
+        if (command === 'show-track') {
+            const settings = await storage.getItem<SettingsState>(STORE_KEYS.SETTINGS)
             if (!settings?.notifications?.enabled) return
 
             const nowPlaying = await storage.getItem<NowPlaying>(STORE_KEYS.NOW_PLAYING)
             if (nowPlaying) await showNotification(nowPlaying)
-            return
         }
 
-        await executeButtonClick({ command, isShortCutKey: true })
+        if (command === 'toggle-new-releases') {
+            await executeButtonClick({ command, isShortCutKey: true })
+        }
     })
 })

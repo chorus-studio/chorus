@@ -9,6 +9,8 @@ export class TrackService {
         try {
             const url = `${ALBUM_URL}/${albumId}`
             const options = await setOptions({ method: 'GET' })
+            if (!options) throw new Error('No options found')
+
             return await request({ url, options })
         } catch (error: any) {
             console.error(error)
@@ -20,6 +22,8 @@ export class TrackService {
     async updateLikedTracks({ ids, method }: { ids: string; method: 'PUT' | 'DELETE' }) {
         try {
             const options = await setOptions({ method })
+            if (!options) throw new Error('No options found')
+
             return await request({ url: `${TRACK_URL}?ids=${ids}`, options })
         } catch (error) {
             console.error(error)
@@ -31,6 +35,8 @@ export class TrackService {
     async checkIfTracksInCollection(ids: string) {
         try {
             const options = await setOptions({ method: 'GET' })
+            if (!options) throw new Error('No options found')
+
             const url = `${TRACK_URL}/contains?ids=${ids}`
             return await request({ url, options })
         } catch (error) {

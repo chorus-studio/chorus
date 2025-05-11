@@ -14,6 +14,8 @@
     import HeartButton from '$lib/components/HeartButton.svelte'
     import SettingsPopover from '$lib/components/SettingsPopover.svelte'
 
+    let supportsPip = false
+
     async function init() {
         setMode('dark')
         await nowPlaying.observe()
@@ -23,12 +25,19 @@
         await mediaStore.setActive(false)
     }
 
+    function checkIfPipSupported() {
+        if (typeof window !== 'undefined' && 'pictureInPictureEnabled' in document) {
+            supportsPip = document.pictureInPictureEnabled
+        }
+    }
+
     onMount(() => {
         init()
         const tracklistObserver = new TracklistObserver()
         tracklistObserver.observe()
         const queueObserver = new QueueObserver()
         queueObserver.observe()
+        checkIfPipSupported()
 
         return () => {
             nowPlaying.disconnect()
@@ -47,5 +56,7 @@
     <HeartButton />
     <SettingsPopover />
     <SkipButton />
-    <PipButton />
+    {#if supportsPip}
+        <PipButton />
+    {/if}
 </div>

@@ -43,7 +43,7 @@
     >
         opt out
     </AlertDialog.Trigger>
-    <AlertDialog.Content class="w-11/12 rounded-lg bg-primary-foreground p-4 md:w-3/4">
+    <AlertDialog.Content class="md:w-1/2 w-11/12 rounded-lg bg-primary-foreground p-4">
         <AlertDialog.Header>
             <AlertDialog.Title class="text-lg">Opt out of Mellowtel?</AlertDialog.Title>
             <AlertDialog.Description class="text-left text-base">
@@ -54,7 +54,11 @@
         <AlertDialog.Footer>
             <div class="flex w-full items-center justify-end gap-2">
                 <AlertDialog.Cancel
-                    class={buttonVariants({ variant: 'outline', size: 'sm', class: 'h-7 text-sm' })}
+                    class={buttonVariants({
+                        variant: 'outline',
+                        size: 'sm',
+                        class: 'mt-0 h-7 text-sm'
+                    })}
                 >
                     cancel
                 </AlertDialog.Cancel>

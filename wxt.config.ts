@@ -42,6 +42,7 @@ export default defineConfig({
             {
                 resources: [
                     '/media-override.js',
+                    '/router.js',
                     '/icon/*',
                     '/sounds/*',
                     '/processor.js',
@@ -100,6 +101,9 @@ export default defineConfig({
             },
             'show-track': {
                 description: 'Show current track as a notification'
+            },
+            'toggle-new-releases': {
+                description: 'Toggle New Releases View'
             }
         }
     })

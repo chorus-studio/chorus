@@ -24,6 +24,19 @@ export function syncWithType<T extends Record<string, any>>(obj: T, template: T)
             typeof template[key] === 'object' &&
             template[key] !== null
         ) {
+            // Special handling for releases property
+            if (key === 'releases') {
+                // Keep the existing releases if they exist
+                continue
+            }
+            // For other objects containing arrays, we need to handle them specially
+            if (
+                Object.values(result[key]).some((v) => Array.isArray(v)) &&
+                Object.values(template[key]).some((v) => Array.isArray(v))
+            ) {
+                // Keep the result object if it has the same structure
+                continue
+            }
             // Recursively sync nested objects
             result[key] = syncWithType(result[key], template[key])
         }
@@ -45,6 +58,19 @@ export function syncWithType<T extends Record<string, any>>(obj: T, template: T)
             typeof template[key] === 'object' &&
             template[key] !== null
         ) {
+            // Special handling for releases property
+            if (key === 'releases') {
+                // Keep the existing releases if they exist
+                continue
+            }
+            // For other objects containing arrays, we need to handle them specially
+            if (
+                Object.values(result[key]).some((v) => Array.isArray(v)) &&
+                Object.values(template[key]).some((v) => Array.isArray(v))
+            ) {
+                // Keep the result object if it has the same structure
+                continue
+            }
             // Recursively sync nested objects
             result[key] = syncWithType(result[key], template[key])
         }

@@ -58,6 +58,9 @@ export default class MediaElement {
                 if (!this.mediaOverride) return
 
                 switch (type) {
+                    case 'FROM_NEW_RELEASES':
+                        window.navigateTo(data)
+                        break
                     case 'FROM_PLAYBACK_LISTENER':
                         this.mediaOverride.updateSoundTouch({
                             pitch: Number(data?.pitch) || 1,
