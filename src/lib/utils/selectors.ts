@@ -13,6 +13,7 @@ const chorusKeys = {
     'mute/unmute': '#volume-button',
     'seek-rewind': '#seek-player-rw-button',
     'seek-forward': '#seek-player-ff-button',
+    'toggle-config': '#chorus-config-dialog-trigger',
     'toggle-new-releases': '#chorus-new-releases-icon',
     settings: '[data-testid="now-playing-widget"] div#chorus-ui #chorus-settings',
     'save/unsave': '[data-testid="now-playing-widget"] div#chorus-ui #chorus-heart',

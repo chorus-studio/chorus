@@ -143,7 +143,7 @@ export default defineBackground(() => {
     )
 
     browser.commands.onCommand.addListener(async (command) => {
-        if (!['show-track', 'toggle-new-releases'].includes(command)) {
+        if (!['show-track', 'toggle-new-releases', 'toggle-config'].includes(command)) {
             return await executeButtonClick({ command, isShortCutKey: true })
         }
 
@@ -158,7 +158,7 @@ export default defineBackground(() => {
             if (nowPlaying) await showNotification(nowPlaying)
         }
 
-        if (command === 'toggle-new-releases') {
+        if (['toggle-new-releases', 'toggle-config'].includes(command)) {
             await executeButtonClick({ command, isShortCutKey: true })
         }
     })

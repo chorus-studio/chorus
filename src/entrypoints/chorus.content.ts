@@ -6,11 +6,12 @@ import Alert from '$lib/components/Alert.svelte'
 import LoopButton from '$lib/components/LoopButton.svelte'
 import SeekButton from '$lib/components/SeekButton.svelte'
 import NewReleasesIcon from '$lib/components/NewReleasesIcon.svelte'
+import ChorusConfigDialog from '$lib/components/ChorusConfigDialog.svelte'
 
 const watchPattern = new MatchPattern('*://open.spotify.com/*')
 
 async function injectChorusUI(ctx: ContentScriptContext) {
-    await injectScript('/router.js', { keepInDom: true })
+    await injectScript('/router.js')
     await injectScript('/media-override.js')
 
     const ui = createIntegratedUi(ctx, {
@@ -23,10 +24,16 @@ async function injectChorusUI(ctx: ContentScriptContext) {
             const newFeedButton = document.querySelector('[data-testid="whats-new-feed-button"]')
             if (newFeedButton) {
                 const newReleasesIcon = document.getElementById('chorus-new-releases')
+                const configDialog = document.getElementById('chorus-config-dialog-trigger')
                 if (!newReleasesIcon) {
-                    const div = document.createElement('div')
-                    newFeedButton.parentElement?.insertBefore(div, newFeedButton)
-                    mount(NewReleasesIcon, { target: div })
+                    const releasesIcon = document.createElement('div')
+                    newFeedButton.parentElement?.insertBefore(releasesIcon, newFeedButton)
+                    mount(NewReleasesIcon, { target: releasesIcon })
+                }
+                if (!configDialog) {
+                    const configDialog = document.createElement('div')
+                    newFeedButton.parentElement?.insertBefore(configDialog, newFeedButton)
+                    mount(ChorusConfigDialog, { target: configDialog })
                 }
             }
             const skipBack = document.querySelector('[data-testid="control-button-skip-back"]')
