@@ -1,9 +1,10 @@
-import { get, writable } from 'svelte/store'
 import { storage } from '@wxt-dev/storage'
+import { get, writable } from 'svelte/store'
 import { syncWithType } from '$lib/utils/store-utils'
 
 import { dataStore } from '$lib/stores/data'
 import { playback } from '$lib/utils/playback'
+import { configStore } from '$lib/stores/config'
 import { currentSongInfo } from '$lib/utils/song'
 import { trackObserver } from '$lib/observers/track'
 import type { SimpleTrack } from '$lib/stores/data/cache'
@@ -89,7 +90,14 @@ function createNowPlayingStore() {
             ? dataStore.collectionObject[songInfo.track_id]
             : (dataStore.collection.find((x) => x.song_id == id) ?? ({} as SimpleTrack))
 
-        if (trackInfo?.blocked) trackObserver?.skipTrack()
+        if (
+            trackInfo?.blocked ||
+            configStore.checkIfTrackShouldBeSkipped({
+                title: title ?? '',
+                artist: artist ?? ''
+            })
+        )
+            trackObserver?.skipTrack()
 
         return {
             id,

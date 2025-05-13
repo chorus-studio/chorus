@@ -3,6 +3,7 @@ import { loopStore } from '$lib/stores/loop'
 import { queue } from '$lib/observers/queue'
 import { seekStore } from '$lib/stores/seek'
 import { mediaStore } from '$lib/stores/media'
+import { configStore } from '$lib/stores/config'
 import { volumeStore } from '$lib/stores/volume'
 import { effectsStore } from '$lib/stores/effects'
 import { settingsStore } from '$lib/stores/settings'
@@ -153,7 +154,15 @@ export class TrackObserver {
     async processSongTransition() {
         const songInfo = this.currentSong
 
-        if (songInfo?.blocked) return this.skipTrack()
+        if (
+            songInfo?.blocked ||
+            configStore.checkIfTrackShouldBeSkipped({
+                title: songInfo?.title ?? '',
+                artist: songInfo?.artist ?? ''
+            })
+        )
+            return this.skipTrack()
+
         if (songInfo?.snip) {
             this.seeking = true
             this.mute()
@@ -191,6 +200,15 @@ export class TrackObserver {
 
             const currentTimeMS = event.detail.currentTime * 1000
             const snip = this.snip
+
+            if (
+                configStore.checkIfTrackShouldBeSkipped({
+                    title: currentSong.title ?? '',
+                    artist: currentSong.artist ?? ''
+                })
+            ) {
+                return this.skipTrack()
+            }
 
             if (this.snip && this.atTempSnipEnd(currentTimeMS)) {
                 return this.updateCurrentTime(this.snip.start_time)
