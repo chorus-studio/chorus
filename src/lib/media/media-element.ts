@@ -14,7 +14,6 @@ export default class MediaElement {
         this.source = source
         this.source.crossOrigin = 'anonymous'
         this.setupEventListeners()
-        this.loadMediaOverride()
     }
 
     private loadMediaOverride(): void {
@@ -44,6 +43,9 @@ export default class MediaElement {
         })
 
         this.source.addEventListener('play', async () => {
+            if (this.mediaOverride) return
+
+            this.loadMediaOverride()
             document.dispatchEvent(new CustomEvent('FROM_MEDIA_PLAY_INIT'))
         })
 
