@@ -1,16 +1,15 @@
 import { defineProxyService } from '@webext-core/proxy-service'
 
 export interface CheckPermissionsService {
-    checkHasPermission(permission?: string): Promise<boolean>
-    verifyPermission(permission?: string): Promise<boolean>
+    checkHasPermission(permission: string): Promise<boolean>
+    verifyPermission(permission: string): Promise<boolean>
 }
 
 export class CheckPermissionsService implements CheckPermissionsService {
-    async checkHasPermission(permission?: string) {
-        const permissions = permission || 'declarativeNetRequestWithHostAccess'
+    async checkHasPermission(permission: string) {
         try {
             return await browser.permissions.contains({
-                permissions: [permissions]
+                permissions: [permission]
             })
         } catch (error) {
             console.error('Failed to check permission:', error)
@@ -18,11 +17,10 @@ export class CheckPermissionsService implements CheckPermissionsService {
         }
     }
 
-    async verifyPermission(permission?: string) {
-        const permissions = permission || 'declarativeNetRequestWithHostAccess'
+    async verifyPermission(permission: string) {
         try {
             return await browser.permissions.request({
-                permissions: [permissions]
+                permissions: [permission]
             })
         } catch (error) {
             console.error('Failed to verify permission:', error)

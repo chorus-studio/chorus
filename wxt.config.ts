@@ -6,17 +6,16 @@ const BASE_PERMISSIONS = [
     'tabs',
     'scripting',
     'unlimitedStorage',
-    'webRequest',
-    'declarativeNetRequest'
+    'webRequest'
 ]
 
 const perBrowserManifest: Record<string, UserManifest> = {
     chrome: {
         permissions: BASE_PERMISSIONS,
-        optional_permissions: ['notifications', 'declarativeNetRequestWithHostAccess']
+        optional_permissions: ['notifications']
     },
     firefox: {
-        permissions: [...BASE_PERMISSIONS, 'notifications', 'declarativeNetRequestWithHostAccess'],
+        permissions: [...BASE_PERMISSIONS, 'notifications'],
         browser_specific_settings: {
             gecko: {
                 id: 'chorus@cdrani.dev'
@@ -50,10 +49,6 @@ export default defineConfig({
                     '/content-scripts/chorus.css'
                 ],
                 matches: ['*://open.spotify.com/*']
-            },
-            {
-                resources: ['pascoli.html', 'meucci.js'],
-                matches: ['<all_urls>']
             }
         ],
         ...perBrowserManifest[browser],

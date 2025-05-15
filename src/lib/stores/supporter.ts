@@ -1,11 +1,11 @@
 import { writable } from 'svelte/store'
-import { mellowtel } from '$lib/utils/mellowtel'
 
 function createSupporterStore() {
     const { subscribe, set } = writable({ isSupporter: false })
 
     async function sync() {
-        const isSupporter = await mellowtel.getOptInStatus()
+        // TODO: Use License Key to check if user is supporter
+        const isSupporter = false
         set({ isSupporter })
     }
 

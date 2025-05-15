@@ -2,7 +2,6 @@
     import { supporterStore } from '$lib/stores/supporter'
 
     import { Badge } from '$lib/components/ui/badge'
-    import SupportDialog from '$lib/components/SupportDialog.svelte'
 
     const checkOptInStatus = async () => await supporterStore.sync()
 
@@ -36,9 +35,6 @@
 
                 <p class="text-xs">More exclusive features are on the way!</p>
             </article>
-            <div class="absolute bottom-0 flex justify-end">
-                <SupportDialog />
-            </div>
         </div>
     </div>
 </div>

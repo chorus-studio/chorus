@@ -1,5 +1,4 @@
 import { storage } from '@wxt-dev/storage'
-import { mellowtel } from '$lib/utils/mellowtel'
 import { activeOpenTab } from '$lib/utils/messaging'
 import { executeButtonClick } from '$lib/utils/command'
 import type { NowPlaying } from '$lib/stores/now-playing'
@@ -12,12 +11,6 @@ import { registerCheckPermissionsService } from '$lib/utils/check-permissions'
 import { registerNotificationService, showNotification } from '$lib/utils/notifications'
 
 export default defineBackground(() => {
-    ;(async () => {
-        await mellowtel.initBackground()
-        const hasOptedIn = await mellowtel.getOptInStatus()
-        if (hasOptedIn) await mellowtel.start()
-    })()
-
     const STORE_KEYS = {
         SETTINGS: 'local:chorus_settings' as const,
         RELEASES: 'local:chorus_releases' as const,
@@ -147,7 +140,8 @@ export default defineBackground(() => {
             return await executeButtonClick({ command, isShortCutKey: true })
         }
 
-        const isSupporter = await mellowtel.getOptInStatus()
+        // TODO: Use License Key to check if user is supporter
+        const isSupporter = false
         if (!isSupporter) return
 
         if (command === 'show-track') {
