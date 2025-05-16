@@ -163,15 +163,16 @@ export class TrackObserver {
         if (songInfo?.snip) {
             this.seeking = true
             this.mute()
-            this.updateCurrentTime(songInfo?.snip?.start_time ?? 0)
-            this.seeking = false
         }
 
-        this.unMute()
+        setTimeout(() => {
+            this.unMute()
+            this.seeking = false
+        }, 50)
         this.setPlayback()
         await queue.refreshQueue()
         await this.updateTrackType()
-        if (this.isSupporter) await this.showNotification(songInfo)
+        await this.showNotification(songInfo)
     }
 
     private async showNotification(songInfo: NowPlaying) {
@@ -196,19 +197,18 @@ export class TrackObserver {
             const currentTimeMS = event.detail.currentTime * 1000
             const snip = this.snip
 
-            if (
-                configStore.checkIfTrackShouldBeSkipped({
-                    title: currentSong.title ?? '',
-                    artist: currentSong.artist ?? ''
-                })
-            ) {
-                return this.skipTrack()
+            const skipTrack = configStore.checkIfTrackShouldBeSkipped({
+                title: currentSong.title ?? '',
+                artist: currentSong.artist ?? ''
+            })
+
+            if (skipTrack) return this.skipTrack()
+
+            if (currentSong.snip && currentTimeMS < currentSong.snip.start_time * 1000) {
+                return this.updateCurrentTime(currentSong.snip.start_time)
             }
 
-            if (
-                this.snip &&
-                (this.atTempSnipEnd(currentTimeMS) || this.snip.start_time * 1000 > currentTimeMS)
-            ) {
+            if (this.snip && this.atTempSnipEnd(currentTimeMS)) {
                 return this.updateCurrentTime(this.snip.start_time)
             }
 
@@ -219,10 +219,12 @@ export class TrackObserver {
                 return this.updateCurrentTime(currentSong.snip?.start_time ?? 0)
             }
 
+            const atSnipEnd = currentSong.snip && currentTimeMS >= currentSong.snip.end_time * 1000
+
             if (snip?.is_shared && location?.search) history.pushState(null, '', location.pathname)
             if (
                 (currentSong.snip || currentSong.blocked) &&
-                currentTimeMS >= this.currentSong.duration * 1000
+                (currentTimeMS >= this.currentSong.duration * 1000 || atSnipEnd)
             )
                 this.skipTrack()
         }, 50)
