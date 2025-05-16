@@ -16,7 +16,6 @@
     import PopUp from '$lib/components/views/PopUp.svelte'
     import TrackInfo from '$lib/components/TrackInfo.svelte'
     import AvatarLogo from '$lib/components/AvatarLogo.svelte'
-    import Support from '$lib/components/views/Support.svelte'
     import Settings from '$lib/components/views/Settings.svelte'
     import ToggleSelect from '$lib/components/ToggleSelect.svelte'
     import ActionButtons from '$lib/components/ActionButtons.svelte'
@@ -40,8 +39,7 @@
         'fx|eq',
         'seek',
         'settings',
-        pip ? '' : 'info',
-        pip ? '' : 'support'
+        pip ? '' : 'info'
     ].filter(Boolean)
 
     let filteredTabs: string[] = $state(tabs)
@@ -56,7 +54,6 @@
         speed: Speed,
         info: Info,
         settings: Settings,
-        support: Support,
         player: PopUp
     }
 
