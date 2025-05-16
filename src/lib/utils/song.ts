@@ -32,9 +32,9 @@ export const currentSongInfo = (): CurrentSongInfo => {
     let trackKey: 'track_id' | 'album_id' | null = null
     let spotify_id: string | null = null
     try {
-        let [, type, spotify_id] = new URL(anchor?.href).pathname.split('/')
+        let [, type, id] = new URL(anchor?.href).pathname.split('/')
         trackKey = type === 'track' ? 'track_id' : 'album_id'
-        spotify_id = spotify_id ?? null
+        spotify_id = id
     } catch {
         return {
             id,
