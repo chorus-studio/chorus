@@ -205,7 +205,10 @@ export class TrackObserver {
                 return this.skipTrack()
             }
 
-            if (this.snip && this.atTempSnipEnd(currentTimeMS)) {
+            if (
+                this.snip &&
+                (this.atTempSnipEnd(currentTimeMS) || this.snip.start_time * 1000 > currentTimeMS)
+            ) {
                 return this.updateCurrentTime(this.snip.start_time)
             }
 
