@@ -13,12 +13,10 @@ import { snipStore, type Snip } from '$lib/stores/snip'
 import type { SimpleTrack } from '$lib/stores/data/cache'
 import { playbackObserver } from '$lib/observers/playback'
 import { nowPlaying, type NowPlaying } from '$lib/stores/now-playing'
-import { getPlayerService, type PlayerService } from '$lib/api/services/player'
 import { getNotificationService, type NotificationService } from '$lib/utils/notifications'
 
 export class TrackObserver {
     private seeking: boolean = false
-    private playerService: PlayerService
     private currentTrackId: string | null = null
     private notificationService: NotificationService
     private songChangeTimeout: NodeJS.Timeout | null = null
@@ -26,7 +24,6 @@ export class TrackObserver {
     private boundProcessMediaPlayInit: (event: CustomEvent) => void
 
     constructor() {
-        this.playerService = getPlayerService()
         this.notificationService = getNotificationService()
         this.boundProcessTimeUpdate = this.processTimeUpdate.bind(this)
         this.boundProcessMediaPlayInit = this.processMediaPlayInit.bind(this)
@@ -166,9 +163,7 @@ export class TrackObserver {
         if (songInfo?.snip) {
             this.seeking = true
             this.mute()
-            const { start_time = 0 } = songInfo?.snip ?? {}
-            const startTimeMS = start_time * 1000
-            await this.playerService.seekTrackToPosition(startTimeMS)
+            this.updateCurrentTime(songInfo?.snip?.start_time ?? 0)
             this.seeking = false
         }
 
