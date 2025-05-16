@@ -236,19 +236,7 @@ export type TrackMetadata = {
     trackCount?: number
 }
 
-function getRangeLimit(range: Range) {
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    today.setDate(today.getDate() - rangeMap[range])
-    return today.getTime()
-}
-
 export type ShowMetadata = Omit<TrackMetadata, 'trackCount'>
-
-function getDiffBetweenDates(date1: number, date2: number) {
-    const diffTime = Math.abs(date1 - date2)
-    return Math.floor(diffTime / (1000 * 60 * 60 * 24))
-}
 
 function getTrackMetadata({
     artist,
