@@ -138,10 +138,6 @@ export default defineBackground(() => {
             return await executeButtonClick({ command, isShortCutKey: true })
         }
 
-        // TODO: Use License Key to check if user is supporter
-        const isSupporter = false
-        if (!isSupporter) return
-
         if (command === 'show-track') {
             const settings = await storage.getItem<SettingsState>(STORE_KEYS.SETTINGS)
             if (!settings?.notifications?.enabled) return
@@ -151,6 +147,11 @@ export default defineBackground(() => {
         }
 
         if (['toggle-new-releases', 'toggle-config'].includes(command)) {
+            // TODO: Use License Key to check if user is supporter
+            const isSupporter = false
+
+            if (!isSupporter) return
+
             await executeButtonClick({ command, isShortCutKey: true })
         }
     })

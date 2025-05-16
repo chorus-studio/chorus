@@ -4,7 +4,6 @@ import { mount, unmount, SvelteComponent } from 'svelte'
 import { mediaStore } from '$lib/stores/media'
 import { nowPlaying } from '$lib/stores/now-playing'
 import { settingsStore } from '$lib/stores/settings'
-import { supporterStore } from '$lib/stores/supporter'
 
 import TimeProgress from '$lib/components/TimeProgress.svelte'
 import VolumeSlider from '$lib/components/VolumeSlider.svelte'
@@ -101,10 +100,6 @@ export class PlaybackObserver {
         }
     }
 
-    get supporter() {
-        return get(supporterStore)
-    }
-
     get settings() {
         return get(settingsStore)
     }
@@ -116,7 +111,7 @@ export class PlaybackObserver {
 
         if (!addToPlaylistButtons?.length) return
 
-        const show = this.settings.base.playlist
+        const show = this.settings.ui.playlist
         addToPlaylistButtons.forEach((button) => {
             const shouldShow = show ? 'visible' : 'hidden'
             const visibility = button.style.visibility
