@@ -4,6 +4,7 @@
     import * as Tooltip from '$lib/components/ui/tooltip'
 
     import { dataStore } from '$lib/stores/data'
+    import { currentSongInfo } from '$lib/utils/song'
     import { nowPlaying } from '$lib/stores/now-playing'
     import { getTrackService } from '$lib/api/services/track'
     import { buttonVariants } from '$lib/components/ui/button'
@@ -25,8 +26,8 @@
         return isLiked
     }
 
-    async function getTrackIdFromAlbumId(albumId: string) {
-        const response = await trackService.getAlbum(albumId)
+    async function getTrackIdFromAlbumId({ albumId, songId }: { albumId: string; songId: string }) {
+        const response = await trackService.getAlbum({ albumId, songId })
         if (!response) return null
 
         const foundTrack = (response as any).tracks.items.find((track: any) => {
@@ -71,9 +72,12 @@
     }
 
     async function getTrackId() {
-        if ($nowPlaying.track_id) return $nowPlaying.track_id
-        if ($nowPlaying.album_id) {
-            const trackId = await getTrackIdFromAlbumId($nowPlaying.album_id)
+        const { track_id, album_id } = currentSongInfo()
+        const trackId = $nowPlaying.track_id ?? track_id
+        const albumId = $nowPlaying.album_id ?? album_id
+        if (trackId) return trackId
+        if (albumId) {
+            const trackId = await getTrackIdFromAlbumId({ albumId, songId: $nowPlaying!.id })
             nowPlaying.set({ ...$nowPlaying, track_id: trackId })
             return trackId
         }
@@ -88,12 +92,10 @@
         if (track_id) {
             nowPlaying.set({ ...$nowPlaying, track_id })
 
-            const response = await trackService?.updateLikedTracks({
+            await trackService?.updateLikedTracks({
                 ids: track_id,
-                method: liked ? 'DELETE' : 'PUT'
+                action: liked ? 'remove' : 'add'
             })
-
-            if (response !== 'empty response') return
 
             dataStore.updateUserCollection({ track_id, liked: !liked })
             await nowPlaying.setLiked(!liked)

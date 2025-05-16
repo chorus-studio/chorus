@@ -5,7 +5,6 @@ import { syncWithType } from '$lib/utils/store-utils'
 export const SETTINGS_STORE_KEY = 'local:chorus_settings'
 
 export type SettingsKey = 'ui' | 'views' | 'notifications' | 'theme' | 'base'
-export type SettingsType = 'general' | 'supporter'
 export type ThemeName = 'none' | 'dynamic' | 'static'
 export type ThemeMode = 'light' | 'dark'
 export type ThemeVibrancy =
@@ -18,11 +17,8 @@ export type ThemeVibrancy =
     | 'Auto'
 
 export type SettingsState = {
-    type: SettingsType
-    base: {
-        playlist: boolean
-    }
     ui: {
+        playlist: boolean
         pip: boolean
         popup: boolean
         volume: boolean
@@ -47,11 +43,8 @@ export type SettingsState = {
 }
 
 const defaultSettingsState: SettingsState = {
-    type: 'general',
-    base: {
-        playlist: false
-    },
     ui: {
+        playlist: false,
         pip: false,
         popup: false,
         volume: false,

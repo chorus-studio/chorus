@@ -157,7 +157,8 @@
                 $snipStore?.end_time !== $nowPlaying?.duration)) ||
         (tab == 'speed' &&
             !$playbackStore.is_default &&
-            ($playbackStore.track.rate != 1 ||
+            ($playbackStore.track.rate.value != 1 ||
+                !$playbackStore.track.rate.preserves_pitch ||
                 $playbackStore.track.pitch != 1 ||
                 $playbackStore.track.semitone != 0))
 </script>
@@ -193,7 +194,7 @@
                 onclick={handleSave}
                 class="h-5 rounded-[2px] border-none bg-green-700 px-2 py-0 pb-[0.125rem] text-sm font-semibold text-[#fafafa] hover:bg-green-800 hover:text-[#fafafa]"
             >
-                save
+                {showDelete ? 'update' : 'save'}
             </Button>
         {/if}
     {/if}

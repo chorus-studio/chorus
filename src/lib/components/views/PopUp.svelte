@@ -109,7 +109,6 @@
 
     onMount(() => {
         ;(async () => {
-            await supporterStore.sync()
             if (pip) await getSpotifyTabStatus()
         })()
         setupPort()
@@ -137,9 +136,9 @@
 </script>
 
 <main
-    class="relative flex {$supporterStore.isSupporter ? 'h-[170px]' : 'h-[130px]'} {pip
+    class="relative flex h-[170px] flex-col gap-1 {pip
         ? 'w-full'
-        : 'w-[300px] bg-[var(--bg)] px-3.5 py-3'} flex-col gap-1"
+        : 'w-[300px] bg-[var(--bg)] px-3.5 py-3'}"
 >
     <div
         class="{pip
@@ -158,41 +157,39 @@
             </Button>
         {/if}
 
-        {#if $supporterStore.isSupporter}
-            {#if !pip && $settingsStore.ui.popup}
-                <SelectVibrancy />
-            {/if}
+        {#if $settingsStore.ui.popup}
+            <SelectVibrancy />
+        {/if}
 
-            {#if !$settingsStore.notifications.granted}
-                <Button
-                    size="sm"
-                    variant="outline"
-                    aria-label="Notifications"
-                    onclick={grantNotificationPermission}
-                    class="flex h-5 items-center gap-x-1 bg-[var(--text)] px-2 text-xs text-[var(--bg)] hover:bg-[var(--text)] hover:text-[var(--bg)]"
-                >
-                    <BellPlus />
-                    grant
-                </Button>
-            {:else}
-                <Button
-                    size="icon"
-                    variant="ghost"
-                    aria-label="Notifications"
-                    onclick={toggleNotifications}
-                    class="size-6 border-none bg-transparent text-[var(--text)] brightness-75 hover:bg-transparent hover:text-[var(--text)] [&_svg]:size-[1rem]"
-                >
-                    {#if $settingsStore.notifications.enabled}
-                        {#if $settingsStore.notifications.on_track_change}
-                            <BellRing />
-                        {:else}
-                            <Bell />
-                        {/if}
+        {#if !$settingsStore.notifications.granted}
+            <Button
+                size="sm"
+                variant="outline"
+                aria-label="Notifications"
+                onclick={grantNotificationPermission}
+                class="flex h-5 items-center gap-x-1 bg-[var(--text)] px-2 text-xs text-[var(--bg)] hover:bg-[var(--text)] hover:text-[var(--bg)]"
+            >
+                <BellPlus />
+                grant
+            </Button>
+        {:else}
+            <Button
+                size="icon"
+                variant="ghost"
+                aria-label="Notifications"
+                onclick={toggleNotifications}
+                class="size-6 border-none bg-transparent text-[var(--text)] brightness-75 hover:bg-transparent hover:text-[var(--text)] [&_svg]:size-[1rem]"
+            >
+                {#if $settingsStore.notifications.enabled}
+                    {#if $settingsStore.notifications.on_track_change}
+                        <BellRing />
                     {:else}
-                        <BellOff />
+                        <Bell />
                     {/if}
-                </Button>
-            {/if}
+                {:else}
+                    <BellOff />
+                {/if}
+            </Button>
         {/if}
 
         <Button
@@ -205,6 +202,7 @@
             <VolumeIcon />
         </Button>
     </div>
+
     <div class="flex h-16 w-full items-center gap-x-2 {pip ? 'mt-1' : 'mt-2'}">
         <CoverImage />
         <div class="flex h-16 flex-col justify-center gap-y-1 overflow-hidden text-[var(--text)]">
@@ -212,13 +210,11 @@
         </div>
     </div>
 
-    {#if $supporterStore.isSupporter}
-        <TimeProgress {port} {pip} />
-    {/if}
+    <TimeProgress {port} {pip} />
 
     <MediaControls {port} {pip} />
 
-    {#if $supporterStore.isSupporter && pip}
+    {#if pip}
         <div class="pt-1">
             <VolumeSlider {port} {pip} />
         </div>

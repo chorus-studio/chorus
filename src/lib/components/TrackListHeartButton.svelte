@@ -18,8 +18,11 @@
     async function handleClick() {
         if (!track?.track_id) return
 
-        const method = isLiked ? 'DELETE' : 'PUT'
-        await trackService?.updateLikedTracks({ ids: track.track_id, method })
+        await trackService?.updateLikedTracks({
+            ids: track.track_id,
+            action: isLiked ? 'remove' : 'add'
+        })
+
         isLiked = !isLiked
 
         dataStore.updateUserCollection({ track_id: track.track_id!, liked: isLiked })

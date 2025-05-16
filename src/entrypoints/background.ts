@@ -1,23 +1,15 @@
 import { storage } from '@wxt-dev/storage'
-import { mellowtel } from '$lib/utils/mellowtel'
 import { activeOpenTab } from '$lib/utils/messaging'
 import { executeButtonClick } from '$lib/utils/command'
 import type { NowPlaying } from '$lib/stores/now-playing'
 import type { SettingsState } from '$lib/stores/settings'
 import { registerTrackService } from '$lib/api/services/track'
 import { registerQueueService } from '$lib/api/services/queue'
-import { registerPlayerService } from '$lib/api/services/player'
 import { registerNewReleasesService } from '$lib/api/services/new-releases'
 import { registerCheckPermissionsService } from '$lib/utils/check-permissions'
 import { registerNotificationService, showNotification } from '$lib/utils/notifications'
 
 export default defineBackground(() => {
-    ;(async () => {
-        await mellowtel.initBackground()
-        const hasOptedIn = await mellowtel.getOptInStatus()
-        if (hasOptedIn) await mellowtel.start()
-    })()
-
     const STORE_KEYS = {
         SETTINGS: 'local:chorus_settings' as const,
         RELEASES: 'local:chorus_releases' as const,
@@ -66,7 +58,6 @@ export default defineBackground(() => {
     })
 
     registerTrackService()
-    registerPlayerService()
     registerQueueService()
     registerNotificationService()
     registerNewReleasesService()
@@ -147,9 +138,6 @@ export default defineBackground(() => {
             return await executeButtonClick({ command, isShortCutKey: true })
         }
 
-        const isSupporter = await mellowtel.getOptInStatus()
-        if (!isSupporter) return
-
         if (command === 'show-track') {
             const settings = await storage.getItem<SettingsState>(STORE_KEYS.SETTINGS)
             if (!settings?.notifications?.enabled) return
@@ -159,6 +147,11 @@ export default defineBackground(() => {
         }
 
         if (['toggle-new-releases', 'toggle-config'].includes(command)) {
+            // TODO: Use License Key to check if user is supporter
+            const isSupporter = false
+
+            if (!isSupporter) return
+
             await executeButtonClick({ command, isShortCutKey: true })
         }
     })

@@ -13,12 +13,10 @@ import { snipStore, type Snip } from '$lib/stores/snip'
 import type { SimpleTrack } from '$lib/stores/data/cache'
 import { playbackObserver } from '$lib/observers/playback'
 import { nowPlaying, type NowPlaying } from '$lib/stores/now-playing'
-import { getPlayerService, type PlayerService } from '$lib/api/services/player'
 import { getNotificationService, type NotificationService } from '$lib/utils/notifications'
 
 export class TrackObserver {
     private seeking: boolean = false
-    private playerService: PlayerService
     private currentTrackId: string | null = null
     private notificationService: NotificationService
     private songChangeTimeout: NodeJS.Timeout | null = null
@@ -26,7 +24,6 @@ export class TrackObserver {
     private boundProcessMediaPlayInit: (event: CustomEvent) => void
 
     constructor() {
-        this.playerService = getPlayerService()
         this.notificationService = getNotificationService()
         this.boundProcessTimeUpdate = this.processTimeUpdate.bind(this)
         this.boundProcessMediaPlayInit = this.processMediaPlayInit.bind(this)
@@ -166,17 +163,16 @@ export class TrackObserver {
         if (songInfo?.snip) {
             this.seeking = true
             this.mute()
-            const { start_time = 0 } = songInfo?.snip ?? {}
-            const startTimeMS = start_time * 1000
-            await this.playerService.seekTrackToPosition(startTimeMS)
-            this.seeking = false
         }
 
-        this.unMute()
+        setTimeout(() => {
+            this.unMute()
+            this.seeking = false
+        }, 50)
         this.setPlayback()
         await queue.refreshQueue()
         await this.updateTrackType()
-        if (this.isSupporter) await this.showNotification(songInfo)
+        await this.showNotification(songInfo)
     }
 
     private async showNotification(songInfo: NowPlaying) {
@@ -201,13 +197,15 @@ export class TrackObserver {
             const currentTimeMS = event.detail.currentTime * 1000
             const snip = this.snip
 
-            if (
-                configStore.checkIfTrackShouldBeSkipped({
-                    title: currentSong.title ?? '',
-                    artist: currentSong.artist ?? ''
-                })
-            ) {
-                return this.skipTrack()
+            const skipTrack = configStore.checkIfTrackShouldBeSkipped({
+                title: currentSong.title ?? '',
+                artist: currentSong.artist ?? ''
+            })
+
+            if (skipTrack) return this.skipTrack()
+
+            if (currentSong.snip && currentTimeMS < currentSong.snip.start_time * 1000) {
+                return this.updateCurrentTime(currentSong.snip.start_time)
             }
 
             if (this.snip && this.atTempSnipEnd(currentTimeMS)) {
@@ -221,10 +219,12 @@ export class TrackObserver {
                 return this.updateCurrentTime(currentSong.snip?.start_time ?? 0)
             }
 
+            const atSnipEnd = currentSong.snip && currentTimeMS >= currentSong.snip.end_time * 1000
+
             if (snip?.is_shared && location?.search) history.pushState(null, '', location.pathname)
             if (
                 (currentSong.snip || currentSong.blocked) &&
-                currentTimeMS >= this.currentSong.duration * 1000
+                (currentTimeMS >= this.currentSong.duration * 1000 || atSnipEnd)
             )
                 this.skipTrack()
         }, 50)

@@ -1,17 +1,42 @@
 import { setOptions, request } from '../request'
 import { defineProxyService } from '@webext-core/proxy-service'
 
-const ALBUM_URL = 'https://api.spotify.com/v1/albums'
-const TRACK_URL = 'https://api.spotify.com/v1/me/tracks'
+const API_URL = 'https://api-partner.spotify.com/pathfinder/v2/query'
 
-export class TrackService {
-    async getAlbum(albumId: string) {
+export interface TrackService {
+    checkIfTracksInCollection(ids: string): Promise<boolean[]>
+    getAlbum({ albumId, songId }: { albumId: string; songId: string }): Promise<string | null>
+    updateLikedTracks({ ids, action }: { ids: string; action: 'add' | 'remove' }): Promise<void>
+}
+
+export class TrackService implements TrackService {
+    async getAlbum({ albumId, songId }: { albumId: string; songId: string }) {
+        const body = {
+            variables: {
+                uri: `spotify:album:${albumId}`,
+                locale: '',
+                offset: 0,
+                limit: 50
+            },
+            operationName: 'getAlbum',
+            extensions: {
+                persistedQuery: {
+                    version: 1,
+                    sha256Hash: '97dd13a1f28c80d66115a13697a7ffd94fe3bebdb94da42159456e1d82bfee76'
+                }
+            }
+        }
+        const options = await setOptions({ method: 'POST', body })
+        if (!options) throw new Error('No options found')
+
         try {
-            const url = `${ALBUM_URL}/${albumId}`
-            const options = await setOptions({ method: 'GET' })
-            if (!options) throw new Error('No options found')
-
-            return await request({ url, options })
+            const response = (await request({ url: API_URL, options })) as any
+            const foundTrack = response.data.albumUnion.tracksV2.items.find((track: any) => {
+                const artists = track.artists.map((artist: any) => artist.name).join(',')
+                const songTitle = `${track.name} by ${artists}`
+                return songTitle == songId
+            })
+            return foundTrack?.uri ?? null
         } catch (error: any) {
             console.error(error)
             return null
@@ -19,12 +44,23 @@ export class TrackService {
     }
 
     // !! method must be either PUT or DELETE !!
-    async updateLikedTracks({ ids, method }: { ids: string; method: 'PUT' | 'DELETE' }) {
-        try {
-            const options = await setOptions({ method })
-            if (!options) throw new Error('No options found')
+    async updateLikedTracks({ ids, action }: { ids: string; action: 'add' | 'remove' }) {
+        const body = {
+            variables: { uris: ids.split(',').map((id) => `spotify:track:${id}`) },
+            operationName: action === 'add' ? 'addToLibrary' : 'removeFromLibrary',
+            extensions: {
+                persistedQuery: {
+                    version: 1,
+                    sha256Hash: 'a3c1ff58e6a36fec5fe1e3a193dc95d9071d96b9ba53c5ba9c1494fb1ee73915'
+                }
+            }
+        }
 
-            return await request({ url: `${TRACK_URL}?ids=${ids}`, options })
+        const options = await setOptions({ method: 'POST', body })
+        if (!options) throw new Error('No options found')
+
+        try {
+            return await request({ url: API_URL, options })
         } catch (error) {
             console.error(error)
             return null
@@ -33,12 +69,25 @@ export class TrackService {
 
     // ids must be comma-separated of spotify ids. Ex. ids=jksfdlkjd,jfdklkfdsj,lsuouw
     async checkIfTracksInCollection(ids: string) {
-        try {
-            const options = await setOptions({ method: 'GET' })
-            if (!options) throw new Error('No options found')
+        const body = {
+            variables: {
+                uris: ids.split(',').map((id) => `spotify:track:${id}`)
+            },
+            operationName: 'isCurated',
+            extensions: {
+                persistedQuery: {
+                    version: 1,
+                    sha256Hash: 'e4ed1f91a2cc5415befedb85acf8671dc1a4bf3ca1a5b945a6386101a22e28a6'
+                }
+            }
+        }
 
-            const url = `${TRACK_URL}/contains?ids=${ids}`
-            return await request({ url, options })
+        const options = await setOptions({ method: 'POST', body })
+        if (!options) throw new Error('No options found')
+
+        try {
+            const response = (await request({ url: API_URL, options })) as any
+            return response.data.lookup.map((item: any) => item.data.isCurated)
         } catch (error) {
             console.error(error)
             return null

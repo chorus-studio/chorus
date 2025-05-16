@@ -1,7 +1,6 @@
 <script lang="ts">
     import { pipStore } from '$lib/stores/pip'
     import { settingsStore } from '$lib/stores/settings'
-    import { supporterStore } from '$lib/stores/supporter'
     import { togglePictureInPicture } from '$lib/utils/pip'
 
     import { Button } from '$lib/components/ui/button'
@@ -27,7 +26,7 @@
     })
 </script>
 
-{#if $supporterStore.isSupporter && show}
+{#if show}
     <Button
         size="icon"
         id="chorus-pip"
