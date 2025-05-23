@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { supporterStore } from '$lib/stores/supporter'
+    import { licenseStore } from '$lib/stores/license'
 
     import * as Tabs from '$lib/components/ui/tabs'
     import Tippy from '$lib/components/Tippy.svelte'
@@ -11,9 +11,10 @@
     import ChorusConfigFXEQ from './ChorusConfigFXEQ.svelte'
 
     let activeTab = $state('auto-skip')
+    let granted = $derived($licenseStore.status === 'granted')
 </script>
 
-{#if $supporterStore.isSupporter}
+{#if granted}
     <Dialog.Root>
         <Dialog.Trigger id="chorus-config-dialog-trigger" class="flex items-center justify-center">
             <Tippy text="config" side="bottom" class="size-7 [&_svg]:size-[18px]">

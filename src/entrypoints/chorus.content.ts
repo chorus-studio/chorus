@@ -21,30 +21,14 @@ async function injectChorusUI(ctx: ContentScriptContext) {
             const chorusUI = document.getElementById('chorus-ui')
             if (chorusUI) return
 
-            const newFeedButton = document.querySelector('[data-testid="whats-new-feed-button"]')
-            if (newFeedButton) {
-                const newReleasesIcon = document.getElementById('chorus-new-releases')
-                const configDialog = document.getElementById('chorus-config-dialog-trigger')
-                if (!newReleasesIcon) {
-                    const releasesIcon = document.createElement('div')
-                    newFeedButton.parentElement?.insertBefore(releasesIcon, newFeedButton)
-                    mount(NewReleasesIcon, { target: releasesIcon })
-                }
-                if (!configDialog) {
-                    const configDialog = document.createElement('div')
-                    newFeedButton.parentElement?.insertBefore(configDialog, newFeedButton)
-                    mount(ChorusConfigDialog, { target: configDialog })
-                }
-            }
             const skipBack = document.querySelector('[data-testid="control-button-skip-back"]')
             const skipForward = document.querySelector(
                 '[data-testid="control-button-skip-forward"]'
             )
             mount(App, { target: container })
             const body = document.querySelector('body')
-            if (body) {
-                mount(Alert, { target: body })
-            }
+            if (body) mount(Alert, { target: body })
+
             if (skipBack) {
                 const seekBack = document.querySelector('#seek-player-rw-button')
                 if (!seekBack) {
@@ -53,31 +37,42 @@ async function injectChorusUI(ctx: ContentScriptContext) {
                     mount(SeekButton, { target: div, props: { role: 'seek-backward' } })
                 }
             }
-            if (skipForward) {
-                const seekForward = document.querySelector('#seek-player-ff-button')
-                const loopButton = document.querySelector('#loop-button')
-                if (!seekForward && !loopButton) {
-                    const forwardDiv = document.createElement('div')
-                    const loopDiv = document.createElement('div')
-                    const parentElement = skipForward.parentElement
-                    if (parentElement?.lastElementChild) {
-                        parentElement?.insertBefore(forwardDiv, skipForward.nextSibling)
-                        parentElement?.insertBefore(
-                            loopDiv,
-                            parentElement?.lastElementChild?.nextSibling
-                        )
-                        mount(SeekButton, {
-                            target: forwardDiv,
-                            props: { role: 'seek-forward' }
-                        })
-                        mount(LoopButton, { target: loopDiv })
-                    }
-                }
+            if (!skipForward) return
+
+            const seekForward = document.querySelector('#seek-player-ff-button')
+            const loopButton = document.querySelector('#loop-button')
+            if (!(!seekForward && !loopButton)) return
+
+            const forwardDiv = document.createElement('div')
+            const loopDiv = document.createElement('div')
+            const parentElement = skipForward.parentElement
+            if (!parentElement?.lastElementChild) return
+
+            parentElement?.insertBefore(forwardDiv, skipForward.nextSibling)
+            parentElement?.insertBefore(loopDiv, parentElement?.lastElementChild?.nextSibling)
+            mount(SeekButton, {
+                target: forwardDiv,
+                props: { role: 'seek-forward' }
+            })
+            mount(LoopButton, { target: loopDiv })
+
+            const newFeedButton = document.querySelector('[data-testid="whats-new-feed-button"]')
+            if (!newFeedButton) return
+
+            const newReleasesIcon = document.getElementById('chorus-new-releases')
+            const configDialog = document.getElementById('chorus-config-dialog-trigger')
+            if (!newReleasesIcon) {
+                const releasesIcon = document.createElement('div')
+                newFeedButton.parentElement?.insertBefore(releasesIcon, newFeedButton)
+                mount(NewReleasesIcon, { target: releasesIcon })
             }
+            if (configDialog) return
+
+            const configDialogContainer = document.createElement('div')
+            newFeedButton.parentElement?.insertBefore(configDialogContainer, newFeedButton)
+            mount(ChorusConfigDialog, { target: configDialogContainer })
         },
-        onRemove: (app) => {
-            unmount(app)
-        }
+        onRemove: (app) => unmount(app)
     })
     ui.autoMount()
 }

@@ -1,12 +1,14 @@
 <script lang="ts">
     import { onMount } from 'svelte'
-    import { playbackObserver } from '$lib/observers/playback'
+    import { licenseStore } from '$lib/stores/license'
     import { settingsStore } from '$lib/stores/settings'
+    import { playbackObserver } from '$lib/observers/playback'
     import type { SettingsState, SettingsKey } from '$lib/stores/settings'
 
     import SettingsSwitch from '$lib/components/SettingsSwitch.svelte'
 
     let pipSupported = $state(false)
+    let granted = $derived($licenseStore.status === 'granted')
 
     async function toggleSettings({
         type,
@@ -50,9 +52,11 @@
             className="mr-0"
             setLabel={setUILabel}
             handleCheckedChange={toggleSettings}
-            list={Object.keys($settingsStore.ui).filter((key) =>
-                key == 'pip' ? pipSupported : true
-            )}
+            list={Object.keys($settingsStore.ui).filter((key) => {
+                if (key == 'pip') return pipSupported && granted
+                if (key == 'popup') return granted
+                return true
+            })}
         />
 
         <SettingsSwitch

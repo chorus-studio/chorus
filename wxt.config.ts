@@ -21,6 +21,15 @@ const perBrowserManifest: Record<string, UserManifest> = {
                 id: 'chorus@cdrani.dev'
             }
         }
+    },
+    host_permissions: {
+        defaults: [
+            'https://*.spotify.com/*',
+            'https://docs.chorusstudio.org/*',
+            'https://chorusstudio.org/*'
+        ],
+        development: ['https://sandbox.polar.sh/*', 'http://localhost:5173/api/polar'],
+        production: ['https://polar.sh/*']
     }
 }
 
@@ -32,7 +41,7 @@ export default defineConfig({
     alias: {
         $lib: 'src/lib'
     },
-    manifest: ({ browser }) => ({
+    manifest: ({ browser, mode }) => ({
         short_name: 'chorus',
         name: 'Chorus - Spotify Enhancer',
         description:
@@ -52,7 +61,10 @@ export default defineConfig({
             }
         ],
         ...perBrowserManifest[browser],
-        host_permissions: ['*://*.spotify.com/*'],
+        host_permissions: [
+            ...perBrowserManifest.host_permissions.defaults,
+            ...perBrowserManifest.host_permissions[mode]
+        ],
         optional_host_permissions: ['<all_urls>'],
         commands: {
             'on/off': {

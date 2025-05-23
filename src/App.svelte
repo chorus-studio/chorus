@@ -1,11 +1,12 @@
 <script lang="ts">
     import { onMount } from 'svelte'
     import { ModeWatcher, setMode } from 'mode-watcher'
+
     import { mediaStore } from '$lib/stores/media'
+    import { licenseStore } from '$lib/stores/license'
     import { nowPlaying } from '$lib/stores/now-playing'
     import { QueueObserver } from '$lib/observers/queue'
     import { trackObserver } from '$lib/observers/track'
-    import { supporterStore } from '$lib/stores/supporter'
     import { playbackObserver } from '$lib/observers/playback'
     import { TracklistObserver } from '$lib/observers/tracklist'
 
@@ -18,10 +19,10 @@
 
     async function init() {
         setMode('dark')
+        await licenseStore.validateLicense()
         await nowPlaying.observe()
         await mediaStore.observe()
         playbackObserver.observe()
-        await supporterStore.sync()
         await mediaStore.setActive(false)
     }
 

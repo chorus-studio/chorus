@@ -19,13 +19,14 @@
     import Settings from '$lib/components/views/Settings.svelte'
     import ToggleSelect from '$lib/components/ToggleSelect.svelte'
     import ActionButtons from '$lib/components/ActionButtons.svelte'
+    import Subscription from '$lib/components/views/Subscription.svelte'
 
     import { dataStore } from '$lib/stores/data'
     import { snipStore } from '$lib/stores/snip'
+    import { licenseStore } from '$lib/stores/license'
     import { nowPlaying } from '$lib/stores/now-playing'
     import { playbackStore } from '$lib/stores/playback'
     import { settingsStore } from '$lib/stores/settings'
-    import { supporterStore } from '$lib/stores/supporter'
     import { volumeStore, type VolumeType } from '$lib/stores/volume'
 
     let { pip = false }: { pip?: boolean } = $props()
@@ -38,6 +39,7 @@
         'speed',
         'fx|eq',
         'seek',
+        pip ? '' : 'pro',
         'settings',
         pip ? '' : 'info'
     ].filter(Boolean)
@@ -46,6 +48,7 @@
 
     let activeTab = $state<string | undefined>()
     let defaultView = $state<string>(tabs[0])
+    let granted = $derived($licenseStore.status === 'granted')
 
     const components: Record<string, Component> = {
         snip: Snip,
@@ -54,7 +57,8 @@
         speed: Speed,
         info: Info,
         settings: Settings,
-        player: PopUp
+        player: PopUp,
+        pro: Subscription
     }
 
     async function handleCheckedChange(checked: boolean) {
@@ -116,7 +120,7 @@
         const unsubscribeSettingsViews = settingsStore.subscribe((state) => {
             const settingsViews = state.views
             filteredTabs = tabs.filter((tab) => {
-                if (!$supporterStore.isSupporter) return true
+                if (!granted) return true
 
                 if (!Object.keys(settingsViews).includes(tab)) return true
                 return settingsViews[tab as keyof typeof settingsViews]
@@ -213,7 +217,7 @@
                 ? 'space-y-2'
                 : ''} w-full flex-col"
         >
-            {#if !['speed', 'info', 'settings', 'support', 'player', 'fx|eq'].includes(activeTab)}
+            {#if ['snip', 'seek'].includes(activeTab)}
                 <TrackInfo />
             {/if}
             {@const View = components[activeTab]}

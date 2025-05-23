@@ -1,7 +1,7 @@
 <script lang="ts">
     import type { Component } from 'svelte'
     import { mount, unmount, onMount } from 'svelte'
-    import { supporterStore } from '$lib/stores/supporter'
+    import { licenseStore } from '$lib/stores/license'
     import { clickOutside } from '$lib/utils/click-outside'
     import { newReleasesStore, newReleasesUIStore, type Range } from '$lib/stores/new-releases'
 
@@ -13,6 +13,7 @@
     let showReleases = $state(false)
     let releasesViewComponent: Component | null = null
     let releasesHeaderComponent: Component | null = null
+    let granted = $derived($licenseStore.status === 'granted')
 
     async function toggleNewReleasesUI() {
         const mainView = document.querySelector(
@@ -93,9 +94,8 @@
 
     const WHOLE_DAY = 24 * 3600 * 1000
 
-    async function checkIfSupporter() {
-        await supporterStore.sync()
-        if (!$supporterStore.isSupporter) return
+    async function checkIfGranted() {
+        if (!granted) return
 
         try {
             const { release_type } = $newReleasesStore
@@ -146,10 +146,10 @@
         shows_count = $newReleasesStore.shows_count
     })
 
-    onMount(checkIfSupporter)
+    onMount(checkIfGranted)
 </script>
 
-{#if $supporterStore.isSupporter}
+{#if granted}
     <div use:clickOutside={registerClickOutside} class="relative z-[999999]">
         <Tippy
             side="bottom"
