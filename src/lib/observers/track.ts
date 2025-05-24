@@ -6,9 +6,9 @@ import { mediaStore } from '$lib/stores/media'
 import { configStore } from '$lib/stores/config'
 import { volumeStore } from '$lib/stores/volume'
 import { effectsStore } from '$lib/stores/effects'
+import { licenseStore } from '$lib/stores/license'
 import { settingsStore } from '$lib/stores/settings'
 import { playbackStore } from '$lib/stores/playback'
-import { supporterStore } from '$lib/stores/supporter'
 import { snipStore, type Snip } from '$lib/stores/snip'
 import type { SimpleTrack } from '$lib/stores/data/cache'
 import { playbackObserver } from '$lib/observers/playback'
@@ -85,7 +85,7 @@ export class TrackObserver {
     }
 
     get isSupporter() {
-        return get(supporterStore).isSupporter
+        return get(licenseStore).status === 'granted'
     }
 
     get muteButton() {
@@ -176,6 +176,8 @@ export class TrackObserver {
     }
 
     private async showNotification(songInfo: NowPlaying) {
+        if (!this.isSupporter) return
+
         if (this.songChangeTimeout) clearTimeout(this.songChangeTimeout)
 
         if (this.settings.notifications.enabled && this.settings.notifications.on_track_change) {

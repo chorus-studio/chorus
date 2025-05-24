@@ -3,6 +3,7 @@
     "version": "2.6.0",
     "devDependencies": {
         "@lucide/svelte": "^0.486.0",
+        "@tailwindcss/typography": "^0.5.16",
         "@tailwindcss/vite": "^4.0.0",
         "@tsconfig/svelte": "^5.0.4",
         "@types/chrome": "^0.0.280",
@@ -36,8 +37,8 @@
     },
     "private": true,
     "scripts": {
-        "dev": "wxt",
-        "dev:fox": "wxt -b firefox",
+        "dev": "wxt --mode development",
+        "dev:fox": "wxt -b firefox --mode development",
         "build": "wxt build",
         "build:fox": "wxt build -b firefox --mv3",
         "zip": "wxt zip",
@@ -49,6 +50,7 @@
     "type": "module",
     "dependencies": {
         "@webext-core/proxy-service": "^1.2.1",
+        "marked": "^15.0.12",
         "mode-watcher": "^0.5.1",
         "node-vibrant": "^4.0.3"
     }

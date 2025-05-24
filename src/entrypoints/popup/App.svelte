@@ -2,7 +2,7 @@
     import '../../app.css'
     import { onMount } from 'svelte'
 
-    import { supporterStore } from '$lib/stores/supporter'
+    import { licenseStore } from '$lib/stores/license'
     import { nowPlaying } from '$lib/stores/now-playing'
     import { getColours } from '$lib/utils/vibrant-colors'
     import { settingsStore, type ThemeVibrancy } from '$lib/stores/settings'
@@ -12,8 +12,6 @@
     let loading = $state(false)
 
     function getVibrancy(): ThemeVibrancy {
-        if (!$supporterStore.isSupporter) return 'Auto'
-
         return $settingsStore.theme.vibrancy
     }
 
@@ -34,8 +32,8 @@
 
     async function init() {
         loading = true
-        await supporterStore.sync()
-        if ($supporterStore.isSupporter) await loadColours()
+        await licenseStore.validateLicense()
+        if ($licenseStore.status === 'granted') await loadColours()
         loading = false
     }
 

@@ -3,8 +3,8 @@
     import { getActiveTab } from '$lib/utils/messaging'
 
     import { volumeStore } from '$lib/stores/volume'
+    import { licenseStore } from '$lib/stores/license'
     import { nowPlaying } from '$lib/stores/now-playing'
-    import { supporterStore } from '$lib/stores/supporter'
     import { settingsStore, type ThemeVibrancy } from '$lib/stores/settings'
 
     import Bell from '@lucide/svelte/icons/bell'
@@ -27,6 +27,7 @@
     let { pip = false }: { pip?: boolean } = $props()
 
     let port = $state<chrome.runtime.Port | null>(null)
+    let granted = $derived($licenseStore.status === 'granted')
 
     let isSpotifyTabOpen = $state(true)
 
@@ -75,7 +76,7 @@
     }
 
     function getVibrancy(): ThemeVibrancy {
-        if (!$supporterStore.isSupporter) return 'Auto'
+        if (!granted) return 'Auto'
 
         return $settingsStore.theme.vibrancy
     }
