@@ -46,14 +46,27 @@ export class TrackObserver {
     private async processMediaPlayInit() {
         await this.updateTrackType()
         this.setPlayback()
-        effectsStore.dispatchEffect()
+        this.setEffect()
+    }
+
+    get audioPreset() {
+        return this.config.audio_presets.find((p) => p.active)
+    }
+
+    setEffect() {
+        if (!this.isSupporter || !this.audioPreset) return effectsStore.dispatchEffect()
+
+        configStore.updateAudioPreset({ preset: this.audioPreset, type: 'effect' })
     }
 
     setPlayback() {
-        const playback = this.currentSong?.playback ?? this.playback.default
-        if (!playback) return
+        if (!this.isSupporter || !this.audioPreset) {
+            const playback = this.currentSong?.playback ?? this.playback.default
+            if (playback) playbackStore.dispatchPlaybackSettings()
+            return
+        }
 
-        playbackStore.dispatchPlaybackSettings(playback)
+        configStore.updateAudioPreset({ preset: this.audioPreset, type: 'playback' })
     }
 
     get currentSong() {
@@ -62,6 +75,10 @@ export class TrackObserver {
 
     get playback() {
         return get(playbackStore)
+    }
+
+    get config() {
+        return get(configStore)
     }
 
     get snip() {
@@ -176,8 +193,6 @@ export class TrackObserver {
     }
 
     private async showNotification(songInfo: NowPlaying) {
-        if (!this.isSupporter) return
-
         if (this.songChangeTimeout) clearTimeout(this.songChangeTimeout)
 
         if (this.settings.notifications.enabled && this.settings.notifications.on_track_change) {

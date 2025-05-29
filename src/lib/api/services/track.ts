@@ -5,12 +5,18 @@ const API_URL = 'https://api-partner.spotify.com/pathfinder/v2/query'
 
 export interface TrackService {
     checkIfTracksInCollection(ids: string): Promise<boolean[]>
-    getAlbum({ albumId, songId }: { albumId: string; songId: string }): Promise<string | null>
+    getTrackIdFromAlbumId({
+        albumId,
+        songId
+    }: {
+        albumId: string
+        songId: string
+    }): Promise<string | null>
     updateLikedTracks({ ids, action }: { ids: string; action: 'add' | 'remove' }): Promise<void>
 }
 
 export class TrackService implements TrackService {
-    async getAlbum({ albumId, songId }: { albumId: string; songId: string }) {
+    async getTrackIdFromAlbumId({ albumId, songId }: { albumId: string; songId: string }) {
         const body = {
             variables: {
                 uri: `spotify:album:${albumId}`,
@@ -32,11 +38,18 @@ export class TrackService implements TrackService {
         try {
             const response = (await request({ url: API_URL, options })) as any
             const foundTrack = response.data.albumUnion.tracksV2.items.find((track: any) => {
-                const artists = track.artists.map((artist: any) => artist.name).join(',')
-                const songTitle = `${track.name} by ${artists}`
+                const trackInfo = track.track
+                const artists = trackInfo.artists.items
+                    .map((artist: any) => artist.name ?? artist.profile.name)
+                    .join(',')
+                const songTitle = `${trackInfo.name} by ${artists}`
                 return songTitle == songId
             })
-            return foundTrack?.uri ?? null
+            return (
+                foundTrack?.uri?.split(':')?.pop() ??
+                foundTrack?.track?.uri?.split(':')?.pop() ??
+                null
+            )
         } catch (error: any) {
             console.error(error)
             return null
