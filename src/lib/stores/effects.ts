@@ -9,7 +9,7 @@ export type AudioEffect = {
     reverb: string
 }
 
-const defaultAudioEffect: AudioEffect = {
+export const defaultAudioEffect: AudioEffect = {
     equalizer: 'none',
     reverb: 'none'
 }

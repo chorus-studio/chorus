@@ -114,6 +114,21 @@ export default defineConfig({
             },
             'toggle-config': {
                 description: 'Toggle Chorus Config UI'
+            },
+            'audio-preset-1': {
+                description: 'Audio Preset 1'
+            },
+            'audio-preset-2': {
+                description: 'Audio Preset 2'
+            },
+            'audio-preset-3': {
+                description: 'Audio Preset 3'
+            },
+            'audio-preset-4': {
+                description: 'Audio Preset 4'
+            },
+            'audio-preset-5': {
+                description: 'Audio Preset 5'
             }
         }
     })

@@ -27,18 +27,7 @@
     }
 
     async function getTrackIdFromAlbumId({ albumId, songId }: { albumId: string; songId: string }) {
-        const response = await trackService.getAlbum({ albumId, songId })
-        if (!response) return null
-
-        const foundTrack = (response as any).tracks.items.find((track: any) => {
-            const artists = track.artists.map((artist: any) => artist.name).join(',')
-            const songTitle = `${track.name} by ${artists}`
-            return songTitle == $nowPlaying.id
-        })
-
-        if (!foundTrack) return null
-
-        return foundTrack.id
+        return await trackService.getTrackIdFromAlbumId({ albumId, songId })
     }
 
     function higlightInTrackList(trackId: string) {
