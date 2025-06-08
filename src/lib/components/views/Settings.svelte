@@ -4,6 +4,7 @@
     import { settingsStore } from '$lib/stores/settings'
     import { playbackObserver } from '$lib/observers/playback'
     import type { SettingsState, SettingsKey } from '$lib/stores/settings'
+    import { setTheme, injectTheme, removeTheme } from '$lib/utils/theming'
 
     import SettingsSwitch from '$lib/components/SettingsSwitch.svelte'
 
@@ -17,16 +18,24 @@
         type: SettingsKey
         key: keyof SettingsState[SettingsKey]
     }) {
+        const enabled = !$settingsStore.ui[key]
+
         await settingsStore.updateSettings({
             [type]: {
-                ...$settingsStore[type],
-                [key]: !$settingsStore[type][key]
+                ...$settingsStore.ui,
+                [key]: enabled
             }
         })
 
         if (key === 'progress') playbackObserver.toggleProgress()
         if (key === 'volume') playbackObserver.toggleVolumeSlider()
         if (key === 'playlist') playbackObserver.togglePlaylistButton()
+        if (key === 'theme') {
+            if (!enabled) return removeTheme()
+
+            setTheme($settingsStore.theme.name)
+            await injectTheme($settingsStore.theme.name)
+        }
     }
 
     function setUILabel(key: keyof SettingsState[SettingsKey]) {
@@ -53,8 +62,8 @@
             setLabel={setUILabel}
             handleCheckedChange={toggleSettings}
             list={Object.keys($settingsStore.ui).filter((key) => {
-                if (key == 'pip') return pipSupported && granted
-                if (key == 'popup') return granted
+                if (key == 'pip') return pipSupported
+                if (key == 'theme') return true //granted
                 return true
             })}
         />

@@ -1,5 +1,8 @@
 import { mount, unmount } from 'svelte'
 
+import { setTheme } from '$lib/utils/theming'
+import type { SettingsState } from '$lib/stores/settings'
+
 import '../app.css'
 import App from '../App.svelte'
 import Alert from '$lib/components/Alert.svelte'
@@ -8,11 +11,13 @@ import SeekButton from '$lib/components/SeekButton.svelte'
 import NewReleasesIcon from '$lib/components/NewReleasesIcon.svelte'
 import ChorusConfigDialog from '$lib/components/ChorusConfigDialog.svelte'
 
-const watchPattern = new MatchPattern('*://open.spotify.com/*')
-
-async function injectChorusUI(ctx: ContentScriptContext) {
+async function injectChorusUI(ctx) {
     await injectScript('/router.js')
     await injectScript('/media-override.js')
+
+    const settings = await storage.getItem<SettingsState>('local:chorus_settings')
+    const theme = settings?.ui?.theme ? settings?.theme?.name : 'spotify'
+    await setTheme(theme)
 
     const ui = createIntegratedUi(ctx, {
         position: 'inline',
@@ -76,6 +81,8 @@ async function injectChorusUI(ctx: ContentScriptContext) {
     })
     ui.autoMount()
 }
+
+const watchPattern = new MatchPattern('*://open.spotify.com/*')
 
 export default defineContentScript({
     matches: ['*://open.spotify.com/*'],

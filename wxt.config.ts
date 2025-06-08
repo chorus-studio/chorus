@@ -55,7 +55,7 @@ export default defineConfig({
                     '/sounds/*',
                     '/processor.js',
                     '/soundtouch.js',
-                    '/content-scripts/chorus.css'
+                    '/content-scripts/*.css'
                 ],
                 matches: ['*://open.spotify.com/*']
             }
@@ -65,7 +65,6 @@ export default defineConfig({
             ...perBrowserManifest.host_permissions.defaults,
             ...perBrowserManifest.host_permissions[mode]
         ],
-        optional_host_permissions: ['<all_urls>'],
         commands: {
             'on/off': {
                 description: 'Toggle Extension On/Off'
@@ -129,6 +128,12 @@ export default defineConfig({
             },
             'audio-preset-5': {
                 description: 'Audio Preset 5'
+            },
+            'cycle-theme-next': {
+                description: 'Cycle Theme Next'
+            },
+            'cycle-theme-previous': {
+                description: 'Cycle Theme Previous'
             }
         }
     })

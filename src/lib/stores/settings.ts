@@ -4,9 +4,9 @@ import { syncWithType } from '$lib/utils/store-utils'
 
 export const SETTINGS_STORE_KEY = 'local:chorus_settings'
 
+import type { ThemeName } from '$lib/utils/theming'
 export type SettingsKey = 'ui' | 'views' | 'notifications' | 'theme'
-export type ThemeName = 'none' | 'dynamic' | 'static'
-export type ThemeMode = 'light' | 'dark'
+
 export type ThemeVibrancy =
     | 'Vibrant'
     | 'DarkVibrant'
@@ -18,8 +18,9 @@ export type ThemeVibrancy =
 
 export type SettingsState = {
     ui: {
-        playlist: boolean
         pip: boolean
+        theme: boolean
+        playlist: boolean
         popup: boolean
         volume: boolean
         progress: boolean
@@ -37,7 +38,6 @@ export type SettingsState = {
     }
     theme: {
         name: ThemeName
-        mode: ThemeMode
         vibrancy: ThemeVibrancy
     }
 }
@@ -47,6 +47,7 @@ const defaultSettingsState: SettingsState = {
         playlist: false,
         pip: false,
         popup: false,
+        theme: false,
         volume: false,
         progress: false
     },
@@ -62,8 +63,7 @@ const defaultSettingsState: SettingsState = {
         on_track_change: false
     },
     theme: {
-        name: 'none' as ThemeName,
-        mode: 'dark' as ThemeMode,
+        name: 'spotify' as ThemeName,
         vibrancy: 'LightVibrant' as ThemeVibrancy
     }
 }

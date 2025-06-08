@@ -247,7 +247,9 @@
                         onCheckedChange={handleCheckedChange}
                     />
                 </div>
-                <ActionButtons tab={activeTab} />
+                {#if activeTab !== 'settings'}
+                    <ActionButtons tab={activeTab} />
+                {/if}
             {/if}
         </Tabs.Content>
     {/if}
