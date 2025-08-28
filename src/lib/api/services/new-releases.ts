@@ -1,5 +1,4 @@
 import { storage } from '@wxt-dev/storage'
-import { setOptions, request } from '../request'
 import {
     type Range,
     type Filter,
@@ -8,8 +7,29 @@ import {
     NEW_RELEASES_STORE_KEY
 } from '$lib/stores/new-releases'
 import { defineProxyService } from '@webext-core/proxy-service'
+import { BaseAPIService, type GraphQLQuery } from '../base-service'
+import { setOptions, request } from '../request'
 
 const API_URL = 'https://api-partner.spotify.com/pathfinder/v2/query'
+
+// GraphQL queries for New Releases service
+const NEW_RELEASES_QUERIES = {
+    LIBRARY_V3: {
+        operationName: 'libraryV3',
+        sha256Hash: '0082bf82412db50128add72dbdb73e2961d59100b9cbf41fb25c568bd8bc358b',
+        dedupe: true
+    },
+    PODCAST_EPISODES: {
+        operationName: 'queryPodcastEpisodes', 
+        sha256Hash: '89c3f9e7216f39cefa5c097821a31015e0bc3079e4c11013d457de4314395168',
+        dedupe: true
+    },
+    ARTIST_DISCOGRAPHY: {
+        operationName: 'queryArtistDiscographyAll',
+        sha256Hash: 'd20e0cb3b2c2063dbe2e1c5c9e2e0e3a2a87d9b8c9a2b0b6c5d7c9c7c2a1b9d',
+        dedupe: true
+    }
+} as const
 
 // bare bones spotify artist object
 type Artist = {
@@ -17,16 +37,21 @@ type Artist = {
     name: string
 }
 
-function getRequestBody(type: 'music' | 'shows') {
-    return {
-        operationName: 'libraryV3',
-        extensions: {
-            persistedQuery: {
-                version: 1,
-                sha256Hash: '0082bf82412db50128add72dbdb73e2961d59100b9cbf41fb25c568bd8bc358b'
-            }
-        },
-        variables: {
+/**
+ * Consolidated library service class
+ */
+class LibraryService extends BaseAPIService {
+    constructor() {
+        super(API_URL)
+    }
+
+    // Public wrapper for executeGraphQLQuery
+    async executeQuery<T>(query: GraphQLQuery, variables: Record<string, any> = {}): Promise<T | null> {
+        return this.executeGraphQLQuery<T>(query, variables)
+    }
+
+    private getLibraryVariables(type: 'music' | 'shows') {
+        return {
             filters: [type === 'music' ? 'Artists' : 'Podcasts & Shows'],
             limit: 50_000,
             textFilter: '',
@@ -34,64 +59,60 @@ function getRequestBody(type: 'music' | 'shows') {
             order: type === 'music' ? 'Alphabetical' : 'Recents'
         }
     }
-}
 
-export async function getShowsList() {
-    const body = getRequestBody('shows')
-    const options = await setOptions({ method: 'POST', body })
+    async getLibraryItems(type: 'music' | 'shows'): Promise<Artist[]> {
+        const variables = this.getLibraryVariables(type)
+        const cacheKey = `library-${type}`
+        
+        const response = await this.executeGraphQLQuery<any>(
+            { ...NEW_RELEASES_QUERIES.LIBRARY_V3, cacheKey },
+            variables
+        )
 
-    if (!options) throw new Error('Failed to set request options: missing authentication')
+        if (!response?.me?.libraryV3?.items) {
+            return []
+        }
 
-    try {
-        const response = (await request({ url: API_URL, options })) as any
-        return response.data.me.libraryV3.items.map((item: any) => ({
-            uri: item.item.data.uri,
-            name: item.item.data.name
-        }))
-    } catch (error) {
-        console.error(error)
-        return []
+        return response.me.libraryV3.items.map((item: any) => {
+            if (type === 'shows') {
+                return {
+                    uri: item.item.data.uri,
+                    name: item.item.data.name
+                }
+            } else {
+                return {
+                    uri: item.item.data.uri,
+                    name: item.item.data.profile.name
+                }
+            }
+        })
     }
 }
 
-export async function getArtistList() {
-    const body = getRequestBody('music')
-    const options = await setOptions({ method: 'POST', body })
+const libraryService = new LibraryService()
 
-    if (!options) throw new Error('Failed to set request options: missing authentication')
+export async function getShowsList(): Promise<Artist[]> {
+    return libraryService.getLibraryItems('shows')
+}
 
-    try {
-        const response = (await request({ url: API_URL, options })) as any
-        return response.data.me.libraryV3.items.map((data: any) => ({
-            uri: data.item.data.uri,
-            name: data.item.data.profile.name
-        }))
-    } catch (error) {
-        console.error(error)
-        return []
-    }
+export async function getArtistList(): Promise<Artist[]> {
+    return libraryService.getLibraryItems('music')
 }
 
 async function getPodcastInfo(show: Show) {
-    const body = {
-        variables: { uri: show.uri, offset: 0, limit: 100 },
-        operationName: 'queryPodcastEpisodes',
-        extensions: {
-            persistedQuery: {
-                version: 1,
-                sha256Hash: '89c3f9e7216f39cefa5c097821a31015e0bc3079e4c11013d457de4314395168'
-            }
-        }
-    }
-
-    const options = await setOptions({ method: 'POST', body })
-    if (!options) throw new Error('Failed to set request options: missing authentication')
-
     try {
-        const response = (await request({ url: API_URL, options })) as any
-        if (!response) throw new Error('Failed to get podcast info')
+        const variables = { uri: show.uri, offset: 0, limit: 100 }
+        
+        const response = await libraryService.executeQuery<any>(
+            { ...NEW_RELEASES_QUERIES.PODCAST_EPISODES, cacheKey: `podcast-${show.uri}` },
+            variables
+        )
 
-        const episodes = response.data.podcastUnionV2.episodesV2.items.map((item: any) => {
+        if (!response?.podcastUnionV2?.episodesV2?.items) {
+            throw new Error('Failed to get podcast info')
+        }
+
+        const episodes = response.podcastUnionV2.episodesV2.items.map((item: any) => {
             return item.entity.data
         })
 
@@ -349,7 +370,10 @@ export interface NewReleasesService {
     updateLibrary({ uri, remove }: { uri: string; remove: boolean }): Promise<void>
 }
 
-export class NewReleasesService implements NewReleasesService {
+export class NewReleasesService extends BaseAPIService implements NewReleasesService {
+    constructor() {
+        super(API_URL)
+    }
     async getMusicReleases() {
         try {
             return await fetchMusicReleases()

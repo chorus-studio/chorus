@@ -1,7 +1,12 @@
+import { storage } from '@wxt-dev/storage'
+import { dedupeRequest } from '$lib/utils/debounce'
+
 type RequestOptions = {
     method?: 'GET' | 'POST' | 'PUT' | 'DELETE'
     body?: Record<string, unknown> | null
     connect?: boolean
+    dedupe?: boolean
+    cacheKey?: string
 }
 
 type SetOptionsResponse = {
@@ -47,26 +52,36 @@ type RequestParams = {
 
 type ApiResponse<T> = T | null
 
-export const request = async <T>({ url, options }: RequestParams): Promise<ApiResponse<T>> => {
-    try {
-        const response = await fetch(url, options)
-
-        if (!response.ok) {
-            throw new Error(
-                `Network response was not ok: ${response.status} ${response.statusText}`
-            )
-        }
-
+export const request = async <T>({ url, options, dedupe, cacheKey }: RequestParams & { dedupe?: boolean; cacheKey?: string }): Promise<ApiResponse<T>> => {
+    const requestFn = async (): Promise<ApiResponse<T>> => {
         try {
-            return (await response.json()) as T
-        } catch (err) {
-            console.error('error 1: ', err)
-            return null
+            const response = await fetch(url, options)
+
+            if (!response.ok) {
+                throw new Error(
+                    `Network response was not ok: ${response.status} ${response.statusText}`
+                )
+            }
+
+            try {
+                return (await response.json()) as T
+            } catch (err) {
+                console.error('JSON parsing error:', err)
+                return null
+            }
+        } catch (error) {
+            if (error instanceof Error) {
+                throw new Error(`Request failed: ${error.message}`)
+            }
+            throw new Error('Request failed with unknown error')
         }
-    } catch (error) {
-        if (error instanceof Error) {
-            throw new Error(`Request failed: ${error.message}`)
-        }
-        throw new Error('Request failed with unknown error')
     }
+    
+    // Use deduplication for GET requests or when explicitly requested
+    if (dedupe || (options.method === 'GET' || !options.method)) {
+        const key = cacheKey || `${options.method || 'GET'}_${url}_${JSON.stringify(options.body)}`
+        return dedupeRequest(key, requestFn)
+    }
+    
+    return requestFn()
 }

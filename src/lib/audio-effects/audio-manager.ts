@@ -318,25 +318,53 @@ export default class AudioManager {
     }
 
     cleanup() {
-        if (this.source) {
-            this.source.disconnect()
-            this._source = undefined
+        try {
+            if (this.source) {
+                this.source.disconnect()
+                this._source = undefined
+            }
+            if (this._gainNode) {
+                this._gainNode.disconnect()
+                this._gainNode = undefined
+            }
+            if (this._soundTouchNode) {
+                this._soundTouchNode.disconnect()
+                this._soundTouchNode = undefined
+            }
+            if (this.destination) {
+                // Don't disconnect the destination as it's the main output
+                this._destination = undefined
+            }
+            // Clear the source map when cleaning up
+            this._sourceMap.clear()
+            
+            // Clean up SoundTouch manager
+            if (this._soundTouchManager) {
+                this._soundTouchManager.dispose?.()
+                this._soundTouchManager = null
+            }
+        } catch (error) {
+            console.warn('Error during cleanup:', error)
         }
-        if (this._gainNode) {
-            this._gainNode.disconnect()
-            this._gainNode = undefined
-        }
-        if (this.destination) {
-            this.destination.disconnect()
-            this._destination = undefined
-        }
-        // Clear the source map when cleaning up
-        this._sourceMap.clear()
     }
 
     dispose() {
         this.cleanup()
-        if (this.audioContext?.state !== 'closed') this.audioContext?.close()
+        
+        // Close audio context with proper error handling
+        if (this._audioContext && this._audioContext.state !== 'closed') {
+            try {
+                this._audioContext.close().catch(error => {
+                    console.warn('Error closing audio context:', error)
+                })
+            } catch (error) {
+                console.warn('Error closing audio context:', error)
+            }
+            this._audioContext = undefined
+        }
+        
+        this._isInitialized = false
+        this._setupPromise = undefined
     }
 
     set source(source) {

@@ -58,12 +58,16 @@ export async function showTrackNotification(track: NowPlaying) {
     await showNotification(track)
 }
 
+export interface ShowNotificationParams extends NowPlaying {
+    // Extending NowPlaying for compatibility
+}
+
 export interface NotificationService {
     showNotification(track: NowPlaying): Promise<void>
 }
 
 export class NotificationService implements NotificationService {
-    async showNotification(params: ShowNotificationParams) {
+    async showNotification(params: NowPlaying) {
         await showNotification(params)
     }
 }

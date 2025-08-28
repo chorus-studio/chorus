@@ -90,25 +90,38 @@ export class CacheStore {
 
     clear(): void {
         const keys = Object.keys(sessionStorage)
-        keys.forEach((key) => {
+        const keysToRemove: string[] = []
+        
+        // Collect keys first to avoid modifying sessionStorage during iteration
+        for (let i = 0; i < keys.length; i++) {
+            const key = keys[i]
             if (key.startsWith(this.prefix)) {
-                sessionStorage.removeItem(key)
+                keysToRemove.push(key)
             }
-        })
+        }
+        
+        // Remove keys in batch
+        for (const key of keysToRemove) {
+            sessionStorage.removeItem(key)
+        }
     }
 
     getAll<T>(): Record<string, T> {
         const result: Record<string, T> = {}
+        const prefixLength = this.prefix.length
+        
+        // Use for loop instead of forEach for better performance
         const keys = Object.keys(sessionStorage)
-
-        keys.forEach((key) => {
+        for (let i = 0; i < keys.length; i++) {
+            const key = keys[i]
             if (key.startsWith(this.prefix)) {
-                const value = this.get<T>(key.slice(this.prefix.length))
-                if (value) {
-                    result[key.slice(this.prefix.length)] = value
+                const shortKey = key.slice(prefixLength)
+                const value = this.get<T>(shortKey)
+                if (value !== null) {
+                    result[shortKey] = value
                 }
             }
-        })
+        }
 
         return result
     }

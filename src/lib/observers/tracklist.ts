@@ -37,18 +37,31 @@ export class TracklistObserver {
     }
 
     private handleMutation = (mutations: MutationRecord[]) => {
+        let shouldUpdate = false
+        
+        // Batch check all mutations to avoid multiple timeout resets
         for (const mutation of mutations) {
             if (this.isMainView(mutation) || this.isMoreLoaded(mutation)) {
-                if (this.timeout) clearTimeout(this.timeout)
-
-                this.timeout = setTimeout(() => {
-                    this.trackList.setUpBlocking()
-                }, 200)
+                shouldUpdate = true
+                break // Exit early once we find one relevant mutation
             }
+        }
+        
+        if (shouldUpdate) {
+            if (this.timeout) clearTimeout(this.timeout)
+            this.timeout = setTimeout(() => {
+                this.trackList.setUpBlocking()
+            }, 200)
         }
     }
 
     disconnect() {
         this.observer?.disconnect()
+        this.observer = null
+        
+        if (this.timeout) {
+            clearTimeout(this.timeout)
+            this.timeout = null
+        }
     }
 }

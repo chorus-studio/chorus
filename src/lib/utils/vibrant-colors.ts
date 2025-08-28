@@ -5,6 +5,10 @@ import type { ThemeVibrancy } from '$lib/stores/settings'
 let text_colour: string | null = '#1bd954'
 let bg_colour: string | null = '#0a0a0a'
 
+// Color cache
+const colorCache = new Map<string, { text_colour: string; bg_colour: string; timestamp: number }>()
+const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
+
 function isLight(hex: string): boolean {
     const [r, g, b] = hexToRgb(hex).map(Number)
     const brightness = (r * 299 + g * 587 + b * 114) / 1000
@@ -136,13 +140,48 @@ function loadImage(url: string, element: HTMLImageElement): Promise<void> {
 }
 
 async function getColours({ url, vibrancy }: { url: string; vibrancy: ThemeVibrancy }) {
-    let img: HTMLImageElement | null = new Image(64, 64)
-    await loadImage(url, img)
-
-    const { text_colour, bg_colour } = await getVibrant({ image: img, vibrancy })
-    await nowPlaying.updateState({ text_colour, bg_colour })
-    img = null
-    return { text_colour, bg_colour }
+    // Check cache first
+    const cacheKey = `${url}_${vibrancy}`
+    const cached = colorCache.get(cacheKey)
+    
+    if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+        await nowPlaying.updateState({ text_colour: cached.text_colour, bg_colour: cached.bg_colour })
+        return { text_colour: cached.text_colour, bg_colour: cached.bg_colour }
+    }
+    
+    // Use requestIdleCallback for non-critical color processing
+    return new Promise<{ text_colour: string; bg_colour: string }>((resolve) => {
+        const processColors = async () => {
+            let img: HTMLImageElement | null = new Image(64, 64)
+            
+            try {
+                await loadImage(url, img)
+                const colors = await getVibrant({ image: img, vibrancy })
+                
+                // Cache the result
+                colorCache.set(cacheKey, {
+                    text_colour: colors.text_colour!,
+                    bg_colour: colors.bg_colour!,
+                    timestamp: Date.now()
+                })
+                
+                await nowPlaying.updateState({ text_colour: colors.text_colour, bg_colour: colors.bg_colour })
+                resolve({ text_colour: colors.text_colour!, bg_colour: colors.bg_colour! })
+            } catch (error) {
+                console.error('Color processing error:', error)
+                resolve({ text_colour: text_colour!, bg_colour: bg_colour! })
+            } finally {
+                img = null
+            }
+        }
+        
+        // Use requestIdleCallback if available, otherwise setTimeout
+        if ('requestIdleCallback' in window) {
+            (window as any).requestIdleCallback(processColors, { timeout: 5000 })
+        } else {
+            setTimeout(processColors, 0)
+        }
+    })
 }
 
 export {

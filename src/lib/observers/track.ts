@@ -1,30 +1,35 @@
 import { get } from 'svelte/store'
 import { loopStore } from '$lib/stores/loop'
 import { queue } from '$lib/observers/queue'
-import { seekStore } from '$lib/stores/seek'
 import { mediaStore } from '$lib/stores/media'
-import { configStore } from '$lib/stores/config'
-import { volumeStore } from '$lib/stores/volume'
 import { effectsStore } from '$lib/stores/effects'
-import { settingsStore } from '$lib/stores/settings'
-import { playbackStore } from '$lib/stores/playback'
 import { supporterStore } from '$lib/stores/supporter'
 import { snipStore, type Snip } from '$lib/stores/snip'
-import type { SimpleTrack } from '$lib/stores/data/cache'
 import { playbackObserver } from '$lib/observers/playback'
-import { nowPlaying, type NowPlaying } from '$lib/stores/now-playing'
-import { getNotificationService, type NotificationService } from '$lib/utils/notifications'
+import { nowPlaying } from '$lib/stores/now-playing'
 
+// Refactored services
+import { TrackStateManager } from '$lib/services/track-state-manager'
+import { PlaybackController } from '$lib/services/playback-controller'
+import { TrackNotificationService } from '$lib/services/track-notification-service'
+import { SELECTORS } from '$lib/utils/selectors'
+
+/**
+ * Refactored TrackObserver using composition over inheritance
+ * Delegates responsibilities to focused service classes
+ */
 export class TrackObserver {
-    private seeking: boolean = false
-    private currentTrackId: string | null = null
-    private notificationService: NotificationService
-    private songChangeTimeout: NodeJS.Timeout | null = null
+    private trackStateManager: TrackStateManager
+    private playbackController: PlaybackController
+    private notificationService: TrackNotificationService
     private boundProcessTimeUpdate: (event: CustomEvent) => void
     private boundProcessMediaPlayInit: (event: CustomEvent) => void
 
     constructor() {
-        this.notificationService = getNotificationService()
+        // Inject dependencies for better testability
+        this.trackStateManager = new TrackStateManager()
+        this.playbackController = new PlaybackController()
+        this.notificationService = new TrackNotificationService()
         this.boundProcessTimeUpdate = this.processTimeUpdate.bind(this)
         this.boundProcessMediaPlayInit = this.processMediaPlayInit.bind(this)
     }
@@ -44,24 +49,14 @@ export class TrackObserver {
     }
 
     private async processMediaPlayInit() {
-        await this.updateTrackType()
-        this.setPlayback()
+        await this.trackStateManager.updateTrackType()
+        this.trackStateManager.setPlayback()
         effectsStore.dispatchEffect()
     }
 
-    setPlayback() {
-        const playback = this.currentSong?.playback ?? this.playback.default
-        if (!playback) return
-
-        playbackStore.dispatchPlaybackSettings(playback)
-    }
-
+    // Simplified getters for commonly accessed stores
     get currentSong() {
         return get(nowPlaying)
-    }
-
-    get playback() {
-        return get(playbackStore)
     }
 
     get snip() {
@@ -72,161 +67,103 @@ export class TrackObserver {
         return get(loopStore)
     }
 
-    get seek() {
-        return get(seekStore)
-    }
-
-    get volume() {
-        return get(volumeStore)
-    }
-
-    get settings() {
-        return get(settingsStore)
-    }
-
     get isSupporter() {
         return get(supporterStore).isSupporter
     }
 
-    get muteButton() {
-        return document.querySelector(
-            '[data-testid="volume-bar-toggle-mute-button"]'
-        ) as HTMLButtonElement
+    private isAtTempSnipEnd(currentTimeMS: number): boolean {
+        const snip = this.snip as Snip
+        return this.trackStateManager.isAtTempSnipEnd(currentTimeMS, snip)
     }
 
-    mute() {
-        volumeStore.mute()
+    private async updateTrackType(): Promise<void> {
+        await this.trackStateManager.updateTrackType()
+        playbackObserver.updateChorusUI()
     }
 
-    unMute() {
-        if (this.volume.muted) volumeStore.unMute()
+    private isAtSnipEnd(currentTimeMS: number): boolean {
+        return this.trackStateManager.isTrackAtSnipEnd(currentTimeMS, this.currentSong)
     }
 
-    atTempSnipEnd(currentTimeMS: number) {
-        const { end_time, last_updated } = this.snip as Snip
-        if (!end_time || !last_updated) return false
-
-        const endTimeMS = end_time * 1000 - 100
-        const lastUpdateSet = !!last_updated
-        const loopEndTimeMS =
-            !lastUpdateSet || last_updated == 'start' ? endTimeMS : endTimeMS + 3000
-        return (
-            !Number.isNaN(endTimeMS) &&
-            currentTimeMS > Math.min(loopEndTimeMS, this.currentSong.duration * 1000)
-        )
+    updateCurrentTime(time: number): void {
+        this.playbackController.updateCurrentTime(time)
     }
 
-    async updateTrackType() {
-        const anchor = document.querySelector('[data-testid="context-item-info-title"] > span > a')
-        // album, track, episode, chapter
-        const contextType = anchor?.getAttribute('href')?.split('/')?.at(1)
-        if (!contextType) return
-
-        const type = ['track', 'album'].includes(contextType) ? 'default' : 'long_form'
-        if (this.seek.media_type !== type) {
-            playbackObserver.updateChorusUI()
-            await seekStore.updateMediaType(type)
-        }
-    }
-
-    atSnipEnd({ currentTimeMS, track }: { currentTimeMS: number; track: SimpleTrack }) {
-        const { end_time = this.currentSong.duration } = track?.snip ?? {}
-        const atSongEnd = end_time == this.currentSong.duration
-        const endTimeMS = end_time * 1000 - (atSongEnd ? 100 : 0)
-        return currentTimeMS >= endTimeMS
-    }
-
-    updateCurrentTime(time: number) {
-        window.postMessage({ type: 'FROM_CURRENT_TIME_LISTENER', data: time }, '*')
-    }
-
-    skipTrack() {
-        if (!this.volume.muted) this.mute()
-        const nextButton = document.querySelector(
-            '[data-testid="control-button-skip-forward"]'
-        ) as HTMLButtonElement
-        nextButton?.click()
+    skipTrack(): void {
+        this.playbackController.skipTrack()
     }
 
     async processSongTransition() {
         const songInfo = this.currentSong
 
-        if (
-            songInfo?.blocked ||
-            configStore.checkIfTrackShouldBeSkipped({
-                title: songInfo?.title ?? '',
-                artist: songInfo?.artist ?? ''
-            })
-        )
+        if (this.playbackController.shouldSkipTrack(songInfo)) {
             return this.skipTrack()
+        }
 
         if (songInfo?.snip) {
-            this.seeking = true
-            this.mute()
+            this.playbackController.setSeeking(true)
+            this.playbackController.mute()
         }
 
         setTimeout(() => {
-            this.unMute()
-            this.seeking = false
+            this.playbackController.unMute()
+            this.playbackController.setSeeking(false)
         }, 50)
-        this.setPlayback()
+        
+        this.trackStateManager.setPlayback()
         await queue.refreshQueue()
         await this.updateTrackType()
-        await this.showNotification(songInfo)
+        await this.notificationService.showTrackChangeNotification(songInfo)
     }
 
-    private async showNotification(songInfo: NowPlaying) {
-        if (this.songChangeTimeout) clearTimeout(this.songChangeTimeout)
-
-        if (this.settings.notifications.enabled && this.settings.notifications.on_track_change) {
-            this.songChangeTimeout = setTimeout(async () => {
-                if (!this.currentTrackId || songInfo.id !== this.currentTrackId) {
-                    await this.notificationService.showNotification(songInfo)
-                    this.currentTrackId = songInfo.id
-                }
-            }, 5_000)
-        }
-    }
+    // Notification handling is now delegated to TrackNotificationService
 
     private async processTimeUpdate(event: CustomEvent) {
         setTimeout(async () => {
             const currentSong = this.currentSong
 
-            if (!currentSong || this.seeking) return
+            if (!currentSong || !this.playbackController.isControlEnabled) return
 
             const currentTimeMS = event.detail.currentTime * 1000
             const snip = this.snip
 
-            const skipTrack = configStore.checkIfTrackShouldBeSkipped({
-                title: currentSong.title ?? '',
-                artist: currentSong.artist ?? ''
-            })
+            // Check if track should be skipped
+            if (this.playbackController.shouldSkipTrack(currentSong)) {
+                return this.skipTrack()
+            }
 
-            if (skipTrack) return this.skipTrack()
-
+            // Handle snip start position
             if (currentSong.snip && currentTimeMS < currentSong.snip.start_time * 1000) {
                 return this.updateCurrentTime(currentSong.snip.start_time)
             }
 
-            if (this.snip && this.atTempSnipEnd(currentTimeMS)) {
+            // Handle temporary snip end
+            if (this.snip && this.isAtTempSnipEnd(currentTimeMS)) {
                 return this.updateCurrentTime(this.snip.start_time)
             }
 
-            if (currentSong.snip && !this.atSnipEnd({ currentTimeMS, track: currentSong })) return
+            // Early return if not at snip end
+            if (currentSong.snip && !this.isAtSnipEnd(currentTimeMS)) return
 
-            if (this.loop.looping && this.atSnipEnd({ currentTimeMS, track: currentSong })) {
-                if (this.loop.type === 'amount') await loopStore.decrement()
-                return this.updateCurrentTime(currentSong.snip?.start_time ?? 0)
+            // Handle looping
+            if (this.loop.looping && this.isAtSnipEnd(currentTimeMS)) {
+                const loopHandled = await this.playbackController.handleLooping(currentTimeMS)
+                if (loopHandled) return
             }
 
-            const atSnipEnd = currentSong.snip && currentTimeMS >= currentSong.snip.end_time * 1000
+            // Handle shared snip URL cleanup
+            if (snip?.is_shared && location?.search) {
+                history.pushState(null, '', location.pathname)
+            }
 
-            if (snip?.is_shared && location?.search) history.pushState(null, '', location.pathname)
-            if (
-                (currentSong.snip || currentSong.blocked) &&
-                (currentTimeMS >= this.currentSong.duration * 1000 || atSnipEnd)
-            )
+            // Handle track end or snip end
+            const atSnipEnd = currentSong.snip && currentTimeMS >= currentSong.snip.end_time * 1000
+            const shouldSkip = (currentSong.snip || currentSong.blocked) &&
+                             (currentTimeMS >= currentSong.duration * 1000 || atSnipEnd)
+            
+            if (shouldSkip) {
                 this.skipTrack()
+            }
         }, 50)
     }
 
@@ -239,6 +176,10 @@ export class TrackObserver {
             'FROM_MEDIA_PLAY_INIT',
             this.boundProcessMediaPlayInit as EventListener
         )
+        
+        // Clean up services
+        this.notificationService.cleanup()
+        
         const media = get(mediaStore)
         if (media.active) await mediaStore.setActive(false)
     }

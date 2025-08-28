@@ -1,5 +1,5 @@
-import { setOptions, request } from '../request'
 import { defineProxyService } from '@webext-core/proxy-service'
+import { BaseAPIService, COMMON_QUERIES, type GraphQLQuery } from '../base-service'
 
 const API_URL = 'https://api-partner.spotify.com/pathfinder/v2/query'
 
@@ -9,89 +9,62 @@ export interface TrackService {
     updateLikedTracks({ ids, action }: { ids: string; action: 'add' | 'remove' }): Promise<void>
 }
 
-export class TrackService implements TrackService {
-    async getAlbum({ albumId, songId }: { albumId: string; songId: string }) {
-        const body = {
-            variables: {
-                uri: `spotify:album:${albumId}`,
-                locale: '',
-                offset: 0,
-                limit: 50
-            },
-            operationName: 'getAlbum',
-            extensions: {
-                persistedQuery: {
-                    version: 1,
-                    sha256Hash: '97dd13a1f28c80d66115a13697a7ffd94fe3bebdb94da42159456e1d82bfee76'
-                }
-            }
-        }
-        const options = await setOptions({ method: 'POST', body })
-        if (!options) throw new Error('No options found')
-
-        try {
-            const response = (await request({ url: API_URL, options })) as any
-            const foundTrack = response.data.albumUnion.tracksV2.items.find((track: any) => {
-                const artists = track.artists.map((artist: any) => artist.name).join(',')
-                const songTitle = `${track.name} by ${artists}`
-                return songTitle == songId
-            })
-            return foundTrack?.uri ?? null
-        } catch (error: any) {
-            console.error(error)
-            return null
-        }
+export class TrackService extends BaseAPIService implements TrackService {
+    constructor() {
+        super(API_URL)
     }
 
-    // !! method must be either PUT or DELETE !!
-    async updateLikedTracks({ ids, action }: { ids: string; action: 'add' | 'remove' }) {
-        const body = {
-            variables: { uris: ids.split(',').map((id) => `spotify:track:${id}`) },
-            operationName: action === 'add' ? 'addToLibrary' : 'removeFromLibrary',
-            extensions: {
-                persistedQuery: {
-                    version: 1,
-                    sha256Hash: 'a3c1ff58e6a36fec5fe1e3a193dc95d9071d96b9ba53c5ba9c1494fb1ee73915'
-                }
-            }
+    async getAlbum({ albumId, songId }: { albumId: string; songId: string }): Promise<string | null> {
+        const variables = {
+            uri: `spotify:album:${albumId}`,
+            locale: '',
+            offset: 0,
+            limit: 50
         }
 
-        const options = await setOptions({ method: 'POST', body })
-        if (!options) throw new Error('No options found')
+        const response = await this.executeGraphQLQuery<any>(
+            COMMON_QUERIES.GET_ALBUM,
+            variables
+        )
 
-        try {
-            return await request({ url: API_URL, options })
-        } catch (error) {
-            console.error(error)
+        if (!response?.albumUnion?.tracksV2?.items) {
             return null
         }
+
+        const foundTrack = response.albumUnion.tracksV2.items.find((track: any) => {
+            const artists = track.artists.map((artist: any) => artist.name).join(',')
+            const songTitle = `${track.name} by ${artists}`
+            return songTitle === songId
+        })
+
+        return foundTrack?.uri ?? null
     }
 
-    // ids must be comma-separated of spotify ids. Ex. ids=jksfdlkjd,jfdklkfdsj,lsuouw
-    async checkIfTracksInCollection(ids: string) {
-        const body = {
-            variables: {
-                uris: ids.split(',').map((id) => `spotify:track:${id}`)
-            },
-            operationName: 'isCurated',
-            extensions: {
-                persistedQuery: {
-                    version: 1,
-                    sha256Hash: 'e4ed1f91a2cc5415befedb85acf8671dc1a4bf3ca1a5b945a6386101a22e28a6'
-                }
-            }
+    async updateLikedTracks({ ids, action }: { ids: string; action: 'add' | 'remove' }): Promise<any> {
+        const variables = {
+            uris: ids.split(',').map((id) => `spotify:track:${id}`)
         }
 
-        const options = await setOptions({ method: 'POST', body })
-        if (!options) throw new Error('No options found')
+        const query = action === 'add' ? COMMON_QUERIES.ADD_TO_LIBRARY : COMMON_QUERIES.REMOVE_FROM_LIBRARY
+        
+        return await this.executeGraphQLQuery<any>(query, variables)
+    }
 
-        try {
-            const response = (await request({ url: API_URL, options })) as any
-            return response.data.lookup.map((item: any) => item.data.isCurated)
-        } catch (error) {
-            console.error(error)
+    async checkIfTracksInCollection(ids: string): Promise<boolean[] | null> {
+        const variables = {
+            uris: ids.split(',').map((id) => `spotify:track:${id}`)
+        }
+
+        const response = await this.executeGraphQLQuery<any>(
+            { ...COMMON_QUERIES.IS_CURATED, cacheKey: `tracks-in-collection-${ids}` },
+            variables
+        )
+
+        if (!response?.lookup) {
             return null
         }
+
+        return response.lookup.map((item: any) => item.data.isCurated)
     }
 }
 
