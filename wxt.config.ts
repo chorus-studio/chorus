@@ -18,10 +18,7 @@ const perBrowserManifest: Record<string, UserManifest> = {
         permissions: [...BASE_PERMISSIONS, 'notifications'],
         browser_specific_settings: {
             gecko: {
-                id: 'chorus@cdrani.dev',
-                data_collection_permissions: {
-                    required: ['none']
-                }
+                id: 'chorus@cdrani.dev'
             }
         }
     }
