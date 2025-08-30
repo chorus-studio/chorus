@@ -38,6 +38,7 @@
     "type": "module",
     "dependencies": {
         "@webext-core/proxy-service": "^1.2.1",
+        "caniuse-lite": "^1.0.30001737",
         "mode-watcher": "^0.5.1",
         "node-vibrant": "^4.0.3"
     }
