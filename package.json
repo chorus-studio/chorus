@@ -33,6 +33,7 @@
         "zip": "wxt zip",
         "zip:fox": "wxt zip -b firefox --mv3",
         "check": "svelte-check --tsconfig ./tsconfig.json",
+        "format": "git diff --name-only --diff-filter=AM | grep -E '\\.(js|ts|svelte|json)$' | xargs prettier --write",
         "postinstall": "wxt prepare"
     },
     "type": "module",
