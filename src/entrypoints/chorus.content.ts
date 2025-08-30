@@ -1,4 +1,10 @@
 import { mount, unmount } from 'svelte'
+import { 
+    type ContentScriptContext, 
+    injectScript, 
+    createIntegratedUi 
+} from 'wxt/client'
+import { MatchPattern } from 'wxt/sandbox'
 
 import '../app.css'
 import App from '../App.svelte'
@@ -76,7 +82,7 @@ async function injectChorusUI(ctx: ContentScriptContext) {
             }
         },
         onRemove: (app) => {
-            unmount(app)
+            if (app) unmount(app)
         }
     })
     ui.autoMount()

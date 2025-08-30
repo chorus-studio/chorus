@@ -2,7 +2,7 @@
     import { Toaster as Sonner, type ToasterProps as SonnerProps } from 'svelte-sonner'
     import { mode } from 'mode-watcher'
 
-    let { theme = $mode, customClasses, ...restProps }: SonnerProps = $props()
+    let { theme = $mode, customClasses, ...restProps }: SonnerProps & { customClasses?: Record<string, string> } = $props()
 </script>
 
 <Sonner

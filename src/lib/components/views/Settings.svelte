@@ -28,9 +28,10 @@
     }
 
     function setUILabel(key: keyof SettingsState[SettingsKey]) {
-        if (key in $settingsStore.views) return `show ${key} tab`
+        const keyStr = String(key)
+        if (key in $settingsStore.views) return `show ${keyStr} tab`
         if (key == 'playlist') return 'add to playlist'
-        return `v2 ${key} `
+        return `v2 ${keyStr} `
     }
 
     function checkIfPipSupported() {

@@ -76,10 +76,12 @@
         const trackId = $nowPlaying.track_id ?? track_id
         const albumId = $nowPlaying.album_id ?? album_id
         if (trackId) return trackId
-        if (albumId) {
-            const trackId = await getTrackIdFromAlbumId({ albumId, songId: $nowPlaying!.id })
-            nowPlaying.set({ ...$nowPlaying, track_id: trackId })
-            return trackId
+        if (albumId && $nowPlaying.id) {
+            const trackId = await getTrackIdFromAlbumId({ albumId, songId: $nowPlaying.id })
+            if (trackId) {
+                nowPlaying.set({ ...$nowPlaying, track_id: trackId })
+                return trackId
+            }
         }
     }
 

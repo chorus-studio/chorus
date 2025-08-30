@@ -189,9 +189,10 @@ export class TestAssert {
             fn()
         } catch (error) {
             thrown = true
-            if (expectedError && !error.message.includes(expectedError)) {
+            const errorMessage = error instanceof Error ? error.message : String(error)
+            if (expectedError && !errorMessage.includes(expectedError)) {
                 throw new Error(
-                    `Expected error containing '${expectedError}', but got '${error.message}'`
+                    `Expected error containing '${expectedError}', but got '${errorMessage}'`
                 )
             }
         }
@@ -210,9 +211,10 @@ export class TestAssert {
             await promise
         } catch (error) {
             rejected = true
-            if (expectedError && !error.message.includes(expectedError)) {
+            const errorMessage = error instanceof Error ? error.message : String(error)
+            if (expectedError && !errorMessage.includes(expectedError)) {
                 throw new Error(
-                    `Expected rejection containing '${expectedError}', but got '${error.message}'`
+                    `Expected rejection containing '${expectedError}', but got '${errorMessage}'`
                 )
             }
         }
@@ -335,8 +337,9 @@ export class TestSuite {
                 this.results.push({ name: test.name, passed: true })
                 console.log(`✓ ${test.name}`)
             } catch (error) {
-                this.results.push({ name: test.name, passed: false, error })
-                console.error(`✗ ${test.name}: ${error.message}`)
+                const errorObj = error instanceof Error ? error : new Error(String(error))
+                this.results.push({ name: test.name, passed: false, error: errorObj })
+                console.error(`✗ ${test.name}: ${errorObj.message}`)
             }
         }
 

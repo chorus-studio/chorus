@@ -11,7 +11,7 @@
     }: {
         list: number[] | Frequent[]
         handleSelect: (value: number) => void
-        handlePin: (value: Frequent) => void
+        handlePin?: (value: Frequent) => void
     } = $props()
 
     let isFrequentList = $derived(list.length > 0 && typeof list[0] !== 'number')

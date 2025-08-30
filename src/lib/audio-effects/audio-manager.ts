@@ -340,7 +340,7 @@ export default class AudioManager {
             
             // Clean up SoundTouch manager
             if (this._soundTouchManager) {
-                this._soundTouchManager.dispose?.()
+                (this._soundTouchManager as any).dispose?.()
                 this._soundTouchManager = null
             }
         } catch (error) {

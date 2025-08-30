@@ -81,7 +81,7 @@ class Queue {
         this.userBlockedTracks = this.filterUnblockedTracks()
         if (!this.userBlockedTracks.length) return
 
-        const queueList = await measureAPICall('get-queue-list', () => this.queueService.getQueueList())
+        const queueList = await measureAPICall('get-queue-list', () => this.queueService.getQueueList()) as any
         const spotifyQueuedTracks = queueList?.player_state?.next_tracks || []
         this.nextQueuedTracks = this.filterQueuedTracks({
             spotifyQueuedTracks,
