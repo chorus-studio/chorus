@@ -28,6 +28,17 @@ const perBrowserManifest: Record<string, UserManifest> = {
 export default defineConfig({
     srcDir: 'src',
     extensionApi: 'chrome',
+    zip: {
+        excludeSources: [
+            '.claude/**/*',
+            '.github/**/*',
+            '.vscode/**/*',
+            'license.md',
+            '.output/**/*',
+            'README.md',
+            'code_of_conduct.md'
+        ]
+    },
     modules: ['@wxt-dev/module-svelte'],
     alias: {
         $lib: 'src/lib'
