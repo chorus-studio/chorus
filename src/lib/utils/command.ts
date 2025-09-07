@@ -21,10 +21,16 @@ export async function executeButtonClick({
         chorusKeys[command as keyof typeof chorusKeys] ||
         mediaKeys[command as keyof typeof mediaKeys]
 
+    // Skip if no selector found for this command  
+    if (!selector) {
+        console.warn(`No selector found for command: ${command}`)
+        return
+    }
+
     await browser.scripting.executeScript({
         args: [selector],
         target: { tabId },
-        func: (selector) => {
+        func: (selector: string) => {
             if (!selector.includes('control-button-npv')) {
                 return (document.querySelector(selector) as HTMLElement)?.click()
             }
