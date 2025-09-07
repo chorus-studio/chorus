@@ -2,10 +2,11 @@ import { get } from 'svelte/store'
 import { loopStore } from '$lib/stores/loop'
 import { queue } from '$lib/observers/queue'
 import { mediaStore } from '$lib/stores/media'
+import { configStore } from '$lib/stores/config'
 import { effectsStore } from '$lib/stores/effects'
+import { nowPlaying } from '$lib/stores/now-playing'
 import { snipStore, type Snip } from '$lib/stores/snip'
 import { playbackObserver } from '$lib/observers/playback'
-import { nowPlaying } from '$lib/stores/now-playing'
 
 // Refactored services
 import { TrackStateManager } from '$lib/services/track-state-manager'
@@ -48,8 +49,8 @@ export class TrackObserver {
 
     private async processMediaPlayInit() {
         await this.trackStateManager.updateTrackType()
-        this.trackStateManager.setPlayback()
-        effectsStore.dispatchEffect()
+        this.trackStateManager.setPlayback(this.audioPreset)
+        this.setEffect()
     }
 
     // Simplified getters for commonly accessed stores
@@ -63,6 +64,19 @@ export class TrackObserver {
 
     get loop() {
         return get(loopStore)
+    }
+
+    get config() {
+        return get(configStore)
+    }
+
+    get audioPreset() {
+        return this.config.audio_presets.find((p) => p.active)
+    }
+
+    setEffect() {
+        if (!this.audioPreset) return effectsStore.dispatchEffect()
+        configStore.updateAudioPreset({ preset: this.audioPreset, type: 'effect' })
     }
 
     private isAtTempSnipEnd(currentTimeMS: number): boolean {

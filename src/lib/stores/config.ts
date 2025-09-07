@@ -1,6 +1,8 @@
-import { writable, get } from 'svelte/store'
 import { storage } from '@wxt-dev/storage'
+import { writable, get } from 'svelte/store'
 import { syncWithType } from '$lib/utils/store-utils'
+import type { Playback } from '$lib/stores/playback'
+import type { AudioEffect } from '$lib/stores/effects'
 
 export const CONFIG_STORE_KEY = 'local:chorus_config'
 
@@ -21,6 +23,7 @@ export type AutoSkip = {
 
 export type ConfigState = {
     auto_skip: AutoSkip
+    audio_presets: AudioPreset[]
     fx_eq_presets: {
         custom_eq_presets: string[]
         spotify_eq_presets: string[]
@@ -29,7 +32,33 @@ export type ConfigState = {
     }
 }
 
+export type AudioPreset = {
+    id: string
+    active: boolean
+    playback: Playback
+    effect: AudioEffect
+}
+
+export const defaultAudioPreset: Omit<AudioPreset, 'id'> = {
+    active: false,
+    playback: {
+        pitch: 1,
+        semitone: 0,
+        rate: {
+            value: 1,
+            preserves_pitch: true
+        }
+    },
+    effect: { equalizer: 'none', reverb: 'none' }
+}
+
+export const createAudioPreset = (): AudioPreset => ({
+    ...defaultAudioPreset,
+    id: crypto.randomUUID()
+})
+
 export const defaultConfig: ConfigState = {
+    audio_presets: [createAudioPreset()],
     auto_skip: {
         enabled: false,
         title_keywords: [],
@@ -98,6 +127,36 @@ function createConfigStore() {
         }
     }
 
+    function updateAudioPreset({
+        preset,
+        type
+    }: {
+        preset: AudioPreset
+        type: 'effect' | 'playback'
+    }) {
+        if (!preset.active) return
+
+        const effect = {
+            equalizer: preset.effect.equalizer,
+            reverb: preset.effect.reverb
+        }
+        const playback = {
+            pitch: preset.playback.pitch,
+            semitone: preset.playback.semitone,
+            rate: {
+                value: preset.playback.rate.value,
+                preserves_pitch: preset.playback.rate.preserves_pitch
+            }
+        }
+
+        const message = {
+            type: type === 'effect' ? 'FROM_EFFECTS_LISTENER' : 'FROM_PLAYBACK_LISTENER',
+            data: type === 'effect' ? effect : playback
+        }
+
+        window?.postMessage(message, '*')
+    }
+
     storage.getItem<ConfigState>(CONFIG_STORE_KEY).then((config) => {
         if (!config) return
 
@@ -128,6 +187,7 @@ function createConfigStore() {
     return {
         subscribe,
         updateConfig,
+        updateAudioPreset,
         checkIfTrackShouldBeSkipped
     }
 }

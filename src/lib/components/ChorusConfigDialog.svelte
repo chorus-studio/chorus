@@ -5,10 +5,11 @@
     import { Separator } from '$lib/components/ui/separator'
     import Settings2 from '@lucide/svelte/icons/settings-2'
 
-    import ChorusConfigAutoSkip from './ChorusConfigAutoSkip.svelte'
     import ChorusConfigFXEQ from './ChorusConfigFXEQ.svelte'
+    import ChorusConfigPresets from './ChorusConfigPresets.svelte'
+    import ChorusConfigAutoSkip from './ChorusConfigAutoSkip.svelte'
 
-    let activeTab = $state('auto-skip')
+    let activeTab = $state('presets')
 </script>
 
 <Dialog.Root>
@@ -27,12 +28,16 @@
             <Tabs.List class="flex w-full justify-between">
                 <Tabs.Trigger value="auto-skip" class="w-full">Auto-Skip</Tabs.Trigger>
                 <Tabs.Trigger value="fx-eq" class="w-full">FXEQ List</Tabs.Trigger>
+                <Tabs.Trigger value="presets" class="w-full">Presets</Tabs.Trigger>
             </Tabs.List>
             <Tabs.Content value="auto-skip">
                 <ChorusConfigAutoSkip />
             </Tabs.Content>
             <Tabs.Content value="fx-eq">
                 <ChorusConfigFXEQ />
+            </Tabs.Content>
+            <Tabs.Content value="presets">
+                <ChorusConfigPresets />
             </Tabs.Content>
         </Tabs.Root>
     </Dialog.Content>

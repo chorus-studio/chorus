@@ -1,16 +1,20 @@
 import { storage } from '@wxt-dev/storage'
 import { activeOpenTab } from '$lib/utils/messaging'
-import { executeButtonClick } from '$lib/utils/command'
+import type { ConfigState } from '$lib/stores/config'
+import { defaultPlayback } from '$lib/stores/playback'
+import { defaultAudioEffect } from '$lib/stores/effects'
 import type { NowPlaying } from '$lib/stores/now-playing'
 import type { SettingsState } from '$lib/stores/settings'
 import { registerTrackService } from '$lib/api/services/track'
 import { registerQueueService } from '$lib/api/services/queue'
 import { registerNewReleasesService } from '$lib/api/services/new-releases'
 import { registerCheckPermissionsService } from '$lib/utils/check-permissions'
+import { executeButtonClick, registerCommandService } from '$lib/utils/command'
 import { registerNotificationService, showNotification } from '$lib/utils/notifications'
 
 export default defineBackground(() => {
     const STORE_KEYS = {
+        CONFIG: 'local:chorus_config' as const,
         SETTINGS: 'local:chorus_settings' as const,
         RELEASES: 'local:chorus_releases' as const,
         DEVICE_ID: 'local:chorus_device_id' as const,
@@ -19,14 +23,40 @@ export default defineBackground(() => {
         CONNECTION_ID: 'local:chorus_connection_id' as const
     }
 
+    const CUSTOM_EVENTS = {
+        volume: 'FROM_VOLUME_LISTENER',
+        init_media: 'FROM_MEDIA_PLAY_INIT',
+        current_time: 'FROM_CURRENT_TIME_LISTENER'
+    }
+
+    async function executeScript(message: { type: string; data: any }) {
+        const { tabId } = await activeOpenTab()
+        if (!tabId) return
+
+        await browser.scripting.executeScript({
+            args: [
+                {
+                    value: message.data,
+                    type: CUSTOM_EVENTS[message.type as keyof typeof CUSTOM_EVENTS] ?? message.type
+                }
+            ],
+            target: { tabId },
+            func: (data) => {
+                if (data.type == 'init_media') {
+                    document.dispatchEvent(new CustomEvent('FROM_MEDIA_PLAY_INIT'))
+                } else if (data.type == 'audio_preset') {
+                    const { playback, effect } = data?.value
+                    window.postMessage({ type: 'FROM_EFFECTS_LISTENER', data: effect }, '*')
+                    window.postMessage({ type: 'FROM_PLAYBACK_LISTENER', data: playback }, '*')
+                } else {
+                    window.postMessage({ type: data.type, data: data?.value }, '*')
+                }
+            }
+        })
+    }
+
     browser.runtime.onConnect.addListener(async (port) => {
         if (port.name !== 'popup') return
-
-        const CUSTOM_EVENTS = {
-            volume: 'FROM_VOLUME_LISTENER',
-            init_media: 'FROM_MEDIA_PLAY_INIT',
-            current_time: 'FROM_CURRENT_TIME_LISTENER'
-        }
 
         port.onMessage.addListener(async (message) => {
             if (message?.type == 'controls') {
@@ -35,30 +65,13 @@ export default defineBackground(() => {
 
             if (!Object.keys(CUSTOM_EVENTS).includes(message.type)) return
 
-            const { tabId } = await activeOpenTab()
-            if (!tabId) return
-
-            await browser.scripting.executeScript({
-                args: [
-                    {
-                        value: message.data,
-                        type: CUSTOM_EVENTS[message.type as keyof typeof CUSTOM_EVENTS]
-                    }
-                ],
-                target: { tabId },
-                func: (data) => {
-                    if (data.type == 'init_media') {
-                        document.dispatchEvent(new CustomEvent('FROM_MEDIA_PLAY_INIT'))
-                    } else {
-                        window.postMessage({ type: data.type, data: data?.value }, '*')
-                    }
-                }
-            })
+            await executeScript(message)
         })
     })
 
     registerTrackService()
     registerQueueService()
+    registerCommandService()
     registerNotificationService()
     registerNewReleasesService()
     registerCheckPermissionsService()
@@ -134,7 +147,10 @@ export default defineBackground(() => {
     )
 
     browser.commands.onCommand.addListener(async (command) => {
-        if (!['show-track', 'toggle-new-releases', 'toggle-config'].includes(command)) {
+        if (
+            !command.startsWith('audio-preset-') &&
+            !['show-track', 'toggle-new-releases', 'toggle-config'].includes(command)
+        ) {
             return await executeButtonClick({ command, isShortCutKey: true })
         }
 
@@ -144,6 +160,26 @@ export default defineBackground(() => {
 
             const nowPlaying = await storage.getItem<NowPlaying>(STORE_KEYS.NOW_PLAYING)
             if (nowPlaying) await showNotification(nowPlaying)
+        }
+
+        if (command.startsWith('audio-preset-')) {
+            const index = Number(command.split('-').at(-1)) - 1
+            const config = await storage.getItem<ConfigState>(STORE_KEYS.CONFIG)
+            const preset = config?.audio_presets[index]
+            if (!preset) return
+
+            const data = preset?.active
+                ? { effect: defaultAudioEffect, playback: defaultPlayback }
+                : preset
+
+            await executeScript({ type: 'audio_preset', data })
+            await storage.setItem(STORE_KEYS.CONFIG, {
+                ...config,
+                audio_presets: config.audio_presets.map((p) => {
+                    const target = p.id == preset.id
+                    return { ...p, active: target ? !preset.active : false }
+                })
+            })
         }
 
         if (['toggle-new-releases', 'toggle-config'].includes(command)) {
