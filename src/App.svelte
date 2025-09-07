@@ -5,7 +5,6 @@
     import { nowPlaying } from '$lib/stores/now-playing'
     import { QueueObserver } from '$lib/observers/queue'
     import { trackObserver } from '$lib/observers/track'
-    import { supporterStore } from '$lib/stores/supporter'
     import { playbackObserver } from '$lib/observers/playback'
     import { TracklistObserver } from '$lib/observers/tracklist'
 
@@ -21,7 +20,6 @@
         await nowPlaying.observe()
         await mediaStore.observe()
         playbackObserver.observe()
-        await supporterStore.sync()
         await mediaStore.setActive(false)
     }
 

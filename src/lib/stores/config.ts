@@ -1,7 +1,6 @@
 import { writable, get } from 'svelte/store'
 import { storage } from '@wxt-dev/storage'
 import { syncWithType } from '$lib/utils/store-utils'
-import { supporterStore } from '$lib/stores/supporter'
 
 export const CONFIG_STORE_KEY = 'local:chorus_config'
 
@@ -53,8 +52,6 @@ function createConfigStore() {
     let isUpdatingStorage = false
 
     function checkIfTrackShouldBeSkipped({ title, artist }: { title: string; artist: string }) {
-        if (!get(supporterStore).isSupporter) return false
-
         if (!title || !artist) return false
 
         const {

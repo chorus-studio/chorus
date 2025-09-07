@@ -18,6 +18,7 @@
     import CirclePlus from '@lucide/svelte/icons/circle-plus'
     import CircleCheck from '@lucide/svelte/icons/circle-check'
     import ScrollingText from '$lib/components/ScrollingText.svelte'
+    import { ScrollArea } from '$lib/components/ui/scroll-area'
 
     let releases: Record<string, TrackMetadata[]> = $state({})
 
@@ -84,10 +85,10 @@
     }
 
     function updatedAtSet() {
-        const { music_updated_at, shows_updated_at, release_type } = $newReleasesStore
-        if (release_type === 'music') return music_updated_at
-        if (release_type === 'shows&podcasts') return shows_updated_at
-        return music_updated_at && shows_updated_at
+        const { music_updated_at, shows_updated_at, release_type, music_data, shows_data } = $newReleasesStore
+        if (release_type === 'music') return music_updated_at || music_data.length > 0
+        if (release_type === 'shows&podcasts') return shows_updated_at || shows_data.length > 0
+        return (music_updated_at && shows_updated_at) || (music_data.length > 0 && shows_data.length > 0)
     }
 
     const isLoading = $derived($newReleasesUIStore.loading || !updatedAtSet())
@@ -147,7 +148,7 @@
     })
 </script>
 
-<div class="flex h-full w-full" id="chorus-new-releases-view">
+<ScrollArea class="flex h-full w-full" id="chorus-new-releases-view">
     <div class="mt-28 flex h-full w-full flex-col items-center justify-center bg-[#121212]">
         <div
             class="xl:min-h-dvh mx-auto flex h-full w-full max-w-screen-4xl flex-col gap-8 p-10 px-10 py-6"
@@ -275,4 +276,4 @@
             {/if}
         </div>
     </div>
-</div>
+</ScrollArea>

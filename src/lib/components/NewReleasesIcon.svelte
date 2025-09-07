@@ -1,8 +1,6 @@
 <script lang="ts">
     import type { Component } from 'svelte'
     import { mount, unmount, onMount } from 'svelte'
-    import { supporterStore } from '$lib/stores/supporter'
-    import { clickOutside } from '$lib/utils/click-outside'
     import { newReleasesStore, newReleasesUIStore, type Range } from '$lib/stores/new-releases'
 
     import Tippy from '$lib/components/Tippy.svelte'
@@ -39,7 +37,8 @@
             if (topBar) topBar.style.display = 'block'
 
             // First unmount the components and wait for them to complete
-            await Promise.all([unmount(NewReleasesView), unmount(NewReleasesHeader)])
+            if (releasesViewComponent) unmount(releasesViewComponent)
+            if (releasesHeaderComponent) unmount(releasesHeaderComponent)
 
             const releasesView = document.getElementById('chorus-new-releases-view')
             const releasesHeader = document.getElementById('chorus-new-releases-header')
@@ -50,31 +49,6 @@
             showReleases = false
             newReleasesUIStore.setVisible(false)
         }
-    }
-
-    function registerClickOutside(event: MouseEvent) {
-        if (!$newReleasesUIStore.visible) return
-
-        const target = event.composedPath() as HTMLElement[]
-        if (!target?.length) return
-
-        const spanLinks = target.find(
-            (t) => t.localName === 'span' && t.classList.contains('chorus-release-text')
-        )
-        if (spanLinks) return
-
-        const isNewReleases = target.find(
-            (t) =>
-                t.localName === 'footer' ||
-                [
-                    'chorus-new-releases',
-                    'chorus-new-releases-view',
-                    'chorus-new-releases-header',
-                    'chorus-new-releases-dialog-content',
-                    'chorus-new-releases-dialog-trigger'
-                ].includes(t.id)
-        )
-        if (!isNewReleases) toggleNewReleasesUI()
     }
 
     // Subscribe to store changes
@@ -94,9 +68,6 @@
     const WHOLE_DAY = 24 * 3600 * 1000
 
     async function checkIfSupporter() {
-        await supporterStore.sync()
-        if (!$supporterStore.isSupporter) return
-
         try {
             const { release_type } = $newReleasesStore
             newReleasesUIStore.setLoading(true)
@@ -149,21 +120,19 @@
     onMount(checkIfSupporter)
 </script>
 
-{#if $supporterStore.isSupporter}
-    <div use:clickOutside={registerClickOutside} class="relative z-[999999]">
-        <Tippy
-            side="bottom"
-            text="new releases"
-            id="chorus-new-releases-icon"
-            onTrigger={toggleNewReleasesUI}
-            class="relative h-8 w-12 cursor-pointer border-white bg-transparent py-0 hover:bg-transparent [&_svg]:size-[18px]"
-        >
-            <BellPlus class="size-[18px] stroke-red-500" />
+<div class="relative z-[999999]">
+    <Tippy
+        side="bottom"
+        text="new releases"
+        id="chorus-new-releases-icon"
+        onTrigger={toggleNewReleasesUI}
+        class="relative h-8 w-12 cursor-pointer border-white bg-transparent py-0 hover:bg-transparent [&_svg]:size-[18px]"
+    >
+        <BellPlus class="size-[18px] stroke-red-500" />
 
-            <span
-                class="h-4 w-10 rounded-md bg-red-500 px-2 text-center text-xs font-semibold text-white"
-                >{music_count + shows_count}</span
-            >
-        </Tippy>
-    </div>
-{/if}
+        <span
+            class="h-4 w-10 rounded-md bg-red-500 px-2 text-center text-xs font-semibold text-white"
+            >{music_count + shows_count}</span
+        >
+    </Tippy>
+</div>

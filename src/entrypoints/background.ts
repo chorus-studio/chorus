@@ -147,11 +147,6 @@ export default defineBackground(() => {
         }
 
         if (['toggle-new-releases', 'toggle-config'].includes(command)) {
-            // TODO: Use License Key to check if user is supporter
-            const isSupporter = false
-
-            if (!isSupporter) return
-
             await executeButtonClick({ command, isShortCutKey: true })
         }
     })

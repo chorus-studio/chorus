@@ -1,9 +1,5 @@
 import { mount, unmount } from 'svelte'
-import { 
-    type ContentScriptContext, 
-    injectScript, 
-    createIntegratedUi 
-} from 'wxt/client'
+import { type ContentScriptContext, injectScript, createIntegratedUi } from 'wxt/client'
 import { MatchPattern } from 'wxt/sandbox'
 
 import '../app.css'
@@ -27,6 +23,16 @@ async function injectChorusUI(ctx: ContentScriptContext) {
             const chorusUI = document.getElementById('chorus-ui')
             if (chorusUI) return
 
+            const skipBack = document.querySelector('[data-testid="control-button-skip-back"]')
+            const skipForward = document.querySelector(
+                '[data-testid="control-button-skip-forward"]'
+            )
+            mount(App, { target: container })
+            const body = document.querySelector('body')
+            if (body) {
+                mount(Alert, { target: body })
+            }
+
             const newFeedButton = document.querySelector('[data-testid="whats-new-feed-button"]')
             if (newFeedButton) {
                 const newReleasesIcon = document.getElementById('chorus-new-releases')
@@ -41,15 +47,6 @@ async function injectChorusUI(ctx: ContentScriptContext) {
                     newFeedButton.parentElement?.insertBefore(configDialog, newFeedButton)
                     mount(ChorusConfigDialog, { target: configDialog })
                 }
-            }
-            const skipBack = document.querySelector('[data-testid="control-button-skip-back"]')
-            const skipForward = document.querySelector(
-                '[data-testid="control-button-skip-forward"]'
-            )
-            mount(App, { target: container })
-            const body = document.querySelector('body')
-            if (body) {
-                mount(Alert, { target: body })
             }
             if (skipBack) {
                 const seekBack = document.querySelector('#seek-player-rw-button')
