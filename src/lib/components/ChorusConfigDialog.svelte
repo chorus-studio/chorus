@@ -6,10 +6,11 @@
     import Settings2 from '@lucide/svelte/icons/settings-2'
 
     import ChorusConfigFXEQ from './ChorusConfigFXEQ.svelte'
+    import ChorusConfigTheming from './ChorusConfigTheming.svelte'
     import ChorusConfigPresets from './ChorusConfigPresets.svelte'
     import ChorusConfigAutoSkip from './ChorusConfigAutoSkip.svelte'
 
-    let activeTab = $state('presets')
+    let activeTab = $state('auto-skip')
 </script>
 
 <Dialog.Root>
@@ -29,6 +30,7 @@
                 <Tabs.Trigger value="auto-skip" class="w-full">Auto-Skip</Tabs.Trigger>
                 <Tabs.Trigger value="fx-eq" class="w-full">FXEQ List</Tabs.Trigger>
                 <Tabs.Trigger value="presets" class="w-full">Presets</Tabs.Trigger>
+                <Tabs.Trigger value="theming" class="w-full">Theming</Tabs.Trigger>
             </Tabs.List>
             <Tabs.Content value="auto-skip">
                 <ChorusConfigAutoSkip />
@@ -38,6 +40,9 @@
             </Tabs.Content>
             <Tabs.Content value="presets">
                 <ChorusConfigPresets />
+            </Tabs.Content>
+            <Tabs.Content value="theming">
+                <ChorusConfigTheming />
             </Tabs.Content>
         </Tabs.Root>
     </Dialog.Content>

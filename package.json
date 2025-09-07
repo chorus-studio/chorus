@@ -26,6 +26,7 @@
     },
     "private": true,
     "scripts": {
+        "predev": "bun run theming/transformer.ts",
         "dev": "wxt",
         "dev:fox": "wxt -b firefox",
         "build": "wxt build",

@@ -1,6 +1,9 @@
 import { mount, unmount } from 'svelte'
-import { type ContentScriptContext, injectScript, createIntegratedUi } from 'wxt/client'
+
 import { MatchPattern } from 'wxt/sandbox'
+import { setTheme } from '$lib/utils/theming'
+import { type SettingsState, SETTINGS_STORE_KEY } from '$lib/stores/settings'
+import { type ContentScriptContext, injectScript, createIntegratedUi } from 'wxt/client'
 
 import '../app.css'
 import App from '../App.svelte'
@@ -10,11 +13,13 @@ import SeekButton from '$lib/components/SeekButton.svelte'
 import NewReleasesIcon from '$lib/components/NewReleasesIcon.svelte'
 import ChorusConfigDialog from '$lib/components/ChorusConfigDialog.svelte'
 
-const watchPattern = new MatchPattern('*://open.spotify.com/*')
-
 async function injectChorusUI(ctx: ContentScriptContext) {
     await injectScript('/router.js')
     await injectScript('/media-override.js')
+
+    const settings = await storage.getItem<SettingsState>(SETTINGS_STORE_KEY)
+    const theme = settings?.theme ? settings.theme.name : 'spotify'
+    await setTheme(theme)
 
     const ui = createIntegratedUi(ctx, {
         position: 'inline',
@@ -56,27 +61,24 @@ async function injectChorusUI(ctx: ContentScriptContext) {
                     mount(SeekButton, { target: div, props: { role: 'seek-backward' } })
                 }
             }
-            if (skipForward) {
-                const seekForward = document.querySelector('#seek-player-ff-button')
-                const loopButton = document.querySelector('#loop-button')
-                if (!seekForward && !loopButton) {
-                    const forwardDiv = document.createElement('div')
-                    const loopDiv = document.createElement('div')
-                    const parentElement = skipForward.parentElement
-                    if (parentElement?.lastElementChild) {
-                        parentElement?.insertBefore(forwardDiv, skipForward.nextSibling)
-                        parentElement?.insertBefore(
-                            loopDiv,
-                            parentElement?.lastElementChild?.nextSibling
-                        )
-                        mount(SeekButton, {
-                            target: forwardDiv,
-                            props: { role: 'seek-forward' }
-                        })
-                        mount(LoopButton, { target: loopDiv })
-                    }
-                }
-            }
+            if (!skipForward) return
+
+            const seekForward = document.querySelector('#seek-player-ff-button')
+            const loopButton = document.querySelector('#loop-button')
+            if (!(!seekForward && !loopButton)) return
+
+            const forwardDiv = document.createElement('div')
+            const loopDiv = document.createElement('div')
+            const parentElement = skipForward.parentElement
+            if (!parentElement?.lastElementChild) return
+
+            parentElement?.insertBefore(forwardDiv, skipForward.nextSibling)
+            parentElement?.insertBefore(loopDiv, parentElement?.lastElementChild?.nextSibling)
+            mount(SeekButton, {
+                target: forwardDiv,
+                props: { role: 'seek-forward' }
+            })
+            mount(LoopButton, { target: loopDiv })
         },
         onRemove: (app) => {
             if (app) unmount(app)
@@ -84,6 +86,8 @@ async function injectChorusUI(ctx: ContentScriptContext) {
     })
     ui.autoMount()
 }
+
+const watchPattern = new MatchPattern('*://open.spotify.com/*')
 
 export default defineContentScript({
     matches: ['*://open.spotify.com/*'],

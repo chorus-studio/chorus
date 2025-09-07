@@ -5,6 +5,7 @@ import { defaultPlayback } from '$lib/stores/playback'
 import { defaultAudioEffect } from '$lib/stores/effects'
 import type { NowPlaying } from '$lib/stores/now-playing'
 import type { SettingsState } from '$lib/stores/settings'
+import { THEM_NAMES, setTheme } from '$lib/utils/theming'
 import { registerTrackService } from '$lib/api/services/track'
 import { registerQueueService } from '$lib/api/services/queue'
 import { registerNewReleasesService } from '$lib/api/services/new-releases'
@@ -42,7 +43,11 @@ export default defineBackground(() => {
             ],
             target: { tabId },
             func: (data) => {
-                if (data.type == 'init_media') {
+                if (data.type == 'theme_change') {
+                    document.dispatchEvent(
+                        new CustomEvent('FROM_THEME_CHANGE', { detail: { theme: data.value } })
+                    )
+                } else if (data.type == 'init_media') {
                     document.dispatchEvent(new CustomEvent('FROM_MEDIA_PLAY_INIT'))
                 } else if (data.type == 'audio_preset') {
                     const { playback, effect } = data?.value
@@ -148,6 +153,7 @@ export default defineBackground(() => {
 
     browser.commands.onCommand.addListener(async (command) => {
         if (
+            !command.startsWith('cycle-theme-') &&
             !command.startsWith('audio-preset-') &&
             !['show-track', 'toggle-new-releases', 'toggle-config'].includes(command)
         ) {
@@ -160,6 +166,27 @@ export default defineBackground(() => {
 
             const nowPlaying = await storage.getItem<NowPlaying>(STORE_KEYS.NOW_PLAYING)
             if (nowPlaying) await showNotification(nowPlaying)
+        }
+
+        if (command.startsWith('cycle-theme-')) {
+            const settings = await storage.getItem<SettingsState>(STORE_KEYS.SETTINGS)
+            const theme = settings?.theme?.name
+            if (!theme) return
+
+            const index = THEME_NAMES.indexOf(theme)
+            const goToNext = command.endsWith('-next')
+            const nextIndex = goToNext
+                ? (index + 1) % THEME_NAMES.length
+                : index === 0
+                  ? THEME_NAMES.length - 1
+                  : index - 1
+            const nextTheme = THEME_NAMES[nextIndex]
+
+            await executeScript({ type: 'theme_change', data: nextTheme })
+            await storage.setItem(STORE_KEYS.SETTINGS, {
+                ...settings,
+                theme: { ...settings.theme, name: nextTheme }
+            })
         }
 
         if (command.startsWith('audio-preset-')) {
