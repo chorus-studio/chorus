@@ -38,6 +38,14 @@ async function injectChorusUI(ctx: ContentScriptContext) {
                 mount(Alert, { target: body })
             }
 
+            const formInput = document.querySelector(
+                'input[data-encore-id="formInput"]'
+            ) as HTMLInputElement | null
+            if (formInput) {
+                formInput.style.paddingRight = '0 !important'
+                formInput.style.paddingLeft = '48px !important'
+            }
+
             const newFeedButton = document.querySelector('[data-testid="whats-new-feed-button"]')
             if (newFeedButton) {
                 const newReleasesIcon = document.getElementById('chorus-new-releases')

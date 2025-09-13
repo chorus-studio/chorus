@@ -91,3 +91,43 @@
         scrollbar-width: none; /* Firefox */
     }
 }
+
+
+.RpMCAf8TjF6HpQSI7hdx .CFfhVwF52u3lETJ8lRWE {
+    padding-left: 48px !important;
+}
+
+/* fix input left padding */
+input[type='search'] {
+    padding-right: 0 !important;
+    padding-inline-end: 0 !important;
+    padding-left: 48px !important;
+}
+
+a[href$='/download'] {
+    display: none !important;
+}
+
+[data-testid='upgrade-button'] {
+    display: none !important;
+}
+
+.RpMCAf8TjF6HpQSI7hdx .CFfhVwF52u3lETJ8lRWE {
+    padding-left: 48px !important;
+}
+
+.RpMCAf8TjF6HpQSI7hdx .CFfhVwF52u3lETJ8lRWE:-moz-placeholder {
+    padding-inline-end:64px;
+    padding-left: 48px;
+}
+
+.RpMCAf8TjF6HpQSI7hdx .CFfhVwF52u3lETJ8lRWE:-ms-input-placeholder {
+    padding-inline-end:64px;
+    padding-left: 48px;
+}
+
+.RpMCAf8TjF6HpQSI7hdx .CFfhVwF52u3lETJ8lRWE:placeholder-shown {
+    -webkit-padding-end: 64px;
+    padding-inline-end:64px;
+    padding-left: 48px;
+}
