@@ -27,7 +27,7 @@
             <p>Customize the appearance of Chorus to your liking.</p>
         </div>
     </div>
-    <div class="flex flex-wrap gap-4">
+    <div class="grid grid-cols-5 gap-4">
         {#each THEME_NAMES as theme}
             <div
                 style={`background-color: ${STATIC_THEMES[theme as ThemeName]?.shadow ?? '#000'}`}
