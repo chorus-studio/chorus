@@ -85,7 +85,6 @@ class Queue {
         // Debounce to prevent race conditions
         return new Promise<void>((resolve) => {
             this.refreshTimeout = setTimeout(async () => {
-                console.log('[Queue] Executing debounced queue refresh')
                 await this.getQueuedTracks()
                 await this.setQueuedTracks()
                 this.refreshTimeout = null
@@ -95,11 +94,8 @@ class Queue {
     }
 
     async restoreUnblockedTrack(unblockedTrackId: string) {
-        console.log('[Queue] Attempting to restore track:', unblockedTrackId)
-
         // If no original queue stored, fall back to regular refresh
         if (this.originalQueue.length === 0) {
-            console.log('[Queue] No original queue stored, falling back to refresh')
             return this.refreshQueue()
         }
 
@@ -109,7 +105,6 @@ class Queue {
         )
 
         if (originalTrackIndex === -1) {
-            console.log('[Queue] Track not found in original queue')
             return this.refreshQueue()
         }
 
@@ -118,7 +113,6 @@ class Queue {
 
         // Only restore if track was after current position
         if (originalTrackIndex <= currentPosition) {
-            console.log('[Queue] Track position already passed, not restoring')
             return
         }
 
@@ -144,8 +138,6 @@ class Queue {
         const restoredQueueUris = currentFilteredQueue.slice()
         restoredQueueUris.splice(insertPosition, 0, trackToRestore.uri)
 
-        console.log('[Queue] Restoring track at position:', insertPosition)
-
         // Update Spotify queue with restored track
         await this.queueService.setQueueList(restoredQueueUris)
     }
@@ -164,7 +156,6 @@ class Queue {
         ) {
             this.originalQueue = [...spotifyQueuedTracks]
             this.originalQueueTimestamp = now
-            console.log('[Queue] Stored original queue:', this.originalQueue.length, 'tracks')
         }
 
         // Extract track IDs from API response
