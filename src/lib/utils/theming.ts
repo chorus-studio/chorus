@@ -25,6 +25,7 @@ export const THEME_NAMES: ThemeName[] = [
     'matcha',
     'artic',
     'ocean',
+    'sky',
     'cherry_blossom',
     'hot_pink',
     'raisin',
@@ -43,6 +44,7 @@ export type ThemeName =
     | 'matcha'
     | 'artic'
     | 'ocean'
+    | 'sky'
     | 'cherry_blossom'
     | 'hot_pink'
     | 'ubuntu'
@@ -106,6 +108,23 @@ export const STATIC_THEMES: Record<ThemeName, null | Record<CSSVariable, string>
         notification: '#00587a',
         notification_error: '#66eaf7',
         misc: '#00587a'
+    },
+    sky: {
+        text: '#badbff',
+        subtext: '#e5f2ff',
+        main: '#002e99',
+        sidebar: '#002e99',
+        player: '#002e99',
+        card: '#0047cc',
+        shadow: '#0047cc',
+        selected_row: '#8ac1ff',
+        button: '#8ac1ff',
+        button_active: '#8ac1ff',
+        button_disabled: '#1867f2',
+        tab_active: '#3a86ff',
+        notification: '#002e99',
+        notification_error: '#5fa2ff',
+        misc: '#002e99'
     },
     regal: {
         text: '#cba3e8',
@@ -421,9 +440,9 @@ export async function overrideExternalStyles() {
                 let count = 0
                 for (const { target, replacement } of rulesToReplace) {
                     const regex = new RegExp(target, 'gi')
-                    modifiedCSS = modifiedCSS.replaceAll(regex, (...args) => {
+                    modifiedCSS = modifiedCSS.replaceAll(regex, (match: string, ...groups: string[]) => {
                         if (typeof replacement === 'function') {
-                            return `${replacement(...args)} !important`
+                            return `${replacement(match, groups[0] || '')} !important`
                         }
                         return `${replacement} !important`
                     })

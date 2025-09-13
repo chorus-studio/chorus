@@ -62,7 +62,6 @@
                 if (key == 'pip') return pipSupported
                 return true
             })}
-            )}
         />
 
         <SettingsSwitch

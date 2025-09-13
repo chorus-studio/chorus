@@ -95,7 +95,7 @@
             )
         })
 
-        if (updatedPreset.active) configStore.updateAudioPreset(updatedPreset)
+        if (updatedPreset.active) configStore.updateAudioPreset({ preset: updatedPreset, type: 'effect' })
     }
 
     let label = $derived(custom ? 'custom' : type === 'reverb' ? 'room' : 'spotify')
