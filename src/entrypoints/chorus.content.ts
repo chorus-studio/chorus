@@ -10,7 +10,7 @@ import App from '../App.svelte'
 import Alert from '$lib/components/Alert.svelte'
 import LoopButton from '$lib/components/LoopButton.svelte'
 import SeekButton from '$lib/components/SeekButton.svelte'
-import NewReleasesIcon from '$lib/components/NewReleasesIcon.svelte'
+// import NewReleasesIcon from '$lib/components/NewReleasesIcon.svelte'
 import ChorusConfigDialog from '$lib/components/ChorusConfigDialog.svelte'
 
 async function injectChorusUI(ctx: ContentScriptContext) {
@@ -48,13 +48,13 @@ async function injectChorusUI(ctx: ContentScriptContext) {
 
             const newFeedButton = document.querySelector('[data-testid="whats-new-feed-button"]')
             if (newFeedButton) {
-                const newReleasesIcon = document.getElementById('chorus-new-releases')
+                // const newReleasesIcon = document.getElementById('chorus-new-releases')
                 const configDialog = document.getElementById('chorus-config-dialog-trigger')
-                if (!newReleasesIcon) {
-                    const releasesIcon = document.createElement('div')
-                    newFeedButton.parentElement?.insertBefore(releasesIcon, newFeedButton)
-                    mount(NewReleasesIcon, { target: releasesIcon })
-                }
+                // if (!newReleasesIcon) {
+                //     const releasesIcon = document.createElement('div')
+                //     newFeedButton.parentElement?.insertBefore(releasesIcon, newFeedButton)
+                //     mount(NewReleasesIcon, { target: releasesIcon })
+                // }
                 if (!configDialog) {
                     const configDialog = document.createElement('div')
                     newFeedButton.parentElement?.insertBefore(configDialog, newFeedButton)

@@ -183,8 +183,8 @@
             <div
                 class="xl:min-h-dvh xl:top-1/4 absolute left-1/2 top-0 flex h-full w-full -translate-x-1/2 flex-col items-center justify-center"
             >
-                <p class="text-center text-3xl text-muted-foreground">No releases found</p>
-                <p class="text-center text-3xl text-muted-foreground">
+                <p class="text-center text-3xl text-foreground">No releases found</p>
+                <p class="text-center text-3xl text-foreground">
                     Update config to refetch with different filters
                 </p>
             </div>
@@ -256,13 +256,13 @@
                                     <ScrollingText
                                         as="a"
                                         text={track.title}
-                                        className="text-base chorus-release-text leading-none cursor-pointer text-muted-foreground hover:text-white hover:underline"
+                                        className="text-base chorus-release-text leading-none cursor-pointer text-foreground hover:text-white hover:underline"
                                         handleClick={() => goTo(track.uri)}
                                     />
                                     <ScrollingText
                                         as="a"
                                         text={track.artist.name}
-                                        className="text-base chorus-release-text leading-none cursor-pointer text-muted-foreground hover:text-white hover:underline"
+                                        className="text-base chorus-release-text leading-none cursor-pointer text-foreground hover:text-white hover:underline"
                                         handleClick={() => goTo(track.artist.uri)}
                                     />
                                     <ScrollingText
@@ -271,7 +271,7 @@
                                                 ? ` | ${pluralize(track.trackCount, 'track')}`
                                                 : ''
                                         }`}
-                                        className="!text-base chorus-release-text text-muted-foreground leading-none lowercase"
+                                        className="!text-base chorus-release-text text-foreground leading-none lowercase"
                                     />
                                 </div>
                             </div>

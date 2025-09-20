@@ -34,7 +34,6 @@
     function setupListener() {
         themeChangeListener = async (e: Event) => {
             const customEvent = e as CustomEvent<{ theme: ThemeName }>
-            console.log('FROM_THEME_CHANGE', customEvent)
             const theme = customEvent.detail.theme
             if (theme === 'spotify') return removeTheme()
             await setTheme(theme)

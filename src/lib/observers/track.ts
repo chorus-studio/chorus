@@ -49,7 +49,7 @@ export class TrackObserver {
 
     private async processMediaPlayInit() {
         await this.trackStateManager.updateTrackType()
-        this.trackStateManager.setPlayback(this.audioPreset)
+        await this.trackStateManager.setPlayback(this.audioPreset)
         this.setEffect()
     }
 
@@ -118,7 +118,7 @@ export class TrackObserver {
             this.playbackController.setSeeking(false)
         }, 50)
 
-        this.trackStateManager.setPlayback()
+        await this.trackStateManager.setPlayback()
         await queue.refreshQueue()
         await this.updateTrackType()
         await this.notificationService.showTrackChangeNotification(songInfo)
