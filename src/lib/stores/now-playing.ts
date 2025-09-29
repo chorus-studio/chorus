@@ -99,6 +99,12 @@ function createNowPlayingStore() {
         )
             trackObserver?.skipTrack()
 
+        // Filter out null/undefined playback to prevent overwriting current settings
+        const { playback: trackPlayback, ...restTrackInfo } = trackInfo || {}
+        const filteredTrackInfo = trackPlayback
+            ? { ...restTrackInfo, playback: trackPlayback }
+            : restTrackInfo
+
         return {
             id,
             cover,
@@ -108,7 +114,7 @@ function createNowPlayingStore() {
             current,
             loop,
             url,
-            ...trackInfo
+            ...filteredTrackInfo
         }
     }
 
@@ -118,7 +124,14 @@ function createNowPlayingStore() {
         if (songChanged) {
             if (!songInfo?.blocked) delete currentData?.blocked
             if (!songInfo?.snip) delete currentData?.snip
-            if (!songInfo?.playback) delete currentData?.playback
+            // Only update playback if the new song explicitly has different playback settings
+            // Otherwise preserve current playback settings (user-set rates)
+            const newPlayback = 'playback' in songInfo ? songInfo.playback : undefined
+            if (newPlayback && newPlayback !== currentData?.playback) {
+                // New song has specific playback settings, use those
+                currentData.playback = newPlayback
+            }
+            // If new song has no playback settings, keep current settings
         }
 
         const newState = { ...currentData, ...songInfo }

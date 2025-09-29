@@ -57,14 +57,13 @@ export default defineConfig({
                     '/sounds/*',
                     '/processor.js',
                     '/soundtouch.js',
-                    '/content-scripts/chorus.css'
+                    '/content-scripts/*.css'
                 ],
                 matches: ['*://open.spotify.com/*']
             }
         ],
         ...perBrowserManifest[browser],
         host_permissions: ['*://*.spotify.com/*'],
-        optional_host_permissions: ['<all_urls>'],
         commands: {
             'on/off': {
                 description: 'Toggle Extension On/Off'
@@ -113,6 +112,27 @@ export default defineConfig({
             },
             'toggle-config': {
                 description: 'Toggle Chorus Config UI'
+            },
+            'audio-preset-1': {
+                description: 'Audio Preset 1'
+            },
+            'audio-preset-2': {
+                description: 'Audio Preset 2'
+            },
+            'audio-preset-3': {
+                description: 'Audio Preset 3'
+            },
+            'audio-preset-4': {
+                description: 'Audio Preset 4'
+            },
+            'audio-preset-5': {
+                description: 'Audio Preset 5'
+            },
+            'cycle-theme-next': {
+                description: 'Cycle Theme Next'
+            },
+            'cycle-theme-previous': {
+                description: 'Cycle Theme Previous'
             }
         }
     })

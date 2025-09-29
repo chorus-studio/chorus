@@ -5,9 +5,9 @@
     import { nowPlaying } from '$lib/stores/now-playing'
     import { QueueObserver } from '$lib/observers/queue'
     import { trackObserver } from '$lib/observers/track'
-    import { supporterStore } from '$lib/stores/supporter'
     import { playbackObserver } from '$lib/observers/playback'
     import { TracklistObserver } from '$lib/observers/tracklist'
+    import { setTheme, removeTheme, type ThemeName } from '$lib/utils/theming'
 
     import PipButton from '$lib/components/PipButton.svelte'
     import SkipButton from '$lib/components/SkipButton.svelte'
@@ -15,13 +15,13 @@
     import SettingsPopover from '$lib/components/SettingsPopover.svelte'
 
     let supportsPip = false
+    let themeChangeListener: (e: Event) => void
 
     async function init() {
         setMode('dark')
         await nowPlaying.observe()
         await mediaStore.observe()
         playbackObserver.observe()
-        await supporterStore.sync()
         await mediaStore.setActive(false)
     }
 
@@ -31,8 +31,25 @@
         }
     }
 
+    function setupListener() {
+        themeChangeListener = async (e: Event) => {
+            const customEvent = e as CustomEvent<{ theme: ThemeName }>
+            const theme = customEvent.detail.theme
+            if (theme === 'spotify') return removeTheme()
+            await setTheme(theme)
+        }
+        document.addEventListener('FROM_THEME_CHANGE', themeChangeListener)
+    }
+
+    function removeListener() {
+        if (themeChangeListener) {
+            document.removeEventListener('FROM_THEME_CHANGE', themeChangeListener)
+        }
+    }
+
     onMount(() => {
         init()
+        setupListener()
         const tracklistObserver = new TracklistObserver()
         tracklistObserver.observe()
         const queueObserver = new QueueObserver()
@@ -46,6 +63,7 @@
             tracklistObserver.disconnect()
             trackObserver.disconnect()
             queueObserver.disconnect()
+            removeListener()
         }
     })
 </script>

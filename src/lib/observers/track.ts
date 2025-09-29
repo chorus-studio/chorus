@@ -2,17 +2,16 @@ import { get } from 'svelte/store'
 import { loopStore } from '$lib/stores/loop'
 import { queue } from '$lib/observers/queue'
 import { mediaStore } from '$lib/stores/media'
+import { configStore } from '$lib/stores/config'
 import { effectsStore } from '$lib/stores/effects'
-import { supporterStore } from '$lib/stores/supporter'
+import { nowPlaying } from '$lib/stores/now-playing'
 import { snipStore, type Snip } from '$lib/stores/snip'
 import { playbackObserver } from '$lib/observers/playback'
-import { nowPlaying } from '$lib/stores/now-playing'
 
 // Refactored services
 import { TrackStateManager } from '$lib/services/track-state-manager'
 import { PlaybackController } from '$lib/services/playback-controller'
 import { TrackNotificationService } from '$lib/services/track-notification-service'
-import { SELECTORS } from '$lib/utils/selectors'
 
 /**
  * Refactored TrackObserver using composition over inheritance
@@ -50,8 +49,8 @@ export class TrackObserver {
 
     private async processMediaPlayInit() {
         await this.trackStateManager.updateTrackType()
-        this.trackStateManager.setPlayback()
-        effectsStore.dispatchEffect()
+        await this.trackStateManager.setPlayback(this.audioPreset)
+        this.setEffect()
     }
 
     // Simplified getters for commonly accessed stores
@@ -67,8 +66,17 @@ export class TrackObserver {
         return get(loopStore)
     }
 
-    get isSupporter() {
-        return get(supporterStore).isSupporter
+    get config() {
+        return get(configStore)
+    }
+
+    get audioPreset() {
+        return this.config.audio_presets.find((p) => p.active)
+    }
+
+    setEffect() {
+        if (!this.audioPreset) return effectsStore.dispatchEffect()
+        configStore.updateAudioPreset({ preset: this.audioPreset, type: 'effect' })
     }
 
     private isAtTempSnipEnd(currentTimeMS: number): boolean {
@@ -109,8 +117,8 @@ export class TrackObserver {
             this.playbackController.unMute()
             this.playbackController.setSeeking(false)
         }, 50)
-        
-        this.trackStateManager.setPlayback()
+
+        await this.trackStateManager.setPlayback()
         await queue.refreshQueue()
         await this.updateTrackType()
         await this.notificationService.showTrackChangeNotification(songInfo)
@@ -158,9 +166,10 @@ export class TrackObserver {
 
             // Handle track end or snip end
             const atSnipEnd = currentSong.snip && currentTimeMS >= currentSong.snip.end_time * 1000
-            const shouldSkip = (currentSong.snip || currentSong.blocked) &&
-                             (currentTimeMS >= currentSong.duration * 1000 || atSnipEnd)
-            
+            const shouldSkip =
+                (currentSong.snip || currentSong.blocked) &&
+                (currentTimeMS >= currentSong.duration * 1000 || atSnipEnd)
+
             if (shouldSkip) {
                 this.skipTrack()
             }
@@ -176,10 +185,10 @@ export class TrackObserver {
             'FROM_MEDIA_PLAY_INIT',
             this.boundProcessMediaPlayInit as EventListener
         )
-        
+
         // Clean up services
         this.notificationService.cleanup()
-        
+
         const media = get(mediaStore)
         if (media.active) await mediaStore.setActive(false)
     }

@@ -16,7 +16,15 @@
         isBlocked = !isBlocked
         if (track) {
             await dataStore.updateTrack({ track_id: track.track_id, value: { blocked: isBlocked } })
-            if (isBlocked) await queue.refreshQueue()
+
+            if (isBlocked) {
+                // When blocking, refresh queue to remove track
+                await queue.refreshQueue()
+            } else {
+                // When unblocking, try intelligent restoration
+                await queue.restoreUnblockedTrack(track.track_id)
+            }
+
             if (track?.song_id === $nowPlaying.id) trackObserver?.skipTrack()
         }
     }

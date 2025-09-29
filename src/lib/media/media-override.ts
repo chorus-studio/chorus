@@ -16,12 +16,17 @@ export default class MediaOverride {
     private source: HTMLMediaElement
     private audioManager: AudioManager
     private _sources: any[] = []
+    private _chorusRate: number = 1
+    private _chorusPreservesPitch: boolean = true
 
     constructor(options: MediaOverrideOptions) {
         this.source = options.source
         this.reverb = options.reverb
         this.equalizer = options.equalizer
         this.audioManager = options.audioManager
+
+        // Store reference to this MediaOverride instance on the media element
+        ;(this.source as any).__chorusMediaOverride = this
 
         // Override playbackRate and preservesPitch properties
         this.overrideMediaProperty('playbackRate', this.handlePlaybackRateSetting)
@@ -61,16 +66,28 @@ export default class MediaOverride {
         // Check if the value is coming from chorus
         if (value?.source === 'chorus') return value.value
 
-        // from spotify
-        return this.playbackRate
+        // When Spotify tries to set playback rate, preserve the chorus rate if we have one
+        const mediaOverride = (this as any).__chorusMediaOverride as MediaOverride | undefined
+        if (mediaOverride && mediaOverride._chorusRate !== 1) {
+            return mediaOverride._chorusRate
+        }
+
+        // from spotify - only allow if no chorus rate is set
+        return value
     }
 
     private handlePreservesPitchSetting(this: HTMLMediaElement, value: any) {
         // Check if the value is coming from chorus
         if (value?.source === 'chorus') return value.value
 
+        // When Spotify tries to set preservesPitch, preserve the chorus setting if we have one
+        const mediaOverride = (this as any).__chorusMediaOverride as MediaOverride | undefined
+        if (mediaOverride) {
+            return mediaOverride._chorusPreservesPitch
+        }
+
         // from spotify
-        return this.preservesPitch
+        return value
     }
 
     addSource(source: HTMLMediaElement): void {
@@ -80,6 +97,10 @@ export default class MediaOverride {
     }
 
     updatePlaybackSettings(rate: Rate): void {
+        // Store the chorus values for later use when Spotify tries to override
+        this._chorusRate = rate.value
+        this._chorusPreservesPitch = rate.preserves_pitch
+
         // Use our property override mechanism with a special format
         const playbackRateValue = { source: 'chorus', value: rate.value }
         const preservesPitchValue = { source: 'chorus', value: rate.preserves_pitch }

@@ -4,7 +4,6 @@
 
     import { volumeStore } from '$lib/stores/volume'
     import { nowPlaying } from '$lib/stores/now-playing'
-    import { supporterStore } from '$lib/stores/supporter'
     import { settingsStore, type ThemeVibrancy } from '$lib/stores/settings'
 
     import Bell from '@lucide/svelte/icons/bell'
@@ -75,8 +74,6 @@
     }
 
     function getVibrancy(): ThemeVibrancy {
-        if (!$supporterStore.isSupporter) return 'Auto'
-
         return $settingsStore.theme.vibrancy
     }
 

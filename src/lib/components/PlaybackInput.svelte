@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { padSpeed, validateSpeed, getTitle } from '$lib/utils/speed'
     import { defaultPlayback, playbackStore } from '$lib/stores/playback'
     import type { Rate, Playback, Frequent } from '$lib/stores/playback'
 
@@ -11,30 +12,13 @@
 
     let { key, list }: { key: keyof Playback; list: Frequent[] } = $props()
 
-    function padSpeed(value: number | string): string {
-        const defaultRate = typeof value !== 'undefined' ? value?.toString() : '1'
-        const parsedValue = parseFloat(defaultRate)
-        if (isNaN(parsedValue)) return defaultRate
-
-        // Use toFixed to ensure we get the exact number of decimal places
-        const decimalPlace = key == 'rate' ? 3 : 2
-        return parsedValue.toFixed(decimalPlace)
-    }
-
-    function validateInput(value: string): number {
-        const parsedValue = parseFloat(value)
-        if (isNaN(parsedValue))
-            return $playbackStore[type][key as keyof (typeof $playbackStore)[typeof type]] as number
-
-        if (key == 'semitone') return Math.max(-24, Math.min(24, parsedValue))
-
-        return Math.max(0.25, Math.min(4, parsedValue))
-    }
-
     async function handleInput(event: Event) {
         const input = event.target as HTMLInputElement
-        const value = validateInput(input.value)
         const type = $playbackStore.is_default ? 'default' : 'track'
+        const current = $playbackStore[type][
+            key as keyof (typeof $playbackStore)[typeof type]
+        ] as number
+        const value = validateSpeed({ value: input.value, key, current })
         const updateValue =
             key == 'rate' ? { [key]: { ...$playbackStore[type][key], value } } : { [key]: value }
         await playbackStore.updatePlayback({
@@ -54,11 +38,6 @@
             [type]: { ...$playbackStore[type], ...updateValue }
         })
         playbackStore.dispatchPlaybackSettings($playbackStore[type])
-    }
-
-    function getTitle(key: string) {
-        if (key == 'semitone') return `key (-24 to 24)`
-        return `${key} (0.25 to 4)`
     }
 
     async function handleReset() {
@@ -130,9 +109,9 @@
                         >{key == 'semitone' ? 'key' : key}</Label
                     >
                     <Input
-                        value={padSpeed(value)}
-                        onchange={handleInput}
                         id={key}
+                        onchange={handleInput}
+                        value={padSpeed({ value, key })}
                         class="h-6 w-full rounded-none border border-none border-zinc-200 bg-green-700 px-1 text-end text-base font-bold text-white outline-white"
                     />
                 </div>

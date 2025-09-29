@@ -1,12 +1,11 @@
-import { writable, get } from 'svelte/store'
 import { storage } from '@wxt-dev/storage'
+import { writable, get } from 'svelte/store'
+import type { ThemeName } from '$lib/utils/theming'
 import { syncWithType } from '$lib/utils/store-utils'
 
 export const SETTINGS_STORE_KEY = 'local:chorus_settings'
 
 export type SettingsKey = 'ui' | 'views' | 'notifications' | 'theme'
-export type ThemeName = 'none' | 'dynamic' | 'static'
-export type ThemeMode = 'light' | 'dark'
 export type ThemeVibrancy =
     | 'Vibrant'
     | 'DarkVibrant'
@@ -18,8 +17,9 @@ export type ThemeVibrancy =
 
 export type SettingsState = {
     ui: {
-        playlist: boolean
         pip: boolean
+        theme: boolean
+        playlist: boolean
         popup: boolean
         volume: boolean
         progress: boolean
@@ -37,18 +37,18 @@ export type SettingsState = {
     }
     theme: {
         name: ThemeName
-        mode: ThemeMode
         vibrancy: ThemeVibrancy
     }
 }
 
 const defaultSettingsState: SettingsState = {
     ui: {
-        playlist: false,
         pip: false,
+        theme: false,
         popup: false,
         volume: false,
-        progress: false
+        progress: false,
+        playlist: false
     },
     views: {
         speed: true,
@@ -62,8 +62,7 @@ const defaultSettingsState: SettingsState = {
         on_track_change: false
     },
     theme: {
-        name: 'none' as ThemeName,
-        mode: 'dark' as ThemeMode,
+        name: 'spotify' as ThemeName,
         vibrancy: 'LightVibrant' as ThemeVibrancy
     }
 }

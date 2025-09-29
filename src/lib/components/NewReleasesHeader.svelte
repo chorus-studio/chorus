@@ -66,7 +66,7 @@
 
 <div
     id="chorus-new-releases-header"
-    class="xl:container absolute left-1/2 z-[99999] flex w-full -translate-x-1/2 rounded-t-md bg-[#121212]"
+    class="xl:container absolute left-1/2 z-[99999] flex w-full -translate-x-1/2 rounded-t-md"
 >
     <div class="mx-auto flex w-full max-w-screen-4xl justify-between gap-4 px-10 py-6">
         <div class="flex flex-col gap-2">

@@ -6,6 +6,7 @@ const API_URL = 'https://api-partner.spotify.com/pathfinder/v2/query'
 export interface TrackService {
     checkIfTracksInCollection(ids: string): Promise<boolean[]>
     getAlbum({ albumId, songId }: { albumId: string; songId: string }): Promise<string | null>
+
     updateLikedTracks({ ids, action }: { ids: string; action: 'add' | 'remove' }): Promise<void>
 }
 
@@ -14,7 +15,13 @@ export class TrackService extends BaseAPIService implements TrackService {
         super(API_URL)
     }
 
-    async getAlbum({ albumId, songId }: { albumId: string; songId: string }): Promise<string | null> {
+    async getAlbum({
+        albumId,
+        songId
+    }: {
+        albumId: string
+        songId: string
+    }): Promise<string | null> {
         const variables = {
             uri: `spotify:album:${albumId}`,
             locale: '',
@@ -22,10 +29,7 @@ export class TrackService extends BaseAPIService implements TrackService {
             limit: 50
         }
 
-        const response = await this.executeGraphQLQuery<any>(
-            COMMON_QUERIES.GET_ALBUM,
-            variables
-        )
+        const response = await this.executeGraphQLQuery<any>(COMMON_QUERIES.GET_ALBUM, variables)
 
         if (!response?.albumUnion?.tracksV2?.items) {
             return null
@@ -40,13 +44,20 @@ export class TrackService extends BaseAPIService implements TrackService {
         return foundTrack?.uri ?? null
     }
 
-    async updateLikedTracks({ ids, action }: { ids: string; action: 'add' | 'remove' }): Promise<any> {
+    async updateLikedTracks({
+        ids,
+        action
+    }: {
+        ids: string
+        action: 'add' | 'remove'
+    }): Promise<any> {
         const variables = {
             uris: ids.split(',').map((id) => `spotify:track:${id}`)
         }
 
-        const query = action === 'add' ? COMMON_QUERIES.ADD_TO_LIBRARY : COMMON_QUERIES.REMOVE_FROM_LIBRARY
-        
+        const query =
+            action === 'add' ? COMMON_QUERIES.ADD_TO_LIBRARY : COMMON_QUERIES.REMOVE_FROM_LIBRARY
+
         return await this.executeGraphQLQuery<any>(query, variables)
     }
 
