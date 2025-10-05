@@ -1,11 +1,8 @@
-name: Submit to Extension Stores
+name: Release
 on:
-    workflow_dispatch:
-        inputs:
-            dryRun:
-                default: false
-                type: boolean
-                description: Skip submission and perform a dry run
+    push:
+        branches:
+            - main
 
 jobs:
     validate:
@@ -13,8 +10,8 @@ jobs:
         uses: ./.github/workflows/validate.yml
         secrets: inherit
 
-    submit:
-        name: Submit
+    release:
+        name: Create Release
         runs-on: ubuntu-22.04
         needs: [validate]
         steps:
@@ -51,13 +48,28 @@ jobs:
                   if-no-files-found: error
                   include-hidden-files: true
 
-            - name: Submit
+            - name: Commit Version Bump
+              run: |
+                  git add package.json CHANGELOG.md
+                  git commit -am "chore(release): v${{ steps.version.outputs.newVersion }}"
+                  git tag v${{ steps.version.outputs.newVersion }}
+                  git push
+                  git push --tags
+
+            - name: Create GitHub Release
+              run: pnpx changelogen@latest gh release ${{ steps.version.outputs.newVersion }} --token ${{ github.token }}
+
+            - name: Upload Release Assets
+              run: gh release upload v${{ steps.version.outputs.newVersion }} .output/*-chrome.zip .output/*-firefox.zip
+              env:
+                  GITHUB_TOKEN: ${{ github.token }}
+
+            - name: Submit to Extension Stores
               run: |
                   bun wxt submit \
                     --chrome-zip .output/*-chrome.zip \
                     --firefox-zip .output/*-firefox.zip --firefox-sources-zip .output/*-sources.zip
               env:
-                  DRY_RUN: ${{ inputs.dryRun }}
                   CHROME_EXTENSION_ID: ${{ secrets.EXTENSION_ID }}
                   CHROME_CLIENT_ID: ${{ secrets.CLIENT_ID }}
                   CHROME_CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
@@ -65,27 +77,3 @@ jobs:
                   FIREFOX_EXTENSION_ID: ${{ secrets.AMO_ID }}
                   FIREFOX_JWT_ISSUER: ${{ secrets.AMO_ISSUER }}
                   FIREFOX_JWT_SECRET: ${{ secrets.AMO_SECRET }}
-                  # EDGE_PRODUCT_ID: ${{ secrets.EDGE_PRODUCT_ID }}
-                  # EDGE_CLIENT_ID: ${{ secrets.EDGE_CLIENT_ID }}
-                  # EDGE_CLIENT_SECRET: ${{ secrets.EDGE_CLIENT_SECRET }}
-                  # EDGE_ACCESS_TOKEN_URL: ${{ secrets.EDGE_ACCESS_TOKEN_URL }}
-
-            - name: Commit and Push
-              if: ${{ !inputs.dryRun }}
-              run: |
-                  git add package.json CHANGELOG.md
-                  git commit -am "chore(release): v$NEW_VERSION"
-                  git tag v$NEW_VERSION
-                  git push
-                  git push --tags
-              env:
-                  NEW_VERSION: ${{ steps.version.outputs.newVersion }}
-
-            - name: Release
-              if: ${{ !inputs.dryRun }}
-              run: pnpx changelogen@latest gh release ${{ steps.version.outputs.newVersion }} --token ${{ github.token }}
-
-            # Don't upload sources zip - it can contain .env files, which may include secrets
-            - name: Upload ZIPs
-              if: ${{ !inputs.dryRun }}
-              run: gh release upload ${{ steps.version.outputs.newVersion }} .output/*-chrome.zip .output/*-firefox.zip

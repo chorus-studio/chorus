@@ -4,7 +4,7 @@ on:
     pull_request:
     push:
         branches:
-            - main
+            - develop
 
 jobs:
     validate:
@@ -18,9 +18,46 @@ jobs:
             - name: Install dependencies
               run: bun install --frozen-lockfile
 
-            # TODO: Uncomment when issues are fixed
-            # - name: Run Checks
-            #   run: bun check
+            - name: Run Checks
+              run: bun check
 
             - name: Build
               run: bun run build
+
+    validate-firefox-sources:
+        runs-on: ubuntu-22.04
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - uses: oven-sh/setup-bun@v2
+
+            - name: Install dependencies
+              run: bun install --frozen-lockfile
+
+            - name: Build and create Firefox sources
+              run: bun run zip:fox
+
+            - name: Extract version
+              run: |
+                  VERSION=$(bun --print 'require("./package.json").version')
+                  echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+
+            - name: Extract and validate sources
+              run: |
+                  cd .output
+                  mkdir chorus-$VERSION-sources
+                  cd chorus-$VERSION-sources
+                  unzip -q ../chorus-$VERSION-sources.zip
+                  bun install --frozen-lockfile
+                  bun run build:fox
+
+            - name: Compare builds
+              run: |
+                  diff -r .output/firefox-mv3 .output/chorus-$VERSION-sources/.output/firefox-mv3
+                  if [ $? -eq 0 ]; then
+                      echo "✅ Firefox source validation passed - builds are identical"
+                  else
+                      echo "❌ Firefox source validation failed - builds differ"
+                      exit 1
+                  fi
