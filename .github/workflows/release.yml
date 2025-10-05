@@ -57,7 +57,7 @@ jobs:
                   git push --tags
 
             - name: Create GitHub Release
-              run: pnpx changelogen@latest gh release ${{ steps.version.outputs.newVersion }} --token ${{ github.token }}
+              run: npx changelogen@latest gh release ${{ steps.version.outputs.newVersion }} --token ${{ github.token }}
 
             - name: Upload Release Assets
               run: gh release upload v${{ steps.version.outputs.newVersion }} .output/*-chrome.zip .output/*-firefox.zip
