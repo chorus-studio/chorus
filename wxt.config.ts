@@ -36,6 +36,7 @@ export default defineConfig({
             'license.md',
             '.output/**/*',
             'README.md',
+            'CHANGELOG.md',
             'code_of_conduct.md'
         ]
     },
