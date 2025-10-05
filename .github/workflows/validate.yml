@@ -46,8 +46,9 @@ jobs:
             - name: Extract and validate sources
               run: |
                   cd .output
-                  unzip -q chorus-$VERSION-sources.zip
+                  mkdir chorus-$VERSION-sources
                   cd chorus-$VERSION-sources
+                  unzip -q ../chorus-$VERSION-sources.zip
                   bun install --frozen-lockfile
                   bun run build:fox
 
