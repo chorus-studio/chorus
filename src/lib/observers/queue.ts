@@ -13,6 +13,8 @@ class Queue {
     private originalQueueTimestamp: number = 0
     private readonly QUEUE_EXPIRY_TIME = 30000 // 30 seconds
     private refreshTimeout: NodeJS.Timeout | null = null
+    private _lastQueueHash: string | null = null
+    public _isUpdatingQueue: boolean = false // Track when we're updating to prevent observer feedback loop
 
     constructor() {
         this.nextQueuedTracks = []
@@ -73,7 +75,19 @@ class Queue {
     async setQueuedTracks() {
         if (!this.nextQueuedTracks.length) return
 
-        await this.queueService.setQueueList(this.nextQueuedTracks)
+        // Set flag to prevent observer from triggering during our update
+        this._isUpdatingQueue = true
+
+        try {
+            await this.queueService.setQueueList(this.nextQueuedTracks)
+
+            // Wait for Spotify to process the update and update the DOM
+            // This prevents the observer from seeing our own changes
+            await new Promise((resolve) => setTimeout(resolve, 2000))
+        } finally {
+            // Always reset flag even if API call fails
+            this._isUpdatingQueue = false
+        }
     }
 
     async refreshQueue() {
@@ -86,60 +100,26 @@ class Queue {
         return new Promise<void>((resolve) => {
             this.refreshTimeout = setTimeout(async () => {
                 await this.getQueuedTracks()
-                await this.setQueuedTracks()
+
+                // Only update queue if it actually changed to prevent infinite feedback loop
+                const currentQueueHash = JSON.stringify(this.nextQueuedTracks)
+                if (currentQueueHash !== this._lastQueueHash) {
+                    this._lastQueueHash = currentQueueHash
+                    await this.setQueuedTracks()
+                }
+
                 this.refreshTimeout = null
                 resolve()
-            }, 300) // 300ms debounce
+            }, 500) // 500ms debounce (increased from 300ms for better stability)
         })
     }
 
     async restoreUnblockedTrack(unblockedTrackId: string) {
-        // If no original queue stored, fall back to regular refresh
-        if (this.originalQueue.length === 0) {
-            return this.refreshQueue()
-        }
-
-        // Find track in original queue
-        const originalTrackIndex = this.originalQueue.findIndex(
-            (track) => track.uri === `spotify:track:${unblockedTrackId}`
-        )
-
-        if (originalTrackIndex === -1) {
-            return this.refreshQueue()
-        }
-
-        // Get current playing track position (simplified - assume first track is playing)
-        const currentPosition = 0 // TODO: Get actual current position
-
-        // Only restore if track was after current position
-        if (originalTrackIndex <= currentPosition) {
-            return
-        }
-
-        // Create restored queue by inserting track back in correct position
-        const currentFilteredQueue = [...this.nextQueuedTracks]
-        const trackToRestore = this.originalQueue[originalTrackIndex]
-
-        // Find where to insert in current queue (relative position)
-        let insertPosition = 0
-        for (let i = 0; i < currentFilteredQueue.length; i++) {
-            const currentTrackUri = currentFilteredQueue[i]
-            const currentTrackOriginalIndex = this.originalQueue.findIndex(
-                (track) => track.uri === currentTrackUri
-            )
-            if (currentTrackOriginalIndex > originalTrackIndex) {
-                insertPosition = i
-                break
-            }
-            insertPosition = i + 1
-        }
-
-        // Insert track at correct position
-        const restoredQueueUris = currentFilteredQueue.slice()
-        restoredQueueUris.splice(insertPosition, 0, trackToRestore.uri)
-
-        // Update Spotify queue with restored track
-        await this.queueService.setQueueList(restoredQueueUris)
+        // When unblocking a track, simply refresh the queue.
+        // If the track is still in Spotify's upcoming queue, it will be included.
+        // If it was already played/skipped, Spotify won't have it in the queue anymore,
+        // so it won't be restored - which is the correct behavior.
+        return this.refreshQueue()
     }
 
     async getQueuedTracks() {
@@ -225,6 +205,11 @@ export class QueueObserver {
     }
 
     handleMutation = (mutations: MutationRecord[]) => {
+        // Ignore mutations caused by our own queue updates to prevent infinite loop
+        if (this.queue._isUpdatingQueue) {
+            return
+        }
+
         let hasRelevantMutation = false
 
         for (const mutation of mutations) {
