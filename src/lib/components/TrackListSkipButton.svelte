@@ -3,7 +3,6 @@
     import * as Tooltip from '$lib/components/ui/tooltip'
     import { buttonVariants } from '$lib/components/ui/button'
 
-    import { queue } from '$lib/observers/queue'
     import { dataStore } from '$lib/stores/data'
     import { trackObserver } from '$lib/observers/track'
     import { nowPlaying } from '$lib/stores/now-playing'
@@ -14,18 +13,14 @@
 
     async function handleBlock() {
         isBlocked = !isBlocked
+
         if (track) {
             await dataStore.updateTrack({ track_id: track.track_id, value: { blocked: isBlocked } })
 
-            if (isBlocked) {
-                // When blocking, refresh queue to remove track
-                await queue.refreshQueue()
-            } else {
-                // When unblocking, try intelligent restoration
-                await queue.restoreUnblockedTrack(track.track_id)
+            // If the blocked track is currently playing, skip it immediately
+            if (isBlocked && track?.song_id === $nowPlaying.id) {
+                trackObserver?.skipTrack()
             }
-
-            if (track?.song_id === $nowPlaying.id) trackObserver?.skipTrack()
         }
     }
 </script>

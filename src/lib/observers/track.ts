@@ -105,7 +105,14 @@ export class TrackObserver {
         const songInfo = this.currentSong
 
         if (this.playbackController.shouldSkipTrack(songInfo)) {
-            return this.skipTrack()
+            // Set flag before auto-skip to prevent QueueObserver from triggering
+            queue._isUpdatingQueue = true
+            const skipResult = this.skipTrack()
+            // Reset flag after skip completes (skip + song transition + buffer)
+            setTimeout(() => {
+                queue._isUpdatingQueue = false
+            }, 3000)
+            return skipResult
         }
 
         if (songInfo?.snip) {
@@ -119,7 +126,9 @@ export class TrackObserver {
         }, 50)
 
         await this.trackStateManager.setPlayback()
-        await queue.refreshQueue()
+        // Queue refresh removed from song transitions to prevent race conditions with skip operations
+        // QueueObserver handles queue changes automatically when queue UI is open
+        // Block/unblock actions call refreshQueue() directly when needed
         await this.updateTrackType()
         await this.notificationService.showTrackChangeNotification(songInfo)
     }

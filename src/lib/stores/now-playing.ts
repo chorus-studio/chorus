@@ -96,8 +96,9 @@ function createNowPlayingStore() {
                 title: title ?? '',
                 artist: artist ?? ''
             })
-        )
+        ) {
             trackObserver?.skipTrack()
+        }
 
         // Filter out null/undefined playback to prevent overwriting current settings
         const { playback: trackPlayback, ...restTrackInfo } = trackInfo || {}

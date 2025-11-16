@@ -75,42 +75,42 @@ class Queue {
     async setQueuedTracks() {
         if (!this.nextQueuedTracks.length) return
 
-        // Set flag to prevent observer from triggering during our update
         this._isUpdatingQueue = true
 
         try {
             await this.queueService.setQueueList(this.nextQueuedTracks)
-
-            // Wait for Spotify to process the update and update the DOM
-            // This prevents the observer from seeing our own changes
             await new Promise((resolve) => setTimeout(resolve, 2000))
+        } catch (error) {
+            console.error('Failed to update queue:', error)
         } finally {
-            // Always reset flag even if API call fails
             this._isUpdatingQueue = false
         }
     }
 
     async refreshQueue() {
-        // Clear existing timeout to debounce rapid calls
+        this._isUpdatingQueue = true
+
         if (this.refreshTimeout) {
             clearTimeout(this.refreshTimeout)
         }
 
-        // Debounce to prevent race conditions
         return new Promise<void>((resolve) => {
             this.refreshTimeout = setTimeout(async () => {
                 await this.getQueuedTracks()
 
-                // Only update queue if it actually changed to prevent infinite feedback loop
                 const currentQueueHash = JSON.stringify(this.nextQueuedTracks)
-                if (currentQueueHash !== this._lastQueueHash) {
+                const hasChanged = currentQueueHash !== this._lastQueueHash
+
+                if (hasChanged) {
                     this._lastQueueHash = currentQueueHash
                     await this.setQueuedTracks()
+                } else {
+                    this._isUpdatingQueue = false
                 }
 
                 this.refreshTimeout = null
                 resolve()
-            }, 500) // 500ms debounce (increased from 300ms for better stability)
+            }, 500)
         })
     }
 
@@ -128,7 +128,6 @@ class Queue {
         )) as any
         const spotifyQueuedTracks = queueList?.player_state?.next_tracks || []
 
-        // Store original queue if it's expired or empty
         const now = Date.now()
         if (
             now - this.originalQueueTimestamp > this.QUEUE_EXPIRY_TIME ||
@@ -138,17 +137,14 @@ class Queue {
             this.originalQueueTimestamp = now
         }
 
-        // Extract track IDs from API response
         this.apiQueuedTrackIds = spotifyQueuedTracks
             .map((track: any) => {
-                // Extract track ID from spotify:track:TRACK_ID format
                 return track.uri?.replace('spotify:track:', '') || ''
             })
             .filter(Boolean)
 
         this.userBlockedTracks = this.filterUnblockedTracks()
 
-        // Always filter the queue to remove any blocked tracks
         this.nextQueuedTracks = this.filterQueuedTracks({
             spotifyQueuedTracks,
             userBlockedTracks: this.userBlockedTracks
@@ -174,11 +170,13 @@ class Queue {
     }: {
         spotifyQueuedTracks: Array<any>
         userBlockedTracks: SimpleTrack[]
-    }) {
+    }): string[] {
         const userBlockedTrackIds = userBlockedTracks.map(
             (track) => `spotify:track:${track.track_id}`
         )
-        return spotifyQueuedTracks.filter((item) => !userBlockedTrackIds.includes(item.uri))
+        return spotifyQueuedTracks
+            .filter((item) => !userBlockedTrackIds.includes(item.uri))
+            .map((item) => item.uri)
     }
 }
 

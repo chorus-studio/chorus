@@ -40,19 +40,28 @@ export class QueueService implements QueueService {
     }
 
     async setQueueList(next_tracks: string[]) {
-        try {
-            const body = { command: { endpoint: 'set_queue', next_tracks } }
+        const [authToken, deviceId] = await storage.getItems([
+            'local:chorus_auth_token',
+            'local:chorus_device_id'
+        ])
 
-            const options = await setOptions({ method: 'POST', body })
-            if (!options) throw new Error('No options found')
-
-            const device_id = await storage.getItem('local:chorus_device_id')
-            const url = `${SET_QUEUE_API_URL}from/${device_id}/to/${device_id}`
-
-            return await request({ url, options })
-        } catch (error) {
-            console.error(error)
+        if (!authToken?.value) {
+            throw new Error('Missing auth token - cannot set queue')
         }
+
+        if (!deviceId?.value) {
+            throw new Error('Missing device ID - cannot set queue')
+        }
+
+        const body = { command: { endpoint: 'set_queue', next_tracks } }
+        const options = await setOptions({ method: 'POST', body })
+
+        if (!options) {
+            throw new Error('Failed to create request options')
+        }
+
+        const url = `${SET_QUEUE_API_URL}from/${deviceId.value}/to/${deviceId.value}`
+        return await request({ url, options })
     }
 
     async playRelease(uri: string) {
