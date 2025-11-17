@@ -11,11 +11,38 @@
     let { track }: { track: SimpleTrack } = $props()
     let isBlocked = $state(track?.blocked ?? false)
 
+    // Only poll for changes when track is blocked (to detect unblock from dialog)
+    $effect(() => {
+        if (!isBlocked) return
+
+        const checkInterval = setInterval(() => {
+            const updatedTrack = dataStore.getTrack(track.track_id)
+            const newBlockedState = updatedTrack?.blocked ?? false
+            if (newBlockedState !== isBlocked) {
+                isBlocked = newBlockedState
+            }
+        }, 500)
+
+        return () => clearInterval(checkInterval)
+    })
+
+    function getCoverArt() {
+        const image = document.querySelector(
+            'button[aria-label="View album artwork"] img'
+        ) as HTMLImageElement
+        if (!image?.src) return null
+        return image.src
+    }
+
     async function handleBlock() {
         isBlocked = !isBlocked
 
         if (track) {
-            await dataStore.updateTrack({ track_id: track.track_id, value: { blocked: isBlocked } })
+            const cover = track?.cover || getCoverArt()
+            await dataStore.updateTrack({
+                track_id: track.track_id,
+                value: { blocked: isBlocked, cover }
+            })
 
             // If the blocked track is currently playing, skip it immediately
             if (isBlocked && track?.song_id === $nowPlaying.id) {

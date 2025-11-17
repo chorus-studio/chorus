@@ -12,6 +12,7 @@ import LoopButton from '$lib/components/LoopButton.svelte'
 import SeekButton from '$lib/components/SeekButton.svelte'
 // import NewReleasesIcon from '$lib/components/NewReleasesIcon.svelte'
 import ChorusConfigDialog from '$lib/components/ChorusConfigDialog.svelte'
+import BlockedTracksDialog from '$lib/components/BlockedTracksDialog.svelte'
 
 async function injectChorusUI(ctx: ContentScriptContext) {
     await injectScript('/router.js')
@@ -50,6 +51,7 @@ async function injectChorusUI(ctx: ContentScriptContext) {
             if (newFeedButton) {
                 // const newReleasesIcon = document.getElementById('chorus-new-releases')
                 const configDialog = document.getElementById('chorus-config-dialog-trigger')
+                const blockedTracksDialog = document.getElementById('blocked-tracks-dialog-trigger')
                 // if (!newReleasesIcon) {
                 //     const releasesIcon = document.createElement('div')
                 //     newFeedButton.parentElement?.insertBefore(releasesIcon, newFeedButton)
@@ -59,6 +61,11 @@ async function injectChorusUI(ctx: ContentScriptContext) {
                     const configDialog = document.createElement('div')
                     newFeedButton.parentElement?.insertBefore(configDialog, newFeedButton)
                     mount(ChorusConfigDialog, { target: configDialog })
+                }
+                if (!blockedTracksDialog) {
+                    const blockedDialog = document.createElement('div')
+                    newFeedButton.parentElement?.insertBefore(blockedDialog, newFeedButton)
+                    mount(BlockedTracksDialog, { target: blockedDialog })
                 }
             }
             if (skipBack) {
