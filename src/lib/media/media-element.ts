@@ -9,10 +9,15 @@ export default class MediaElement {
     public mediaOverride?: MediaOverride
     private _equalizer: Equalizer | null = null
     private _audioManager: AudioManager | null = null
+    private static hasGlobalListener = false
 
     constructor(source: HTMLMediaElement) {
         this.source = source
         this.source.crossOrigin = 'anonymous'
+
+        // Store reference on source so global listener can find it
+        ;(this.source as any)._chorusMediaElement = this
+
         this.setupEventListeners()
     }
 
@@ -49,7 +54,14 @@ export default class MediaElement {
             document.dispatchEvent(new CustomEvent('FROM_MEDIA_PLAY_INIT'))
         })
 
-        // Set up window message listener
+        // Register global listener only once for entire session
+        if (!MediaElement.hasGlobalListener) {
+            MediaElement.setupGlobalMessageListener()
+            MediaElement.hasGlobalListener = true
+        }
+    }
+
+    private static setupGlobalMessageListener(): void {
         window.addEventListener('message', (event) => {
             // Verify the origin for security
             if (event.source !== window) return
@@ -57,22 +69,30 @@ export default class MediaElement {
 
             try {
                 const { type, data } = event.data
-                if (!this.mediaOverride) return
 
+                // Get current media source (always the active MediaElement)
+                const currentSource = (window as any).mediaSource
+                if (!currentSource) return
+
+                // Get MediaElement instance attached to current source
+                const mediaElement = (currentSource as any)._chorusMediaElement as MediaElement
+                if (!mediaElement?.mediaOverride) return
+
+                // Process message for current MediaElement
                 switch (type) {
                     case 'FROM_NEW_RELEASES':
-                        window.navigateTo(data)
+                        ;(window as any).navigateTo(data)
                         break
                     case 'FROM_PLAYBACK_LISTENER':
-                        this.mediaOverride.updateSoundTouch({
+                        mediaElement.mediaOverride.updateSoundTouch({
                             pitch: Number(data?.pitch) || 1,
                             semitone: Number(data?.semitone) || 0
                         })
-                        this.mediaOverride.updatePlaybackSettings(data.rate as Rate)
+                        mediaElement.mediaOverride.updatePlaybackSettings(data.rate as Rate)
                         break
 
                     case 'FROM_EFFECTS_LISTENER':
-                        this.mediaOverride.updateAudioEffect({
+                        mediaElement.mediaOverride.updateAudioEffect({
                             clear: Boolean(data?.clear),
                             reverb: data?.reverb ? String(data.reverb) : undefined,
                             equalizer: data?.equalizer ? String(data.equalizer) : undefined
@@ -80,7 +100,7 @@ export default class MediaElement {
                         break
 
                     case 'FROM_VOLUME_LISTENER':
-                        this.mediaOverride.updateVolume({
+                        mediaElement.mediaOverride.updateVolume({
                             value: Number(data?.value) || 0,
                             muted: Boolean(data?.muted),
                             type: String(data?.type) as 'linear' | 'logarithmic'
@@ -88,7 +108,7 @@ export default class MediaElement {
                         break
 
                     case 'FROM_CURRENT_TIME_LISTENER':
-                        this.mediaOverride.updateCurrentTime(Number(data) || 0)
+                        mediaElement.mediaOverride.updateCurrentTime(Number(data) || 0)
                         break
                 }
             } catch (error) {

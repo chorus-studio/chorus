@@ -23,6 +23,7 @@ export class TrackObserver {
     private notificationService: TrackNotificationService
     private boundProcessTimeUpdate: (event: CustomEvent) => void
     private boundProcessMediaPlayInit: (event: CustomEvent) => void
+    private processTimeoutId: NodeJS.Timeout | null = null
 
     constructor() {
         // Inject dependencies for better testability
@@ -136,7 +137,13 @@ export class TrackObserver {
     // Notification handling is now delegated to TrackNotificationService
 
     private async processTimeUpdate(event: CustomEvent) {
-        setTimeout(async () => {
+        // Cancel previous timeout to prevent accumulation
+        if (this.processTimeoutId) {
+            clearTimeout(this.processTimeoutId)
+        }
+
+        // Only ONE timeout active at a time
+        this.processTimeoutId = setTimeout(async () => {
             const currentSong = this.currentSong
 
             if (!currentSong || !this.playbackController.isControlEnabled) return
@@ -182,6 +189,8 @@ export class TrackObserver {
             if (shouldSkip) {
                 this.skipTrack()
             }
+
+            this.processTimeoutId = null
         }, 50)
     }
 
@@ -194,6 +203,12 @@ export class TrackObserver {
             'FROM_MEDIA_PLAY_INIT',
             this.boundProcessMediaPlayInit as EventListener
         )
+
+        // Clear any pending timeout to prevent accumulation
+        if (this.processTimeoutId) {
+            clearTimeout(this.processTimeoutId)
+            this.processTimeoutId = null
+        }
 
         // Clean up services
         this.notificationService.cleanup()

@@ -17,6 +17,7 @@ export default class AudioManager {
 
     private _currentVolume: number = 1
     private _volumeType: 'linear' | 'logarithmic' = 'linear'
+    private _errorHandler?: (e: Event) => void
 
     constructor(element: HTMLVideoElement | HTMLAudioElement) {
         this._element = element
@@ -30,14 +31,15 @@ export default class AudioManager {
         // Set crossOrigin to anonymous to handle CORS
         this._element.crossOrigin = 'anonymous'
 
-        // Handle CORS errors
-        this._element.addEventListener('error', (e) => {
+        // Handle CORS errors - store reference for cleanup
+        this._errorHandler = (e) => {
             // Don't block playback on CORS errors
             if (this._element instanceof HTMLMediaElement) {
                 this._element.volume = 1
                 this._element.muted = false
             }
-        })
+        }
+        this._element.addEventListener('error', this._errorHandler)
 
         // Check if the source is cross-origin
         try {
@@ -87,7 +89,7 @@ export default class AudioManager {
                         this._element.addEventListener('loadedmetadata', async () => {
                             await this.setupAudioChain()
                             resolve()
-                        })
+                        }, { once: true })
                     })
                 }
             }
@@ -350,7 +352,13 @@ export default class AudioManager {
 
     dispose() {
         this.cleanup()
-        
+
+        // Remove error event listener to prevent accumulation
+        if (this._errorHandler && this._element instanceof HTMLMediaElement) {
+            this._element.removeEventListener('error', this._errorHandler)
+            this._errorHandler = undefined
+        }
+
         // Close audio context with proper error handling
         if (this._audioContext && this._audioContext.state !== 'closed') {
             try {
@@ -362,7 +370,7 @@ export default class AudioManager {
             }
             this._audioContext = undefined
         }
-        
+
         this._isInitialized = false
         this._setupPromise = undefined
     }

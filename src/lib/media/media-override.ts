@@ -15,7 +15,6 @@ export default class MediaOverride {
     private equalizer: Equalizer
     private source: HTMLMediaElement
     private audioManager: AudioManager
-    private _sources: any[] = []
     private _chorusRate: number = 1
     private _chorusPreservesPitch: boolean = true
 
@@ -88,12 +87,6 @@ export default class MediaOverride {
 
         // from spotify
         return value
-    }
-
-    addSource(source: HTMLMediaElement): void {
-        if ((source as any).isPlaybackRateChanged) return
-        ;(source as any).isPlaybackRateChanged = true
-        this._sources.push(source)
     }
 
     updatePlaybackSettings(rate: Rate): void {
