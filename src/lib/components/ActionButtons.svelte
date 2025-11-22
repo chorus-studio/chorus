@@ -81,8 +81,7 @@
             }
         })
 
-        nowPlaying.set({
-            ...$nowPlaying,
+        await nowPlaying.updateState({
             playback: $playbackStore.track
         })
     }
@@ -93,21 +92,18 @@
 
         if (!$snipStore) return
 
+        const snipData = {
+            start_time: $snipStore.start_time!,
+            end_time: $snipStore.end_time!
+        }
+
         await dataStore.updateTrack({
             track_id: track.track_id!,
-            value: {
-                snip: {
-                    start_time: $snipStore.start_time!,
-                    end_time: $snipStore.end_time!
-                }
-            }
+            value: { snip: snipData }
         })
-        nowPlaying.set({
-            ...$nowPlaying,
-            snip: {
-                start_time: $snipStore.start_time!,
-                end_time: $snipStore.end_time!
-            }
+
+        await nowPlaying.updateState({
+            snip: snipData
         })
     }
 
@@ -147,14 +143,13 @@
         (tab == 'speed' && $nowPlaying?.playback && !$playbackStore.is_default)
     $: showSave =
         (tab == 'snip' &&
-            (($snipStore?.start_time &&
-                $nowPlaying?.snip &&
-                $snipStore.start_time !== $nowPlaying?.snip?.start_time) ||
-                $snipStore?.start_time !== 0 ||
-                ($snipStore?.end_time &&
-                    $nowPlaying?.snip &&
-                    $snipStore.end_time !== $nowPlaying?.snip?.end_time) ||
-                $snipStore?.end_time !== $nowPlaying?.duration)) ||
+            $snipStore &&
+            (($nowPlaying?.snip &&
+                ($snipStore.start_time !== $nowPlaying.snip.start_time ||
+                    $snipStore.end_time !== $nowPlaying.snip.end_time)) ||
+                (!$nowPlaying?.snip &&
+                    ($snipStore.start_time !== 0 ||
+                        $snipStore.end_time !== $nowPlaying.duration)))) ||
         (tab == 'speed' &&
             !$playbackStore.is_default &&
             ($playbackStore.track.rate.value != 1 ||
