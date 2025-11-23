@@ -143,7 +143,6 @@
         checkIfSupporter()
 
         let navigationObserver: MutationObserver | null = null
-        let urlCheckInterval: number | null = null
 
         // Listen for browser navigation events (back/forward buttons)
         window.addEventListener('popstate', handleUrlChange)
@@ -190,13 +189,6 @@
             })
         }
 
-        // Fallback: periodically check URL when New Releases is visible
-        urlCheckInterval = setInterval(() => {
-            if (showReleases) {
-                handleUrlChange()
-            }
-        }, 1000) as unknown as number
-
         // Cleanup function
         return () => {
             window.removeEventListener('popstate', handleUrlChange)
@@ -204,9 +196,6 @@
             history.replaceState = originalReplaceState
             if (navigationObserver) {
                 navigationObserver.disconnect()
-            }
-            if (urlCheckInterval) {
-                clearInterval(urlCheckInterval)
             }
         }
     })

@@ -11,6 +11,25 @@ import type { SimpleTrack } from '$lib/stores/data/cache'
 
 export const NOW_PLAYING_STORE_KEY = 'local:chorus_now_playing'
 
+// Debounced storage writer to batch rapid updates
+let storageWriteTimeout: NodeJS.Timeout | null = null
+function debouncedStorageWrite<T>(key: string, value: T, delay: number = 100) {
+    if (storageWriteTimeout) {
+        clearTimeout(storageWriteTimeout)
+    }
+    return new Promise<void>((resolve) => {
+        storageWriteTimeout = setTimeout(async () => {
+            try {
+                await storage.setItem(key, value)
+                resolve()
+            } catch (error) {
+                console.error('Error writing to storage:', error)
+                resolve()
+            }
+        }, delay)
+    })
+}
+
 export type NowPlaying = SimpleTrack & {
     current: number
     duration: number
@@ -148,9 +167,7 @@ function createNowPlayingStore() {
 
         isUpdatingStorage = true
         try {
-            await storage.setItem<NowPlaying>(NOW_PLAYING_STORE_KEY, updatedState)
-        } catch (error) {
-            console.error('Error updating now playing storage:', error)
+            await debouncedStorageWrite(NOW_PLAYING_STORE_KEY, updatedState)
         } finally {
             isUpdatingStorage = false
         }
@@ -165,9 +182,7 @@ function createNowPlayingStore() {
         const newState = get(store)
         isUpdatingStorage = true
         try {
-            await storage.setItem<NowPlaying>(NOW_PLAYING_STORE_KEY, newState)
-        } catch (error) {
-            console.error('Error updating liked state in storage:', error)
+            await debouncedStorageWrite(NOW_PLAYING_STORE_KEY, newState)
         } finally {
             isUpdatingStorage = false
         }
@@ -188,9 +203,7 @@ function createNowPlayingStore() {
         const newState = get(store)
         isUpdatingStorage = true
         try {
-            await storage.setItem<NowPlaying>(NOW_PLAYING_STORE_KEY, newState)
-        } catch (error) {
-            console.error('Error updating now playing state in storage:', error)
+            await debouncedStorageWrite(NOW_PLAYING_STORE_KEY, newState)
         } finally {
             isUpdatingStorage = false
         }
