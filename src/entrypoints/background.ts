@@ -7,7 +7,7 @@ import type { NowPlaying } from '$lib/stores/now-playing'
 import type { SettingsState } from '$lib/stores/settings'
 import { THEME_NAMES, setTheme } from '$lib/utils/theming'
 import { registerTrackService } from '$lib/api/services/track'
-import { registerQueueService } from '$lib/api/services/queue'
+import { registerPlayerService } from '$lib/api/services/player'
 import { registerNewReleasesService } from '$lib/api/services/new-releases'
 import { registerCheckPermissionsService } from '$lib/utils/check-permissions'
 import { executeButtonClick, registerCommandService } from '$lib/utils/command'
@@ -75,7 +75,7 @@ export default defineBackground(() => {
     })
 
     registerTrackService()
-    registerQueueService()
+    registerPlayerService()
     registerCommandService()
     registerNotificationService()
     registerNewReleasesService()

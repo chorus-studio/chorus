@@ -11,22 +11,30 @@
     let searchQuery = $state('')
     let selectedTracks = $state<Set<string>>(new Set())
     let blockedTracks = $state<SimpleTrack[]>([])
-    let refreshInterval: NodeJS.Timeout | null = null
 
     // Refresh blocked tracks list from dataStore
     function refreshBlockedTracks() {
         blockedTracks = dataStore.blocked
     }
 
-    // Poll for changes every 500ms when dialog is open
+    // Initialize blocked tracks and listen for block/unblock events (event-driven, no polling)
     $effect(() => {
         refreshBlockedTracks()
-        refreshInterval = setInterval(refreshBlockedTracks, 500)
+
+        const handleTrackBlocked = (event: Event) => {
+            refreshBlockedTracks()
+        }
+
+        const handleTrackUnblocked = (event: Event) => {
+            refreshBlockedTracks()
+        }
+
+        document.addEventListener('chorus:track-blocked', handleTrackBlocked)
+        document.addEventListener('chorus:track-unblocked', handleTrackUnblocked)
 
         return () => {
-            if (refreshInterval) {
-                clearInterval(refreshInterval)
-            }
+            document.removeEventListener('chorus:track-blocked', handleTrackBlocked)
+            document.removeEventListener('chorus:track-unblocked', handleTrackUnblocked)
         }
     })
 
