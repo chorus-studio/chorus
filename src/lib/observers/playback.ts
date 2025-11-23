@@ -13,6 +13,32 @@ export class PlaybackObserver {
     private volumeSlider: SvelteComponent | null = null
     private timeProgress: SvelteComponent | null = null
 
+    // Cache frequently accessed DOM elements
+    private cachedElements: {
+        playbackProgressbar?: HTMLElement | null
+        playbackPosition?: HTMLElement | null
+        playbackDuration?: HTMLElement | null
+        volumeBar?: HTMLElement | null
+        skipBack?: Element | null
+        seekButton?: Element | null
+    } = {}
+
+    private clearCache() {
+        this.cachedElements = {}
+    }
+
+    private getElement<T extends HTMLElement = HTMLElement>(
+        selector: string,
+        cacheKey: keyof typeof this.cachedElements
+    ): T | null {
+        if (this.cachedElements[cacheKey] !== undefined) {
+            return this.cachedElements[cacheKey] as T | null
+        }
+        const element = document.querySelector(selector) as T | null
+        this.cachedElements[cacheKey] = element
+        return element
+    }
+
     observe() {
         const target = document.querySelector('[data-testid="playback-position"]')
         if (!target) return
@@ -31,8 +57,8 @@ export class PlaybackObserver {
     }
 
     private ensureSeekButtonAfterSkipBack() {
-        const skipBack = document.querySelector('[data-testid="control-button-skip-back"]')
-        const seekButton = document.querySelector('#seek-player-rw-button')
+        const skipBack = this.getElement('[data-testid="control-button-skip-back"]', 'skipBack')
+        const seekButton = this.getElement('#seek-player-rw-button', 'seekButton')
         if (!skipBack?.parentElement || !seekButton?.parentElement) return
 
         skipBack.parentElement?.insertBefore(seekButton.parentElement, skipBack)
@@ -47,7 +73,7 @@ export class PlaybackObserver {
 
     private toggleSpotifyVolume() {
         const showSpotifyVolume = !this.settings.ui.volume
-        const target = document.querySelector('[data-testid="volume-bar"]') as HTMLElement
+        const target = this.getElement<HTMLElement>('[data-testid="volume-bar"]', 'volumeBar')
         if (!target) return
 
         target.style.display = showSpotifyVolume ? 'flex' : 'none'
@@ -133,13 +159,10 @@ export class PlaybackObserver {
     private toggleSpotifyProgress() {
         const showSpotifyProgress = !this.settings.ui.progress
 
-        const target = document.querySelector('[data-testid="playback-progressbar"]') as HTMLElement
-        const playbackPosition = document.querySelector(
-            '[data-testid="playback-position"]'
-        ) as HTMLElement
-        const playbackDuration = document.querySelector(
-            '[data-testid="playback-duration"]'
-        ) as HTMLElement
+        const target = this.getElement<HTMLElement>('[data-testid="playback-progressbar"]', 'playbackProgressbar')
+        const playbackPosition = this.getElement<HTMLElement>('[data-testid="playback-position"]', 'playbackPosition')
+        const playbackDuration = this.getElement<HTMLElement>('[data-testid="playback-duration"]', 'playbackDuration')
+
         if (!target || !playbackPosition || !playbackDuration) return
 
         const container = playbackPosition.parentElement
@@ -178,8 +201,8 @@ export class PlaybackObserver {
         const chorusTimeProgress = document.querySelector('#chorus-time-progress')
         if (chorusTimeProgress) return
 
-        const target = document.querySelector('[data-testid="playback-progressbar"]') as HTMLElement
-        const container = target.parentElement
+        const target = this.getElement<HTMLElement>('[data-testid="playback-progressbar"]', 'playbackProgressbar')
+        const container = target?.parentElement
         if (!container) return
         this.toggleSpotifyProgress()
 
