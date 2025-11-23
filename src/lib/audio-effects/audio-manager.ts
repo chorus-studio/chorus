@@ -1,6 +1,16 @@
 import SoundTouch from './soundtouch'
 import { SoundTouchData } from '$lib/stores/playback'
 
+// Singleton AudioContext to prevent multiple context creation
+let sharedAudioContext: AudioContext | null = null
+
+function getSharedAudioContext(): AudioContext {
+    if (!sharedAudioContext || sharedAudioContext.state === 'closed') {
+        sharedAudioContext = new AudioContext({ latencyHint: 'playback' })
+    }
+    return sharedAudioContext
+}
+
 export default class AudioManager {
     private _gainNode?: GainNode
     private _soundTouchNode?: AudioNode
@@ -67,10 +77,8 @@ export default class AudioManager {
 
         // Only proceed with Web Audio API setup for same-origin sources
         try {
-            // Create new context if we don't have one or if it's closed
-            if (!this._audioContext || this._audioContext.state === 'closed') {
-                this._audioContext = new AudioContext({ latencyHint: 'playback' })
-            }
+            // Use shared AudioContext singleton
+            this._audioContext = getSharedAudioContext()
 
             // Ensure context is running
             if (this._audioContext.state === 'suspended') {
@@ -359,17 +367,9 @@ export default class AudioManager {
             this._errorHandler = undefined
         }
 
-        // Close audio context with proper error handling
-        if (this._audioContext && this._audioContext.state !== 'closed') {
-            try {
-                this._audioContext.close().catch(error => {
-                    console.warn('Error closing audio context:', error)
-                })
-            } catch (error) {
-                console.warn('Error closing audio context:', error)
-            }
-            this._audioContext = undefined
-        }
+        // Don't close the shared AudioContext - just disconnect from it
+        // The singleton context persists for reuse by other AudioManager instances
+        this._audioContext = undefined
 
         this._isInitialized = false
         this._setupPromise = undefined

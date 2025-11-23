@@ -218,6 +218,9 @@ export class PlaybackObserver {
             const newValue = mutation.target.nodeValue
             if (!newValue) return
 
+            // Clear element cache on mutations (track changes, navigation, etc.)
+            this.clearCache()
+
             await this.checkForDJ()
             await nowPlaying.updateNowPlaying()
             this.togglePlaylistButton()
@@ -227,6 +230,7 @@ export class PlaybackObserver {
     disconnect() {
         this.observer?.disconnect()
         this.observer = null
+        this.clearCache()
     }
 }
 

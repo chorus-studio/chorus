@@ -23,6 +23,7 @@ export class TrackObserver {
     private boundProcessTimeUpdate: (event: CustomEvent) => void
     private boundProcessMediaPlayInit: (event: CustomEvent) => void
     private processTimeoutId: NodeJS.Timeout | null = null
+    private muteTimeoutId: NodeJS.Timeout | null = null
 
     constructor() {
         // Inject dependencies for better testability
@@ -112,9 +113,15 @@ export class TrackObserver {
             this.playbackController.mute()
         }
 
-        setTimeout(() => {
+        // Clear any pending unmute timeout to prevent accumulation
+        if (this.muteTimeoutId) {
+            clearTimeout(this.muteTimeoutId)
+        }
+
+        this.muteTimeoutId = setTimeout(() => {
             this.playbackController.unMute()
             this.playbackController.setSeeking(false)
+            this.muteTimeoutId = null
         }, 50)
 
         await this.trackStateManager.setPlayback()
@@ -192,10 +199,14 @@ export class TrackObserver {
             this.boundProcessMediaPlayInit as EventListener
         )
 
-        // Clear any pending timeout to prevent accumulation
+        // Clear any pending timeouts to prevent accumulation
         if (this.processTimeoutId) {
             clearTimeout(this.processTimeoutId)
             this.processTimeoutId = null
+        }
+        if (this.muteTimeoutId) {
+            clearTimeout(this.muteTimeoutId)
+            this.muteTimeoutId = null
         }
 
         // Clean up services
