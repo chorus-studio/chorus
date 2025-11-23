@@ -11,19 +11,19 @@
     let { track }: { track: SimpleTrack } = $props()
     let isBlocked = $state(track?.blocked ?? false)
 
-    // Only poll for changes when track is blocked (to detect unblock from dialog)
+    // Listen for unblock events from BlockedTracksDialog (event-driven, no polling)
     $effect(() => {
         if (!isBlocked) return
 
-        const checkInterval = setInterval(() => {
-            const updatedTrack = dataStore.getTrack(track.track_id)
-            const newBlockedState = updatedTrack?.blocked ?? false
-            if (newBlockedState !== isBlocked) {
-                isBlocked = newBlockedState
+        const handleUnblock = (event: Event) => {
+            const customEvent = event as CustomEvent<{ track_id: string }>
+            if (customEvent.detail.track_id === track.track_id) {
+                isBlocked = false
             }
-        }, 500)
+        }
 
-        return () => clearInterval(checkInterval)
+        document.addEventListener('chorus:track-unblocked', handleUnblock)
+        return () => document.removeEventListener('chorus:track-unblocked', handleUnblock)
     })
 
     function getCoverArt() {
@@ -44,9 +44,24 @@
                 value: { blocked: isBlocked, cover }
             })
 
-            // If the blocked track is currently playing, skip it immediately
-            if (isBlocked && track?.song_id === $nowPlaying.id) {
-                trackObserver?.skipTrack()
+            // Emit event for reactive updates
+            if (isBlocked) {
+                document.dispatchEvent(
+                    new CustomEvent('chorus:track-blocked', {
+                        detail: { track_id: track.track_id }
+                    })
+                )
+
+                // If the blocked track is currently playing, skip it immediately
+                if (track?.song_id === $nowPlaying.id) {
+                    trackObserver?.skipTrack()
+                }
+            } else {
+                document.dispatchEvent(
+                    new CustomEvent('chorus:track-unblocked', {
+                        detail: { track_id: track.track_id }
+                    })
+                )
             }
         }
     }

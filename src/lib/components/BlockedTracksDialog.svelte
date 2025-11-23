@@ -69,6 +69,11 @@
         selectedTracks.delete(trackId)
         selectedTracks = selectedTracks
         refreshBlockedTracks()
+
+        // Emit event for reactive updates
+        document.dispatchEvent(
+            new CustomEvent('chorus:track-unblocked', { detail: { track_id: trackId } })
+        )
     }
 
     async function unblockSelected() {
@@ -83,6 +88,13 @@
         )
         selectedTracks = new Set()
         refreshBlockedTracks()
+
+        // Emit events for each unblocked track
+        trackIds.forEach((trackId) => {
+            document.dispatchEvent(
+                new CustomEvent('chorus:track-unblocked', { detail: { track_id: trackId } })
+            )
+        })
     }
 
     function parseSongId(songId: string): { title: string; artists: string } {
