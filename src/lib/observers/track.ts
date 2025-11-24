@@ -139,6 +139,10 @@ export class TrackObserver {
 
         await this.trackStateManager.setPlayback()
         await this.updateTrackType()
+
+        // Apply effects on track change (not just on media play init)
+        this.setEffect()
+
         await this.notificationService.showTrackChangeNotification(songInfo)
     }
 
@@ -174,11 +178,11 @@ export class TrackObserver {
                 return this.updateCurrentTime(this.snip.start_time)
             }
 
-            // Early return if not at snip end
-            if (currentSong.snip && !this.isAtSnipEnd(currentTimeMS)) return
+            // Check if at or past snip end for auto-advance
+            const atSnipEnd = currentSong.snip && currentTimeMS >= currentSong.snip.end_time * 1000
 
-            // Handle looping
-            if (this.loop.looping && this.isAtSnipEnd(currentTimeMS)) {
+            // Handle looping if at snip end
+            if (this.loop.looping && (currentSong.snip && this.isAtSnipEnd(currentTimeMS))) {
                 const loopHandled = await this.playbackController.handleLooping(currentTimeMS)
                 if (loopHandled) return
             }
@@ -188,15 +192,18 @@ export class TrackObserver {
                 history.pushState(null, '', location.pathname)
             }
 
-            // Handle track end or snip end
-            const atSnipEnd = currentSong.snip && currentTimeMS >= currentSong.snip.end_time * 1000
+            // Handle track end or snip end - auto-advance if at or past end
             const shouldSkip =
                 (currentSong.snip || currentSong.blocked) &&
                 (currentTimeMS >= currentSong.duration * 1000 || atSnipEnd)
 
             if (shouldSkip) {
                 this.skipTrack()
+                return
             }
+
+            // Early return if we have a snip but not yet at the end (still playing within snip)
+            if (currentSong.snip && !atSnipEnd) return
 
             this.processTimeoutId = null
         }, 50)
