@@ -13,7 +13,7 @@ export const NOW_PLAYING_STORE_KEY = 'local:chorus_now_playing'
 
 // Debounced storage writer to batch rapid updates
 let storageWriteTimeout: NodeJS.Timeout | null = null
-function debouncedStorageWrite<T>(key: string, value: T, delay: number = 100) {
+function debouncedStorageWrite<T>(key: `local:${string}` | `session:${string}` | `sync:${string}` | `managed:${string}`, value: T, delay: number = 100) {
     if (storageWriteTimeout) {
         clearTimeout(storageWriteTimeout)
     }

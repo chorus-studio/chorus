@@ -4,7 +4,7 @@ import { syncWithType } from '$lib/utils/store-utils'
 
 // Debounced storage writer to batch rapid updates
 let storageWriteTimeout: NodeJS.Timeout | null = null
-function debouncedStorageWrite<T>(key: string, value: T, delay: number = 100) {
+function debouncedStorageWrite<T>(key: `local:${string}` | `session:${string}` | `sync:${string}` | `managed:${string}`, value: T, delay: number = 100) {
     if (storageWriteTimeout) {
         clearTimeout(storageWriteTimeout)
     }
