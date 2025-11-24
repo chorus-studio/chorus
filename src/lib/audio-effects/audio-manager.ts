@@ -23,7 +23,10 @@ export default class AudioManager {
 
     private _element: HTMLMediaElement | MediaStream
     private _source?: MediaStreamAudioSourceNode | MediaElementAudioSourceNode
-    private _sourceMap: Map<HTMLMediaElement, MediaElementAudioSourceNode> = new Map()
+
+    // Static source map to persist across AudioManager instances
+    // Prevents creating duplicate source nodes for the same HTMLMediaElement
+    private static _sourceMap: Map<HTMLMediaElement, MediaElementAudioSourceNode> = new Map()
 
     private _currentVolume: number = 1
     private _volumeType: 'linear' | 'logarithmic' = 'linear'
@@ -85,8 +88,13 @@ export default class AudioManager {
                 await this._audioContext.resume()
             }
 
-            // Cleanup any existing connections first
-            this.cleanup()
+            // Only cleanup effect chain if this is a re-initialization
+            // Don't call full cleanup() as it would destroy nodes we want to preserve
+            if (this._gainNode || this._soundTouchNode) {
+                // Just disconnect existing effect nodes, they'll be recreated
+                if (this._gainNode) this._gainNode.disconnect()
+                if (this._soundTouchNode) this._soundTouchNode.disconnect()
+            }
 
             // Wait for the media to be loaded before creating the audio chain
             if (this._element instanceof HTMLMediaElement) {
@@ -122,13 +130,13 @@ export default class AudioManager {
 
             // Check if we already have a source node for this element
             if (this._element instanceof HTMLMediaElement) {
-                const existingSource = this._sourceMap.get(this._element)
+                const existingSource = AudioManager._sourceMap.get(this._element)
                 if (existingSource) {
                     this._source = existingSource
                 } else {
                     // Create new source node
                     this._source = this._audioContext.createMediaElementSource(this._element)
-                    this._sourceMap.set(this._element, this._source)
+                    AudioManager._sourceMap.set(this._element, this._source)
                 }
             }
 
@@ -329,10 +337,11 @@ export default class AudioManager {
 
     cleanup() {
         try {
-            if (this.source) {
-                this.source.disconnect()
-                this._source = undefined
-            }
+            // DON'T disconnect the source node - it's bound to the HTMLMediaElement
+            // and must persist across AudioManager instances
+            // The source node is stored in the static _sourceMap and reused
+
+            // Only clean up the effect nodes
             if (this._gainNode) {
                 this._gainNode.disconnect()
                 this._gainNode = undefined
@@ -345,9 +354,9 @@ export default class AudioManager {
                 // Don't disconnect the destination as it's the main output
                 this._destination = undefined
             }
-            // Clear the source map when cleaning up
-            this._sourceMap.clear()
-            
+
+            // DON'T clear the static source map - it persists across all instances
+
             // Clean up SoundTouch manager
             if (this._soundTouchManager) {
                 (this._soundTouchManager as any).dispose?.()

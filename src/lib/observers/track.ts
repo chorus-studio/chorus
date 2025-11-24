@@ -118,11 +118,24 @@ export class TrackObserver {
             clearTimeout(this.muteTimeoutId)
         }
 
-        this.muteTimeoutId = setTimeout(() => {
+        this.muteTimeoutId = setTimeout(async () => {
+            // Ensure audio chain is ready before unmuting to prevent "no audio" issues
+            try {
+                const mediaSource = (window as any).mediaSource
+                if (mediaSource) {
+                    const mediaElement = (mediaSource as any)._chorusMediaElement
+                    if (mediaElement?.audioManager) {
+                        await mediaElement.audioManager.ensureAudioChainReady()
+                    }
+                }
+            } catch (error) {
+                console.warn('Audio chain not ready, unmuting anyway:', error)
+            }
+
             this.playbackController.unMute()
             this.playbackController.setSeeking(false)
             this.muteTimeoutId = null
-        }, 50)
+        }, 100) // Increased from 50ms to 100ms to give audio chain more time to setup
 
         await this.trackStateManager.setPlayback()
         await this.updateTrackType()

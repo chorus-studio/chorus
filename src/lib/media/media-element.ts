@@ -117,6 +117,32 @@ export default class MediaElement {
         })
     }
 
+    dispose(): void {
+        // Clean up audio manager
+        if (this._audioManager) {
+            this._audioManager.dispose()
+            this._audioManager = null
+        }
+
+        // Clean up reverb
+        if (this._reverb) {
+            (this._reverb as any).cleanup?.()
+            this._reverb = null
+        }
+
+        // Clean up equalizer
+        if (this._equalizer) {
+            this._equalizer.disconnect()
+            this._equalizer = null
+        }
+
+        // Clear media override
+        this.mediaOverride = undefined
+
+        // Remove reference from source
+        delete (this.source as any)._chorusMediaElement
+    }
+
     get audioManager(): AudioManager | null {
         return this._audioManager
     }

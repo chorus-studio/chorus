@@ -142,7 +142,25 @@ export default class MediaOverride {
             if (effect?.reverb) await this.reverb.setReverbEffect(effect.reverb)
         } catch (error) {
             console.error('Error updating audio effects:', error)
-            this.audioManager.disconnect()
+
+            // Try to recover by restoring basic audio chain
+            try {
+                // Disconnect any partially-applied effects
+                this.audioManager.disconnect()
+
+                // Attempt to reconnect basic chain without effects
+                await this.audioManager.ensureAudioChainReady()
+
+                console.log('Audio chain restored after effect error')
+            } catch (recoveryError) {
+                console.error('Failed to recover audio chain:', recoveryError)
+                // As last resort, just disconnect to prevent hanging connections
+                try {
+                    this.audioManager.disconnect()
+                } catch (finalError) {
+                    console.error('Final disconnect failed:', finalError)
+                }
+            }
         }
     }
 }

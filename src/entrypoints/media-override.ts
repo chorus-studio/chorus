@@ -3,7 +3,7 @@ import MediaElement from '../lib/media/media-element'
 function mediaOverride() {
     // Expose first media source directly
     ;(window as any).mediaSource = null
-    let mediaElement: MediaElement
+    let mediaElement: MediaElement | null = null
 
     // Store the original createElement method
     const originalCreateElement = document.createElement
@@ -14,6 +14,16 @@ function mediaOverride() {
 
         // Set the media source
         ;(window as any).mediaSource = source
+
+        // Dispose old MediaElement instance before creating new one
+        if (mediaElement) {
+            try {
+                mediaElement.dispose()
+            } catch (error) {
+                console.warn('Error disposing MediaElement:', error)
+            }
+            mediaElement = null
+        }
 
         // For cross-origin sources, just use direct playback
         try {
