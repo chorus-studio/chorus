@@ -21,11 +21,19 @@ export default class MediaElement {
         this.setupEventListeners()
     }
 
-    private loadMediaOverride(): void {
+    private async loadMediaOverride(): Promise<void> {
         if (this.mediaOverride) return
 
         // Initialize audio effects
         this._audioManager = new AudioManager(this.source)
+
+        // Wait for AudioManager to be ready before proceeding
+        try {
+            await this._audioManager.ensureAudioChainReady()
+        } catch (error) {
+            console.warn('AudioManager initialization failed, continuing without Web Audio API:', error)
+        }
+
         this._reverb = new Reverb(this._audioManager)
         this._equalizer = new Equalizer(this._audioManager)
 
@@ -50,7 +58,7 @@ export default class MediaElement {
         this.source.addEventListener('play', async () => {
             if (this.mediaOverride) return
 
-            this.loadMediaOverride()
+            await this.loadMediaOverride()
             document.dispatchEvent(new CustomEvent('FROM_MEDIA_PLAY_INIT'))
         })
 
