@@ -111,6 +111,8 @@ export class TrackObserver {
         if (songInfo?.snip) {
             this.playbackController.setSeeking(true)
             this.playbackController.mute()
+            // Immediately set position to snip start to prevent playback from 0
+            this.updateCurrentTime(songInfo.snip.start_time)
         }
 
         // Clear any pending unmute timeout to prevent accumulation
@@ -182,7 +184,7 @@ export class TrackObserver {
             const atSnipEnd = currentSong.snip && currentTimeMS >= currentSong.snip.end_time * 1000
 
             // Handle looping if at snip end
-            if (this.loop.looping && (currentSong.snip && this.isAtSnipEnd(currentTimeMS))) {
+            if (this.loop.looping && currentSong.snip && this.isAtSnipEnd(currentTimeMS)) {
                 const loopHandled = await this.playbackController.handleLooping(currentTimeMS)
                 if (loopHandled) return
             }
@@ -206,7 +208,7 @@ export class TrackObserver {
             if (currentSong.snip && !atSnipEnd) return
 
             this.processTimeoutId = null
-        }, 50)
+        }, 100)
     }
 
     async disconnect() {

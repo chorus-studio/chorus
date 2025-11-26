@@ -2,25 +2,6 @@ import { get, writable } from 'svelte/store'
 import { storage } from '@wxt-dev/storage'
 import { syncWithType } from '$lib/utils/store-utils'
 
-// Debounced storage writer to batch rapid updates
-let storageWriteTimeout: NodeJS.Timeout | null = null
-function debouncedStorageWrite<T>(key: `local:${string}` | `session:${string}` | `sync:${string}` | `managed:${string}`, value: T, delay: number = 100) {
-    if (storageWriteTimeout) {
-        clearTimeout(storageWriteTimeout)
-    }
-    return new Promise<void>((resolve) => {
-        storageWriteTimeout = setTimeout(async () => {
-            try {
-                await storage.setItem(key, value)
-                resolve()
-            } catch (error) {
-                console.error('Error writing to storage:', error)
-                resolve()
-            }
-        }, delay)
-    })
-}
-
 export type Rate = {
     value: number
     preserves_pitch: boolean
@@ -99,7 +80,9 @@ function createPlaybackStore() {
         const newState = get(store)
         isUpdatingStorage = true
         try {
-            await debouncedStorageWrite(PLAYBACK_STORE_KEY, newState)
+            await storage.setItem<PlaybackSettings>(PLAYBACK_STORE_KEY, newState)
+        } catch (error) {
+            console.error('Error updating playback in storage:', error)
         } finally {
             isUpdatingStorage = false
         }
@@ -146,7 +129,9 @@ function createPlaybackStore() {
         const newState = get(store)
         isUpdatingStorage = true
         try {
-            await debouncedStorageWrite(PLAYBACK_STORE_KEY, newState)
+            await storage.setItem<PlaybackSettings>(PLAYBACK_STORE_KEY, newState)
+        } catch (error) {
+            console.error('Error updating storage:', error)
         } finally {
             isUpdatingStorage = false
         }
@@ -164,7 +149,9 @@ function createPlaybackStore() {
         const newState = get(store)
         isUpdatingStorage = true
         try {
-            await debouncedStorageWrite(PLAYBACK_STORE_KEY, newState)
+            await storage.setItem<PlaybackSettings>(PLAYBACK_STORE_KEY, newState)
+        } catch (error) {
+            console.error('Error updating storage:', error)
         } finally {
             isUpdatingStorage = false
         }
