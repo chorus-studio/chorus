@@ -27,12 +27,12 @@ export default class MediaElement {
         // Initialize audio effects
         this._audioManager = new AudioManager(this.source)
 
-        // Wait for AudioManager to be ready before proceeding
-        try {
-            await this._audioManager.ensureAudioChainReady()
-        } catch (error) {
-            console.warn('AudioManager initialization failed, continuing without Web Audio API:', error)
-        }
+        // // Wait for AudioManager to be ready before proceeding
+        // try {
+        //     await this._audioManager.ensureAudioChainReady()
+        // } catch (error) {
+        //     console.warn('AudioManager initialization failed, continuing without Web Audio API:', error)
+        // }
 
         this._reverb = new Reverb(this._audioManager)
         this._equalizer = new Equalizer(this._audioManager)
@@ -134,7 +134,7 @@ export default class MediaElement {
 
         // Clean up reverb
         if (this._reverb) {
-            (this._reverb as any).cleanup?.()
+            ;(this._reverb as any).cleanup?.()
             this._reverb = null
         }
 

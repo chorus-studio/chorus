@@ -47,7 +47,7 @@ const defaultSettingsState: SettingsState = {
         theme: false,
         popup: false,
         volume: false,
-        progress: false,
+        progress: true,
         playlist: false
     },
     views: {

@@ -39,7 +39,10 @@ const defaultNowPlaying: NowPlaying = {
     current: 0,
     album_id: null,
     text_colour: '#ffffff',
-    bg_colour: '#000000'
+    bg_colour: '#000000',
+    snip: null,
+    playback: null,
+    blocked: null
 }
 
 function createNowPlayingStore() {
