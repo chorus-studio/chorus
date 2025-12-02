@@ -3,7 +3,7 @@
     import { formatDate } from '$lib/utils/time'
     import { mediaStore } from '$lib/stores/media'
     import { groupBy } from '$lib/utils/groupings'
-    import { getQueueService } from '$lib/api/services/queue'
+    import { getPlayerService } from '$lib/api/services/player'
     import type { TrackMetadata } from '$lib/api/services/new-releases'
     import {
         groupByMap,
@@ -53,7 +53,7 @@
         if ($newReleasesStore.release_id === uri) return pauseTrack()
 
         try {
-            await getQueueService().playRelease(uri)
+            await getPlayerService().playRelease(uri)
             await newReleasesStore.updateState({ release_id: uri })
         } catch (error) {
             console.error('Error playing track:', error)

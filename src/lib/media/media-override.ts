@@ -15,7 +15,6 @@ export default class MediaOverride {
     private equalizer: Equalizer
     private source: HTMLMediaElement
     private audioManager: AudioManager
-    private _sources: any[] = []
     private _chorusRate: number = 1
     private _chorusPreservesPitch: boolean = true
 
@@ -90,12 +89,6 @@ export default class MediaOverride {
         return value
     }
 
-    addSource(source: HTMLMediaElement): void {
-        if ((source as any).isPlaybackRateChanged) return
-        ;(source as any).isPlaybackRateChanged = true
-        this._sources.push(source)
-    }
-
     updatePlaybackSettings(rate: Rate): void {
         // Store the chorus values for later use when Spotify tries to override
         this._chorusRate = rate.value
@@ -149,7 +142,25 @@ export default class MediaOverride {
             if (effect?.reverb) await this.reverb.setReverbEffect(effect.reverb)
         } catch (error) {
             console.error('Error updating audio effects:', error)
-            this.audioManager.disconnect()
+
+            // Try to recover by restoring basic audio chain
+            try {
+                // Disconnect any partially-applied effects
+                this.audioManager.disconnect()
+
+                // Attempt to reconnect basic chain without effects
+                await this.audioManager.ensureAudioChainReady()
+
+                console.log('Audio chain restored after effect error')
+            } catch (recoveryError) {
+                console.error('Failed to recover audio chain:', recoveryError)
+                // As last resort, just disconnect to prevent hanging connections
+                try {
+                    this.audioManager.disconnect()
+                } catch (finalError) {
+                    console.error('Final disconnect failed:', finalError)
+                }
+            }
         }
     }
 }

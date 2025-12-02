@@ -23,6 +23,8 @@
     import { getColours } from '$lib/utils/vibrant-colors'
     import { getCheckPermissionsService } from '$lib/utils/check-permissions'
 
+    const version = chrome.runtime.getManifest().version
+
     let { pip = false }: { pip?: boolean } = $props()
 
     let port = $state<chrome.runtime.Port | null>(null)
@@ -137,6 +139,12 @@
         ? 'w-full'
         : 'w-[300px] bg-[var(--bg)] px-3.5 py-3'}"
 >
+    {#if !pip}
+        <div class="absolute left-3 top-0">
+            <span class="text-xs font-black text-[var(--text)] opacity-50">v{version}</span>
+        </div>
+    {/if}
+
     <div
         class="{pip
             ? 'absolute -top-1.5 right-1'

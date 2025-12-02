@@ -131,7 +131,7 @@ function createPlaybackStore() {
         try {
             await storage.setItem<PlaybackSettings>(PLAYBACK_STORE_KEY, newState)
         } catch (error) {
-            console.error('Error adding frequent value in storage:', error)
+            console.error('Error updating storage:', error)
         } finally {
             isUpdatingStorage = false
         }
@@ -151,7 +151,7 @@ function createPlaybackStore() {
         try {
             await storage.setItem<PlaybackSettings>(PLAYBACK_STORE_KEY, newState)
         } catch (error) {
-            console.error('Error toggling pin in storage:', error)
+            console.error('Error updating storage:', error)
         } finally {
             isUpdatingStorage = false
         }

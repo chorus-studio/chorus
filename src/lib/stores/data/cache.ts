@@ -13,9 +13,10 @@ export type SimpleTrack = {
     song_id: string
     liked?: boolean | null
     track_id: string
+    cover?: string | null
     snip?: Snip | null
     playback?: Playback | null
-    blocked?: boolean
+    blocked?: boolean | null
 }
 
 export const COLLECTION_KEY = 'collection'
@@ -65,6 +66,10 @@ export class CacheStore {
             delete value.playback
             delete updatedTrack.playback
         }
+        if (value.blocked === null) {
+            delete value.blocked
+            delete updatedTrack.blocked
+        }
 
         // Apply the rest of the updates
         collection[track_id] = { ...updatedTrack, ...value }
@@ -91,7 +96,7 @@ export class CacheStore {
     clear(): void {
         const keys = Object.keys(sessionStorage)
         const keysToRemove: string[] = []
-        
+
         // Collect keys first to avoid modifying sessionStorage during iteration
         for (let i = 0; i < keys.length; i++) {
             const key = keys[i]
@@ -99,7 +104,7 @@ export class CacheStore {
                 keysToRemove.push(key)
             }
         }
-        
+
         // Remove keys in batch
         for (const key of keysToRemove) {
             sessionStorage.removeItem(key)
@@ -109,7 +114,7 @@ export class CacheStore {
     getAll<T>(): Record<string, T> {
         const result: Record<string, T> = {}
         const prefixLength = this.prefix.length
-        
+
         // Use for loop instead of forEach for better performance
         const keys = Object.keys(sessionStorage)
         for (let i = 0; i < keys.length; i++) {

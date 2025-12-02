@@ -39,7 +39,10 @@ const defaultNowPlaying: NowPlaying = {
     current: 0,
     album_id: null,
     text_colour: '#ffffff',
-    bg_colour: '#000000'
+    bg_colour: '#000000',
+    snip: null,
+    playback: null,
+    blocked: null
 }
 
 function createNowPlayingStore() {
@@ -96,8 +99,9 @@ function createNowPlayingStore() {
                 title: title ?? '',
                 artist: artist ?? ''
             })
-        )
+        ) {
             trackObserver?.skipTrack()
+        }
 
         // Filter out null/undefined playback to prevent overwriting current settings
         const { playback: trackPlayback, ...restTrackInfo } = trackInfo || {}
