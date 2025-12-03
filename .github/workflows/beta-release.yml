@@ -40,10 +40,10 @@ jobs:
 
             - name: Modify manifest name to include BETA suffix
               run: |
-                  # Find the chrome build directory
-                  CHROME_DIR=$(find .output -maxdepth 1 -type d -name "*-chrome" | head -n 1)
-                  if [ -z "$CHROME_DIR" ]; then
-                    echo "Error: Chrome build directory not found"
+                  # The build directory is .output/chrome-mv3
+                  CHROME_DIR=".output/chrome-mv3"
+                  if [ ! -d "$CHROME_DIR" ]; then
+                    echo "Error: Chrome build directory not found at $CHROME_DIR"
                     echo "Contents of .output:"
                     ls -la .output
                     exit 1
@@ -66,17 +66,13 @@ jobs:
 
             - name: Zip Chrome extension with modified manifest
               run: |
-                  cd .output
-                  CHROME_DIR=$(find . -maxdepth 1 -type d -name "*-chrome" | head -n 1)
-                  CHROME_DIR_NAME=$(basename "$CHROME_DIR")
-                  ZIP_NAME="${CHROME_DIR_NAME}.zip"
+                  cd .output/chrome-mv3
+                  ZIP_NAME="chorus-${{ steps.version.outputs.version }}-chrome.zip"
 
-                  echo "Zipping $CHROME_DIR_NAME to $ZIP_NAME"
-
-                  cd "$CHROME_DIR_NAME"
+                  echo "Creating zip: $ZIP_NAME"
                   zip -r "../$ZIP_NAME" . -q
-                  cd ..
 
+                  cd ..
                   echo "Created: $ZIP_NAME"
                   ls -lh "$ZIP_NAME"
 
