@@ -36,37 +36,43 @@ jobs:
                   bun --eval "const pkg = require('./package.json'); pkg.version = '${{ steps.version.outputs.version }}'; require('fs').writeFileSync('./package.json', JSON.stringify(pkg, null, 2) + '\n')"
 
             - name: Build Chrome extension
-              run: bun run build && bun run zip
+              run: bun run build
 
             - name: Modify manifest name to include BETA suffix
               run: |
-                  MANIFEST_PATH=$(find .output -name "manifest.json" | head -n 1)
-                  if [ -z "$MANIFEST_PATH" ]; then
-                    echo "Error: manifest.json not found in .output directory"
-                    exit 1
-                  fi
-                  echo "Found manifest at: $MANIFEST_PATH"
-                  bun --eval "const manifest = require('./$MANIFEST_PATH'); manifest.name = manifest.name + ' (BETA)'; require('fs').writeFileSync('$MANIFEST_PATH', JSON.stringify(manifest, null, 2) + '\n')"
-                  echo "Updated manifest name to: $(bun --eval "console.log(require('./$MANIFEST_PATH').name)")"
-
-            - name: Re-zip Chrome extension with modified manifest
-              run: |
-                  cd .output
-                  # Find the chrome directory (e.g., chorus-2.8.0-beta-chrome)
-                  CHROME_DIR=$(find . -maxdepth 1 -type d -name "*-chrome" | head -n 1)
+                  # Find the chrome build directory
+                  CHROME_DIR=$(find .output -maxdepth 1 -type d -name "*-chrome" | head -n 1)
                   if [ -z "$CHROME_DIR" ]; then
                     echo "Error: Chrome build directory not found"
+                    echo "Contents of .output:"
+                    ls -la .output
                     exit 1
                   fi
+
+                  echo "Found Chrome build directory: $CHROME_DIR"
+
+                  # Find and modify manifest.json
+                  MANIFEST_PATH="$CHROME_DIR/manifest.json"
+                  if [ ! -f "$MANIFEST_PATH" ]; then
+                    echo "Error: manifest.json not found at $MANIFEST_PATH"
+                    exit 1
+                  fi
+
+                  echo "Modifying manifest at: $MANIFEST_PATH"
+                  node -e "const fs = require('fs'); const manifest = JSON.parse(fs.readFileSync('$MANIFEST_PATH', 'utf8')); manifest.name = manifest.name + ' (BETA)'; fs.writeFileSync('$MANIFEST_PATH', JSON.stringify(manifest, null, 2) + '\n');"
+
+                  # Verify the change
+                  echo "Updated manifest name to: $(node -e "console.log(JSON.parse(require('fs').readFileSync('$MANIFEST_PATH', 'utf8')).name)")"
+
+            - name: Zip Chrome extension with modified manifest
+              run: |
+                  cd .output
+                  CHROME_DIR=$(find . -maxdepth 1 -type d -name "*-chrome" | head -n 1)
                   CHROME_DIR_NAME=$(basename "$CHROME_DIR")
                   ZIP_NAME="${CHROME_DIR_NAME}.zip"
 
-                  echo "Re-zipping $CHROME_DIR_NAME to $ZIP_NAME"
+                  echo "Zipping $CHROME_DIR_NAME to $ZIP_NAME"
 
-                  # Remove old zip if exists
-                  rm -f "$ZIP_NAME"
-
-                  # Create new zip with modified manifest
                   cd "$CHROME_DIR_NAME"
                   zip -r "../$ZIP_NAME" . -q
                   cd ..
