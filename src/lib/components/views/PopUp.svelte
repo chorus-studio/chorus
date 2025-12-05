@@ -22,8 +22,9 @@
 
     import { getColours } from '$lib/utils/vibrant-colors'
     import { getCheckPermissionsService } from '$lib/utils/check-permissions'
+    import { getVersion } from '$lib/utils/version'
 
-    const version = chrome.runtime.getManifest().version
+    const version = getVersion()
 
     let { pip = false }: { pip?: boolean } = $props()
 
