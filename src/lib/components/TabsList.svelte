@@ -26,10 +26,11 @@
     import { playbackStore } from '$lib/stores/playback'
     import { settingsStore } from '$lib/stores/settings'
     import { volumeStore, type VolumeType } from '$lib/stores/volume'
+    import { getVersion } from '$lib/utils/version'
 
     let { pip = false }: { pip?: boolean } = $props()
 
-    const version = chrome.runtime.getManifest().version
+    const version = getVersion()
 
     const VIEW_KEY = 'local:chorus_view'
 
