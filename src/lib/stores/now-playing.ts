@@ -126,8 +126,14 @@ function createNowPlayingStore() {
         const songInfo = getSongInfo()
         const currentData = get(store)
         if (songChanged) {
-            if (!songInfo?.blocked) delete currentData?.blocked
-            if (!songInfo?.snip) delete currentData?.snip
+            // When song changes, ensure we start fresh without old snip/blocked data
+            // This prevents race conditions where old track data persists
+            delete currentData?.blocked
+            delete currentData?.snip
+
+            // Only restore snip/blocked if the new song explicitly has them
+            // This ensures we don't carry over old track's snip to new track
+
             // Only update playback if the new song explicitly has different playback settings
             // Otherwise preserve current playback settings (user-set rates)
             const newPlayback = 'playback' in songInfo ? songInfo.playback : undefined
