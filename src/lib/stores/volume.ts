@@ -60,7 +60,7 @@ function createVolumeStore() {
         }
     }
 
-    async function updateVolume(state: Partial<VolumeState>) {
+    async function updateVolume(state: Partial<VolumeState>, shouldDispatch = true) {
         update((prev) => ({ ...prev, ...state }))
         const newState = get(store)
         isUpdatingStorage = true
@@ -71,10 +71,12 @@ function createVolumeStore() {
         } finally {
             isUpdatingStorage = false
         }
-        dispatchVolumeEvent()
+        if (shouldDispatch) {
+            dispatchVolumeEvent()
+        }
     }
 
-    async function resetVolume() {
+    async function resetVolume(shouldDispatch = true) {
         update((prev) => ({ ...prev, value: prev.default_volume[prev.type] }))
         const newState = get(store)
         isUpdatingStorage = true
@@ -85,7 +87,9 @@ function createVolumeStore() {
         } finally {
             isUpdatingStorage = false
         }
-        dispatchVolumeEvent()
+        if (shouldDispatch) {
+            dispatchVolumeEvent()
+        }
     }
 
     storage.getItem<VolumeState>(VOLUME_STORE_KEY).then((volume) => {

@@ -43,7 +43,7 @@
     let currentVibrancy = $state<ThemeVibrancy>($settingsStore.theme.vibrancy ?? 'Auto')
 
     async function toggleVolumeMute() {
-        await volumeStore.updateVolume({ muted: !$volumeStore.muted })
+        await volumeStore.updateVolume({ muted: !$volumeStore.muted }, false)
         port?.postMessage({ type: 'volume', data: $volumeStore })
     }
 
