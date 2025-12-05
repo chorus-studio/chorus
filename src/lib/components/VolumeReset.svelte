@@ -7,10 +7,11 @@
     import * as HoverCard from '$lib/components/ui/hover-card'
     import { Button, buttonVariants } from '$lib/components/ui/button'
 
-    let { pip = false }: { pip?: boolean } = $props()
+    let { pip = false, port = null }: { pip?: boolean; port?: chrome.runtime.Port | null } = $props()
 
     async function handleResetVolume() {
-        await volumeStore.resetVolume()
+        await volumeStore.resetVolume(false)
+        port?.postMessage({ type: 'volume', data: $volumeStore })
     }
 
     async function updateVolume({ type, value }: { type: VolumeType; value: number }) {
