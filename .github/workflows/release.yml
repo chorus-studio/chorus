@@ -77,3 +77,10 @@ jobs:
                   FIREFOX_EXTENSION_ID: ${{ secrets.AMO_ID }}
                   FIREFOX_JWT_ISSUER: ${{ secrets.AMO_ISSUER }}
                   FIREFOX_JWT_SECRET: ${{ secrets.AMO_SECRET }}
+
+            - name: Sync main back to develop
+              run: |
+                  git fetch origin develop
+                  git checkout develop
+                  git merge main --no-edit
+                  git push origin develop
