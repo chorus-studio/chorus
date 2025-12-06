@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v2.7.2
+
+[compare changes](https://github.com/chorus-studio/chorus/compare/v2.7.1...v2.7.2)
+
+### 🏡 Chore
+
+- Merge develop to main for release ([#271](https://github.com/chorus-studio/chorus/pull/271))
+
+### ❤️ Contributors
+
+- Charles ([@cdrani](https://github.com/cdrani))
+
 ## v2.7.1
 
 [compare changes](https://github.com/chorus-studio/chorus/compare/v2.7.0...v2.7.1)
