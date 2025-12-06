@@ -22,6 +22,9 @@
 
     import { getColours } from '$lib/utils/vibrant-colors'
     import { getCheckPermissionsService } from '$lib/utils/check-permissions'
+    import { getVersion } from '$lib/utils/version'
+
+    const version = getVersion()
 
     let { pip = false }: { pip?: boolean } = $props()
 
@@ -40,7 +43,7 @@
     let currentVibrancy = $state<ThemeVibrancy>($settingsStore.theme.vibrancy ?? 'Auto')
 
     async function toggleVolumeMute() {
-        await volumeStore.updateVolume({ muted: !$volumeStore.muted })
+        await volumeStore.updateVolume({ muted: !$volumeStore.muted }, false)
         port?.postMessage({ type: 'volume', data: $volumeStore })
     }
 
@@ -137,6 +140,12 @@
         ? 'w-full'
         : 'w-[300px] bg-[var(--bg)] px-3.5 py-3'}"
 >
+    {#if !pip}
+        <div class="absolute left-3 top-0">
+            <span class="text-xs font-black text-[var(--text)] opacity-50">v{version}</span>
+        </div>
+    {/if}
+
     <div
         class="{pip
             ? 'absolute -top-1.5 right-1'

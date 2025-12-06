@@ -26,8 +26,11 @@
     import { playbackStore } from '$lib/stores/playback'
     import { settingsStore } from '$lib/stores/settings'
     import { volumeStore, type VolumeType } from '$lib/stores/volume'
+    import { getVersion } from '$lib/utils/version'
 
     let { pip = false }: { pip?: boolean } = $props()
+
+    const version = getVersion()
 
     const VIEW_KEY = 'local:chorus_view'
 
@@ -242,6 +245,13 @@
                 </div>
                 <ActionButtons tab={activeTab} />
             {/if}
+            <div
+                class="absolute {pip
+                    ? '-bottom-4'
+                    : '-bottom-3'} left-1/2 flex w-full -translate-x-1/2 justify-center"
+            >
+                <span class="text-xs font-black text-[var(--text)] opacity-50">v{version}</span>
+            </div>
         </Tabs.Content>
     {/if}
 </Tabs.Root>

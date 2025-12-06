@@ -3,7 +3,6 @@
     import { ModeWatcher, setMode } from 'mode-watcher'
     import { mediaStore } from '$lib/stores/media'
     import { nowPlaying } from '$lib/stores/now-playing'
-    import { QueueObserver } from '$lib/observers/queue'
     import { trackObserver } from '$lib/observers/track'
     import { playbackObserver } from '$lib/observers/playback'
     import { TracklistObserver } from '$lib/observers/tracklist'
@@ -52,8 +51,6 @@
         setupListener()
         const tracklistObserver = new TracklistObserver()
         tracklistObserver.observe()
-        const queueObserver = new QueueObserver()
-        queueObserver.observe()
         checkIfPipSupported()
 
         return () => {
@@ -62,7 +59,6 @@
             playbackObserver.disconnect()
             tracklistObserver.disconnect()
             trackObserver.disconnect()
-            queueObserver.disconnect()
             removeListener()
         }
     })

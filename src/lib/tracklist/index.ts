@@ -117,11 +117,18 @@ export class TrackList {
         return isLiked
     }
 
+    getCoverArt(row: HTMLElement) {
+        const image = row.querySelector('img') as HTMLImageElement
+        if (!image?.src) return null
+        return image.src
+    }
+
     async generateSimpleTrack(row: HTMLElement) {
         const track = trackSongInfo(row)
         if (!track?.track_id) return
 
         const isLiked = await this.isLiked(row)
+        const cover = track.cover || this.getCoverArt(row)
         dataStore.updateUserCollection({
             track_id: track.track_id,
             liked: isLiked
@@ -130,6 +137,7 @@ export class TrackList {
         await dataStore.updateTrack({
             track_id: track.track_id,
             value: {
+                cover,
                 liked: isLiked,
                 track_id: track.track_id,
                 song_id: track.id!

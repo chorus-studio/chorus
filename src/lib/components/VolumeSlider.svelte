@@ -12,17 +12,17 @@
     let { port, pip = false }: { port: chrome.runtime.Port | null; pip?: boolean } = $props()
 
     async function handleVolumeChange(value: number) {
-        await volumeStore.updateVolume({ value })
+        await volumeStore.updateVolume({ value }, false)
         port?.postMessage({ type: 'volume', data: $volumeStore })
     }
 
     async function handleMute() {
-        await volumeStore.updateVolume({ muted: !$volumeStore.muted })
+        await volumeStore.updateVolume({ muted: !$volumeStore.muted }, false)
         port?.postMessage({ type: 'volume', data: $volumeStore })
     }
 
     async function handleVolumeTypeChange(value: string) {
-        await volumeStore.updateVolume({ type: value as VolumeType })
+        await volumeStore.updateVolume({ type: value as VolumeType }, false)
         port?.postMessage({ type: 'volume', data: $volumeStore })
     }
 
@@ -38,7 +38,7 @@
         : 'max-w-[220px]'} items-center justify-between gap-x-2 self-end"
 >
     <div class="-mt-4">
-        <VolumeReset {pip} />
+        <VolumeReset {pip} {port} />
     </div>
 
     {#if pip}

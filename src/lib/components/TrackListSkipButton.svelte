@@ -3,7 +3,6 @@
     import * as Tooltip from '$lib/components/ui/tooltip'
     import { buttonVariants } from '$lib/components/ui/button'
 
-    import { queue } from '$lib/observers/queue'
     import { dataStore } from '$lib/stores/data'
     import { trackObserver } from '$lib/observers/track'
     import { nowPlaying } from '$lib/stores/now-playing'
@@ -12,20 +11,58 @@
     let { track }: { track: SimpleTrack } = $props()
     let isBlocked = $state(track?.blocked ?? false)
 
+    // Listen for unblock events from BlockedTracksDialog (event-driven, no polling)
+    $effect(() => {
+        if (!isBlocked) return
+
+        const handleUnblock = (event: Event) => {
+            const customEvent = event as CustomEvent<{ track_id: string }>
+            if (customEvent.detail.track_id === track.track_id) {
+                isBlocked = false
+            }
+        }
+
+        document.addEventListener('chorus:track-unblocked', handleUnblock)
+        return () => document.removeEventListener('chorus:track-unblocked', handleUnblock)
+    })
+
+    function getCoverArt() {
+        const image = document.querySelector(
+            'button[aria-label="View album artwork"] img'
+        ) as HTMLImageElement
+        if (!image?.src) return null
+        return image.src
+    }
+
     async function handleBlock() {
         isBlocked = !isBlocked
+
         if (track) {
-            await dataStore.updateTrack({ track_id: track.track_id, value: { blocked: isBlocked } })
+            const cover = track?.cover || getCoverArt()
+            await dataStore.updateTrack({
+                track_id: track.track_id,
+                value: { blocked: isBlocked, cover }
+            })
 
+            // Emit event for reactive updates
             if (isBlocked) {
-                // When blocking, refresh queue to remove track
-                await queue.refreshQueue()
-            } else {
-                // When unblocking, try intelligent restoration
-                await queue.restoreUnblockedTrack(track.track_id)
-            }
+                document.dispatchEvent(
+                    new CustomEvent('chorus:track-blocked', {
+                        detail: { track_id: track.track_id }
+                    })
+                )
 
-            if (track?.song_id === $nowPlaying.id) trackObserver?.skipTrack()
+                // If the blocked track is currently playing, skip it immediately
+                if (track?.song_id === $nowPlaying.id) {
+                    trackObserver?.skipTrack()
+                }
+            } else {
+                document.dispatchEvent(
+                    new CustomEvent('chorus:track-unblocked', {
+                        detail: { track_id: track.track_id }
+                    })
+                )
+            }
         }
     }
 </script>

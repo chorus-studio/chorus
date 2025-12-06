@@ -1,6 +1,5 @@
 import { get } from 'svelte/store'
 import { loopStore } from '$lib/stores/loop'
-import { queue } from '$lib/observers/queue'
 import { mediaStore } from '$lib/stores/media'
 import { configStore } from '$lib/stores/config'
 import { effectsStore } from '$lib/stores/effects'
@@ -23,6 +22,8 @@ export class TrackObserver {
     private notificationService: TrackNotificationService
     private boundProcessTimeUpdate: (event: CustomEvent) => void
     private boundProcessMediaPlayInit: (event: CustomEvent) => void
+    private processTimeoutId: NodeJS.Timeout | null = null
+    private muteTimeoutId: NodeJS.Timeout | null = null
 
     constructor() {
         // Inject dependencies for better testability
@@ -36,7 +37,6 @@ export class TrackObserver {
     async initialize() {
         playbackObserver.updateChorusUI()
         await this.processSongTransition()
-        await queue.refreshQueue()
         document.addEventListener(
             'FROM_MEDIA_TIMEUPDATE',
             this.boundProcessTimeUpdate as EventListener
@@ -111,23 +111,53 @@ export class TrackObserver {
         if (songInfo?.snip) {
             this.playbackController.setSeeking(true)
             this.playbackController.mute()
+            // Immediately set position to snip start to prevent playback from 0
+            this.updateCurrentTime(songInfo.snip.start_time)
         }
 
-        setTimeout(() => {
+        // Clear any pending unmute timeout to prevent accumulation
+        if (this.muteTimeoutId) {
+            clearTimeout(this.muteTimeoutId)
+        }
+
+        this.muteTimeoutId = setTimeout(async () => {
+            // Ensure audio chain is ready before unmuting to prevent "no audio" issues
+            try {
+                const mediaSource = (window as any).mediaSource
+                if (mediaSource) {
+                    const mediaElement = (mediaSource as any)._chorusMediaElement
+                    if (mediaElement?.audioManager) {
+                        await mediaElement.audioManager.ensureAudioChainReady()
+                    }
+                }
+            } catch (error) {
+                console.warn('Audio chain not ready, unmuting anyway:', error)
+            }
+
             this.playbackController.unMute()
             this.playbackController.setSeeking(false)
-        }, 50)
+            this.muteTimeoutId = null
+        }, 100) // Increased from 50ms to 100ms to give audio chain more time to setup
 
         await this.trackStateManager.setPlayback()
-        await queue.refreshQueue()
         await this.updateTrackType()
+
+        // Apply effects on track change (not just on media play init)
+        this.setEffect()
+
         await this.notificationService.showTrackChangeNotification(songInfo)
     }
 
     // Notification handling is now delegated to TrackNotificationService
 
     private async processTimeUpdate(event: CustomEvent) {
-        setTimeout(async () => {
+        // Cancel previous timeout to prevent accumulation
+        if (this.processTimeoutId) {
+            clearTimeout(this.processTimeoutId)
+        }
+
+        // Only ONE timeout active at a time
+        this.processTimeoutId = setTimeout(async () => {
             const currentSong = this.currentSong
 
             if (!currentSong || !this.playbackController.isControlEnabled) return
@@ -150,11 +180,11 @@ export class TrackObserver {
                 return this.updateCurrentTime(this.snip.start_time)
             }
 
-            // Early return if not at snip end
-            if (currentSong.snip && !this.isAtSnipEnd(currentTimeMS)) return
+            // Check if at or past snip end for auto-advance
+            const atSnipEnd = currentSong.snip && currentTimeMS >= currentSong.snip.end_time * 1000
 
-            // Handle looping
-            if (this.loop.looping && this.isAtSnipEnd(currentTimeMS)) {
+            // Handle looping if at snip end
+            if (this.loop.looping && currentSong.snip && this.isAtSnipEnd(currentTimeMS)) {
                 const loopHandled = await this.playbackController.handleLooping(currentTimeMS)
                 if (loopHandled) return
             }
@@ -164,16 +194,21 @@ export class TrackObserver {
                 history.pushState(null, '', location.pathname)
             }
 
-            // Handle track end or snip end
-            const atSnipEnd = currentSong.snip && currentTimeMS >= currentSong.snip.end_time * 1000
+            // Handle track end or snip end - auto-advance if at or past end
             const shouldSkip =
                 (currentSong.snip || currentSong.blocked) &&
                 (currentTimeMS >= currentSong.duration * 1000 || atSnipEnd)
 
             if (shouldSkip) {
                 this.skipTrack()
+                return
             }
-        }, 50)
+
+            // Early return if we have a snip but not yet at the end (still playing within snip)
+            if (currentSong.snip && !atSnipEnd) return
+
+            this.processTimeoutId = null
+        }, 100)
     }
 
     async disconnect() {
@@ -185,6 +220,16 @@ export class TrackObserver {
             'FROM_MEDIA_PLAY_INIT',
             this.boundProcessMediaPlayInit as EventListener
         )
+
+        // Clear any pending timeouts to prevent accumulation
+        if (this.processTimeoutId) {
+            clearTimeout(this.processTimeoutId)
+            this.processTimeoutId = null
+        }
+        if (this.muteTimeoutId) {
+            clearTimeout(this.muteTimeoutId)
+            this.muteTimeoutId = null
+        }
 
         // Clean up services
         this.notificationService.cleanup()

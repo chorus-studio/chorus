@@ -4,6 +4,7 @@ import { loopStore } from '$lib/stores/loop'
 import { configStore } from '$lib/stores/config'
 import { nowPlaying } from '$lib/stores/now-playing'
 import type { NowPlaying } from '$lib/stores/now-playing'
+import { snipStore } from '$lib/stores/snip'
 
 /**
  * Handles playback control operations
@@ -37,10 +38,13 @@ export class PlaybackController {
             this.mute()
         }
 
+        // Clear temporary snip store to prevent it from affecting the next track
+        snipStore.reset()
+
         const nextButton = document.querySelector(
             '[data-testid="control-button-skip-forward"]'
         ) as HTMLButtonElement
-        
+
         nextButton?.click()
     }
 

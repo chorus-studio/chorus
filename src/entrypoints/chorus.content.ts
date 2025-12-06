@@ -12,6 +12,7 @@ import LoopButton from '$lib/components/LoopButton.svelte'
 import SeekButton from '$lib/components/SeekButton.svelte'
 // import NewReleasesIcon from '$lib/components/NewReleasesIcon.svelte'
 import ChorusConfigDialog from '$lib/components/ChorusConfigDialog.svelte'
+import BlockedTracksDialog from '$lib/components/BlockedTracksDialog.svelte'
 
 async function injectChorusUI(ctx: ContentScriptContext) {
     await injectScript('/router.js')
@@ -28,65 +29,72 @@ async function injectChorusUI(ctx: ContentScriptContext) {
             const chorusUI = document.getElementById('chorus-ui')
             if (chorusUI) return
 
-            const skipBack = document.querySelector('[data-testid="control-button-skip-back"]')
-            const skipForward = document.querySelector(
-                '[data-testid="control-button-skip-forward"]'
-            )
+            // Batch all DOM queries upfront
+            const elements = {
+                skipBack: document.querySelector('[data-testid="control-button-skip-back"]'),
+                skipForward: document.querySelector('[data-testid="control-button-skip-forward"]'),
+                body: document.querySelector('body'),
+                formInput: document.querySelector('input[data-encore-id="formInput"]') as HTMLInputElement | null,
+                newFeedButton: document.querySelector('[data-testid="whats-new-feed-button"]'),
+                configDialog: document.getElementById('chorus-config-dialog-trigger'),
+                blockedTracksDialog: document.getElementById('blocked-tracks-dialog-trigger'),
+                seekBack: document.querySelector('#seek-player-rw-button'),
+                seekForward: document.querySelector('#seek-player-ff-button'),
+                loopButton: document.querySelector('#loop-button')
+            }
+
+            // Mount main app
             mount(App, { target: container })
-            const body = document.querySelector('body')
-            if (body) {
-                mount(Alert, { target: body })
+            if (elements.body) {
+                mount(Alert, { target: elements.body })
             }
 
-            const formInput = document.querySelector(
-                'input[data-encore-id="formInput"]'
-            ) as HTMLInputElement | null
-            if (formInput) {
-                formInput.style.paddingRight = '0 !important'
-                formInput.style.paddingLeft = '48px !important'
+            // Apply form input styles
+            if (elements.formInput) {
+                elements.formInput.style.paddingRight = '0 !important'
+                elements.formInput.style.paddingLeft = '48px !important'
             }
 
-            const newFeedButton = document.querySelector('[data-testid="whats-new-feed-button"]')
-            if (newFeedButton) {
-                // const newReleasesIcon = document.getElementById('chorus-new-releases')
-                const configDialog = document.getElementById('chorus-config-dialog-trigger')
-                // if (!newReleasesIcon) {
-                //     const releasesIcon = document.createElement('div')
-                //     newFeedButton.parentElement?.insertBefore(releasesIcon, newFeedButton)
-                //     mount(NewReleasesIcon, { target: releasesIcon })
-                // }
-                if (!configDialog) {
+            // Mount dialogs in newFeedButton area
+            if (elements.newFeedButton?.parentElement) {
+                const parent = elements.newFeedButton.parentElement
+
+                if (!elements.configDialog) {
                     const configDialog = document.createElement('div')
-                    newFeedButton.parentElement?.insertBefore(configDialog, newFeedButton)
+                    parent.insertBefore(configDialog, elements.newFeedButton)
                     mount(ChorusConfigDialog, { target: configDialog })
                 }
-            }
-            if (skipBack) {
-                const seekBack = document.querySelector('#seek-player-rw-button')
-                if (!seekBack) {
-                    const div = document.createElement('div')
-                    skipBack.parentElement?.insertBefore(div, skipBack)
-                    mount(SeekButton, { target: div, props: { role: 'seek-backward' } })
+                if (!elements.blockedTracksDialog) {
+                    const blockedDialog = document.createElement('div')
+                    parent.insertBefore(blockedDialog, elements.newFeedButton)
+                    mount(BlockedTracksDialog, { target: blockedDialog })
                 }
             }
-            if (!skipForward) return
 
-            const seekForward = document.querySelector('#seek-player-ff-button')
-            const loopButton = document.querySelector('#loop-button')
-            if (!(!seekForward && !loopButton)) return
+            // Mount seek back button
+            if (elements.skipBack?.parentElement && !elements.seekBack) {
+                const div = document.createElement('div')
+                elements.skipBack.parentElement.insertBefore(div, elements.skipBack)
+                mount(SeekButton, { target: div, props: { role: 'seek-backward' } })
+            }
 
-            const forwardDiv = document.createElement('div')
-            const loopDiv = document.createElement('div')
-            const parentElement = skipForward.parentElement
-            if (!parentElement?.lastElementChild) return
+            // Mount seek forward and loop buttons
+            if (elements.skipForward?.parentElement && !elements.seekForward && !elements.loopButton) {
+                const parentElement = elements.skipForward.parentElement
+                if (parentElement.lastElementChild) {
+                    const forwardDiv = document.createElement('div')
+                    const loopDiv = document.createElement('div')
 
-            parentElement?.insertBefore(forwardDiv, skipForward.nextSibling)
-            parentElement?.insertBefore(loopDiv, parentElement?.lastElementChild?.nextSibling)
-            mount(SeekButton, {
-                target: forwardDiv,
-                props: { role: 'seek-forward' }
-            })
-            mount(LoopButton, { target: loopDiv })
+                    parentElement.insertBefore(forwardDiv, elements.skipForward.nextSibling)
+                    parentElement.insertBefore(loopDiv, parentElement.lastElementChild.nextSibling)
+
+                    mount(SeekButton, {
+                        target: forwardDiv,
+                        props: { role: 'seek-forward' }
+                    })
+                    mount(LoopButton, { target: loopDiv })
+                }
+            }
         },
         onRemove: (app) => {
             if (app) unmount(app)

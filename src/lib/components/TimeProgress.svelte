@@ -57,12 +57,12 @@
         {/if}
 
         <div
+            {id}
             role="slider"
             tabindex={0}
             bind:this={sliderRef}
             aria-label="Time slider"
             class="relative w-full"
-            id={id ?? 'popup-time-progress'}
             aria-valuenow={currentPosition}
             onkeydown={setProgress}
             onmousedown={setProgress}

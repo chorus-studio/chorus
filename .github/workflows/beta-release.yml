@@ -1,0 +1,103 @@
+name: Beta Release to Chrome Web Store
+on:
+    push:
+        tags:
+            - 'v*-beta*'
+
+jobs:
+    validate:
+        name: Validate
+        uses: ./.github/workflows/validate.yml
+        secrets: inherit
+
+    beta-release:
+        name: Beta Release
+        runs-on: ubuntu-22.04
+        needs: [validate]
+        steps:
+            - uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+
+            - uses: oven-sh/setup-bun@v2
+
+            - name: Install dependencies
+              run: bun install --frozen-lockfile
+
+            - name: Extract version from tag
+              id: version
+              run: |
+                  TAG_VERSION=${GITHUB_REF#refs/tags/v}
+                  echo "version=$TAG_VERSION" >> "$GITHUB_OUTPUT"
+                  echo "Beta version: $TAG_VERSION"
+
+            - name: Update package.json version
+              run: |
+                  bun --eval "const pkg = require('./package.json'); pkg.version = '${{ steps.version.outputs.version }}'; require('fs').writeFileSync('./package.json', JSON.stringify(pkg, null, 2) + '\n')"
+
+            - name: Build Chrome extension
+              run: bun run build
+
+            - name: Modify manifest name to include BETA suffix
+              run: |
+                  # The build directory is .output/chrome-mv3
+                  CHROME_DIR=".output/chrome-mv3"
+                  if [ ! -d "$CHROME_DIR" ]; then
+                    echo "Error: Chrome build directory not found at $CHROME_DIR"
+                    echo "Contents of .output:"
+                    ls -la .output
+                    exit 1
+                  fi
+
+                  echo "Found Chrome build directory: $CHROME_DIR"
+
+                  # Find and modify manifest.json
+                  MANIFEST_PATH="$CHROME_DIR/manifest.json"
+                  if [ ! -f "$MANIFEST_PATH" ]; then
+                    echo "Error: manifest.json not found at $MANIFEST_PATH"
+                    exit 1
+                  fi
+
+                  echo "Modifying manifest at: $MANIFEST_PATH"
+                  node -e "const fs = require('fs'); const manifest = JSON.parse(fs.readFileSync('$MANIFEST_PATH', 'utf8')); manifest.name = manifest.name + ' (BETA)'; fs.writeFileSync('$MANIFEST_PATH', JSON.stringify(manifest, null, 2) + '\n');"
+
+                  # Verify the change
+                  echo "Updated manifest name to: $(node -e "console.log(JSON.parse(require('fs').readFileSync('$MANIFEST_PATH', 'utf8')).name)")"
+
+            - name: Zip Chrome extension with modified manifest
+              run: |
+                  cd .output/chrome-mv3
+                  ZIP_NAME="chorus-${{ steps.version.outputs.version }}-chrome.zip"
+
+                  echo "Creating zip: $ZIP_NAME"
+                  zip -r "../$ZIP_NAME" . -q
+
+                  cd ..
+                  echo "Created: $ZIP_NAME"
+                  ls -lh "$ZIP_NAME"
+
+            - name: Upload Artifacts
+              uses: actions/upload-artifact@v4
+              with:
+                  path: .output/*-chrome.zip
+                  if-no-files-found: error
+                  include-hidden-files: true
+
+            - name: Submit to Chrome Web Store (Beta)
+              run: |
+                  bun wxt submit --chrome-zip .output/*-chrome.zip
+              env:
+                  CHROME_EXTENSION_ID: ${{ secrets.BETA_EXTENSION_ID }}
+                  CHROME_CLIENT_ID: ${{ secrets.BETA_CLIENT_ID }}
+                  CHROME_CLIENT_SECRET: ${{ secrets.BETA_CLIENT_SECRET }}
+                  CHROME_REFRESH_TOKEN: ${{ secrets.BETA_REFRESH_TOKEN }}
+
+            - name: Create GitHub Pre-release
+              run: |
+                  gh release create ${{ github.ref_name }} \
+                    .output/*-chrome.zip \
+                    --title "Beta Release ${{ github.ref_name }}" \
+                    --generate-notes \
+                    --prerelease
+              env:
+                  GH_TOKEN: ${{ github.token }}
