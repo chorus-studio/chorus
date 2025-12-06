@@ -1,6 +1,6 @@
 {
     "name": "chorus",
-    "version": "2.7.0",
+    "version": "2.7.1",
     "devDependencies": {
         "@lucide/svelte": "^0.486.0",
         "@tailwindcss/vite": "^4.0.0",
