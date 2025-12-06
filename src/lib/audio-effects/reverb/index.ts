@@ -23,29 +23,39 @@ export default class Reverb {
     }
 
     async setReverbEffect(effect: string) {
+        console.log('Reverb.setReverbEffect called with:', effect)
         if (!this._audioManager.audioContext) {
-            throw new Error('AudioContext not initialized')
+            console.warn('Reverb: AudioContext not initialized yet, skipping')
+            return
         }
 
         this._audioContext = this._audioManager.audioContext
         if (effect === 'none') {
+            console.log('Reverb: disconnecting')
             this.cleanup()
-            return this._audioManager.disconnect()
+            if (this._audioManager.audioContext) {
+                this._audioManager.removeEffect('reverb')
+            }
+            return
         }
 
         try {
             const isImpulse = this.isImpulse(effect)
             if (isImpulse) {
                 await this.createImpulseReverb(effect)
+                console.log('Reverb: impulse reverb applied')
             } else {
                 await this.createDigitalReverb()
                 this.connectDigitalReverb()
                 this.applyReverbEffect(effect)
+                console.log('Reverb: digital reverb applied')
             }
         } catch (error) {
             console.error('Error setting reverb effect:', error)
             this.cleanup()
-            this._audioManager.disconnect()
+            if (this._audioManager.audioContext) {
+                this._audioManager.disconnect()
+            }
             throw error
         }
     }
@@ -79,15 +89,27 @@ export default class Reverb {
 
     private cleanup() {
         if (this._reverbWorkletNode) {
-            this._reverbWorkletNode.disconnect()
+            try {
+                this._reverbWorkletNode.disconnect()
+            } catch (e) {
+                // Ignore disconnect errors during cleanup
+            }
             this._reverbWorkletNode = undefined
         }
         if (this._reverbGainNode) {
-            this._reverbGainNode.disconnect()
+            try {
+                this._reverbGainNode.disconnect()
+            } catch (e) {
+                // Ignore disconnect errors during cleanup
+            }
             this._reverbGainNode = undefined
         }
         if (this._convolverNode) {
-            this._convolverNode.disconnect()
+            try {
+                this._convolverNode.disconnect()
+            } catch (e) {
+                // Ignore disconnect errors during cleanup
+            }
             this._convolverNode = undefined
         }
     }

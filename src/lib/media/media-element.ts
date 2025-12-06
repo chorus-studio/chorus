@@ -2,13 +2,16 @@ import MediaOverride from './media-override'
 import Reverb from '$lib/audio-effects/reverb'
 import type { Rate } from '$lib/stores/playback'
 import Equalizer from '$lib/audio-effects/equalizer'
+import MSProcessor from '$lib/audio-effects/ms-processor'
 import AudioManager from '$lib/audio-effects/audio-manager'
 export default class MediaElement {
     private source: HTMLMediaElement
     private _reverb: Reverb | null = null
     public mediaOverride?: MediaOverride
     private _equalizer: Equalizer | null = null
+    private _msProcessor: MSProcessor | null = null
     private _audioManager: AudioManager | null = null
+    private static hasGlobalListener = false
 
     constructor(source: HTMLMediaElement) {
         this.source = source
@@ -23,11 +26,13 @@ export default class MediaElement {
         this._audioManager = new AudioManager(this.source)
         this._reverb = new Reverb(this._audioManager)
         this._equalizer = new Equalizer(this._audioManager)
+        this._msProcessor = new MSProcessor(this._audioManager)
 
         this.mediaOverride = new MediaOverride({
             source: this.source,
             reverb: this._reverb!,
             equalizer: this._equalizer!,
+            msProcessor: this._msProcessor!,
             audioManager: this._audioManager!
         })
     }
@@ -47,9 +52,20 @@ export default class MediaElement {
 
             this.loadMediaOverride()
             document.dispatchEvent(new CustomEvent('FROM_MEDIA_PLAY_INIT'))
+
+            // Trigger re-application of stored effects after media is ready
+            window.postMessage({ type: 'REQUEST_EFFECT_REAPPLY' }, '*')
         })
 
-        window.addEventListener('message', (event) => {
+        // Register global listener only once for entire session
+        if (!MediaElement.hasGlobalListener) {
+            MediaElement.setupGlobalMessageListener()
+            MediaElement.hasGlobalListener = true
+        }
+    }
+
+    private static setupGlobalMessageListener(): void {
+        window.addEventListener('message', async (event) => {
             // Verify the origin for security
             if (event.source !== window) return
             if (event.data === '@execute_deferreds') return
@@ -57,30 +73,60 @@ export default class MediaElement {
             try {
                 const { type, data } = event.data
 
-                if (!this.mediaOverride) return
+                // Get current media source (always the active MediaElement)
+                const currentSource = (window as any).mediaSource
+                if (!currentSource) {
+                    if (type === 'FROM_EFFECTS_LISTENER') {
+                        console.warn('FROM_EFFECTS_LISTENER: No currentSource found')
+                    }
+                    return
+                }
 
+                // Get MediaElement instance attached to current source
+                const mediaElement = (currentSource as any)._chorusMediaElement as MediaElement
+                if (!mediaElement) {
+                    if (type === 'FROM_EFFECTS_LISTENER') {
+                        console.warn('FROM_EFFECTS_LISTENER: No mediaElement found')
+                    }
+                    return
+                }
+
+                // For effect-related messages, ensure mediaOverride is initialized
+                if (!mediaElement.mediaOverride && (type === 'FROM_EFFECTS_LISTENER' || type === 'FROM_PLAYBACK_LISTENER' || type === 'FROM_VOLUME_LISTENER')) {
+                    console.log('Initializing mediaOverride for', type)
+                    await mediaElement.loadMediaOverride()
+                }
+
+                if (!mediaElement.mediaOverride) {
+                    console.warn('Failed to initialize mediaOverride')
+                    return
+                }
+
+                // Process message for current MediaElement
                 switch (type) {
                     case 'FROM_NEW_RELEASES':
                         ;(window as any).navigateTo(data)
                         break
                     case 'FROM_PLAYBACK_LISTENER':
-                        this.mediaOverride.updateSoundTouch({
+                        mediaElement.mediaOverride.updateSoundTouch({
                             pitch: Number(data?.pitch) || 1,
                             semitone: Number(data?.semitone) || 0
                         })
-                        this.mediaOverride.updatePlaybackSettings(data.rate as Rate)
+                        mediaElement.mediaOverride.updatePlaybackSettings(data.rate as Rate)
                         break
 
                     case 'FROM_EFFECTS_LISTENER':
-                        this.mediaOverride.updateAudioEffect({
+                        console.log('FROM_EFFECTS_LISTENER received:', data)
+                        mediaElement.mediaOverride.updateAudioEffect({
                             clear: Boolean(data?.clear),
                             reverb: data?.reverb ? String(data.reverb) : undefined,
-                            equalizer: data?.equalizer ? String(data.equalizer) : undefined
+                            equalizer: data?.equalizer ? String(data.equalizer) : undefined,
+                            msProcessor: data?.msProcessor ? String(data.msProcessor) : undefined
                         })
                         break
 
                     case 'FROM_VOLUME_LISTENER':
-                        this.mediaOverride.updateVolume({
+                        mediaElement.mediaOverride.updateVolume({
                             value: Number(data?.value) || 0,
                             muted: Boolean(data?.muted),
                             type: String(data?.type) as 'linear' | 'logarithmic'
@@ -88,13 +134,45 @@ export default class MediaElement {
                         break
 
                     case 'FROM_CURRENT_TIME_LISTENER':
-                        this.mediaOverride.updateCurrentTime(Number(data) || 0)
+                        mediaElement.mediaOverride.updateCurrentTime(Number(data) || 0)
                         break
                 }
             } catch (error) {
                 console.warn('Error handling message:', error)
             }
         })
+    }
+
+    dispose(): void {
+        // Clean up audio manager
+        if (this._audioManager) {
+            this._audioManager.dispose()
+            this._audioManager = null
+        }
+
+        // Clean up reverb
+        if (this._reverb) {
+            ;(this._reverb as any).cleanup?.()
+            this._reverb = null
+        }
+
+        // Clean up equalizer
+        if (this._equalizer) {
+            this._equalizer.disconnect()
+            this._equalizer = null
+        }
+
+        // Clean up MS processor
+        if (this._msProcessor) {
+            ;(this._msProcessor as any).dispose?.()
+            this._msProcessor = null
+        }
+
+        // Clear media override
+        this.mediaOverride = undefined
+
+        // Remove reference from source
+        delete (this.source as any)._chorusMediaElement
     }
 
     get audioManager(): AudioManager | null {

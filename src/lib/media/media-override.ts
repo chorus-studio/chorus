@@ -1,11 +1,13 @@
 import Reverb from '$lib/audio-effects/reverb'
 import Equalizer from '$lib/audio-effects/equalizer'
+import MSProcessor from '$lib/audio-effects/ms-processor'
 import AudioManager from '$lib/audio-effects/audio-manager'
 import type { SoundTouchData, Rate } from '$lib/stores/playback'
 
 type MediaOverrideOptions = {
     reverb: Reverb
     equalizer: Equalizer
+    msProcessor: MSProcessor
     source: HTMLMediaElement
     audioManager: AudioManager
 }
@@ -13,6 +15,7 @@ type MediaOverrideOptions = {
 export default class MediaOverride {
     private reverb: Reverb
     private equalizer: Equalizer
+    private msProcessor: MSProcessor
     private source: HTMLMediaElement
     private audioManager: AudioManager
     private _sources: any[] = []
@@ -23,6 +26,7 @@ export default class MediaOverride {
         this.source = options.source
         this.reverb = options.reverb
         this.equalizer = options.equalizer
+        this.msProcessor = options.msProcessor
         this.audioManager = options.audioManager
 
         // Store reference to this MediaOverride instance on the media element
@@ -136,17 +140,49 @@ export default class MediaOverride {
         }
     }
 
-    async updateAudioEffect(effect: { clear?: boolean; reverb?: string; equalizer?: string }) {
-        if (!this.audioManager || !this.equalizer || !this.reverb) return
+    async updateAudioEffect(effect: { clear?: boolean; reverb?: string; equalizer?: string; msProcessor?: string }) {
+        console.log('MediaOverride.updateAudioEffect called with:', effect)
+        if (!this.audioManager || !this.equalizer || !this.reverb || !this.msProcessor) {
+            console.warn('Missing dependencies:', {
+                audioManager: !!this.audioManager,
+                equalizer: !!this.equalizer,
+                reverb: !!this.reverb,
+                msProcessor: !!this.msProcessor
+            })
+            return
+        }
 
         try {
             await this.audioManager.ensureAudioChainReady()
+
+            // If clear is requested, disconnect all effects
+            if (effect.clear) {
+                console.log('Clearing all effects')
+                this.audioManager.disconnect()
+                return
+            }
+
+            // Disconnect all effects first
             this.audioManager.disconnect()
 
-            if (effect.clear) return
+            // Apply frequency-domain effect (mutually exclusive: reverb OR equalizer)
+            // Priority: reverb > equalizer
+            if (effect?.reverb && effect.reverb !== 'none') {
+                console.log('Applying reverb effect:', effect.reverb)
+                await this.reverb.setReverbEffect(effect.reverb)
+            } else if (effect?.equalizer && effect.equalizer !== 'none') {
+                console.log('Applying equalizer effect:', effect.equalizer)
+                this.equalizer.setEQEffect(effect.equalizer)
+            }
 
-            if (effect?.equalizer) this.equalizer.setEQEffect(effect.equalizer)
-            if (effect?.reverb) await this.reverb.setReverbEffect(effect.reverb)
+            // Apply MS processor (can be combined with any frequency-domain effect)
+            // This is a stereo transformation that's independent of frequency/time processing
+            if (effect?.msProcessor && effect.msProcessor !== 'none') {
+                console.log('Applying MS processor effect:', effect.msProcessor)
+                await this.msProcessor.setMSEffect(effect.msProcessor)
+            }
+
+            console.log('Effect applied successfully')
         } catch (error) {
             console.error('Error updating audio effects:', error)
             this.audioManager.disconnect()

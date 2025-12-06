@@ -18,6 +18,14 @@ export default class AudioManager {
     private _currentVolume: number = 1
     private _volumeType: 'linear' | 'logarithmic' = 'linear'
 
+    // Track active effect nodes for multi-effect chaining
+    // Some effects (like equalizer) have separate input/output nodes
+    private _activeEffects: {
+        equalizer?: { input: AudioNode; output: AudioNode } | AudioNode
+        msProcessor?: AudioWorkletNode
+        reverb?: AudioNode
+    } = {}
+
     constructor(element: HTMLVideoElement | HTMLAudioElement) {
         this._element = element
         this._setupPromise = this.initialize()
@@ -240,13 +248,9 @@ export default class AudioManager {
     connectDigitalReverb(digitalReverbNode: AudioWorkletNode) {
         if (!this.isConnectable || !this._audioContext) return
 
-        // Clean up any existing connections
-        this.cleanupEffectChain()
-
-        // Create new connections
-        this._gainNode!.connect(digitalReverbNode)
-        digitalReverbNode.connect(this._soundTouchNode!)
-        this._soundTouchNode!.connect(this.destination!)
+        // Register effect and rebuild chain
+        this._activeEffects.reverb = digitalReverbNode
+        this.rebuildEffectChain()
     }
 
     connectImpulseReverb({
@@ -258,6 +262,9 @@ export default class AudioManager {
     }) {
         if (!this.isConnectable || !this._audioContext) return
 
+        // For impulse reverb, we need to handle wet/dry mixing
+        // This is complex, so for now keep the old behavior
+        // TODO: Refactor to support multi-effect with impulse reverb wet/dry
         this.cleanupEffectChain()
 
         const dryGainNode = this._audioContext.createGain()
@@ -276,34 +283,126 @@ export default class AudioManager {
         wetGainNode.connect(this._soundTouchNode!)
 
         this._soundTouchNode!.connect(this.destination!)
+
+        // Mark that reverb is active (but using old routing)
+        this._activeEffects.reverb = convolverNode
     }
 
-    connectEqualizer(equalizerNode: AudioNode) {
+    connectEqualizer(equalizerNode: AudioNode | { input: AudioNode; output: AudioNode }) {
         if (!this.isConnectable) return
 
-        // Clean up any existing connections
-        this.cleanupEffectChain()
+        // Register effect and rebuild chain
+        this._activeEffects.equalizer = equalizerNode
+        this.rebuildEffectChain()
+    }
 
-        this._gainNode!.connect(equalizerNode)
-        equalizerNode.connect(this._soundTouchNode!)
-        this._soundTouchNode!.connect(this.destination!)
+    connectMSProcessor(msProcessorNode: AudioWorkletNode) {
+        if (!this.isConnectable) return
+
+        // Register effect and rebuild chain
+        this._activeEffects.msProcessor = msProcessorNode
+        this.rebuildEffectChain()
     }
 
     private cleanupEffectChain() {
         if (!this._gainNode || !this._soundTouchNode) return
 
-        // Disconnect all existing connections
-        this._gainNode.disconnect()
-        this._soundTouchNode.disconnect()
+        try {
+            // Disconnect all existing connections
+            this._gainNode.disconnect()
+            this._soundTouchNode.disconnect()
 
-        // Reconnect the basic chain
-        this._gainNode.connect(this._soundTouchNode)
-        this._soundTouchNode.connect(this.destination!)
+            // Disconnect active effects
+            if (this._activeEffects.equalizer) {
+                if (typeof this._activeEffects.equalizer === 'object' && 'input' in this._activeEffects.equalizer) {
+                    this._activeEffects.equalizer.input.disconnect()
+                    this._activeEffects.equalizer.output.disconnect()
+                } else {
+                    this._activeEffects.equalizer.disconnect()
+                }
+            }
+            if (this._activeEffects.msProcessor) this._activeEffects.msProcessor.disconnect()
+            if (this._activeEffects.reverb) this._activeEffects.reverb.disconnect()
+        } catch (error) {
+            console.warn('Error during cleanup:', error)
+        }
+    }
+
+    private rebuildEffectChain() {
+        if (!this._gainNode || !this._soundTouchNode || !this.destination || !this.source) {
+            console.warn('Cannot rebuild chain - missing nodes:', {
+                gainNode: !!this._gainNode,
+                soundTouchNode: !!this._soundTouchNode,
+                destination: !!this.destination,
+                source: !!this.source
+            })
+            return
+        }
+
+        try {
+            this.cleanupEffectChain()
+
+            // CRITICAL: Reconnect source to gain node
+            this.source.connect(this._gainNode)
+
+            // Build dynamic chain: gain → [effects] → soundTouch → destination
+            let currentNode: AudioNode = this._gainNode
+
+            // Chain effects in order: equalizer → MS processor → reverb
+            if (this._activeEffects.equalizer) {
+                // Handle effects with separate input/output nodes (like equalizer with filter chain)
+                if (typeof this._activeEffects.equalizer === 'object' && 'input' in this._activeEffects.equalizer) {
+                    currentNode.connect(this._activeEffects.equalizer.input)
+                    currentNode = this._activeEffects.equalizer.output
+                    console.log('Connected equalizer (dual-node) to chain')
+                } else {
+                    currentNode.connect(this._activeEffects.equalizer)
+                    currentNode = this._activeEffects.equalizer
+                    console.log('Connected equalizer (single-node) to chain')
+                }
+            }
+
+            if (this._activeEffects.msProcessor) {
+                currentNode.connect(this._activeEffects.msProcessor)
+                currentNode = this._activeEffects.msProcessor
+                console.log('Connected MS processor to chain')
+            }
+
+            if (this._activeEffects.reverb) {
+                currentNode.connect(this._activeEffects.reverb)
+                currentNode = this._activeEffects.reverb
+                console.log('Connected reverb to chain')
+            }
+
+            // Connect final node to soundTouch
+            currentNode.connect(this._soundTouchNode)
+            this._soundTouchNode.connect(this.destination)
+
+            console.log('Effect chain rebuilt successfully:', {
+                hasEqualizer: !!this._activeEffects.equalizer,
+                hasMSProcessor: !!this._activeEffects.msProcessor,
+                hasReverb: !!this._activeEffects.reverb
+            })
+        } catch (error) {
+            console.error('Error rebuilding effect chain:', error)
+            throw error
+        }
     }
 
     disconnect() {
         if (!this.isConnectable) return
-        this.cleanupEffectChain()
+
+        // Clear all active effects
+        this._activeEffects = {}
+
+        // Rebuild with no effects (just gain → soundTouch → destination)
+        this.rebuildEffectChain()
+    }
+
+    removeEffect(effectType: 'equalizer' | 'msProcessor' | 'reverb') {
+        // Remove specific effect and rebuild chain
+        delete this._activeEffects[effectType]
+        this.rebuildEffectChain()
     }
 
     private async loadSoundTouch() {

@@ -5,7 +5,6 @@ export default class Equalizer {
     _filters: BiquadFilterNode[]
     _audioManager: AudioManager
     _audioContext?: AudioContext
-    _audioNode?: AudioNode
 
     constructor(audioManager: AudioManager) {
         this._filters = []
@@ -13,17 +12,21 @@ export default class Equalizer {
     }
 
     setEQEffect(effect: string) {
+        console.log('Equalizer.setEQEffect called with:', effect)
         if (!this._audioManager.audioContext) {
-            throw new Error('AudioContext not initialized')
+            console.warn('Equalizer: AudioContext not initialized yet, skipping')
+            return
         }
 
         this._audioContext = this._audioManager.audioContext
         if (effect === 'none') {
+            console.log('Equalizer: disconnecting')
             return this.disconnect()
         }
 
         try {
             this.#applyEQFilters(effect)
+            console.log('Equalizer: filters applied successfully')
         } catch (error) {
             console.error('Error setting EQ effect:', error)
             this.disconnect()
@@ -56,38 +59,51 @@ export default class Equalizer {
     }
 
     #applyEQFilters(effect: string) {
-        if (!this._audioManager.source) {
-            throw new Error('Audio source not initialized')
+        if (!this._audioManager.audioContext) {
+            throw new Error('AudioContext not initialized')
         }
+
+        this._audioContext = this._audioManager.audioContext
 
         // Disconnect existing filters
         this.disconnect()
 
-        // Create and connect new filters
+        // Create filters
         EQ_FILTERS.forEach((setting, index) => {
             const filter = this.createBiquadFilter({ setting, index, effect })
             this._filters.push(filter)
         })
 
-        // Connect filters in series
-        this._audioNode = this._audioManager.source
-        this._filters.forEach((filter) => {
-            this._audioNode?.connect(filter)
-            this._audioNode = filter
-        })
+        // Connect filters in series internally
+        if (this._filters.length > 0) {
+            for (let i = 0; i < this._filters.length - 1; i++) {
+                this._filters[i].connect(this._filters[i + 1])
+            }
 
-        // Connect the last filter to the destination
-        if (this._audioNode) {
-            this._audioManager.connectEqualizer(this._audioNode)
+            // Register the filter chain with separate input/output nodes
+            // AudioManager will connect: previousNode → filters[0] (input)
+            // Then use filters[last] (output) as currentNode for next effect
+            this._audioManager.connectEqualizer({
+                input: this._filters[0],
+                output: this._filters[this._filters.length - 1]
+            })
         }
     }
 
     disconnect() {
         this._filters.forEach((filter) => {
-            filter.disconnect()
+            try {
+                filter.disconnect()
+            } catch (e) {
+                // Ignore disconnect errors during cleanup
+            }
         })
 
         this._filters = []
-        this._audioManager.disconnect()
+
+        // Only remove effect if audio manager is still valid
+        if (this._audioManager?.audioContext) {
+            this._audioManager.removeEffect('equalizer')
+        }
     }
 }
