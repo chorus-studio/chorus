@@ -4,18 +4,21 @@
 class MSProcessor extends AudioWorkletProcessor {
     static get parameterDescriptors() {
         return [
-            ['mode', 0, 0, 9, 'k-rate'],          // Processing mode selector
-            ['width', 100, 0, 200, 'k-rate'],     // Stereo width percentage
-            ['midGain', 0, -12, 12, 'k-rate'],    // Mid channel gain in dB
-            ['sideGain', 0, -12, 12, 'k-rate'],   // Side channel gain in dB
-            ['balance', 0, -100, 100, 'k-rate']   // L/R balance
-        ].map(x => new Object({
-            name: x[0],
-            defaultValue: x[1],
-            minValue: x[2],
-            maxValue: x[3],
-            automationRate: x[4]
-        }))
+            ['mode', 0, 0, 9, 'k-rate'], // Processing mode selector
+            ['width', 100, 0, 200, 'k-rate'], // Stereo width percentage
+            ['midGain', 0, -12, 12, 'k-rate'], // Mid channel gain in dB
+            ['sideGain', 0, -12, 12, 'k-rate'], // Side channel gain in dB
+            ['balance', 0, -100, 100, 'k-rate'] // L/R balance
+        ].map(
+            (x) =>
+                new Object({
+                    name: x[0],
+                    defaultValue: x[1],
+                    minValue: x[2],
+                    maxValue: x[3],
+                    automationRate: x[4]
+                })
+        )
     }
 
     constructor() {
@@ -68,22 +71,22 @@ class MSProcessor extends AudioWorkletProcessor {
             let outL, outR
 
             switch (Math.floor(mode)) {
-                case 0: // None (passthrough)
+                case 0: // Bypass (passthrough)
                     outL = L
                     outR = R
                     break
 
-                case 1: // Left only (output left to both channels)
+                case 1: // Left only (left channel to left speaker, silence to right)
                     outL = L
-                    outR = L
+                    outR = 0
                     break
 
-                case 2: // Right only (output right to both channels)
-                    outL = R
+                case 2: // Right only (right channel to right speaker, silence to left)
+                    outL = 0
                     outR = R
                     break
 
-                case 3: // Mid only (center/mono content)
+                case 3: // Mid only (center/mono content to both speakers)
                     outL = mid
                     outR = mid
                     break
