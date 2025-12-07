@@ -3,6 +3,7 @@ import Equalizer from '$lib/audio-effects/equalizer'
 import MSProcessor from '$lib/audio-effects/ms-processor'
 import AudioManager from '$lib/audio-effects/audio-manager'
 import type { SoundTouchData, Rate } from '$lib/stores/playback'
+import type { MSParams } from '$lib/stores/ms-params'
 
 type MediaOverrideOptions = {
     reverb: Reverb
@@ -140,7 +141,12 @@ export default class MediaOverride {
         }
     }
 
-    async updateAudioEffect(effect: { clear?: boolean; reverb?: string; equalizer?: string; msProcessor?: string }) {
+    async updateAudioEffect(effect: {
+        clear?: boolean
+        reverb?: string
+        equalizer?: string
+        msProcessor?: string
+    }) {
         console.log('MediaOverride.updateAudioEffect called with:', effect)
         if (!this.audioManager || !this.equalizer || !this.reverb || !this.msProcessor) {
             console.warn('Missing dependencies:', {
@@ -186,6 +192,22 @@ export default class MediaOverride {
         } catch (error) {
             console.error('Error updating audio effects:', error)
             this.audioManager.disconnect()
+        }
+    }
+
+    async updateMSParams(params: MSParams): Promise<void> {
+        console.log('MediaOverride.updateMSParams called with:', params)
+        if (!this.msProcessor) {
+            console.warn('MS processor not initialized')
+            return
+        }
+
+        try {
+            await this.audioManager.ensureAudioChainReady()
+            await this.msProcessor.applyManualParams(params)
+            console.log('MS params applied successfully')
+        } catch (error) {
+            console.error('Error updating MS params:', error)
         }
     }
 }

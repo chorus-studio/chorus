@@ -92,7 +92,13 @@ export default class MediaElement {
                 }
 
                 // For effect-related messages, ensure mediaOverride is initialized
-                if (!mediaElement.mediaOverride && (type === 'FROM_EFFECTS_LISTENER' || type === 'FROM_PLAYBACK_LISTENER' || type === 'FROM_VOLUME_LISTENER')) {
+                if (
+                    !mediaElement.mediaOverride &&
+                    (type === 'FROM_EFFECTS_LISTENER' ||
+                        type === 'FROM_PLAYBACK_LISTENER' ||
+                        type === 'FROM_VOLUME_LISTENER' ||
+                        type === 'FROM_MS_PARAMS_LISTENER')
+                ) {
                     console.log('Initializing mediaOverride for', type)
                     await mediaElement.loadMediaOverride()
                 }
@@ -123,6 +129,11 @@ export default class MediaElement {
                             equalizer: data?.equalizer ? String(data.equalizer) : undefined,
                             msProcessor: data?.msProcessor ? String(data.msProcessor) : undefined
                         })
+                        break
+
+                    case 'FROM_MS_PARAMS_LISTENER':
+                        console.log('FROM_MS_PARAMS_LISTENER received:', data)
+                        mediaElement.mediaOverride.updateMSParams(data)
                         break
 
                     case 'FROM_VOLUME_LISTENER':

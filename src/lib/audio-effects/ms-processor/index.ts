@@ -1,5 +1,6 @@
 import AudioManager from '../audio-manager'
 import { MS_PRESETS } from './presets'
+import type { MSParams } from '$lib/stores/ms-params'
 
 export default class MSProcessor {
     private _audioManager: AudioManager
@@ -44,6 +45,30 @@ export default class MSProcessor {
         }
     }
 
+    async applyManualParams(params: MSParams) {
+        console.log('MSProcessor.applyManualParams called with:', params)
+        if (!this._audioManager.audioContext) {
+            console.warn('MSProcessor: AudioContext not initialized yet, skipping')
+            return
+        }
+
+        this._audioContext = this._audioManager.audioContext
+
+        try {
+            // Ensure processor is created and connected
+            if (!this._msWorkletNode) {
+                await this.createMSProcessor()
+                this.connectMSProcessor()
+            }
+
+            this.applyParams(params)
+            console.log('MSProcessor: manual params applied successfully')
+        } catch (error) {
+            console.error('Error applying manual MS params:', error)
+            throw error
+        }
+    }
+
     private async createMSProcessor() {
         if (!this._audioContext) {
             throw new Error('AudioContext not initialized')
@@ -63,15 +88,11 @@ export default class MSProcessor {
             }
 
             // Create the AudioWorklet node
-            this._msWorkletNode = new AudioWorkletNode(
-                this._audioContext,
-                'ms-processor',
-                {
-                    channelCountMode: 'explicit',
-                    channelCount: 2,
-                    outputChannelCount: [2]
-                }
-            )
+            this._msWorkletNode = new AudioWorkletNode(this._audioContext, 'ms-processor', {
+                channelCountMode: 'explicit',
+                channelCount: 2,
+                outputChannelCount: [2]
+            })
         } catch (error) {
             console.error('Failed to create MS processor worklet:', error)
             throw error
@@ -98,11 +119,20 @@ export default class MSProcessor {
             return
         }
 
+        // Apply preset parameters
+        this.applyParams(presetConfig)
+    }
+
+    private applyParams(params: Record<string, number>) {
+        if (!this._msWorkletNode || !this._audioContext) {
+            throw new Error('MS processor not initialized')
+        }
+
         // Apply each parameter with smooth ramping to avoid clicks
         const currentTime = this._audioContext.currentTime
         const rampTime = 0.05 // 50ms ramp
 
-        Object.entries(presetConfig).forEach(([paramName, value]) => {
+        Object.entries(params).forEach(([paramName, value]) => {
             const param = this._msWorkletNode?.parameters.get(paramName)
             if (param) {
                 param.linearRampToValueAtTime(value, currentTime + rampTime)
