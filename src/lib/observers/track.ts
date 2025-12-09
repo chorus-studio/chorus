@@ -22,8 +22,6 @@ export class TrackObserver {
     private notificationService: TrackNotificationService
     private boundProcessTimeUpdate: (event: CustomEvent) => void
     private boundProcessMediaPlayInit: (event: CustomEvent) => void
-    private processTimeoutId: NodeJS.Timeout | null = null
-    private muteTimeoutId: NodeJS.Timeout | null = null
 
     constructor() {
         // Inject dependencies for better testability
@@ -111,38 +109,15 @@ export class TrackObserver {
         if (songInfo?.snip) {
             this.playbackController.setSeeking(true)
             this.playbackController.mute()
-            // Immediately set position to snip start to prevent playback from 0
-            this.updateCurrentTime(songInfo.snip.start_time)
         }
 
-        // Clear any pending unmute timeout to prevent accumulation
-        if (this.muteTimeoutId) {
-            clearTimeout(this.muteTimeoutId)
-        }
-
-        this.muteTimeoutId = setTimeout(async () => {
-            // Ensure audio chain is ready before unmuting to prevent "no audio" issues
-            try {
-                const mediaSource = (window as any).mediaSource
-                if (mediaSource) {
-                    const mediaElement = (mediaSource as any)._chorusMediaElement
-                    if (mediaElement?.audioManager) {
-                        await mediaElement.audioManager.ensureAudioChainReady()
-                    }
-                }
-            } catch (error) {
-                console.warn('Audio chain not ready, unmuting anyway:', error)
-            }
-
+        setTimeout(() => {
             this.playbackController.unMute()
             this.playbackController.setSeeking(false)
-            this.muteTimeoutId = null
-        }, 100) // Increased from 50ms to 100ms to give audio chain more time to setup
+        }, 50)
 
         await this.trackStateManager.setPlayback()
         await this.updateTrackType()
-
-        // Apply effects on track change (not just on media play init)
         this.setEffect()
 
         await this.notificationService.showTrackChangeNotification(songInfo)
@@ -151,13 +126,7 @@ export class TrackObserver {
     // Notification handling is now delegated to TrackNotificationService
 
     private async processTimeUpdate(event: CustomEvent) {
-        // Cancel previous timeout to prevent accumulation
-        if (this.processTimeoutId) {
-            clearTimeout(this.processTimeoutId)
-        }
-
-        // Only ONE timeout active at a time
-        this.processTimeoutId = setTimeout(async () => {
+        setTimeout(async () => {
             const currentSong = this.currentSong
 
             if (!currentSong || !this.playbackController.isControlEnabled) return
@@ -180,9 +149,6 @@ export class TrackObserver {
                 return this.updateCurrentTime(this.snip.start_time)
             }
 
-            // Check if at or past snip end for auto-advance
-            const atSnipEnd = currentSong.snip && currentTimeMS >= currentSong.snip.end_time * 1000
-
             // Handle looping if at snip end
             if (this.loop.looping && currentSong.snip && this.isAtSnipEnd(currentTimeMS)) {
                 const loopHandled = await this.playbackController.handleLooping(currentTimeMS)
@@ -193,6 +159,9 @@ export class TrackObserver {
             if (snip?.is_shared && location?.search) {
                 history.pushState(null, '', location.pathname)
             }
+
+            // Check if at or past snip end for auto-advance
+            const atSnipEnd = currentSong.snip && currentTimeMS >= currentSong.snip.end_time * 1000
 
             // Handle track end or snip end - auto-advance if at or past end
             const shouldSkip =
@@ -206,9 +175,7 @@ export class TrackObserver {
 
             // Early return if we have a snip but not yet at the end (still playing within snip)
             if (currentSong.snip && !atSnipEnd) return
-
-            this.processTimeoutId = null
-        }, 100)
+        }, 50)
     }
 
     async disconnect() {
@@ -220,16 +187,6 @@ export class TrackObserver {
             'FROM_MEDIA_PLAY_INIT',
             this.boundProcessMediaPlayInit as EventListener
         )
-
-        // Clear any pending timeouts to prevent accumulation
-        if (this.processTimeoutId) {
-            clearTimeout(this.processTimeoutId)
-            this.processTimeoutId = null
-        }
-        if (this.muteTimeoutId) {
-            clearTimeout(this.muteTimeoutId)
-            this.muteTimeoutId = null
-        }
 
         // Clean up services
         this.notificationService.cleanup()

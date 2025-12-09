@@ -86,10 +86,6 @@ export default class Reverb {
             this._reverbGainNode.disconnect()
             this._reverbGainNode = undefined
         }
-        if (this._convolverNode) {
-            this._convolverNode.disconnect()
-            this._convolverNode = undefined
-        }
     }
 
     connectDigitalReverb() {
