@@ -15,16 +15,6 @@ function mediaOverride() {
         // Set the media source
         ;(window as any).mediaSource = source
 
-        // Dispose old MediaElement instance before creating new one
-        if (mediaElement) {
-            try {
-                mediaElement.dispose()
-            } catch (error) {
-                console.warn('Error disposing MediaElement:', error)
-            }
-            mediaElement = null
-        }
-
         // For cross-origin sources, just use direct playback
         try {
             const currentSrc = source.currentSrc

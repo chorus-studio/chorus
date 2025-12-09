@@ -1,16 +1,6 @@
 import SoundTouch from './soundtouch'
 import { SoundTouchData } from '$lib/stores/playback'
 
-// Singleton AudioContext to prevent multiple context creation
-let sharedAudioContext: AudioContext | null = null
-
-function getSharedAudioContext(): AudioContext {
-    if (!sharedAudioContext || sharedAudioContext.state === 'closed') {
-        sharedAudioContext = new AudioContext({ latencyHint: 'playback' })
-    }
-    return sharedAudioContext
-}
-
 export default class AudioManager {
     private _gainNode?: GainNode
     private _soundTouchNode?: AudioNode
@@ -23,14 +13,10 @@ export default class AudioManager {
 
     private _element: HTMLMediaElement | MediaStream
     private _source?: MediaStreamAudioSourceNode | MediaElementAudioSourceNode
-
-    // Static source map to persist across AudioManager instances
-    // Prevents creating duplicate source nodes for the same HTMLMediaElement
-    private static _sourceMap: Map<HTMLMediaElement, MediaElementAudioSourceNode> = new Map()
+    private _sourceMap: Map<HTMLMediaElement, MediaElementAudioSourceNode> = new Map()
 
     private _currentVolume: number = 1
     private _volumeType: 'linear' | 'logarithmic' = 'linear'
-    private _errorHandler?: (e: Event) => void
 
     constructor(element: HTMLVideoElement | HTMLAudioElement) {
         this._element = element
@@ -44,15 +30,14 @@ export default class AudioManager {
         // Set crossOrigin to anonymous to handle CORS
         this._element.crossOrigin = 'anonymous'
 
-        // Handle CORS errors - store reference for cleanup
-        this._errorHandler = (e) => {
+        // Handle CORS errors
+        this._element.addEventListener('error', (e) => {
             // Don't block playback on CORS errors
             if (this._element instanceof HTMLMediaElement) {
                 this._element.volume = 1
                 this._element.muted = false
             }
-        }
-        this._element.addEventListener('error', this._errorHandler)
+        })
 
         // Check if the source is cross-origin
         try {
@@ -80,21 +65,18 @@ export default class AudioManager {
 
         // Only proceed with Web Audio API setup for same-origin sources
         try {
-            // Use shared AudioContext singleton
-            this._audioContext = getSharedAudioContext()
+            // Create AudioContext if needed
+            if (!this._audioContext || this._audioContext.state === 'closed') {
+                this._audioContext = new AudioContext({ latencyHint: 'playback' })
+            }
 
             // Ensure context is running
             if (this._audioContext.state === 'suspended') {
                 await this._audioContext.resume()
             }
 
-            // Only cleanup effect chain if this is a re-initialization
-            // Don't call full cleanup() as it would destroy nodes we want to preserve
-            if (this._gainNode || this._soundTouchNode) {
-                // Just disconnect existing effect nodes, they'll be recreated
-                if (this._gainNode) this._gainNode.disconnect()
-                if (this._soundTouchNode) this._soundTouchNode.disconnect()
-            }
+            // Cleanup existing audio chain before re-initialization
+            this.cleanup()
 
             // Wait for the media to be loaded before creating the audio chain
             if (this._element instanceof HTMLMediaElement) {
@@ -105,7 +87,7 @@ export default class AudioManager {
                         this._element.addEventListener('loadedmetadata', async () => {
                             await this.setupAudioChain()
                             resolve()
-                        }, { once: true })
+                        })
                     })
                 }
             }
@@ -130,13 +112,13 @@ export default class AudioManager {
 
             // Check if we already have a source node for this element
             if (this._element instanceof HTMLMediaElement) {
-                const existingSource = AudioManager._sourceMap.get(this._element)
+                const existingSource = this._sourceMap.get(this._element)
                 if (existingSource) {
                     this._source = existingSource
                 } else {
                     // Create new source node
                     this._source = this._audioContext.createMediaElementSource(this._element)
-                    AudioManager._sourceMap.set(this._element, this._source)
+                    this._sourceMap.set(this._element, this._source)
                 }
             }
 
@@ -337,11 +319,9 @@ export default class AudioManager {
 
     cleanup() {
         try {
-            // DON'T disconnect the source node - it's bound to the HTMLMediaElement
-            // and must persist across AudioManager instances
-            // The source node is stored in the static _sourceMap and reused
-
-            // Only clean up the effect nodes
+            if (this._source) {
+                this._source.disconnect()
+            }
             if (this._gainNode) {
                 this._gainNode.disconnect()
                 this._gainNode = undefined
@@ -351,11 +331,11 @@ export default class AudioManager {
                 this._soundTouchNode = undefined
             }
             if (this.destination) {
-                // Don't disconnect the destination as it's the main output
                 this._destination = undefined
             }
 
-            // DON'T clear the static source map - it persists across all instances
+            // Clear source map
+            this._sourceMap.clear()
 
             // Clean up SoundTouch manager
             if (this._soundTouchManager) {
@@ -370,14 +350,10 @@ export default class AudioManager {
     dispose() {
         this.cleanup()
 
-        // Remove error event listener to prevent accumulation
-        if (this._errorHandler && this._element instanceof HTMLMediaElement) {
-            this._element.removeEventListener('error', this._errorHandler)
-            this._errorHandler = undefined
+        // Close AudioContext
+        if (this._audioContext && this._audioContext.state !== 'closed') {
+            this._audioContext.close()
         }
-
-        // Don't close the shared AudioContext - just disconnect from it
-        // The singleton context persists for reuse by other AudioManager instances
         this._audioContext = undefined
 
         this._isInitialized = false

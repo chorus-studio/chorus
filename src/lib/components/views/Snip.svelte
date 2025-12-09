@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { onMount } from 'svelte'
     import { snipStore } from '$lib/stores/snip'
     import { nowPlaying } from '$lib/stores/now-playing'
     import TimeSlider from '$lib/components/TimeSlider.svelte'
@@ -9,7 +10,7 @@
             is_shared: false,
             last_updated: 'start',
             start_time: $nowPlaying?.snip?.start_time ?? 0,
-            end_time: $nowPlaying?.snip?.end_time ?? $nowPlaying.duration
+            end_time: $nowPlaying?.snip?.end_time ?? ($nowPlaying?.duration ?? 0)
         })
     }
 

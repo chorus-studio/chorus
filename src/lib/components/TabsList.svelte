@@ -83,7 +83,7 @@
             is_shared: false,
             last_updated: 'start',
             start_time: track?.snip?.start_time ?? 0,
-            end_time: track?.snip?.end_time ?? $nowPlaying.duration
+            end_time: track?.snip?.end_time ?? ($nowPlaying?.duration ?? 0)
         })
     }
 
