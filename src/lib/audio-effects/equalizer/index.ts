@@ -12,7 +12,6 @@ export default class Equalizer {
     }
 
     setEQEffect(effect: string) {
-        console.log('Equalizer.setEQEffect called with:', effect)
         if (!this._audioManager.audioContext) {
             console.warn('Equalizer: AudioContext not initialized yet, skipping')
             return
@@ -20,13 +19,11 @@ export default class Equalizer {
 
         this._audioContext = this._audioManager.audioContext
         if (effect === 'none') {
-            console.log('Equalizer: disconnecting')
             return this.disconnect()
         }
 
         try {
             this.#applyEQFilters(effect)
-            console.log('Equalizer: filters applied successfully')
         } catch (error) {
             console.error('Error setting EQ effect:', error)
             this.disconnect()
@@ -65,8 +62,15 @@ export default class Equalizer {
 
         this._audioContext = this._audioManager.audioContext
 
-        // Disconnect existing filters
-        this.disconnect()
+        // Disconnect existing filters (but don't trigger chain rebuild)
+        this._filters.forEach((filter) => {
+            try {
+                filter.disconnect()
+            } catch (e) {
+                // Ignore disconnect errors during cleanup
+            }
+        })
+        this._filters = []
 
         // Create filters
         EQ_FILTERS.forEach((setting, index) => {

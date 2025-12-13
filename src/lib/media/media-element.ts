@@ -16,6 +16,8 @@ export default class MediaElement {
     constructor(source: HTMLMediaElement) {
         this.source = source
         this.source.crossOrigin = 'anonymous'
+        // Store reference to this MediaElement instance on the source
+        ;(this.source as any)._chorusMediaElement = this
         this.setupEventListeners()
     }
 

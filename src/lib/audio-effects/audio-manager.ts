@@ -128,6 +128,12 @@ export default class AudioManager {
                     this._source = this._audioContext.createMediaElementSource(this._element)
                     this._sourceMap.set(this._element, this._source)
                 }
+
+                // CRITICAL: When using Web Audio API, we must set the element volume to 1
+                // and NOT mute it, as the routing is now controlled by the audio graph
+                // The element's volume doesn't affect the Web Audio output
+                this._element.volume = 1
+                this._element.muted = false
             }
 
             // Create gain node if it doesn't exist
@@ -308,15 +314,31 @@ export default class AudioManager {
         if (!this._gainNode || !this._soundTouchNode) return
 
         try {
+            // CRITICAL: Disconnect the source from everything first
+            // This prevents duplicate connections when we rebuild
+            if (this.source) {
+                try {
+                    this.source.disconnect()
+                } catch (e) {
+                    // Source might not be connected yet, that's OK
+                }
+            }
+
             // Disconnect all existing connections
             this._gainNode.disconnect()
             this._soundTouchNode.disconnect()
 
             // Disconnect active effects
+            // NOTE: For equalizer with separate input/output nodes, we DON'T call disconnect()
+            // on them because they're part of an internal filter chain. Calling disconnect()
+            // would break the internal connections between filters. We only need to disconnect
+            // single-node effects or effects that manage their own internal state.
             if (this._activeEffects.equalizer) {
-                if (typeof this._activeEffects.equalizer === 'object' && 'input' in this._activeEffects.equalizer) {
-                    this._activeEffects.equalizer.input.disconnect()
-                    this._activeEffects.equalizer.output.disconnect()
+                if (
+                    typeof this._activeEffects.equalizer === 'object' &&
+                    'input' in this._activeEffects.equalizer
+                ) {
+                    // Don't disconnect - the equalizer manages its own internal chain
                 } else {
                     this._activeEffects.equalizer.disconnect()
                 }
@@ -330,12 +352,6 @@ export default class AudioManager {
 
     private rebuildEffectChain() {
         if (!this._gainNode || !this._soundTouchNode || !this.destination || !this.source) {
-            console.warn('Cannot rebuild chain - missing nodes:', {
-                gainNode: !!this._gainNode,
-                soundTouchNode: !!this._soundTouchNode,
-                destination: !!this.destination,
-                source: !!this.source
-            })
             return
         }
 
@@ -351,38 +367,31 @@ export default class AudioManager {
             // Chain effects in order: equalizer → MS processor → reverb
             if (this._activeEffects.equalizer) {
                 // Handle effects with separate input/output nodes (like equalizer with filter chain)
-                if (typeof this._activeEffects.equalizer === 'object' && 'input' in this._activeEffects.equalizer) {
+                if (
+                    typeof this._activeEffects.equalizer === 'object' &&
+                    'input' in this._activeEffects.equalizer
+                ) {
                     currentNode.connect(this._activeEffects.equalizer.input)
                     currentNode = this._activeEffects.equalizer.output
-                    console.log('Connected equalizer (dual-node) to chain')
                 } else {
                     currentNode.connect(this._activeEffects.equalizer)
                     currentNode = this._activeEffects.equalizer
-                    console.log('Connected equalizer (single-node) to chain')
                 }
             }
 
             if (this._activeEffects.msProcessor) {
                 currentNode.connect(this._activeEffects.msProcessor)
                 currentNode = this._activeEffects.msProcessor
-                console.log('Connected MS processor to chain')
             }
 
             if (this._activeEffects.reverb) {
                 currentNode.connect(this._activeEffects.reverb)
                 currentNode = this._activeEffects.reverb
-                console.log('Connected reverb to chain')
             }
 
             // Connect final node to soundTouch
             currentNode.connect(this._soundTouchNode)
             this._soundTouchNode.connect(this.destination)
-
-            console.log('Effect chain rebuilt successfully:', {
-                hasEqualizer: !!this._activeEffects.equalizer,
-                hasMSProcessor: !!this._activeEffects.msProcessor,
-                hasReverb: !!this._activeEffects.reverb
-            })
         } catch (error) {
             console.error('Error rebuilding effect chain:', error)
             throw error
@@ -438,7 +447,7 @@ export default class AudioManager {
 
             // Clean up SoundTouch manager
             if (this._soundTouchManager) {
-                (this._soundTouchManager as any).dispose?.()
+                ;(this._soundTouchManager as any).dispose?.()
                 this._soundTouchManager = null
             }
         } catch (error) {

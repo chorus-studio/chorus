@@ -188,6 +188,14 @@ function createPlaybackStore() {
         set(syncedValues)
     })
 
+    // Listen for requests to reapply playback settings (e.g., after media element recreation)
+    window.addEventListener('message', (event) => {
+        if (event.source !== window) return
+        if (event.data?.type === 'REQUEST_EFFECT_REAPPLY') {
+            dispatchPlaybackSettings()
+        }
+    })
+
     return {
         reset,
         togglePin,

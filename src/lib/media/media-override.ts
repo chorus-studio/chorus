@@ -171,21 +171,23 @@ export default class MediaOverride {
             // Disconnect all effects first
             this.audioManager.disconnect()
 
-            // Apply frequency-domain effect (mutually exclusive: reverb OR equalizer)
-            // Priority: reverb > equalizer
-            if (effect?.reverb && effect.reverb !== 'none') {
-                console.log('Applying reverb effect:', effect.reverb)
-                await this.reverb.setReverbEffect(effect.reverb)
-            } else if (effect?.equalizer && effect.equalizer !== 'none') {
+            // Apply effects in the order they'll be chained: equalizer → MS processor → reverb
+            // Each effect can be applied independently
+            if (effect?.equalizer && effect.equalizer !== 'none') {
                 console.log('Applying equalizer effect:', effect.equalizer)
                 this.equalizer.setEQEffect(effect.equalizer)
             }
 
-            // Apply MS processor (can be combined with any frequency-domain effect)
-            // This is a stereo transformation that's independent of frequency/time processing
+            // Apply MS processor (can be combined with any other effect)
             if (effect?.msProcessor && effect.msProcessor !== 'none') {
                 console.log('Applying MS processor effect:', effect.msProcessor)
                 await this.msProcessor.setMSEffect(effect.msProcessor)
+            }
+
+            // Apply reverb (can be combined with any other effect)
+            if (effect?.reverb && effect.reverb !== 'none') {
+                console.log('Applying reverb effect:', effect.reverb)
+                await this.reverb.setReverbEffect(effect.reverb)
             }
 
             console.log('Effect applied successfully')

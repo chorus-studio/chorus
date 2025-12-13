@@ -99,8 +99,10 @@ function createMSParamsStore() {
     // Listen for requests to reapply params (e.g., after media element recreation)
     window.addEventListener('message', (event) => {
         if (event.source !== window) return
-        if (event.data?.type === 'REQUEST_MS_PARAMS_REAPPLY') {
-            console.log('Reapplying stored MS params after media recreation')
+        if (
+            event.data?.type === 'REQUEST_MS_PARAMS_REAPPLY' ||
+            event.data?.type === 'REQUEST_EFFECT_REAPPLY'
+        ) {
             dispatchParams()
         }
     })
