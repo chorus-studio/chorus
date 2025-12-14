@@ -14,6 +14,7 @@
     import Seek from '$lib/components/views/Seek.svelte'
     import Speed from '$lib/components/views/Speed.svelte'
     import PopUp from '$lib/components/views/PopUp.svelte'
+    import MS from '$lib/components/views/MS.svelte'
     import TrackInfo from '$lib/components/TrackInfo.svelte'
     import AvatarLogo from '$lib/components/AvatarLogo.svelte'
     import Settings from '$lib/components/views/Settings.svelte'
@@ -39,6 +40,7 @@
         'snip',
         'speed',
         'fx|eq',
+        'ms',
         'seek',
         'settings',
         pip ? '' : 'info'
@@ -52,6 +54,7 @@
     const components: Record<string, Component> = {
         snip: Snip,
         'fx|eq': FXEQ,
+        ms: MS,
         seek: Seek,
         speed: Speed,
         info: Info,
@@ -208,12 +211,13 @@
                 'player',
                 'snip',
                 'fx|eq',
+                'ms',
                 'speed'
             ].includes(activeTab)
                 ? 'space-y-2'
                 : ''} w-full flex-col"
         >
-            {#if !['speed', 'info', 'settings', 'support', 'player', 'fx|eq'].includes(activeTab)}
+            {#if !['speed', 'info', 'settings', 'support', 'player', 'fx|eq', 'ms'].includes(activeTab)}
                 <TrackInfo />
             {/if}
             {@const View = components[activeTab]}

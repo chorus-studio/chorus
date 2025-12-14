@@ -57,6 +57,7 @@ export default defineConfig({
                     '/icon/*',
                     '/sounds/*',
                     '/processor.js',
+                    '/ms-processor.js',
                     '/soundtouch.js',
                     '/content-scripts/*.css'
                 ],

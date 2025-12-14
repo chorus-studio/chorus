@@ -1,11 +1,14 @@
 import Reverb from '$lib/audio-effects/reverb'
 import Equalizer from '$lib/audio-effects/equalizer'
+import MSProcessor from '$lib/audio-effects/ms-processor'
 import AudioManager from '$lib/audio-effects/audio-manager'
 import type { SoundTouchData, Rate } from '$lib/stores/playback'
+import type { MSParams } from '$lib/stores/ms-params'
 
 type MediaOverrideOptions = {
     reverb: Reverb
     equalizer: Equalizer
+    msProcessor: MSProcessor
     source: HTMLMediaElement
     audioManager: AudioManager
 }
@@ -13,6 +16,7 @@ type MediaOverrideOptions = {
 export default class MediaOverride {
     private reverb: Reverb
     private equalizer: Equalizer
+    private msProcessor: MSProcessor
     private source: HTMLMediaElement
     private audioManager: AudioManager
     private _sources: any[] = []
@@ -23,6 +27,7 @@ export default class MediaOverride {
         this.source = options.source
         this.reverb = options.reverb
         this.equalizer = options.equalizer
+        this.msProcessor = options.msProcessor
         this.audioManager = options.audioManager
 
         // Store reference to this MediaOverride instance on the media element
@@ -136,20 +141,75 @@ export default class MediaOverride {
         }
     }
 
-    async updateAudioEffect(effect: { clear?: boolean; reverb?: string; equalizer?: string }) {
-        if (!this.audioManager || !this.equalizer || !this.reverb) return
+    async updateAudioEffect(effect: {
+        clear?: boolean
+        reverb?: string
+        equalizer?: string
+        msProcessor?: string
+    }) {
+        console.log('MediaOverride.updateAudioEffect called with:', effect)
+        if (!this.audioManager || !this.equalizer || !this.reverb || !this.msProcessor) {
+            console.warn('Missing dependencies:', {
+                audioManager: !!this.audioManager,
+                equalizer: !!this.equalizer,
+                reverb: !!this.reverb,
+                msProcessor: !!this.msProcessor
+            })
+            return
+        }
 
         try {
             await this.audioManager.ensureAudioChainReady()
+
+            // If clear is requested, disconnect all effects
+            if (effect.clear) {
+                console.log('Clearing all effects')
+                this.audioManager.disconnect()
+                return
+            }
+
+            // Disconnect all effects first
             this.audioManager.disconnect()
 
-            if (effect.clear) return
+            // Apply effects in the order they'll be chained: equalizer → MS processor → reverb
+            // Each effect can be applied independently
+            if (effect?.equalizer && effect.equalizer !== 'none') {
+                console.log('Applying equalizer effect:', effect.equalizer)
+                this.equalizer.setEQEffect(effect.equalizer)
+            }
 
-            if (effect?.equalizer) this.equalizer.setEQEffect(effect.equalizer)
-            if (effect?.reverb) await this.reverb.setReverbEffect(effect.reverb)
+            // Apply MS processor (can be combined with any other effect)
+            if (effect?.msProcessor && effect.msProcessor !== 'none') {
+                console.log('Applying MS processor effect:', effect.msProcessor)
+                await this.msProcessor.setMSEffect(effect.msProcessor)
+            }
+
+            // Apply reverb (can be combined with any other effect)
+            if (effect?.reverb && effect.reverb !== 'none') {
+                console.log('Applying reverb effect:', effect.reverb)
+                await this.reverb.setReverbEffect(effect.reverb)
+            }
+
+            console.log('Effect applied successfully')
         } catch (error) {
             console.error('Error updating audio effects:', error)
             this.audioManager.disconnect()
+        }
+    }
+
+    async updateMSParams(params: MSParams): Promise<void> {
+        console.log('MediaOverride.updateMSParams called with:', params)
+        if (!this.msProcessor) {
+            console.warn('MS processor not initialized')
+            return
+        }
+
+        try {
+            await this.audioManager.ensureAudioChainReady()
+            await this.msProcessor.applyManualParams(params)
+            console.log('MS params applied successfully')
+        } catch (error) {
+            console.error('Error updating MS params:', error)
         }
     }
 }

@@ -119,6 +119,14 @@ function createVolumeStore() {
         set(syncedVolume)
     })
 
+    // Listen for requests to reapply volume (e.g., after media element recreation)
+    window.addEventListener('message', (event) => {
+        if (event.source !== window) return
+        if (event.data?.type === 'REQUEST_EFFECT_REAPPLY') {
+            dispatchVolumeEvent()
+        }
+    })
+
     return {
         mute,
         unMute,

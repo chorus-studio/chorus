@@ -7,11 +7,13 @@ const AUDIO_EFFECTS_STORE_KEY = 'local:chorus_audio_effects'
 export type AudioEffect = {
     equalizer: string
     reverb: string
+    msProcessor: string
 }
 
 export const defaultAudioEffect: AudioEffect = {
     equalizer: 'none',
-    reverb: 'none'
+    reverb: 'none',
+    msProcessor: 'none'
 }
 
 function createAudioEffectsStore() {
@@ -20,7 +22,9 @@ function createAudioEffectsStore() {
     let isUpdatingStorage = false
 
     function dispatchEffect() {
-        window.postMessage({ type: 'FROM_EFFECTS_LISTENER', data: get(effectsStore) }, '*')
+        const effectData = get(effectsStore)
+        console.log('effectsStore.dispatchEffect:', effectData)
+        window.postMessage({ type: 'FROM_EFFECTS_LISTENER', data: effectData }, '*')
     }
 
     async function updateEffect({ key, value }: { key: keyof AudioEffect; value: string }) {
@@ -77,6 +81,15 @@ function createAudioEffectsStore() {
 
         const syncedValue = syncWithType(value, defaultAudioEffect)
         set(syncedValue)
+    })
+
+    // Listen for requests to reapply effects (e.g., after media element recreation)
+    window.addEventListener('message', (event) => {
+        if (event.source !== window) return
+        if (event.data?.type === 'REQUEST_EFFECT_REAPPLY') {
+            console.log('Reapplying stored effects after media recreation')
+            dispatchEffect()
+        }
     })
 
     return {

@@ -29,6 +29,7 @@ export type ConfigState = {
         spotify_eq_presets: string[]
         room_reverb_presets: string[]
         custom_reverb_presets: string[]
+        ms_processor_presets: string[]
     }
 }
 
@@ -49,7 +50,7 @@ export const defaultAudioPreset: Omit<AudioPreset, 'id'> = {
             preserves_pitch: true
         }
     },
-    effect: { equalizer: 'none', reverb: 'none' }
+    effect: { equalizer: 'none', reverb: 'none', msProcessor: 'none' }
 }
 
 export const createAudioPreset = (): AudioPreset => ({
@@ -71,7 +72,8 @@ export const defaultConfig: ConfigState = {
         custom_eq_presets: [],
         spotify_eq_presets: [],
         room_reverb_presets: [],
-        custom_reverb_presets: []
+        custom_reverb_presets: [],
+        ms_processor_presets: []
     }
 }
 

@@ -17,7 +17,7 @@
         topOptions,
         bottomOptions
     }: {
-        type: 'reverb' | 'equalizer'
+        type: 'reverb' | 'equalizer' | 'msProcessor'
         topSelected: boolean
         topLabel: string
         bottomLabel: string

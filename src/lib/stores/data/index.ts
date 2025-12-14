@@ -40,6 +40,7 @@ class DataStore {
         sessionStorage.setItem('chorus:sounds_path', chrome.runtime.getURL('sounds/'))
         sessionStorage.setItem('chorus:reverb_path', chrome.runtime.getURL('processor.js'))
         sessionStorage.setItem('chorus:soundtouch_path', chrome.runtime.getURL('soundtouch.js'))
+        sessionStorage.setItem('chorus:ms_processor_path', chrome.runtime.getURL('ms-processor.js'))
 
         await this.sync()
         await this.populate()

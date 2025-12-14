@@ -8,6 +8,12 @@
     import { TracklistObserver } from '$lib/observers/tracklist'
     import { setTheme, removeTheme, type ThemeName } from '$lib/utils/theming'
 
+    // Import stores to ensure they're initialized and set up their listeners
+    import '$lib/stores/effects'
+    import '$lib/stores/playback'
+    import '$lib/stores/ms-params'
+    import '$lib/stores/volume'
+
     import PipButton from '$lib/components/PipButton.svelte'
     import SkipButton from '$lib/components/SkipButton.svelte'
     import HeartButton from '$lib/components/HeartButton.svelte'
