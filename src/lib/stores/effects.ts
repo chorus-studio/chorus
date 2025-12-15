@@ -23,8 +23,9 @@ function createAudioEffectsStore() {
 
     function dispatchEffect() {
         const effectData = get(effectsStore)
-        console.log('effectsStore.dispatchEffect:', effectData)
-        window.postMessage({ type: 'FROM_EFFECTS_LISTENER', data: effectData }, '*')
+        if (typeof window !== 'undefined') {
+            window.postMessage({ type: 'FROM_EFFECTS_LISTENER', data: effectData }, '*')
+        }
     }
 
     async function updateEffect({ key, value }: { key: keyof AudioEffect; value: string }) {
@@ -70,27 +71,26 @@ function createAudioEffectsStore() {
             set(syncedValue)
 
             // Update storage with synced value
-            storage.setItem<AudioEffect>(AUDIO_EFFECTS_STORE_KEY, syncedValue).catch((error) => {
-                console.error('Error updating storage:', error)
+            storage.setItem<AudioEffect>(AUDIO_EFFECTS_STORE_KEY, syncedValue).catch(() => {
                 isUpdatingStorage = false
             })
         })
 
     storage.watch<AudioEffect>(AUDIO_EFFECTS_STORE_KEY, (value) => {
-        if (!value) return
+        if (!value || isUpdatingStorage) return
 
         const syncedValue = syncWithType(value, defaultAudioEffect)
         set(syncedValue)
     })
 
     // Listen for requests to reapply effects (e.g., after media element recreation)
-    window.addEventListener('message', (event) => {
-        if (event.source !== window) return
-        if (event.data?.type === 'REQUEST_EFFECT_REAPPLY') {
-            console.log('Reapplying stored effects after media recreation')
-            dispatchEffect()
-        }
-    })
+    // Only set up listener if window is available (not in service worker context)
+    if (typeof window !== 'undefined') {
+        window.addEventListener('message', (event) => {
+            if (event.source !== window) return
+            if (event.data?.type === 'REQUEST_EFFECT_REAPPLY') dispatchEffect()
+        })
+    }
 
     return {
         set,
