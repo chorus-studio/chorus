@@ -147,14 +147,7 @@ export default class MediaOverride {
         equalizer?: string
         msProcessor?: string
     }) {
-        console.log('MediaOverride.updateAudioEffect called with:', effect)
         if (!this.audioManager || !this.equalizer || !this.reverb || !this.msProcessor) {
-            console.warn('Missing dependencies:', {
-                audioManager: !!this.audioManager,
-                equalizer: !!this.equalizer,
-                reverb: !!this.reverb,
-                msProcessor: !!this.msProcessor
-            })
             return
         }
 
@@ -163,7 +156,6 @@ export default class MediaOverride {
 
             // If clear is requested, disconnect all effects
             if (effect.clear) {
-                console.log('Clearing all effects')
                 this.audioManager.disconnect()
                 return
             }
@@ -174,23 +166,18 @@ export default class MediaOverride {
             // Apply effects in the order they'll be chained: equalizer → MS processor → reverb
             // Each effect can be applied independently
             if (effect?.equalizer && effect.equalizer !== 'none') {
-                console.log('Applying equalizer effect:', effect.equalizer)
                 this.equalizer.setEQEffect(effect.equalizer)
             }
 
             // Apply MS processor (can be combined with any other effect)
             if (effect?.msProcessor && effect.msProcessor !== 'none') {
-                console.log('Applying MS processor effect:', effect.msProcessor)
                 await this.msProcessor.setMSEffect(effect.msProcessor)
             }
 
             // Apply reverb (can be combined with any other effect)
             if (effect?.reverb && effect.reverb !== 'none') {
-                console.log('Applying reverb effect:', effect.reverb)
                 await this.reverb.setReverbEffect(effect.reverb)
             }
-
-            console.log('Effect applied successfully')
         } catch (error) {
             console.error('Error updating audio effects:', error)
             this.audioManager.disconnect()
@@ -198,16 +185,11 @@ export default class MediaOverride {
     }
 
     async updateMSParams(params: MSParams): Promise<void> {
-        console.log('MediaOverride.updateMSParams called with:', params)
-        if (!this.msProcessor) {
-            console.warn('MS processor not initialized')
-            return
-        }
+        if (!this.msProcessor) return
 
         try {
             await this.audioManager.ensureAudioChainReady()
             await this.msProcessor.applyManualParams(params)
-            console.log('MS params applied successfully')
         } catch (error) {
             console.error('Error updating MS params:', error)
         }

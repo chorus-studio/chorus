@@ -86,7 +86,7 @@
             is_shared: false,
             last_updated: 'start',
             start_time: track?.snip?.start_time ?? 0,
-            end_time: track?.snip?.end_time ?? ($nowPlaying?.duration ?? 0)
+            end_time: track?.snip?.end_time ?? $nowPlaying?.duration ?? 0
         })
     }
 
@@ -134,7 +134,7 @@
 </script>
 
 <Tabs.Root value={activeTab} class="h-7 w-full p-0">
-    <Tabs.List class="flex h-full items-center justify-end gap-x-1.5 bg-transparent p-0">
+    <Tabs.List class="flex h-full items-center justify-end gap-x-1 bg-transparent p-0">
         {#if pip}
             <div class="absolute left-0">
                 <AvatarLogo class="bg-black" />

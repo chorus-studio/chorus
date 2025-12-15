@@ -44,7 +44,9 @@ function createVolumeStore() {
 
     function dispatchVolumeEvent() {
         const volume = get(store)
-        window.postMessage({ type: 'FROM_VOLUME_LISTENER', data: volume }, '*')
+        if (typeof window !== 'undefined') {
+            window.postMessage({ type: 'FROM_VOLUME_LISTENER', data: volume }, '*')
+        }
     }
 
     async function updateDefaultVolume(state: Partial<VolumeState>) {
@@ -120,12 +122,15 @@ function createVolumeStore() {
     })
 
     // Listen for requests to reapply volume (e.g., after media element recreation)
-    window.addEventListener('message', (event) => {
-        if (event.source !== window) return
-        if (event.data?.type === 'REQUEST_EFFECT_REAPPLY') {
-            dispatchVolumeEvent()
-        }
-    })
+    // Only set up listener if window is available (not in service worker context)
+    if (typeof window !== 'undefined') {
+        window.addEventListener('message', (event) => {
+            if (event.source !== window) return
+            if (event.data?.type === 'REQUEST_EFFECT_REAPPLY') {
+                dispatchVolumeEvent()
+            }
+        })
+    }
 
     return {
         mute,

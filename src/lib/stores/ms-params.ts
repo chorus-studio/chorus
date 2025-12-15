@@ -28,7 +28,9 @@ function createMSParamsStore() {
     function dispatchParams() {
         const params = get(msParamsStore)
         console.log('msParamsStore.dispatchParams:', params)
-        window.postMessage({ type: 'FROM_MS_PARAMS_LISTENER', data: params }, '*')
+        if (typeof window !== 'undefined') {
+            window.postMessage({ type: 'FROM_MS_PARAMS_LISTENER', data: params }, '*')
+        }
     }
 
     async function updateParam({ key, value }: { key: keyof MSParams; value: number }) {
@@ -97,15 +99,18 @@ function createMSParamsStore() {
     })
 
     // Listen for requests to reapply params (e.g., after media element recreation)
-    window.addEventListener('message', (event) => {
-        if (event.source !== window) return
-        if (
-            event.data?.type === 'REQUEST_MS_PARAMS_REAPPLY' ||
-            event.data?.type === 'REQUEST_EFFECT_REAPPLY'
-        ) {
-            dispatchParams()
-        }
-    })
+    // Only set up listener if window is available (not in service worker context)
+    if (typeof window !== 'undefined') {
+        window.addEventListener('message', (event) => {
+            if (event.source !== window) return
+            if (
+                event.data?.type === 'REQUEST_MS_PARAMS_REAPPLY' ||
+                event.data?.type === 'REQUEST_EFFECT_REAPPLY'
+            ) {
+                dispatchParams()
+            }
+        })
+    }
 
     return {
         set,

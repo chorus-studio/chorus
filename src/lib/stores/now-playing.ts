@@ -166,7 +166,9 @@ function createNowPlayingStore() {
     }
 
     function setCurrentTime(time: number) {
-        window.postMessage({ type: 'FROM_CURRENT_TIME_LISTENER', data: time }, '*')
+        if (typeof window !== 'undefined') {
+            window.postMessage({ type: 'FROM_CURRENT_TIME_LISTENER', data: time }, '*')
+        }
     }
 
     async function setLiked(liked: boolean) {

@@ -44,8 +44,7 @@ function createMediaStore() {
     }
 
     async function handleMutations(mutations: MutationRecord[]) {
-        // Use .some() for early exit - more efficient than for loop
-        const hasRelevantMutation = mutations.some((mutation) => {
+        for (const mutation of mutations) {
             const target = mutation.target as HTMLElement
             const isHeart = target.id === 'chorus-ui'
             const isSpotifyControls =
@@ -53,11 +52,7 @@ function createMediaStore() {
                 target.localName === 'button' &&
                 mutation.attributeName === 'aria-label'
 
-            return isHeart || isSpotifyControls
-        })
-
-        if (hasRelevantMutation) {
-            await updateState()
+            if (isHeart || isSpotifyControls) await updateState()
         }
     }
 
@@ -138,8 +133,7 @@ function createMediaStore() {
             .then(() => {
                 isUpdatingStorage = false
             })
-            .catch((error) => {
-                console.error('Error updating storage:', error)
+            .catch(() => {
                 isUpdatingStorage = false
             })
     })
