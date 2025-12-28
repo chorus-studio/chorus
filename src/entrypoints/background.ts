@@ -151,6 +151,96 @@ export default defineBackground(() => {
         ['requestHeaders']
     )
 
+    // ============================================================================
+    // Crossfade: Audio chunk interception for track transitions
+    // ============================================================================
+
+    let audioRange = { start: 0, end: 0 }
+    let audioTrackId: string | null = null
+
+    function arrayBufferToBase64(buffer: ArrayBuffer): string {
+        const bytes = new Uint8Array(buffer)
+        const binary = bytes.reduce((acc, byte) => acc + String.fromCharCode(byte), '')
+        return btoa(binary)
+    }
+
+    browser.webRequest.onSendHeaders.addListener(
+        async (details) => {
+            // Check if crossfade is enabled
+            const settings = await storage.getItem('local:crossfade_settings')
+            if (!settings || !settings.enabled) return
+
+            if (!details?.url.includes('audio-fa.scdn.co/audio')) return
+
+            // Extract Range header
+            const rangeHeader = details?.requestHeaders?.find(
+                (h) => h.name.toLowerCase() === 'range'
+            )?.value
+
+            if (!rangeHeader) return
+
+            const match = rangeHeader.match(/bytes=(\d+)-(\d+)/)
+            if (!match) return
+
+            const start = parseInt(match[1], 10)
+            const end = parseInt(match[2], 10)
+
+            // Extract track ID from URL
+            const trackId = details.url.split('audio/')[1]?.split('?')[0]
+            if (!trackId) return
+
+            // Reset tracking for new track
+            if (start === 0) {
+                audioRange = { start, end }
+                audioTrackId = trackId
+                return
+            }
+
+            // Only process sequential chunks for same track
+            if (trackId !== audioTrackId || start !== audioRange.end + 1) return
+
+            audioRange = { start, end }
+
+            try {
+                // Fetch audio chunk
+                const response = await fetch(details.url, {
+                    headers: { Range: `bytes=${start}-${end}` }
+                })
+
+                if (!response.ok) return
+
+                const arrayBuffer = await response.arrayBuffer()
+                const base64Data = arrayBufferToBase64(arrayBuffer)
+
+                // Send to page context
+                const { tabId } = await activeOpenTab()
+                if (!tabId) return
+
+                await browser.scripting.executeScript({
+                    args: [
+                        {
+                            type: 'FROM_CROSSFADE_BUFFER',
+                            data: {
+                                data: base64Data,
+                                range: { start, end },
+                                trackId,
+                                url: details.url
+                            }
+                        }
+                    ],
+                    target: { tabId },
+                    func: (message) => {
+                        window.postMessage(message, '*')
+                    }
+                })
+            } catch (error) {
+                console.error('[Crossfade] Error:', error)
+            }
+        },
+        { urls: ['https://audio-fa.scdn.co/audio/*'] },
+        ['requestHeaders']
+    )
+
     browser.commands.onCommand.addListener(async (command) => {
         if (
             !command.startsWith('cycle-theme-') &&
