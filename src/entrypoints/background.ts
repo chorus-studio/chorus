@@ -1,11 +1,11 @@
 import { storage } from '@wxt-dev/storage'
+import { THEME_NAMES } from '$lib/utils/theming'
 import { activeOpenTab } from '$lib/utils/messaging'
 import type { ConfigState } from '$lib/stores/config'
 import { defaultPlayback } from '$lib/stores/playback'
 import { defaultAudioEffect } from '$lib/stores/effects'
 import type { NowPlaying } from '$lib/stores/now-playing'
 import type { SettingsState } from '$lib/stores/settings'
-import { THEME_NAMES, setTheme } from '$lib/utils/theming'
 import { registerTrackService } from '$lib/api/services/track'
 import { registerPlayerService } from '$lib/api/services/player'
 import { registerNewReleasesService } from '$lib/api/services/new-releases'
@@ -167,10 +167,12 @@ export default defineBackground(() => {
     browser.webRequest.onSendHeaders.addListener(
         async (details) => {
             // Check if crossfade is enabled
-            const settings = await storage.getItem('local:crossfade_settings')
+            const settings = await storage.getItem<{ enabled: boolean }>(
+                'local:crossfade_settings'
+            )
             if (!settings || !settings.enabled) return
 
-            if (!details?.url.includes('audio-fa.scdn.co/audio')) return
+            if (!details?.url.includes('spotifycdn.com/audio')) return
 
             // Extract Range header
             const rangeHeader = details?.requestHeaders?.find(
@@ -237,7 +239,9 @@ export default defineBackground(() => {
                 console.error('[Crossfade] Error:', error)
             }
         },
-        { urls: ['https://audio-fa.scdn.co/audio/*'] },
+        {
+            urls: ['*://*.spotifycdn.com/audio/*']
+        },
         ['requestHeaders']
     )
 

@@ -1,6 +1,6 @@
 import type AudioManager from '../audio-manager'
 import type { AudioBufferChunk, CrossfadeSettings } from './types'
-import { crossfadeSettings } from '$lib/stores/crossfade'
+import { crossfadeStore } from '$lib/stores/crossfade'
 import { get } from 'svelte/store'
 
 /**
@@ -29,10 +29,10 @@ export default class Crossfade {
 
     constructor(audioManager: AudioManager) {
         this._audioManager = audioManager
-        this._settings = get(crossfadeSettings)
+        this._settings = get(crossfadeStore)
 
         // Subscribe to settings changes
-        crossfadeSettings.subscribe((settings) => {
+        crossfadeStore.subscribe((settings) => {
             this._settings = settings
         })
     }

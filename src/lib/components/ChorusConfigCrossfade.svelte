@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { crossfadeSettings } from '$lib/stores/crossfade'
+    import { crossfadeStore } from '$lib/stores/crossfade'
     import type { CrossfadeType } from '$lib/audio-effects/crossfade/types'
 
     import { Label } from '$lib/components/ui/label'
@@ -9,7 +9,6 @@
     import RotateCcw from '@lucide/svelte/icons/rotate-ccw'
 
     import type { Selection } from '$lib/types'
-    import { DEFAULT_CROSSFADE_SETTINGS } from '$lib/audio-effects/crossfade/types'
 
     const fadeTypeOptions: Selection[] = [
         { label: 'Equal Power', value: 'equal-power' },
@@ -18,25 +17,25 @@
     ]
 
     function updateEnabled(value: boolean) {
-        crossfadeSettings.update((s) => ({ ...s, enabled: value }))
+        crossfadeStore.updateSettings({ enabled: value })
     }
 
     function updateDuration(value: number) {
         const duration = Math.max(3, Math.min(12, value))
-        crossfadeSettings.update((s) => ({ ...s, duration }))
+        crossfadeStore.updateSettings({ duration })
     }
 
     function updateType(value: string) {
-        crossfadeSettings.update((s) => ({ ...s, type: value as CrossfadeType }))
+        crossfadeStore.updateSettings({ type: value as CrossfadeType })
     }
 
     function updateMinTrackLength(value: number) {
         const minTrackLength = Math.max(0, Math.min(300, value))
-        crossfadeSettings.update((s) => ({ ...s, minTrackLength }))
+        crossfadeStore.updateSettings({ minTrackLength })
     }
 
     function resetToDefaults() {
-        crossfadeSettings.set(DEFAULT_CROSSFADE_SETTINGS)
+        crossfadeStore.reset()
     }
 </script>
 
@@ -62,12 +61,12 @@
         </div>
         <Button
             id="crossfade-enabled"
-            variant={$crossfadeSettings.enabled ? 'default' : 'outline'}
+            variant={$crossfadeStore.enabled ? 'default' : 'outline'}
             size="sm"
-            onclick={() => updateEnabled(!$crossfadeSettings.enabled)}
+            onclick={() => updateEnabled(!$crossfadeStore.enabled)}
             class="min-w-20"
         >
-            {$crossfadeSettings.enabled ? 'Enabled' : 'Disabled'}
+            {$crossfadeStore.enabled ? 'Enabled' : 'Disabled'}
         </Button>
     </div>
 
@@ -79,7 +78,7 @@
             <Label for="crossfade-duration" class="text-sm font-medium text-white">
                 Fade Duration
             </Label>
-            <span class="text-sm text-gray-300">{$crossfadeSettings.duration}s</span>
+            <span class="text-sm text-gray-300">{$crossfadeStore.duration}s</span>
         </div>
         <input
             id="crossfade-duration"
@@ -87,10 +86,10 @@
             min="3"
             max="12"
             step="1"
-            value={$crossfadeSettings.duration}
+            value={$crossfadeStore.duration}
             oninput={(e) => updateDuration(Number(e.currentTarget.value))}
             class="h-2 w-full cursor-pointer appearance-none rounded-lg bg-gray-700 accent-green-500"
-            disabled={!$crossfadeSettings.enabled}
+            disabled={!$crossfadeStore.enabled}
         />
         <div class="flex justify-between text-xs text-gray-400">
             <span>3s (Short)</span>
@@ -108,15 +107,15 @@
         </Label>
         <CustomSelect
             key="crossfade-type"
-            selected={$crossfadeSettings.type}
+            selected={$crossfadeStore.type}
             options={fadeTypeOptions}
             onValueChange={updateType}
-            disabled={!$crossfadeSettings.enabled}
+            disabled={!$crossfadeStore.enabled}
         />
         <p class="text-xs text-gray-400">
-            {#if $crossfadeSettings.type === 'equal-power'}
+            {#if $crossfadeStore.type === 'equal-power'}
                 Maintains constant perceived loudness (recommended)
-            {:else if $crossfadeSettings.type === 'exponential'}
+            {:else if $crossfadeStore.type === 'exponential'}
                 Natural-sounding decay, good for most music
             {:else}
                 Simple linear fade, may have slight volume dip
@@ -132,7 +131,7 @@
             <Label for="crossfade-min-length" class="text-sm font-medium text-white">
                 Minimum Track Length
             </Label>
-            <span class="text-sm text-gray-300">{$crossfadeSettings.minTrackLength}s</span>
+            <span class="text-sm text-gray-300">{$crossfadeStore.minTrackLength}s</span>
         </div>
         <input
             id="crossfade-min-length"
@@ -140,10 +139,10 @@
             min="0"
             max="120"
             step="10"
-            value={$crossfadeSettings.minTrackLength}
+            value={$crossfadeStore.minTrackLength}
             oninput={(e) => updateMinTrackLength(Number(e.currentTarget.value))}
             class="h-2 w-full cursor-pointer appearance-none rounded-lg bg-gray-700 accent-green-500"
-            disabled={!$crossfadeSettings.enabled}
+            disabled={!$crossfadeStore.enabled}
         />
         <p class="text-xs text-gray-400">
             Don't crossfade tracks shorter than this duration (prevents fading very short tracks)
@@ -164,9 +163,9 @@
             Reset to Defaults
         </Button>
         <div class="flex items-center gap-x-2">
-            <div class={`size-2 rounded-full ${$crossfadeSettings.enabled ? 'bg-green-500' : 'bg-gray-500'}`}></div>
+            <div class={`size-2 rounded-full ${$crossfadeStore.enabled ? 'bg-green-500' : 'bg-gray-500'}`}></div>
             <span class="text-xs text-gray-400">
-                {$crossfadeSettings.enabled ? 'Crossfade Active' : 'Crossfade Inactive'}
+                {$crossfadeStore.enabled ? 'Crossfade Active' : 'Crossfade Inactive'}
             </span>
         </div>
     </div>
