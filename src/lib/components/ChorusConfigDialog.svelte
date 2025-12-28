@@ -9,6 +9,7 @@
     import ChorusConfigTheming from './ChorusConfigTheming.svelte'
     import ChorusConfigPresets from './ChorusConfigPresets.svelte'
     import ChorusConfigAutoSkip from './ChorusConfigAutoSkip.svelte'
+    import ChorusConfigCrossfade from './ChorusConfigCrossfade.svelte'
 
     let activeTab = $state('auto-skip')
 </script>
@@ -30,6 +31,7 @@
                 <Tabs.Trigger value="auto-skip" class="w-full">Auto-Skip</Tabs.Trigger>
                 <Tabs.Trigger value="fx-eq" class="w-full">FXEQ List</Tabs.Trigger>
                 <Tabs.Trigger value="presets" class="w-full">Presets</Tabs.Trigger>
+                <Tabs.Trigger value="crossfade" class="w-full">Crossfade</Tabs.Trigger>
                 <Tabs.Trigger value="theming" class="w-full">Theming</Tabs.Trigger>
             </Tabs.List>
             <Tabs.Content value="auto-skip">
@@ -40,6 +42,9 @@
             </Tabs.Content>
             <Tabs.Content value="presets">
                 <ChorusConfigPresets />
+            </Tabs.Content>
+            <Tabs.Content value="crossfade">
+                <ChorusConfigCrossfade />
             </Tabs.Content>
             <Tabs.Content value="theming">
                 <ChorusConfigTheming />
