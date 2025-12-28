@@ -65,6 +65,18 @@ export default class MediaElement {
 
             try {
                 const { type, data } = event.data
+
+                // Handle crossfade separately since it doesn't need mediaOverride
+                if (type === 'FROM_CROSSFADE_BUFFER') {
+                    console.log('[MediaElement] Received crossfade buffer message')
+                    if (this._crossfade) {
+                        this._crossfade.updateBuffer(data)
+                    } else {
+                        console.warn('[MediaElement] Crossfade not initialized')
+                    }
+                    return
+                }
+
                 if (!this.mediaOverride) return
 
                 switch (type) {
@@ -102,12 +114,6 @@ export default class MediaElement {
 
                     case 'FROM_CURRENT_TIME_LISTENER':
                         this.mediaOverride.updateCurrentTime(Number(data) || 0)
-                        break
-
-                    case 'FROM_CROSSFADE_BUFFER':
-                        if (this._crossfade) {
-                            this._crossfade.updateBuffer(data)
-                        }
                         break
                 }
             } catch (error) {
