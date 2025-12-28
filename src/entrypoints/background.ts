@@ -191,17 +191,33 @@ export default defineBackground(() => {
             const trackId = details.url.split('audio/')[1]?.split('?')[0]
             if (!trackId) return
 
-            // Reset tracking for new track
-            if (start === 0) {
+            // Track change detected - new track starting
+            const isNewTrack = audioTrackId && audioTrackId !== trackId
+
+            // Reset tracking for new track or first chunk
+            if (start === 0 || isNewTrack) {
                 audioRange = { start, end }
+                const previousTrackId = audioTrackId
                 audioTrackId = trackId
-                return
+
+                // If this is a new track (not the first), we want to send this chunk
+                // so the crossfade can use it
+                if (isNewTrack) {
+                    console.log('[Crossfade/BG] Track change detected:', {
+                        from: previousTrackId,
+                        to: trackId
+                    })
+                    // Continue to send this chunk
+                } else {
+                    // First chunk of first track, just track it
+                    return
+                }
+            } else {
+                // Only process sequential chunks for same track
+                if (trackId !== audioTrackId || start !== audioRange.end + 1) return
+
+                audioRange = { start, end }
             }
-
-            // Only process sequential chunks for same track
-            if (trackId !== audioTrackId || start !== audioRange.end + 1) return
-
-            audioRange = { start, end }
 
             try {
                 // Fetch audio chunk
@@ -209,14 +225,26 @@ export default defineBackground(() => {
                     headers: { Range: `bytes=${start}-${end}` }
                 })
 
-                if (!response.ok) return
+                if (!response.ok) {
+                    console.warn('[Crossfade/BG] Fetch failed:', response.status)
+                    return
+                }
 
                 const arrayBuffer = await response.arrayBuffer()
                 const base64Data = arrayBufferToBase64(arrayBuffer)
 
+                console.log('[Crossfade/BG] Sending chunk to page:', {
+                    trackId,
+                    range: { start, end },
+                    size: arrayBuffer.byteLength
+                })
+
                 // Send to page context
                 const { tabId } = await activeOpenTab()
-                if (!tabId) return
+                if (!tabId) {
+                    console.warn('[Crossfade/BG] No active tab')
+                    return
+                }
 
                 await browser.scripting.executeScript({
                     args: [
@@ -236,7 +264,7 @@ export default defineBackground(() => {
                     }
                 })
             } catch (error) {
-                console.error('[Crossfade] Error:', error)
+                console.error('[Crossfade/BG] Error:', error)
             }
         },
         {
