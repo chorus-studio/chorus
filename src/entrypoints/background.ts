@@ -8,6 +8,7 @@ import type { NowPlaying } from '$lib/stores/now-playing'
 import type { SettingsState } from '$lib/stores/settings'
 import { registerTrackService } from '$lib/api/services/track'
 import { registerPlayerService } from '$lib/api/services/player'
+import type { CrossfadeSettings } from '$lib/audio-effects/crossfade/types'
 import { registerNewReleasesService } from '$lib/api/services/new-releases'
 import { registerCheckPermissionsService } from '$lib/utils/check-permissions'
 import { executeButtonClick, registerCommandService } from '$lib/utils/command'
@@ -19,6 +20,7 @@ export default defineBackground(() => {
         SETTINGS: 'local:chorus_settings' as const,
         RELEASES: 'local:chorus_releases' as const,
         DEVICE_ID: 'local:chorus_device_id' as const,
+        CROSSFADE: 'local:chorus_crossfade' as const,
         AUTH_TOKEN: 'local:chorus_auth_token' as const,
         NOW_PLAYING: 'local:chorus_now_playing' as const,
         CONNECTION_ID: 'local:chorus_connection_id' as const
@@ -167,10 +169,8 @@ export default defineBackground(() => {
     browser.webRequest.onSendHeaders.addListener(
         async (details) => {
             // Check if crossfade is enabled
-            const settings = await storage.getItem<{ enabled: boolean }>(
-                'local:crossfade_settings'
-            )
-            if (!settings || !settings.enabled) return
+            const crossfadeSettings = await storage.getItem<CrossfadeSettings>(STORE_KEYS.CROSSFADE)
+            if (!crossfadeSettings || !crossfadeSettings.enabled) return
 
             if (!details?.url.includes('spotifycdn.com/audio')) return
 

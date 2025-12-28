@@ -500,4 +500,8 @@ export default class AudioManager {
     get destination() {
         return this._destination
     }
+
+    get gainNode() {
+        return this._gainNode
+    }
 }

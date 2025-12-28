@@ -17,8 +17,7 @@ export default class Crossfade {
     private _audioContext?: AudioContext
     private _settings: CrossfadeSettings
 
-    // Gain nodes for crossfading
-    private _currentGain?: GainNode
+    // Gain node for next track (current track uses AudioManager's gain)
     private _nextGain?: GainNode
     private _nextSource?: AudioBufferSourceNode
 
@@ -26,6 +25,7 @@ export default class Crossfade {
     private _isFading = false
     private _fadeTimeout?: number
     private _currentTrackId: string | null = null
+    private _lastChunkBuffer: AudioBuffer | null = null
 
     constructor(audioManager: AudioManager) {
         this._audioManager = audioManager
@@ -38,7 +38,8 @@ export default class Crossfade {
     }
 
     /**
-     * Initialize AudioContext and gain nodes
+     * Initialize AudioContext and gain node for next track
+     * (Current track uses AudioManager's existing gain node)
      */
     private setupAudioNodes(): void {
         this._audioContext = this._audioManager.audioContext
@@ -47,12 +48,7 @@ export default class Crossfade {
             return
         }
 
-        if (!this._currentGain) {
-            this._currentGain = this._audioContext.createGain()
-            this._currentGain.connect(this._audioContext.destination)
-            this._currentGain.gain.setValueAtTime(1, this._audioContext.currentTime)
-        }
-
+        // Create gain node for next track if it doesn't exist
         if (!this._nextGain) {
             this._nextGain = this._audioContext.createGain()
             this._nextGain.connect(this._audioContext.destination)
@@ -69,48 +65,63 @@ export default class Crossfade {
     }
 
     /**
-     * Apply crossfade with configured curve type
+     * Apply crossfade curves to both gain nodes
+     * @param startTime - When to start the fade
+     * @param duration - How long the fade should last
+     * @param fadeOutGain - Gain node to fade OUT (current track's main audio)
+     * @param fadeInGain - Gain node to fade IN (next track's buffer)
      */
-    private applyFadeCurve(startTime: number): void {
-        if (!this._audioContext || !this._currentGain || !this._nextGain) return
+    private applyCrossfadeCurves(
+        startTime: number,
+        duration: number,
+        fadeOutGain: GainNode,
+        fadeInGain: GainNode
+    ): void {
+        if (!this._audioContext) return
 
-        const endTime = startTime + this._settings.duration
+        const endTime = startTime + duration
 
         switch (this._settings.type) {
             case 'equal-power': {
                 // Sample at 60fps for smooth curves
-                const steps = Math.floor(this._settings.duration * 60)
+                const steps = Math.floor(duration * 60)
                 for (let i = 0; i <= steps; i++) {
                     const progress = i / steps
-                    const time = startTime + this._settings.duration * progress
+                    const time = startTime + duration * progress
 
+                    // Equal-power: current track fades out, next track fades in
                     const fadeOut = this.calculateEqualPowerGain(progress)
                     const fadeIn = this.calculateEqualPowerGain(1 - progress)
 
-                    this._currentGain.gain.linearRampToValueAtTime(fadeOut, time)
-                    this._nextGain.gain.linearRampToValueAtTime(fadeIn, time)
+                    fadeOutGain.gain.linearRampToValueAtTime(fadeOut, time)
+                    fadeInGain.gain.linearRampToValueAtTime(fadeIn, time)
                 }
                 break
             }
 
             case 'exponential':
-                this._currentGain.gain.exponentialRampToValueAtTime(0.01, endTime)
-                this._nextGain.gain.exponentialRampToValueAtTime(1, endTime)
+                fadeOutGain.gain.exponentialRampToValueAtTime(0.01, endTime)
+                fadeInGain.gain.exponentialRampToValueAtTime(1, endTime)
                 break
 
             case 'linear':
             default:
-                this._currentGain.gain.linearRampToValueAtTime(0, endTime)
-                this._nextGain.gain.linearRampToValueAtTime(1, endTime)
+                fadeOutGain.gain.linearRampToValueAtTime(0, endTime)
+                fadeInGain.gain.linearRampToValueAtTime(1, endTime)
                 break
         }
     }
 
     /**
-     * Start crossfade with decoded audio buffer
+     * Start crossfade with decoded audio buffer (next track's first chunk)
+     *
+     * Strategy:
+     * 1. Fade OUT the main Spotify audio (current track) using AudioManager's gain
+     * 2. Fade IN the new track chunk (from buffer) using next gain node
+     * 3. Play them simultaneously for smooth transition
      */
-    private async startCrossfade(audioBuffer: AudioBuffer): Promise<void> {
-        if (!audioBuffer || this._isFading) return
+    private async startCrossfade(nextTrackBuffer: AudioBuffer): Promise<void> {
+        if (!nextTrackBuffer || this._isFading) return
 
         this.setupAudioNodes()
 
@@ -119,48 +130,69 @@ export default class Crossfade {
             return
         }
 
+        const mainGain = this._audioManager.gainNode
+        if (!mainGain) {
+            console.error('[Crossfade] AudioManager gain node not available')
+            return
+        }
+
         this._isFading = true
 
         const currentTime = this._audioContext.currentTime
+        const fadeDuration = this._settings.duration
 
-        // Create and connect buffer source
-        this._nextSource = this._audioContext.createBufferSource()
-        this._nextSource.buffer = audioBuffer
-        this._nextSource.connect(this._nextGain)
+        // Get current main gain value to fade from
+        const currentMainGain = mainGain.gain.value
 
-        // Apply fade curves
-        this.applyFadeCurve(currentTime)
-
-        // Start playback
-        this._nextSource.start(0, 0, this._settings.duration + 2)
-
-        console.log('[Crossfade] Started:', {
-            duration: this._settings.duration,
-            type: this._settings.type,
-            bufferDuration: audioBuffer.duration
+        console.log('[Crossfade] Starting crossfade:', {
+            currentTime,
+            fadeDuration,
+            currentMainGain,
+            nextTrackDuration: nextTrackBuffer.duration,
+            type: this._settings.type
         })
 
-        // Schedule cleanup
-        this._fadeTimeout = window.setTimeout(
-            () => this.completeCrossfade(),
-            this._settings.duration * 1000 + 100
-        )
+        // Create and connect buffer source for next track
+        this._nextSource = this._audioContext.createBufferSource()
+        this._nextSource.buffer = nextTrackBuffer
+        this._nextSource.connect(this._nextGain)
+
+        // Set initial gains
+        mainGain.gain.cancelScheduledValues(currentTime)
+        mainGain.gain.setValueAtTime(currentMainGain, currentTime)
+
+        this._nextGain.gain.cancelScheduledValues(currentTime)
+        this._nextGain.gain.setValueAtTime(0, currentTime)
+
+        // Apply crossfade curves
+        this.applyCrossfadeCurves(currentTime, fadeDuration, mainGain, this._nextGain)
+
+        // Start playing next track buffer
+        this._nextSource.start(currentTime, 0, fadeDuration + 1)
+
+        // Schedule cleanup and gain restoration
+        this._fadeTimeout = window.setTimeout(() => {
+            this.completeCrossfade(mainGain, currentMainGain)
+        }, fadeDuration * 1000 + 100)
     }
 
     /**
      * Complete crossfade and reset state
+     * @param mainGain - AudioManager's main gain node to restore
+     * @param originalGainValue - Original gain value to restore
      */
-    private completeCrossfade(): void {
+    private completeCrossfade(mainGain: GainNode, originalGainValue: number): void {
         if (!this._audioContext) return
 
-        console.log('[Crossfade] Completing crossfade')
+        console.log('[Crossfade] Completing crossfade, restoring main gain to', originalGainValue)
 
-        // Reset gain nodes
-        if (this._currentGain) {
-            this._currentGain.gain.cancelScheduledValues(this._audioContext.currentTime)
-            this._currentGain.gain.setValueAtTime(1, this._audioContext.currentTime)
+        // Restore main audio gain to original value
+        if (mainGain) {
+            mainGain.gain.cancelScheduledValues(this._audioContext.currentTime)
+            mainGain.gain.setValueAtTime(originalGainValue, this._audioContext.currentTime)
         }
 
+        // Reset next track gain to 0 (silent)
         if (this._nextGain) {
             this._nextGain.gain.cancelScheduledValues(this._audioContext.currentTime)
             this._nextGain.gain.setValueAtTime(0, this._audioContext.currentTime)
@@ -202,6 +234,10 @@ export default class Crossfade {
     /**
      * Handle incoming audio buffer chunk from background script
      * This is the main entry point for crossfade triggering
+     *
+     * Key insight: Spotify sends ~10s chunks. When track changes, we detect
+     * the new track ID and have both the last chunk of previous track and
+     * first chunk of new track - perfect for crossfading!
      */
     async updateBuffer(chunk: AudioBufferChunk): Promise<void> {
         if (!this._settings.enabled) return
@@ -212,7 +248,8 @@ export default class Crossfade {
             console.log('[Crossfade] Received chunk:', {
                 trackId: chunk.trackId,
                 range: chunk.range,
-                size: arrayBuffer.byteLength
+                size: arrayBuffer.byteLength,
+                currentTrackId: this._currentTrackId
             })
 
             this.setupAudioNodes()
@@ -231,8 +268,23 @@ export default class Crossfade {
                 sampleRate: audioBuffer.sampleRate
             })
 
-            // Start crossfade
-            await this.startCrossfade(audioBuffer)
+            // Detect track change
+            const isNewTrack = this._currentTrackId && this._currentTrackId !== chunk.trackId
+
+            if (isNewTrack && this._lastChunkBuffer) {
+                // Track changed! We have last chunk of old track and first chunk of new track
+                console.log('[Crossfade] Track change detected!', {
+                    oldTrack: this._currentTrackId,
+                    newTrack: chunk.trackId
+                })
+
+                // Start crossfade with new track's first chunk
+                await this.startCrossfade(audioBuffer)
+            }
+
+            // Always buffer the last chunk for potential crossfade
+            this._lastChunkBuffer = audioBuffer
+            this._currentTrackId = chunk.trackId
 
         } catch (error) {
             console.error('[Crossfade] Error processing buffer:', error)
@@ -247,9 +299,12 @@ export default class Crossfade {
 
         console.log('[Crossfade] Cancelled')
 
-        if (this._currentGain) {
-            this._currentGain.gain.cancelScheduledValues(this._audioContext.currentTime)
-            this._currentGain.gain.setValueAtTime(1, this._audioContext.currentTime)
+        // Restore main audio gain (if we have access to it)
+        const mainGain = this._audioManager.gainNode
+        if (mainGain) {
+            mainGain.gain.cancelScheduledValues(this._audioContext.currentTime)
+            // Restore to full volume
+            mainGain.gain.setValueAtTime(1, this._audioContext.currentTime)
         }
 
         if (this._nextGain) {
@@ -280,15 +335,6 @@ export default class Crossfade {
      */
     cleanup(): void {
         this.cancelCrossfade()
-
-        if (this._currentGain) {
-            try {
-                this._currentGain.disconnect()
-            } catch (e) {
-                // Ignore
-            }
-            this._currentGain = undefined
-        }
 
         if (this._nextGain) {
             try {

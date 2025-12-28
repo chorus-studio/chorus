@@ -4,7 +4,7 @@ import { syncWithType } from '$lib/utils/store-utils'
 import type { CrossfadeSettings } from '$lib/audio-effects/crossfade/types'
 import { DEFAULT_CROSSFADE_SETTINGS } from '$lib/audio-effects/crossfade/types'
 
-export const CROSSFADE_STORE_KEY = 'local:crossfade_settings'
+export const CROSSFADE_STORE_KEY = 'local:chorus_crossfade'
 
 function createCrossfadeStore() {
     const store = writable<CrossfadeSettings>(DEFAULT_CROSSFADE_SETTINGS)

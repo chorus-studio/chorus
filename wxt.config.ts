@@ -65,7 +65,7 @@ export default defineConfig({
             }
         ],
         ...perBrowserManifest[browser],
-        host_permissions: ['*://*.spotify.com/*', 'https://audio-fa.scdn.co/audio/*'],
+        host_permissions: ['*://*.spotify.com/*', '*://*.spotifycdn.com/audio/*'],
         commands: {
             'on/off': {
                 description: 'Toggle Extension On/Off'
