@@ -48,7 +48,9 @@ export class TrackObserver {
     private async processMediaPlayInit() {
         await this.trackStateManager.updateTrackType()
         await this.trackStateManager.setPlayback(this.audioPreset)
-        this.setEffect()
+        // Note: setEffect() will be called via REQUEST_EFFECT_REAPPLY message
+        // dispatched from media-element.ts, so we don't need to call it here
+        // to avoid redundant effect applications
     }
 
     // Simplified getters for commonly accessed stores

@@ -34,11 +34,20 @@
     async function handleBlock() {
         if ($nowPlaying.track_id) {
             nowPlaying.set({ ...$nowPlaying, blocked: true })
+            const { cover, track_id } = $nowPlaying
+
             await dataStore.updateTrack({
-                track_id: $nowPlaying.track_id,
-                value: { blocked: true }
+                track_id,
+                value: { blocked: true, cover }
             })
+
+            document.dispatchEvent(
+                new CustomEvent('chorus:track-blocked', {
+                    detail: { track_id: track_id }
+                })
+            )
             highlightInTrackList()
+
         }
 
         trackObserver?.skipTrack()

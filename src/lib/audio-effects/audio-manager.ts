@@ -329,16 +329,22 @@ export default class AudioManager {
             this._soundTouchNode.disconnect()
 
             // Disconnect active effects
-            // NOTE: For equalizer with separate input/output nodes, we DON'T call disconnect()
-            // on them because they're part of an internal filter chain. Calling disconnect()
-            // would break the internal connections between filters. We only need to disconnect
-            // single-node effects or effects that manage their own internal state.
+            // NOTE: For equalizer with separate input/output nodes, we need to disconnect
+            // both the input and output nodes from the external chain, but NOT the internal
+            // connections between filters (the equalizer class handles those).
             if (this._activeEffects.equalizer) {
                 if (
                     typeof this._activeEffects.equalizer === 'object' &&
                     'input' in this._activeEffects.equalizer
                 ) {
-                    // Don't disconnect - the equalizer manages its own internal chain
+                    // Disconnect input and output from the external chain
+                    // This prevents duplicate connections when rebuilding
+                    try {
+                        this._activeEffects.equalizer.input.disconnect()
+                        this._activeEffects.equalizer.output.disconnect()
+                    } catch (e) {
+                        // Ignore disconnect errors during cleanup
+                    }
                 } else {
                     this._activeEffects.equalizer.disconnect()
                 }
