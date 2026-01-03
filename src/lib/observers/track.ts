@@ -89,7 +89,7 @@ export class TrackObserver {
         playbackObserver.updateChorusUI()
     }
 
-    private isAtSnipEnd(currentTimeMS: number): boolean {
+    private isAtTrackOrSnipEnd(currentTimeMS: number): boolean {
         return this.trackStateManager.isTrackAtSnipEnd(currentTimeMS, this.currentSong)
     }
 
@@ -151,10 +151,13 @@ export class TrackObserver {
                 return this.updateCurrentTime(this.snip.start_time)
             }
 
-            // Handle looping if at snip end
-            if (this.loop.looping && currentSong.snip && this.isAtSnipEnd(currentTimeMS)) {
+            // Handle looping if at track/snip end
+            if (this.loop.looping && this.isAtTrackOrSnipEnd(currentTimeMS)) {
                 const loopHandled = await this.playbackController.handleLooping(currentTimeMS)
                 if (loopHandled) return
+                // Loop count exhausted, skip to next track
+                this.skipTrack()
+                return
             }
 
             // Handle shared snip URL cleanup
@@ -164,13 +167,20 @@ export class TrackObserver {
 
             // Check if at or past snip end for auto-advance
             const atSnipEnd = currentSong.snip && currentTimeMS >= currentSong.snip.end_time * 1000
+            const atTrackEnd = currentTimeMS >= currentSong.duration * 1000 - 100
 
             // Handle track end or snip end - auto-advance if at or past end
             const shouldSkip =
-                (currentSong.snip || currentSong.blocked) &&
-                (currentTimeMS >= currentSong.duration * 1000 || atSnipEnd)
+                (currentSong.snip || currentSong.blocked) && (atTrackEnd || atSnipEnd)
 
             if (shouldSkip) {
+                this.skipTrack()
+                return
+            }
+
+            // Handle end of track after loop count exhausted (for non-snip tracks)
+            // When looping ends, iteration is 0 and looping is false
+            if (this.loop.type === 'amount' && this.loop.iteration === 0 && atTrackEnd) {
                 this.skipTrack()
                 return
             }

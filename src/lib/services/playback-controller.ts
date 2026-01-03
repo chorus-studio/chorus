@@ -53,24 +53,41 @@ export class PlaybackController {
     }
 
     shouldSkipTrack(songInfo: NowPlaying): boolean {
-        return songInfo?.blocked || 
-               configStore.checkIfTrackShouldBeSkipped({
-                   title: songInfo?.title ?? '',
-                   artist: songInfo?.artist ?? ''
-               })
+        return (
+            songInfo?.blocked ||
+            configStore.checkIfTrackShouldBeSkipped({
+                title: songInfo?.title ?? '',
+                artist: songInfo?.artist ?? ''
+            })
+        )
     }
 
     async handleLooping(currentTimeMS: number): Promise<boolean> {
         const loop = get(loopStore)
         const currentSong = get(nowPlaying)
-        
+
         if (!loop.looping) return false
 
-        if (loop.type === 'amount') {
-            await loopStore.decrement()
+        if (loop.type === 'infinite') {
+            // Infinite loop: always seek back to start
+            this.updateCurrentTime(currentSong.snip?.start_time ?? 0)
+            return true
         }
-        
-        this.updateCurrentTime(currentSong.snip?.start_time ?? 0)
-        return true
+
+        // Count-based loop: check if we have iterations left
+        if (loop.type === 'amount') {
+            if (loop.iteration >= 1) {
+                // Iterations remaining, decrement and loop back
+                await loopStore.decrement()
+                this.updateCurrentTime(currentSong.snip?.start_time ?? 0)
+                return true
+            } else {
+                // No iterations left (iteration === 0), stop looping and advance
+                await loopStore.resetIteration()
+                return false
+            }
+        }
+
+        return false
     }
 }

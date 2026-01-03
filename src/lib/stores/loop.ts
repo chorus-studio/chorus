@@ -75,7 +75,7 @@ function createLoopStore() {
             const newIteration = state.iteration - 1
             return {
                 ...state,
-                iteration: newIteration == 0 ? state.amount : newIteration,
+                iteration: Math.max(0, newIteration),
                 looping: newIteration > 0
             }
         })
