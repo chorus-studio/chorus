@@ -7,38 +7,21 @@
     import * as Tooltip from '$lib/components/ui/tooltip'
     import { buttonVariants } from '$lib/components/ui/button'
 
-    function highlightInTrackList() {
-        const rowsQuery = document.querySelectorAll('[data-testid="tracklist-row"]')
-        if (!rowsQuery?.length) return
-
-        const trackRows = Array.from(rowsQuery)
-
-        const context = trackRows.find(
-            (row) =>
-                row.querySelector('a[data-testid="internal-track-link"] div')?.textContent ===
-                $nowPlaying.title
-        )
-
-        if (!context) return
-
-        const blockIcon = context.querySelector('button[role="block"]')
-        if (!blockIcon) return
-
-        const svg = blockIcon.querySelector('svg')
-        if (!svg) return
-
-        blockIcon.setAttribute('aria-label', 'Block Track')
-        svg.style.stroke = '#1ed760'
-    }
-
-    async function handleBlock() {
+    async function handleBlock(): Promise<void> {
         if ($nowPlaying.track_id) {
-            nowPlaying.set({ ...$nowPlaying, blocked: true })
+            const { cover, track_id } = $nowPlaying
+            console.log({ cover, track_id })
+
             await dataStore.updateTrack({
-                track_id: $nowPlaying.track_id,
-                value: { blocked: true }
+                track_id,
+                value: { blocked: true, cover }
             })
-            highlightInTrackList()
+
+            document.dispatchEvent(
+                new CustomEvent('chorus:track-blocked', {
+                    detail: { track_id: track_id, cover }
+                })
+            )
         }
 
         trackObserver?.skipTrack()

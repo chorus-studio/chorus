@@ -9,21 +9,25 @@
     import type { SimpleTrack } from '$lib/stores/data/cache'
 
     let { track }: { track: SimpleTrack } = $props()
-    let isBlocked = $state(track?.blocked ?? false)
+    let isBlocked = $state(track?.blocked || false)
 
-    // Listen for unblock events from BlockedTracksDialog (event-driven, no polling)
     $effect(() => {
-        if (!isBlocked) return
-
-        const handleUnblock = (event: Event) => {
+        const handleBlockUnBlock = (event: Event) => {
             const customEvent = event as CustomEvent<{ track_id: string }>
             if (customEvent.detail.track_id === track.track_id) {
-                isBlocked = false
+                const found = dataStore.blocked.find(
+                    (blockedTrack) => blockedTrack.track_id == track.track_id
+                )
+                isBlocked = !!found
             }
         }
 
-        document.addEventListener('chorus:track-unblocked', handleUnblock)
-        return () => document.removeEventListener('chorus:track-unblocked', handleUnblock)
+        document.addEventListener('chorus:track-blocked', handleBlockUnBlock)
+        document.addEventListener('chorus:track-unblocked', handleBlockUnBlock)
+        return () => {
+            document.removeEventListener('chorus:track-blocked', handleBlockUnBlock)
+            document.removeEventListener('chorus:track-unblocked', handleBlockUnBlock)
+        }
     })
 
     function getCoverArt() {
@@ -41,14 +45,13 @@
             const cover = track?.cover || getCoverArt()
             await dataStore.updateTrack({
                 track_id: track.track_id,
-                value: { blocked: isBlocked, cover }
+                value: { blocked: isBlocked || null, cover }
             })
 
-            // Emit event for reactive updates
             if (isBlocked) {
                 document.dispatchEvent(
                     new CustomEvent('chorus:track-blocked', {
-                        detail: { track_id: track.track_id }
+                        detail: { track_id: track.track_id, cover }
                     })
                 )
 

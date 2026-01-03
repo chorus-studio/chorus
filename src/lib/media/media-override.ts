@@ -22,6 +22,7 @@ export default class MediaOverride {
     private _sources: any[] = []
     private _chorusRate: number = 1
     private _chorusPreservesPitch: boolean = true
+    private _effectUpdateInProgress: Promise<void> | null = null
 
     constructor(options: MediaOverrideOptions) {
         this.source = options.source
@@ -151,37 +152,52 @@ export default class MediaOverride {
             return
         }
 
-        try {
-            await this.audioManager.ensureAudioChainReady()
-
-            // If clear is requested, disconnect all effects
-            if (effect.clear) {
-                this.audioManager.disconnect()
-                return
-            }
-
-            // Disconnect all effects first
-            this.audioManager.disconnect()
-
-            // Apply effects in the order they'll be chained: equalizer → MS processor → reverb
-            // Each effect can be applied independently
-            if (effect?.equalizer && effect.equalizer !== 'none') {
-                this.equalizer.setEQEffect(effect.equalizer)
-            }
-
-            // Apply MS processor (can be combined with any other effect)
-            if (effect?.msProcessor && effect.msProcessor !== 'none') {
-                await this.msProcessor.setMSEffect(effect.msProcessor)
-            }
-
-            // Apply reverb (can be combined with any other effect)
-            if (effect?.reverb && effect.reverb !== 'none') {
-                await this.reverb.setReverbEffect(effect.reverb)
-            }
-        } catch (error) {
-            console.error('Error updating audio effects:', error)
-            this.audioManager.disconnect()
+        // Wait for any in-progress effect update to complete before starting a new one
+        // This prevents race conditions where multiple rapid effect changes could cause double-application
+        if (this._effectUpdateInProgress) {
+            await this._effectUpdateInProgress
         }
+
+        // Create a new promise for this update operation
+        this._effectUpdateInProgress = (async () => {
+            try {
+                await this.audioManager.ensureAudioChainReady()
+
+                // If clear is requested, disconnect all effects
+                if (effect.clear) {
+                    this.audioManager.disconnect()
+                    return
+                }
+
+                // Disconnect all effects first
+                this.audioManager.disconnect()
+
+                // Apply effects in the order they'll be chained: equalizer → MS processor → reverb
+                // Each effect can be applied independently
+                if (effect?.equalizer && effect.equalizer !== 'none') {
+                    this.equalizer.setEQEffect(effect.equalizer)
+                }
+
+                // Apply MS processor (can be combined with any other effect)
+                if (effect?.msProcessor && effect.msProcessor !== 'none') {
+                    await this.msProcessor.setMSEffect(effect.msProcessor)
+                }
+
+                // Apply reverb (can be combined with any other effect)
+                if (effect?.reverb && effect.reverb !== 'none') {
+                    await this.reverb.setReverbEffect(effect.reverb)
+                }
+            } catch (error) {
+                console.error('Error updating audio effects:', error)
+                this.audioManager.disconnect()
+            } finally {
+                // Clear the lock when done
+                this._effectUpdateInProgress = null
+            }
+        })()
+
+        // Wait for this update to complete
+        await this._effectUpdateInProgress
     }
 
     async updateMSParams(params: MSParams): Promise<void> {
