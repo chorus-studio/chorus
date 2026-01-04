@@ -273,6 +273,9 @@ export default class AudioManager {
         // TODO: Refactor to support multi-effect with impulse reverb wet/dry
         this.cleanupEffectChain()
 
+        // CRITICAL: Reconnect source to gain node after cleanup
+        this.source!.connect(this._gainNode!)
+
         const dryGainNode = this._audioContext.createGain()
         const wetGainNode = this._audioContext.createGain()
 
