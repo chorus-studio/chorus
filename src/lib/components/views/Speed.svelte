@@ -25,7 +25,7 @@
     })
 </script>
 
-<div class="relative columns-2 gap-x-4 space-y-3">
+<div class="columns-2 gap-x-2.5 space-y-3">
     <div class="flex h-48 flex-col">
         <PlaybackInput key="rate" list={$playbackStore.frequents.rate} />
         <Separator orientation="horizontal" class="!my-2 h-0.5" />
@@ -50,11 +50,6 @@
             {/if}
         </div>
     </div>
-
-    <Separator
-        orientation="vertical"
-        class="absolute -top-2 left-1/2 h-48 w-0.5 -translate-x-1/2"
-    />
 
     <div class="flex h-48 flex-col">
         <PlaybackInput key="pitch" list={$playbackStore.frequents.pitch} />
