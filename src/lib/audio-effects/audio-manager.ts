@@ -410,11 +410,19 @@ export default class AudioManager {
     disconnect() {
         if (!this.isConnectable) return
 
-        // Clear all active effects
+        // CRITICAL: First cleanup the effect chain while we still have references to the effect nodes
+        // This ensures all effect nodes are properly disconnected before we clear the references
+        this.cleanupEffectChain()
+
+        // Now clear all active effects
         this._activeEffects = {}
 
-        // Rebuild with no effects (just gain → soundTouch → destination)
-        this.rebuildEffectChain()
+        // Reconnect the basic chain: source → gain → soundTouch → destination
+        if (this.source && this._gainNode && this._soundTouchNode && this.destination) {
+            this.source.connect(this._gainNode)
+            this._gainNode.connect(this._soundTouchNode)
+            this._soundTouchNode.connect(this.destination)
+        }
     }
 
     removeEffect(effectType: 'equalizer' | 'msProcessor' | 'reverb') {
