@@ -243,10 +243,10 @@ export default class AudioManager {
 
     getGainPairing(effect: string) {
         const pairings = {
-            kick_ir: { dry: 0.95, wet: 0.05 },
-            muffler_ir: { dry: 0.9, wet: 0.1 },
-            diffusor_ir: { dry: 0.9, wet: 0.1 },
-            telephone_ir: { dry: 0.65, wet: 0.35 }
+            kick_ir: { dry: 0.5, wet: 0.5 },
+            muffler_ir: { dry: 0.4, wet: 0.6 },
+            diffusor_ir: { dry: 0.4, wet: 0.6 },
+            telephone_ir: { dry: 0.3, wet: 0.7 }
         }
         return pairings[effect as keyof typeof pairings]
     }

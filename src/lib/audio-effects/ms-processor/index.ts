@@ -13,16 +13,13 @@ export default class MSProcessor {
     }
 
     async setMSEffect(effect: string) {
-        console.log('MSProcessor.setMSEffect called with:', effect)
         if (!this._audioManager.audioContext) {
-            console.warn('MSProcessor: AudioContext not initialized yet, skipping')
             return
         }
 
         this._audioContext = this._audioManager.audioContext
 
         if (effect === 'none') {
-            console.log('MSProcessor: disconnecting')
             this.cleanup()
             if (this._audioManager.audioContext) {
                 this._audioManager.removeEffect('msProcessor')
@@ -34,7 +31,6 @@ export default class MSProcessor {
             await this.createMSProcessor()
             this.connectMSProcessor()
             this.applyMSEffect(effect)
-            console.log('MSProcessor: effect applied successfully')
         } catch (error) {
             console.error('Error setting MS effect:', error)
             this.cleanup()
@@ -46,9 +42,7 @@ export default class MSProcessor {
     }
 
     async applyManualParams(params: MSParams) {
-        console.log('MSProcessor.applyManualParams called with:', params)
         if (!this._audioManager.audioContext) {
-            console.warn('MSProcessor: AudioContext not initialized yet, skipping')
             return
         }
 
@@ -62,7 +56,6 @@ export default class MSProcessor {
             }
 
             this.applyParams(params)
-            console.log('MSProcessor: manual params applied successfully')
         } catch (error) {
             console.error('Error applying manual MS params:', error)
             throw error
