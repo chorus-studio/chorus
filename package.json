@@ -22,7 +22,7 @@
         "tailwindcss-animate": "^1.0.7",
         "tslib": "^2.8.1",
         "typescript": "^5.6.3",
-        "wxt": "^0.19.13"
+        "wxt": "^0.19.29"
     },
     "private": true,
     "scripts": {

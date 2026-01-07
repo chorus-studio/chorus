@@ -23,15 +23,12 @@ export default class Reverb {
     }
 
     async setReverbEffect(effect: string) {
-        console.log('Reverb.setReverbEffect called with:', effect)
         if (!this._audioManager.audioContext) {
-            console.warn('Reverb: AudioContext not initialized yet, skipping')
             return
         }
 
         this._audioContext = this._audioManager.audioContext
         if (effect === 'none') {
-            console.log('Reverb: disconnecting')
             this.cleanup()
             if (this._audioManager.audioContext) {
                 this._audioManager.removeEffect('reverb')
@@ -43,12 +40,10 @@ export default class Reverb {
             const isImpulse = this.isImpulse(effect)
             if (isImpulse) {
                 await this.createImpulseReverb(effect)
-                console.log('Reverb: impulse reverb applied')
             } else {
                 await this.createDigitalReverb()
                 this.connectDigitalReverb()
                 this.applyReverbEffect(effect)
-                console.log('Reverb: digital reverb applied')
             }
         } catch (error) {
             console.error('Error setting reverb effect:', error)

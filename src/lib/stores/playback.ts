@@ -190,17 +190,6 @@ function createPlaybackStore() {
         set(syncedValues)
     })
 
-    // Listen for requests to reapply playback settings (e.g., after media element recreation)
-    // Only set up listener if window is available (not in service worker context)
-    if (typeof window !== 'undefined') {
-        window.addEventListener('message', (event) => {
-            if (event.source !== window) return
-            if (event.data?.type === 'REQUEST_EFFECT_REAPPLY') {
-                dispatchPlaybackSettings()
-            }
-        })
-    }
-
     return {
         reset,
         togglePin,

@@ -52,9 +52,6 @@ export default class MediaElement {
 
             this.loadMediaOverride()
             document.dispatchEvent(new CustomEvent('FROM_MEDIA_PLAY_INIT'))
-
-            // Trigger re-application of stored effects after media is ready
-            window.postMessage({ type: 'REQUEST_EFFECT_REAPPLY' }, '*')
         })
 
         // Set up window message listener (instance-based, v2.7.1 pattern)

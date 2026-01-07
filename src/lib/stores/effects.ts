@@ -83,15 +83,6 @@ function createAudioEffectsStore() {
         set(syncedValue)
     })
 
-    // Listen for requests to reapply effects (e.g., after media element recreation)
-    // Only set up listener if window is available (not in service worker context)
-    if (typeof window !== 'undefined') {
-        window.addEventListener('message', (event) => {
-            if (event.source !== window) return
-            if (event.data?.type === 'REQUEST_EFFECT_REAPPLY') dispatchEffect()
-        })
-    }
-
     return {
         set,
         reset,

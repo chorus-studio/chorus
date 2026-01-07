@@ -243,10 +243,10 @@ export default class AudioManager {
 
     getGainPairing(effect: string) {
         const pairings = {
-            kick_ir: { dry: 0.95, wet: 0.05 },
-            muffler_ir: { dry: 0.9, wet: 0.1 },
-            diffusor_ir: { dry: 0.9, wet: 0.1 },
-            telephone_ir: { dry: 0.65, wet: 0.35 }
+            kick_ir: { dry: 0.5, wet: 0.5 },
+            muffler_ir: { dry: 0.4, wet: 0.6 },
+            diffusor_ir: { dry: 0.4, wet: 0.6 },
+            telephone_ir: { dry: 0.3, wet: 0.7 }
         }
         return pairings[effect as keyof typeof pairings]
     }
@@ -410,11 +410,19 @@ export default class AudioManager {
     disconnect() {
         if (!this.isConnectable) return
 
-        // Clear all active effects
+        // CRITICAL: First cleanup the effect chain while we still have references to the effect nodes
+        // This ensures all effect nodes are properly disconnected before we clear the references
+        this.cleanupEffectChain()
+
+        // Now clear all active effects
         this._activeEffects = {}
 
-        // Rebuild with no effects (just gain → soundTouch → destination)
-        this.rebuildEffectChain()
+        // Reconnect the basic chain: source → gain → soundTouch → destination
+        if (this.source && this._gainNode && this._soundTouchNode && this.destination) {
+            this.source.connect(this._gainNode)
+            this._gainNode.connect(this._soundTouchNode)
+            this._soundTouchNode.connect(this.destination)
+        }
     }
 
     removeEffect(effectType: 'equalizer' | 'msProcessor' | 'reverb') {
