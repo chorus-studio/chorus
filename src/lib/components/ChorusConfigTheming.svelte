@@ -3,7 +3,8 @@
     import { settingsStore } from '$lib/stores/settings'
     import { setTheme, setThemeUnified } from '$lib/utils/theming'
     import { customThemesStore, visibleThemes } from '$lib/stores/custom-themes'
-    import type { CustomTheme, ThemeListItem } from '$lib/types/custom-theme'
+    import type { CustomTheme, CustomThemeType, ThemeListItem } from '$lib/types/custom-theme'
+    import { isBuiltinGradientId } from '$lib/types/custom-theme'
 
     import { Button } from '$lib/components/ui/button'
     import { ScrollArea } from '$lib/components/ui/scroll-area'
@@ -18,8 +19,9 @@
     import EyeOff from 'lucide-svelte/icons/eye-off'
     import Download from 'lucide-svelte/icons/download'
 
-    // Search state
+    // Search and filter state
     let searchQuery = $state('')
+    let activeFilter = $state<'all' | CustomThemeType>('all')
 
     // Dialog states
     let showEditor = $state(false)
@@ -32,19 +34,55 @@
     // Current selected theme - use settings store as source of truth
     const currentThemeId = $derived($settingsStore.theme.customThemeId ?? $settingsStore.theme.name)
 
-    // Filter themes by search query
+    // Filter themes by search query and type
     const filteredThemes = $derived.by(() => {
-        if (!searchQuery.trim()) return $visibleThemes
-        const query = searchQuery.toLowerCase()
-        return $visibleThemes.filter((t) => t.name.toLowerCase().includes(query))
+        let themes = $visibleThemes
+
+        // Filter by type
+        if (activeFilter !== 'all') {
+            themes = themes.filter((t) => {
+                // Built-in color themes have no type field or type === undefined
+                if (activeFilter === 'color') {
+                    return !t.type || t.type === 'color'
+                }
+                return t.type === activeFilter
+            })
+        }
+
+        // Filter by search query
+        if (searchQuery.trim()) {
+            const query = searchQuery.toLowerCase()
+            themes = themes.filter((t) => t.name.toLowerCase().includes(query))
+        }
+
+        return themes
+    })
+
+    // Count themes by type for filter badges
+    const themeCounts = $derived({
+        all: $visibleThemes.length,
+        color: $visibleThemes.filter((t) => !t.type || t.type === 'color').length,
+        gradient: $visibleThemes.filter((t) => t.type === 'gradient').length,
+        image: $visibleThemes.filter((t) => t.type === 'image').length
     })
 
     // Handle theme selection
     async function handleSelectTheme(theme: ThemeListItem) {
         if (theme.id === currentThemeId) return
 
-        if (theme.isBuiltIn) {
-            // Update settings store for built-in theme, clear customThemeId
+        // Built-in gradient themes need special handling - they're "built-in" but applied like custom themes
+        if (isBuiltinGradientId(theme.id)) {
+            // Store the built-in gradient ID as customThemeId
+            await settingsStore.updateSettings({
+                theme: {
+                    ...$settingsStore.theme,
+                    customThemeId: theme.id
+                }
+            })
+            await customThemesStore.setActiveTheme(theme.id)
+            await setThemeUnified(theme.id, customThemesStore.getThemeById)
+        } else if (theme.isBuiltIn) {
+            // Update settings store for built-in color theme, clear customThemeId
             await settingsStore.updateSettings({
                 theme: {
                     ...$settingsStore.theme,
@@ -197,8 +235,49 @@
         </div>
     </div>
 
-    <!-- Search Bar -->
-    <ThemeSearchBar bind:value={searchQuery} />
+    <!-- Search Bar and Filters -->
+    <div class="flex flex-col gap-2">
+        <ThemeSearchBar bind:value={searchQuery} />
+
+        <!-- Type Filters -->
+        <div class="flex items-center gap-2">
+            <span class="text-xs text-muted-foreground">Filter:</span>
+            <div class="flex gap-1">
+                <Button
+                    variant={activeFilter === 'all' ? 'default' : 'outline'}
+                    size="sm"
+                    class="h-7 px-2 text-xs"
+                    onclick={() => (activeFilter = 'all')}
+                >
+                    All ({themeCounts.all})
+                </Button>
+                <Button
+                    variant={activeFilter === 'color' ? 'default' : 'outline'}
+                    size="sm"
+                    class="h-7 px-2 text-xs"
+                    onclick={() => (activeFilter = 'color')}
+                >
+                    Static ({themeCounts.color})
+                </Button>
+                <Button
+                    variant={activeFilter === 'gradient' ? 'default' : 'outline'}
+                    size="sm"
+                    class="h-7 px-2 text-xs"
+                    onclick={() => (activeFilter = 'gradient')}
+                >
+                    Gradients ({themeCounts.gradient})
+                </Button>
+                <Button
+                    variant={activeFilter === 'image' ? 'default' : 'outline'}
+                    size="sm"
+                    class="h-7 px-2 text-xs"
+                    onclick={() => (activeFilter = 'image')}
+                >
+                    Backgrounds ({themeCounts.image})
+                </Button>
+            </div>
+        </div>
+    </div>
 
     <!-- Theme Grid -->
     <ScrollArea class="h-[400px]">

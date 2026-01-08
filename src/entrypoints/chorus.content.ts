@@ -5,6 +5,7 @@ import { setTheme, setCustomTheme } from '$lib/utils/theming'
 import { type SettingsState, SETTINGS_STORE_KEY } from '$lib/stores/settings'
 import { type ContentScriptContext, injectScript, createIntegratedUi } from 'wxt/client'
 import type { CustomThemesState } from '$lib/types/custom-theme'
+import { isBuiltinGradientId, getBuiltinGradientTheme } from '$lib/types/custom-theme'
 import { CUSTOM_THEMES_STORE_KEY } from '$lib/stores/custom-themes'
 
 import '../app.css'
@@ -24,17 +25,33 @@ async function injectChorusUI(ctx: ContentScriptContext) {
 
     // Check for active custom theme first
     if (settings?.theme?.customThemeId) {
-        const customThemesState = await storage.getItem<CustomThemesState>(CUSTOM_THEMES_STORE_KEY)
-        const customTheme = customThemesState?.themes?.[settings.theme.customThemeId]
-        if (customTheme) {
-            await setCustomTheme(customTheme)
+        const customThemeId = settings.theme.customThemeId
+
+        // Check if it's a built-in gradient theme
+        if (isBuiltinGradientId(customThemeId)) {
+            const builtinGradient = getBuiltinGradientTheme(customThemeId)
+            if (builtinGradient) {
+                await setCustomTheme(builtinGradient)
+            } else {
+                // Fallback to default
+                const theme = settings?.theme?.name ?? 'spotify'
+                await setTheme(theme)
+            }
         } else {
-            // Custom theme not found, fall back to built-in theme
-            const theme = settings?.theme?.name ?? 'spotify'
-            await setTheme(theme)
+            // It's a user-created custom theme
+            const customThemesState =
+                await storage.getItem<CustomThemesState>(CUSTOM_THEMES_STORE_KEY)
+            const customTheme = customThemesState?.themes?.[customThemeId]
+            if (customTheme) {
+                await setCustomTheme(customTheme)
+            } else {
+                // Custom theme not found, fall back to built-in theme
+                const theme = settings?.theme?.name ?? 'spotify'
+                await setTheme(theme)
+            }
         }
     } else {
-        // Apply built-in theme
+        // Apply built-in color theme
         const theme = settings?.theme?.name ?? 'spotify'
         await setTheme(theme)
     }

@@ -82,7 +82,9 @@ export function generateImageBackgroundCSS(theme: ImageTheme): string {
 
     // Generate image URL
     const imageUrl =
-        image.source === 'base64' ? `url(data:image/png;base64,${image.data})` : `url(${image.data})`
+        image.source === 'base64'
+            ? `url(data:image/png;base64,${image.data})`
+            : `url(${image.data})`
 
     // Generate filter
     const filterValue = generateFilterCSS(options.filters)
@@ -116,51 +118,12 @@ export function generateGradientBackgroundCSS(theme: GradientTheme): string {
 }
 
 /**
- * Generate UI element background CSS for image/gradient themes
- * Only applies backgrounds to elements that absolutely need them for readability (tooltips, menus)
- * Uses CSS variables for everything else to keep background visible
- */
-function generateUIBackgroundCSS(): string {
-    return `
-/* Menus and popovers - need solid background for readability */
-.SboKmDrCTZng7t4EgNoM,
-.k4sYYpEpX2f7RMAPHv3F,
-.NbcaczStd8vD2rHWwaKv,
-.wlb3dYO07PZuYfmNfmkS,
-.LJej9EszIMJShPMMExpj {
-    background-color: rgba(20, 20, 20, 0.9) !important;
-}
-
-/* Tooltips - need solid background */
-[data-tippy-root] .tippy-box,
-[role="tooltip"],
-.Tippy__transition-container,
-.eKcLjnIANRB8fWqSMNv_,
-.z7B_YJImD6MLB4OkOnk6 {
-    background-color: rgba(20, 20, 20, 0.9) !important;
-}
-
-/* Context menus */
-.encore-dark-theme [data-encore-id="popover"],
-.VNuHhGlPD7kJyHrqptKX {
-    background-color: rgba(20, 20, 20, 0.9) !important;
-}
-
-/* Album/artist info popup on hover */
-.bnlZ3qtshEXCqAz7FFPx,
-.Nv3tJVZ5qd0rbyVG3V7s {
-    background-color: rgba(20, 20, 20, 0.85) !important;
-}
-`
-}
-
-/**
  * Generate complete CSS for a custom theme background (image or gradient)
- * This targets the main Spotify content areas
+ * This targets the main Spotify content areas using a fixed pseudo-element
+ * to cover the entire viewport
  */
 export function generateCustomThemeBackgroundCSS(theme: ImageTheme | GradientTheme): string {
     const selector = `.Root__main-view, .main-view-container`
-    const uiCSS = generateUIBackgroundCSS()
 
     if (theme.type === 'image') {
         const bgCSS = generateImageBackgroundCSS(theme)
@@ -176,15 +139,21 @@ ${selector}::before {
     ${bgCSS};
     pointer-events: none;
 }
-${uiCSS}
 `.trim()
     } else {
-        const bgCSS = generateGradientBackgroundCSS(theme)
+        const gradientCSS = generateGradientCSS(theme.config, theme.stops)
         return `
-${selector} {
-    ${bgCSS} !important;
+${selector}::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: -1;
+    background: ${gradientCSS};
+    pointer-events: none;
 }
-${uiCSS}
 `.trim()
     }
 }
@@ -249,9 +218,18 @@ export function lightenColor(hex: string, percent: number): string {
     const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
     if (!result) return hex
 
-    const r = Math.min(255, Math.floor(parseInt(result[1], 16) + (255 - parseInt(result[1], 16)) * (percent / 100)))
-    const g = Math.min(255, Math.floor(parseInt(result[2], 16) + (255 - parseInt(result[2], 16)) * (percent / 100)))
-    const b = Math.min(255, Math.floor(parseInt(result[3], 16) + (255 - parseInt(result[3], 16)) * (percent / 100)))
+    const r = Math.min(
+        255,
+        Math.floor(parseInt(result[1], 16) + (255 - parseInt(result[1], 16)) * (percent / 100))
+    )
+    const g = Math.min(
+        255,
+        Math.floor(parseInt(result[2], 16) + (255 - parseInt(result[2], 16)) * (percent / 100))
+    )
+    const b = Math.min(
+        255,
+        Math.floor(parseInt(result[3], 16) + (255 - parseInt(result[3], 16)) * (percent / 100))
+    )
 
     return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`
 }
@@ -322,9 +300,15 @@ function interpolateColor(color1: string, color2: string, factor: number): strin
 
     if (!result1 || !result2) return color1
 
-    const r = Math.round(parseInt(result1[1], 16) + (parseInt(result2[1], 16) - parseInt(result1[1], 16)) * factor)
-    const g = Math.round(parseInt(result1[2], 16) + (parseInt(result2[2], 16) - parseInt(result1[2], 16)) * factor)
-    const b = Math.round(parseInt(result1[3], 16) + (parseInt(result2[3], 16) - parseInt(result1[3], 16)) * factor)
+    const r = Math.round(
+        parseInt(result1[1], 16) + (parseInt(result2[1], 16) - parseInt(result1[1], 16)) * factor
+    )
+    const g = Math.round(
+        parseInt(result1[2], 16) + (parseInt(result2[2], 16) - parseInt(result1[2], 16)) * factor
+    )
+    const b = Math.round(
+        parseInt(result1[3], 16) + (parseInt(result2[3], 16) - parseInt(result1[3], 16)) * factor
+    )
 
     return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`
 }

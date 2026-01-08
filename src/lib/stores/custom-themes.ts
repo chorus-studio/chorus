@@ -10,7 +10,12 @@ import type {
     GradientTheme,
     ThemeListItem
 } from '$lib/types/custom-theme'
-import { DEFAULT_CUSTOM_THEMES_STATE } from '$lib/types/custom-theme'
+import {
+    DEFAULT_CUSTOM_THEMES_STATE,
+    BUILTIN_GRADIENT_THEMES,
+    isBuiltinGradientId,
+    getBuiltinGradientTheme
+} from '$lib/types/custom-theme'
 
 export const CUSTOM_THEMES_STORE_KEY = 'local:chorus_custom_themes'
 
@@ -124,7 +129,8 @@ function createCustomThemesStore() {
             return {
                 ...state,
                 themes: remainingThemes,
-                activeCustomThemeId: state.activeCustomThemeId === id ? null : state.activeCustomThemeId
+                activeCustomThemeId:
+                    state.activeCustomThemeId === id ? null : state.activeCustomThemeId
             }
         })
 
@@ -253,7 +259,7 @@ function createCustomThemesStore() {
 
 export const customThemesStore = createCustomThemesStore()
 
-// Derived store for visible themes (custom first, then built-in)
+// Derived store for visible themes (custom first, then built-in gradients, then built-in color themes)
 export const visibleThemes = derived(customThemesStore, ($store): ThemeListItem[] => {
     // Get visible custom themes
     const customThemes: ThemeListItem[] = Object.values($store.themes)
@@ -272,10 +278,36 @@ export const visibleThemes = derived(customThemesStore, ($store): ThemeListItem[
                           sidebar: (t as ColorTheme).colors.sidebar,
                           text: (t as ColorTheme).colors.text
                       }
+                    : undefined,
+            gradientPreview:
+                t.type === 'gradient'
+                    ? {
+                          config: (t as GradientTheme).config,
+                          stops: (t as GradientTheme).stops
+                      }
+                    : undefined,
+            imageThumbnail:
+                t.type === 'image'
+                    ? (t as ImageTheme).image.thumbnail || (t as ImageTheme).image.data
                     : undefined
         }))
 
-    // Get visible built-in themes
+    // Get visible built-in gradient themes
+    const builtInGradients: ThemeListItem[] = BUILTIN_GRADIENT_THEMES.filter(
+        (t) => !$store.hiddenBuiltIn.includes(t.id)
+    ).map((t) => ({
+        id: t.id,
+        name: t.name,
+        isBuiltIn: true,
+        hidden: false,
+        type: 'gradient' as const,
+        gradientPreview: {
+            config: t.config,
+            stops: t.stops
+        }
+    }))
+
+    // Get visible built-in color themes
     const builtInThemes: ThemeListItem[] = THEME_NAMES.filter(
         (name) => !$store.hiddenBuiltIn.includes(name)
     ).map((name) => ({
@@ -292,8 +324,8 @@ export const visibleThemes = derived(customThemesStore, ($store): ThemeListItem[
             : undefined
     }))
 
-    // Custom first, then built-in
-    return [...customThemes, ...builtInThemes]
+    // Custom first, then built-in gradients, then built-in color themes
+    return [...customThemes, ...builtInGradients, ...builtInThemes]
 })
 
 // Derived store for hidden themes
@@ -306,25 +338,61 @@ export const hiddenThemes = derived(customThemesStore, ($store): ThemeListItem[]
             name: t.name,
             isBuiltIn: false,
             hidden: true,
-            type: t.type
+            type: t.type,
+            previewColors:
+                t.type === 'color'
+                    ? {
+                          shadow: (t as ColorTheme).colors.shadow,
+                          sidebar: (t as ColorTheme).colors.sidebar,
+                          text: (t as ColorTheme).colors.text
+                      }
+                    : undefined,
+            gradientPreview:
+                t.type === 'gradient'
+                    ? {
+                          config: (t as GradientTheme).config,
+                          stops: (t as GradientTheme).stops
+                      }
+                    : undefined,
+            imageThumbnail:
+                t.type === 'image'
+                    ? (t as ImageTheme).image.thumbnail || (t as ImageTheme).image.data
+                    : undefined
         }))
 
-    // Get hidden built-in themes
-    const hiddenBuiltIn: ThemeListItem[] = $store.hiddenBuiltIn.map((name) => ({
-        id: name,
-        name: name.replace(/_/g, ' '),
+    // Get hidden built-in gradient themes
+    const hiddenBuiltInGradients: ThemeListItem[] = BUILTIN_GRADIENT_THEMES.filter((t) =>
+        $store.hiddenBuiltIn.includes(t.id)
+    ).map((t) => ({
+        id: t.id,
+        name: t.name,
         isBuiltIn: true,
         hidden: true,
-        previewColors: STATIC_THEMES[name as ThemeName]
-            ? {
-                  shadow: STATIC_THEMES[name as ThemeName]!.shadow,
-                  sidebar: STATIC_THEMES[name as ThemeName]!.sidebar,
-                  text: STATIC_THEMES[name as ThemeName]!.text
-              }
-            : undefined
+        type: 'gradient' as const,
+        gradientPreview: {
+            config: t.config,
+            stops: t.stops
+        }
     }))
 
-    return [...hiddenCustom, ...hiddenBuiltIn]
+    // Get hidden built-in color themes
+    const hiddenBuiltIn: ThemeListItem[] = $store.hiddenBuiltIn
+        .filter((name) => !isBuiltinGradientId(name))
+        .map((name) => ({
+            id: name,
+            name: name.replace(/_/g, ' '),
+            isBuiltIn: true,
+            hidden: true,
+            previewColors: STATIC_THEMES[name as ThemeName]
+                ? {
+                      shadow: STATIC_THEMES[name as ThemeName]!.shadow,
+                      sidebar: STATIC_THEMES[name as ThemeName]!.sidebar,
+                      text: STATIC_THEMES[name as ThemeName]!.text
+                  }
+                : undefined
+        }))
+
+    return [...hiddenCustom, ...hiddenBuiltInGradients, ...hiddenBuiltIn]
 })
 
 // Derived store for all themes (for search)
@@ -343,10 +411,34 @@ export const allThemes = derived(customThemesStore, ($store): ThemeListItem[] =>
                       sidebar: (t as ColorTheme).colors.sidebar,
                       text: (t as ColorTheme).colors.text
                   }
+                : undefined,
+        gradientPreview:
+            t.type === 'gradient'
+                ? {
+                      config: (t as GradientTheme).config,
+                      stops: (t as GradientTheme).stops
+                  }
+                : undefined,
+        imageThumbnail:
+            t.type === 'image'
+                ? (t as ImageTheme).image.thumbnail || (t as ImageTheme).image.data
                 : undefined
     }))
 
-    // All built-in themes
+    // All built-in gradient themes
+    const builtInGradients: ThemeListItem[] = BUILTIN_GRADIENT_THEMES.map((t) => ({
+        id: t.id,
+        name: t.name,
+        isBuiltIn: true,
+        hidden: $store.hiddenBuiltIn.includes(t.id),
+        type: 'gradient' as const,
+        gradientPreview: {
+            config: t.config,
+            stops: t.stops
+        }
+    }))
+
+    // All built-in color themes
     const builtInThemes: ThemeListItem[] = THEME_NAMES.map((name) => ({
         id: name,
         name: name.replace(/_/g, ' '),
@@ -361,6 +453,6 @@ export const allThemes = derived(customThemesStore, ($store): ThemeListItem[] =>
             : undefined
     }))
 
-    // Custom first, then built-in
-    return [...customThemes, ...builtInThemes]
+    // Custom first, then built-in gradients, then built-in color themes
+    return [...customThemes, ...builtInGradients, ...builtInThemes]
 })

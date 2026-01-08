@@ -16,17 +16,22 @@
     --background-highlight: var(--chorus-button) !important;
 }
 
+.Root__globalNav {
+    border-radius: var(--br-2) !important;
+    margin: 2px !important;
+}
+
+.Root__now-playing-bar {
+    margin: 2px !important;
+    border-radius: var(--br-2) !important;
+}
+
 /* background */
 .main-home-homeHeader,
 .main-entityHeader-backgroundColor,
 .main-actionBarBackground-background,
 .playlist-playlist-actionBarBackground-background {
     background: transparent !important;
-}
-
-.wgtzoAN2iFV0pENAqJko {
-    border-radius: var(--br-2);
-    padding: var(--br-2);
 }
 
 .main-topBar-overlay {

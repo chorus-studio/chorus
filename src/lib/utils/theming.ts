@@ -490,6 +490,7 @@ export async function injectTheme(theme: ThemeName): Promise<void> {
 
 // Custom theme support
 import type { CustomTheme, ColorTheme, ImageTheme, GradientTheme } from '$lib/types/custom-theme'
+import { isBuiltinGradientId, getBuiltinGradientTheme } from '$lib/types/custom-theme'
 import {
     generateCustomThemeBackgroundCSS,
     generateTextColorOverridesCSS
@@ -572,9 +573,10 @@ function applyOverlayColorVariables(): void {
     applyColorVariables(DEFAULT_OVERLAY_COLORS)
     // Override highlight-elevated for tooltips/popups - needs to be more opaque
     const root = document.documentElement
-    root.style.setProperty('--chorus-highlight-elevated', 'rgba(30, 30, 30, 0.95)')
-    root.style.setProperty('--chorus-main-elevated', 'rgba(30, 30, 30, 0.95)')
-    root.style.setProperty('--chorus-card-elevated', 'rgba(30, 30, 30, 0.95)')
+    root.style.setProperty('--chorus-highlight-elevated', 'rgba(0, 0, 0, 0.05)')
+    root.style.setProperty('--chorus-main-elevated', 'rgba(30, 30, 30, 0.15)')
+    root.style.setProperty('--chorus-card-elevated', 'rgba(0, 0, 0, 0.05)')
+    root.style.setProperty('--chorus-card', 'rgba(0, 0, 0, 0.5)')
 }
 
 /**
@@ -746,6 +748,15 @@ export async function setThemeUnified(
         return
     }
 
+    // Check if it's a built-in gradient theme
+    if (isBuiltinGradientId(themeId)) {
+        const builtinGradient = getBuiltinGradientTheme(themeId)
+        if (builtinGradient) {
+            await setCustomTheme(builtinGradient)
+            return
+        }
+    }
+
     // Check if it's a custom theme
     if (isCustomThemeId(themeId) && getCustomTheme) {
         const customTheme = getCustomTheme(themeId)
@@ -755,6 +766,6 @@ export async function setThemeUnified(
         }
     }
 
-    // Assume it's a built-in theme
+    // Assume it's a built-in color theme
     await setTheme(themeId as ThemeName)
 }
