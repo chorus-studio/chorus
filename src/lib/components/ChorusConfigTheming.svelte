@@ -1,67 +1,231 @@
 <script lang="ts">
     import type { ThemeName } from '$lib/utils/theming'
     import { settingsStore } from '$lib/stores/settings'
-    import { setTheme, THEME_NAMES, STATIC_THEMES } from '$lib/utils/theming'
+    import { setTheme, setThemeUnified } from '$lib/utils/theming'
+    import { customThemesStore, visibleThemes } from '$lib/stores/custom-themes'
+    import type { CustomTheme, ThemeListItem } from '$lib/types/custom-theme'
 
     import { Button } from '$lib/components/ui/button'
+    import { ScrollArea } from '$lib/components/ui/scroll-area'
+    import {
+        ThemeGrid,
+        ThemeSearchBar,
+        ThemeEditorDialog,
+        HiddenThemesDialog,
+        ThemeImportExportDialog
+    } from '$lib/components/theming'
+    import Plus from 'lucide-svelte/icons/plus'
+    import EyeOff from 'lucide-svelte/icons/eye-off'
+    import Download from 'lucide-svelte/icons/download'
 
-    async function updateTheme(e: MouseEvent) {
-        const theme = (e.currentTarget as HTMLDivElement).dataset.theme as ThemeName
-        if (theme === $settingsStore.theme.name) return
+    // Search state
+    let searchQuery = $state('')
 
-        await settingsStore.updateSettings({
-            theme: {
-                ...$settingsStore.theme,
-                name: theme
+    // Dialog states
+    let showEditor = $state(false)
+    let editorMode = $state<'create' | 'edit' | 'remix'>('create')
+    let editingTheme = $state<CustomTheme | ThemeName | undefined>(undefined)
+    let showHiddenThemes = $state(false)
+    let showImportExport = $state(false)
+    let exportThemeId = $state<string | undefined>(undefined)
+
+    // Current selected theme - use settings store as source of truth
+    const currentThemeId = $derived($settingsStore.theme.customThemeId ?? $settingsStore.theme.name)
+
+    // Filter themes by search query
+    const filteredThemes = $derived.by(() => {
+        if (!searchQuery.trim()) return $visibleThemes
+        const query = searchQuery.toLowerCase()
+        return $visibleThemes.filter((t) => t.name.toLowerCase().includes(query))
+    })
+
+    // Handle theme selection
+    async function handleSelectTheme(theme: ThemeListItem) {
+        if (theme.id === currentThemeId) return
+
+        if (theme.isBuiltIn) {
+            // Update settings store for built-in theme, clear customThemeId
+            await settingsStore.updateSettings({
+                theme: {
+                    ...$settingsStore.theme,
+                    name: theme.id as ThemeName,
+                    customThemeId: null
+                }
+            })
+            await customThemesStore.setActiveTheme(null)
+            await setTheme(theme.id as ThemeName)
+        } else {
+            // Apply custom theme and persist customThemeId in settings
+            await settingsStore.updateSettings({
+                theme: {
+                    ...$settingsStore.theme,
+                    customThemeId: theme.id
+                }
+            })
+            await customThemesStore.setActiveTheme(theme.id)
+            await setThemeUnified(theme.id, customThemesStore.getThemeById)
+        }
+    }
+
+    // Handle edit theme
+    function handleEditTheme(theme: ThemeListItem) {
+        if (theme.isBuiltIn) return
+        const customTheme = customThemesStore.getThemeById(theme.id)
+        if (customTheme) {
+            editingTheme = customTheme
+            editorMode = 'edit'
+            showEditor = true
+        }
+    }
+
+    // Handle delete theme
+    async function handleDeleteTheme(theme: ThemeListItem) {
+        if (theme.isBuiltIn) return
+        if (confirm(`Delete theme "${theme.name}"? This cannot be undone.`)) {
+            await customThemesStore.deleteTheme(theme.id)
+            // If deleted theme was active, switch to Spotify default
+            if (currentThemeId === theme.id) {
+                await settingsStore.updateSettings({
+                    theme: { ...$settingsStore.theme, name: 'spotify', customThemeId: null }
+                })
+                await customThemesStore.setActiveTheme(null)
+                await setTheme('spotify')
             }
-        })
+        }
+    }
 
-        await setTheme(theme)
+    // Handle hide theme
+    async function handleHideTheme(theme: ThemeListItem) {
+        await customThemesStore.hideTheme(theme.id, theme.isBuiltIn)
+        // If hidden theme was active, switch to Spotify default
+        if (currentThemeId === theme.id) {
+            await settingsStore.updateSettings({
+                theme: { ...$settingsStore.theme, name: 'spotify', customThemeId: null }
+            })
+            await customThemesStore.setActiveTheme(null)
+            await setTheme('spotify')
+        }
+    }
+
+    // Handle remix theme
+    function handleRemixTheme(theme: ThemeListItem) {
+        if (theme.isBuiltIn) {
+            editingTheme = theme.id as ThemeName
+        } else {
+            const customTheme = customThemesStore.getThemeById(theme.id)
+            if (customTheme) {
+                editingTheme = customTheme
+            }
+        }
+        editorMode = 'remix'
+        showEditor = true
+    }
+
+    // Handle export theme
+    function handleExportTheme(theme: ThemeListItem) {
+        if (theme.isBuiltIn) return
+        exportThemeId = theme.id
+        showImportExport = true
+    }
+
+    // Handle create new theme
+    function handleCreateTheme() {
+        editingTheme = undefined
+        editorMode = 'create'
+        showEditor = true
+    }
+
+    // Handle save theme
+    async function handleSaveTheme(themeData: Omit<CustomTheme, 'id' | 'createdAt' | 'updatedAt'>) {
+        if (editorMode === 'edit' && editingTheme && typeof editingTheme !== 'string') {
+            await customThemesStore.updateTheme(editingTheme.id, themeData as Partial<CustomTheme>)
+            // If editing active theme, reapply it
+            if (currentThemeId === editingTheme.id) {
+                await setThemeUnified(editingTheme.id, customThemesStore.getThemeById)
+            }
+        } else {
+            const result = await customThemesStore.createTheme(themeData as any)
+            if (result.success && result.theme) {
+                // Optionally select the new theme
+                await handleSelectTheme({
+                    id: result.theme.id,
+                    name: result.theme.name,
+                    isBuiltIn: false,
+                    hidden: false,
+                    type: result.theme.type
+                })
+            }
+        }
+        showEditor = false
+    }
+
+    function handleCancelEditor() {
+        showEditor = false
+        editingTheme = undefined
+    }
+
+    function handleShowImportExport() {
+        exportThemeId = undefined
+        showImportExport = true
     }
 </script>
 
 <div class="flex flex-col gap-4">
+    <!-- Header Row -->
     <div class="flex w-full flex-col gap-2 rounded-md">
-        <div class="flex w-full justify-between rounded-md bg-muted p-4">
-            <h1>Theming</h1>
-            <p>Customize the appearance of Chorus to your liking.</p>
+        <div class="flex w-full items-center justify-between rounded-md bg-muted p-4">
+            <div>
+                <h1 class="text-lg font-semibold">Theming</h1>
+                <p class="text-sm text-muted-foreground">
+                    Customize the appearance of Chorus to your liking.
+                </p>
+            </div>
+            <div class="flex items-center gap-2">
+                <Button variant="outline" size="sm" onclick={handleShowImportExport}>
+                    <Download class="mr-1 size-4" />
+                    Import
+                </Button>
+                <Button variant="outline" size="sm" onclick={() => (showHiddenThemes = true)}>
+                    <EyeOff class="mr-1 size-4" />
+                    Hidden
+                </Button>
+                <Button size="sm" onclick={handleCreateTheme}>
+                    <Plus class="mr-1 size-4" />
+                    Create
+                </Button>
+            </div>
         </div>
     </div>
-    <div class="grid grid-cols-5 gap-4">
-        {#each THEME_NAMES as theme}
-            <div
-                style={`background-color: ${STATIC_THEMES[theme as ThemeName]?.shadow ?? '#000'}`}
-                class="relative aspect-square size-32 rounded-md"
-            >
-                <Button
-                    variant="outline"
-                    data-theme={theme}
-                    onclick={updateTheme}
-                    class="absolute z-10 aspect-square size-32 rounded-md bg-transparent hover:bg-transparent"
-                ></Button>
 
-                <span
-                    class="absolute bottom-1.5 left-0 right-0 z-[5] text-center text-xs"
-                    style={`color: ${STATIC_THEMES[theme as ThemeName]?.text ?? '#fff'}`}
-                >
-                    {theme.split('_').join(' ')}
-                </span>
+    <!-- Search Bar -->
+    <ThemeSearchBar bind:value={searchQuery} />
 
-                <div
-                    class="absolute inset-0 flex justify-center gap-1 rounded-md p-1 py-2"
-                    style={`background-color: ${STATIC_THEMES[theme as ThemeName]?.shadow ?? '#000'}`}
-                >
-                    <div
-                        style={`background-color: ${STATIC_THEMES[theme as ThemeName]?.sidebar ?? '#121212'}`}
-                        class="left-0 h-24 w-2.5 rounded-sm"
-                    ></div>
-
-                    <div
-                        style={`background-color: ${STATIC_THEMES[theme as ThemeName]?.sidebar ?? '#121212'}`}
-                        class="left-1 top-2 h-24 w-24 rounded-sm"
-                    ></div>
-                </div>
-            </div>
-        {/each}
-    </div>
+    <!-- Theme Grid -->
+    <ScrollArea class="h-[400px]">
+        <ThemeGrid
+            themes={filteredThemes}
+            selectedThemeId={currentThemeId}
+            onSelect={handleSelectTheme}
+            onEdit={handleEditTheme}
+            onDelete={handleDeleteTheme}
+            onHide={handleHideTheme}
+            onRemix={handleRemixTheme}
+            onExport={handleExportTheme}
+        />
+    </ScrollArea>
 </div>
+
+<!-- Theme Editor Dialog -->
+<ThemeEditorDialog
+    bind:open={showEditor}
+    mode={editorMode}
+    initialTheme={editingTheme}
+    onSave={handleSaveTheme}
+    onCancel={handleCancelEditor}
+/>
+
+<!-- Hidden Themes Dialog -->
+<HiddenThemesDialog bind:open={showHiddenThemes} />
+
+<!-- Import/Export Dialog -->
+<ThemeImportExportDialog bind:open={showImportExport} {exportThemeId} />

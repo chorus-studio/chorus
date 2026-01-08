@@ -6,6 +6,8 @@ import { defaultAudioEffect } from '$lib/stores/effects'
 import type { NowPlaying } from '$lib/stores/now-playing'
 import type { SettingsState } from '$lib/stores/settings'
 import { THEME_NAMES, setTheme } from '$lib/utils/theming'
+import type { CustomThemesState, ThemeListItem } from '$lib/types/custom-theme'
+import { CUSTOM_THEMES_STORE_KEY } from '$lib/stores/custom-themes'
 import { registerTrackService } from '$lib/api/services/track'
 import { registerPlayerService } from '$lib/api/services/player'
 import { registerNewReleasesService } from '$lib/api/services/new-releases'
@@ -170,22 +172,82 @@ export default defineBackground(() => {
 
         if (command.startsWith('cycle-theme-')) {
             const settings = await storage.getItem<SettingsState>(STORE_KEYS.SETTINGS)
-            const theme = settings?.theme?.name
-            if (!theme) return
+            const customThemesState =
+                await storage.getItem<CustomThemesState>(CUSTOM_THEMES_STORE_KEY)
 
-            const index = THEME_NAMES.indexOf(theme)
+            // Build list of visible themes (custom first, then non-hidden built-in)
+            const visibleThemes: ThemeListItem[] = []
+
+            // Add visible custom themes
+            if (customThemesState?.themes) {
+                const customThemes = Object.values(customThemesState.themes)
+                    .filter((t) => !t.hidden)
+                    .sort((a, b) => a.name.localeCompare(b.name))
+                    .map((t) => ({
+                        id: t.id,
+                        name: t.name,
+                        isBuiltIn: false,
+                        hidden: false
+                    }))
+                visibleThemes.push(...customThemes)
+            }
+
+            // Add visible built-in themes
+            const hiddenBuiltIn = customThemesState?.hiddenBuiltIn ?? []
+            const builtInThemes = THEME_NAMES.filter((name) => !hiddenBuiltIn.includes(name)).map(
+                (name) => ({
+                    id: name,
+                    name: name.replace(/_/g, ' '),
+                    isBuiltIn: true,
+                    hidden: false
+                })
+            )
+            visibleThemes.push(...builtInThemes)
+
+            if (visibleThemes.length === 0) return
+
+            // Find current theme index
+            const currentThemeName = settings?.theme?.name
+            const currentCustomThemeId = settings?.theme?.customThemeId
+
+            let currentIndex = -1
+            if (currentCustomThemeId) {
+                currentIndex = visibleThemes.findIndex(
+                    (t) => !t.isBuiltIn && t.id === currentCustomThemeId
+                )
+            }
+            if (currentIndex === -1 && currentThemeName) {
+                currentIndex = visibleThemes.findIndex(
+                    (t) => t.isBuiltIn && t.id === currentThemeName
+                )
+            }
+            if (currentIndex === -1) currentIndex = 0
+
+            // Calculate next index
             const goToNext = command.endsWith('-next')
             const nextIndex = goToNext
-                ? (index + 1) % THEME_NAMES.length
-                : index === 0
-                  ? THEME_NAMES.length - 1
-                  : index - 1
-            const nextTheme = THEME_NAMES[nextIndex]
+                ? (currentIndex + 1) % visibleThemes.length
+                : currentIndex === 0
+                  ? visibleThemes.length - 1
+                  : currentIndex - 1
 
-            await executeScript({ type: 'theme_change', data: nextTheme })
+            const nextTheme = visibleThemes[nextIndex]
+
+            // Dispatch theme change event with appropriate data
+            const themeChangeData = nextTheme.isBuiltIn
+                ? nextTheme.id
+                : { customThemeId: nextTheme.id }
+
+            await executeScript({ type: 'theme_change', data: themeChangeData })
+
+            // Update settings
             await storage.setItem(STORE_KEYS.SETTINGS, {
                 ...settings,
-                theme: { ...settings.theme, name: nextTheme }
+                theme: {
+                    ...settings?.theme,
+                    name: nextTheme.isBuiltIn ? nextTheme.id : (settings?.theme?.name ?? 'Chill'),
+                    customThemeId: nextTheme.isBuiltIn ? null : nextTheme.id
+                }
             })
         }
 

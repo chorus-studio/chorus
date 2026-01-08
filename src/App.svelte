@@ -6,7 +6,14 @@
     import { trackObserver } from '$lib/observers/track'
     import { playbackObserver } from '$lib/observers/playback'
     import { TracklistObserver } from '$lib/observers/tracklist'
-    import { setTheme, removeTheme, type ThemeName } from '$lib/utils/theming'
+    import {
+        setTheme,
+        removeTheme,
+        setCustomTheme,
+        removeCustomThemeStyles,
+        type ThemeName
+    } from '$lib/utils/theming'
+    import { customThemesStore } from '$lib/stores/custom-themes'
 
     // Import stores to ensure they're initialized and set up their listeners
     import '$lib/stores/effects'
@@ -38,9 +45,26 @@
 
     function setupListener() {
         themeChangeListener = async (e: Event) => {
-            const customEvent = e as CustomEvent<{ theme: ThemeName }>
+            const customEvent = e as CustomEvent<{ theme: ThemeName | { customThemeId: string } }>
             const theme = customEvent.detail.theme
-            if (theme === 'spotify') return removeTheme()
+
+            // Handle custom theme (object with customThemeId)
+            if (typeof theme === 'object' && 'customThemeId' in theme) {
+                const customTheme = customThemesStore.getThemeById(theme.customThemeId)
+                if (customTheme) {
+                    await setCustomTheme(customTheme)
+                }
+                return
+            }
+
+            // Handle built-in themes
+            if (theme === 'spotify') {
+                removeTheme()
+                removeCustomThemeStyles()
+                return
+            }
+
+            removeCustomThemeStyles()
             await setTheme(theme)
         }
         document.addEventListener('FROM_THEME_CHANGE', themeChangeListener)

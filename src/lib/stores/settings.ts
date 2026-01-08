@@ -39,6 +39,7 @@ export type SettingsState = {
     theme: {
         name: ThemeName
         vibrancy: ThemeVibrancy
+        customThemeId?: string | null
     }
 }
 
@@ -65,7 +66,8 @@ const defaultSettingsState: SettingsState = {
     },
     theme: {
         name: 'spotify' as ThemeName,
-        vibrancy: 'LightVibrant' as ThemeVibrancy
+        vibrancy: 'LightVibrant' as ThemeVibrancy,
+        customThemeId: null
     }
 }
 

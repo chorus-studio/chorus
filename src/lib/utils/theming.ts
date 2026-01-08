@@ -343,9 +343,17 @@ export function removeTheme() {
 }
 
 export async function setTheme(theme: ThemeName): Promise<void> {
-    if (theme == 'spotify') return removeTheme()
+    if (theme == 'spotify') {
+        removeTheme()
+        removeCustomThemeStyles()
+        return
+    }
     const themeConfig = STATIC_THEMES[theme]
     if (!themeConfig) return
+
+    // Remove any existing theme/custom styles first
+    removeTheme()
+    removeCustomThemeStyles()
 
     await injectTheme(theme)
 
@@ -440,12 +448,15 @@ export async function overrideExternalStyles() {
                 let count = 0
                 for (const { target, replacement } of rulesToReplace) {
                     const regex = new RegExp(target, 'gi')
-                    modifiedCSS = modifiedCSS.replaceAll(regex, (match: string, ...groups: string[]) => {
-                        if (typeof replacement === 'function') {
-                            return `${replacement(match, groups[0] || '')} !important`
+                    modifiedCSS = modifiedCSS.replaceAll(
+                        regex,
+                        (match: string, ...groups: string[]) => {
+                            if (typeof replacement === 'function') {
+                                return `${replacement(match, groups[0] || '')} !important`
+                            }
+                            return `${replacement} !important`
                         }
-                        return `${replacement} !important`
-                    })
+                    )
                     count++
                 }
 
@@ -461,9 +472,12 @@ export async function overrideExternalStyles() {
 }
 
 export async function injectTheme(theme: ThemeName): Promise<void> {
-    if (document.getElementById('chorus-theme')) return
     const themeConfig = STATIC_THEMES[theme]
     if (!themeConfig) return
+
+    // Remove existing theme link if present
+    const existing = document.getElementById('chorus-theme')
+    if (existing) existing.remove()
 
     await overrideExternalStyles()
 
@@ -472,4 +486,275 @@ export async function injectTheme(theme: ThemeName): Promise<void> {
     style.rel = 'stylesheet'
     style.href = chrome.runtime.getURL('/content-scripts/theme.css')
     document.head.appendChild(style)
+}
+
+// Custom theme support
+import type { CustomTheme, ColorTheme, ImageTheme, GradientTheme } from '$lib/types/custom-theme'
+import {
+    generateCustomThemeBackgroundCSS,
+    generateTextColorOverridesCSS
+} from '$lib/utils/theme-css'
+
+const CUSTOM_THEME_STYLE_ID = 'chorus-custom-theme-css'
+const CUSTOM_BACKGROUND_STYLE_ID = 'chorus-custom-background'
+
+/**
+ * Check if a theme ID is a custom theme (UUID format)
+ */
+export function isCustomThemeId(id: string): boolean {
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
+}
+
+/**
+ * Remove custom theme styles
+ */
+export function removeCustomThemeStyles(): void {
+    const customStyle = document.getElementById(CUSTOM_THEME_STYLE_ID)
+    const bgStyle = document.getElementById(CUSTOM_BACKGROUND_STYLE_ID)
+
+    if (customStyle) customStyle.remove()
+    if (bgStyle) bgStyle.remove()
+}
+
+/**
+ * Apply CSS color variables to document root
+ */
+function applyColorVariables(colors: Record<CSSVariable, string>): void {
+    const root = document.documentElement
+
+    root.style.setProperty('--chorus-main', colors.main)
+    root.style.setProperty('--chorus-card', colors.card)
+    root.style.setProperty('--chorus-sidebar', colors.sidebar)
+    root.style.setProperty('--chorus-button', colors.button)
+    root.style.setProperty('--chorus-subtext', colors.subtext)
+    root.style.setProperty('--chorus-text', colors.text)
+    root.style.setProperty('--chorus-selected-row', colors.selected_row)
+    root.style.setProperty('--chorus-shadow', colors.shadow)
+    root.style.setProperty('--chorus-button-active', colors.button_active)
+    root.style.setProperty('--chorus-button-disabled', colors.button_disabled)
+    root.style.setProperty('--chorus-tab-active', colors.tab_active)
+    root.style.setProperty('--chorus-misc', colors.misc)
+    root.style.setProperty('--chorus-player', colors.player)
+    root.style.setProperty('--chorus-notification', colors.notification)
+    root.style.setProperty('--chorus-notification-error', colors.notification_error)
+    root.style.setProperty('--chorus-highlight', colors.main)
+    root.style.setProperty('--chorus-highlight-elevated', colors.sidebar)
+}
+
+/**
+ * Default semi-transparent colors for image/gradient themes
+ * UI elements get very light semi-transparent backgrounds so the image shows through
+ * but content remains readable
+ */
+const DEFAULT_OVERLAY_COLORS: Record<CSSVariable, string> = {
+    text: '#ffffff',
+    subtext: 'rgba(255, 255, 255, 0.8)',
+    main: 'rgba(0, 0, 0, 0.05)',
+    sidebar: 'rgba(0, 0, 0, 0.05)',
+    player: 'rgba(0, 0, 0, 0.05)',
+    card: 'rgba(0, 0, 0, 0.05)',
+    shadow: 'rgba(0, 0, 0, 0.05)',
+    selected_row: 'rgba(255, 255, 255, 0.15)',
+    button: 'rgba(255, 255, 255, 0.95)',
+    button_active: 'rgba(29, 185, 84, 1)',
+    button_disabled: 'rgba(255, 255, 255, 0.15)',
+    tab_active: 'rgba(255, 255, 255, 0.15)',
+    notification: 'rgba(0, 0, 0, 0.6)',
+    notification_error: 'rgba(220, 50, 50, 0.8)',
+    misc: 'rgba(0, 0, 0, 0.05)'
+}
+
+/**
+ * Apply default overlay colors for image/gradient themes
+ * This ensures UI elements have proper visual separation
+ */
+function applyOverlayColorVariables(): void {
+    applyColorVariables(DEFAULT_OVERLAY_COLORS)
+    // Override highlight-elevated for tooltips/popups - needs to be more opaque
+    const root = document.documentElement
+    root.style.setProperty('--chorus-highlight-elevated', 'rgba(30, 30, 30, 0.95)')
+    root.style.setProperty('--chorus-main-elevated', 'rgba(30, 30, 30, 0.95)')
+    root.style.setProperty('--chorus-card-elevated', 'rgba(30, 30, 30, 0.95)')
+}
+
+/**
+ * Inject custom CSS into the document
+ */
+function injectCustomCSS(id: string, css: string): void {
+    // Remove existing
+    const existing = document.getElementById(id)
+    if (existing) existing.remove()
+
+    const style = document.createElement('style')
+    style.id = id
+    style.textContent = css
+    document.head.appendChild(style)
+}
+
+/**
+ * Apply a color-based custom theme
+ */
+async function applyColorTheme(theme: ColorTheme): Promise<void> {
+    // Check if color variables are already set (avoid flash on route change)
+    const root = document.documentElement
+    const currentMain = root.style.getPropertyValue('--chorus-main')
+
+    if (currentMain === theme.colors.main && document.getElementById('chorus-theme')) {
+        // Theme already applied, just ensure base styles are present
+        await injectThemeStylesheet()
+        return
+    }
+
+    // Remove any existing theme first
+    removeTheme()
+    removeCustomThemeStyles()
+
+    // Inject base theme CSS using a built-in theme as reference
+    await injectThemeStylesheet()
+
+    // Apply color variables
+    applyColorVariables(theme.colors)
+
+    // Override external styles
+    await overrideExternalStyles()
+}
+
+/**
+ * Apply an image-based custom theme
+ */
+async function applyImageTheme(theme: ImageTheme): Promise<void> {
+    // Check if this theme's background is already applied (avoid flash on route change)
+    const existingBgStyle = document.getElementById(CUSTOM_BACKGROUND_STYLE_ID)
+    const bgCSS = generateCustomThemeBackgroundCSS(theme)
+
+    if (existingBgStyle && existingBgStyle.textContent === bgCSS) {
+        // Theme already applied, just ensure base styles are present
+        await injectThemeStylesheet()
+        return
+    }
+
+    // Remove any existing theme first
+    removeTheme()
+    removeCustomThemeStyles()
+
+    // Inject base theme CSS
+    injectTheme('spotify')
+    await injectThemeStylesheet()
+
+    // Apply default overlay colors for visual separation
+    applyOverlayColorVariables()
+
+    // Apply text color overrides if provided
+    if (theme.textColors) {
+        const textCSS = generateTextColorOverridesCSS(theme.textColors)
+        if (textCSS) {
+            injectCustomCSS(CUSTOM_THEME_STYLE_ID, textCSS)
+        }
+    }
+
+    // Apply background image CSS
+    injectCustomCSS(CUSTOM_BACKGROUND_STYLE_ID, bgCSS)
+
+    // Override external styles
+    await overrideExternalStyles()
+}
+
+/**
+ * Apply a gradient-based custom theme
+ */
+async function applyGradientTheme(theme: GradientTheme): Promise<void> {
+    // Check if this theme's background is already applied (avoid flash on route change)
+    const existingBgStyle = document.getElementById(CUSTOM_BACKGROUND_STYLE_ID)
+    const bgCSS = generateCustomThemeBackgroundCSS(theme)
+
+    if (existingBgStyle && existingBgStyle.textContent === bgCSS) {
+        // Theme already applied, just ensure base styles are present
+        await injectThemeStylesheet()
+        return
+    }
+
+    // Remove any existing theme first
+    removeTheme()
+    removeCustomThemeStyles()
+
+    // Inject base theme CSS
+    await injectThemeStylesheet()
+
+    // Apply default overlay colors for visual separation
+    applyOverlayColorVariables()
+
+    // Apply text color overrides if provided
+    if (theme.textColors) {
+        const textCSS = generateTextColorOverridesCSS(theme.textColors)
+        if (textCSS) {
+            injectCustomCSS(CUSTOM_THEME_STYLE_ID, textCSS)
+        }
+    }
+
+    // Apply gradient background CSS
+    injectCustomCSS(CUSTOM_BACKGROUND_STYLE_ID, bgCSS)
+
+    // Override external styles
+    await overrideExternalStyles()
+}
+
+/**
+ * Inject just the theme stylesheet without a specific theme config
+ */
+async function injectThemeStylesheet(): Promise<void> {
+    // Remove existing theme link if present
+    const existing = document.getElementById('chorus-theme')
+    if (existing) existing.remove()
+
+    await overrideExternalStyles()
+
+    const style = document.createElement('link')
+    style.id = 'chorus-theme'
+    style.rel = 'stylesheet'
+    style.href = chrome.runtime.getURL('/content-scripts/theme.css')
+    document.head.appendChild(style)
+}
+
+/**
+ * Apply a custom theme (any type)
+ */
+export async function setCustomTheme(theme: CustomTheme): Promise<void> {
+    switch (theme.type) {
+        case 'color':
+            await applyColorTheme(theme as ColorTheme)
+            break
+        case 'image':
+            await applyImageTheme(theme as ImageTheme)
+            break
+        case 'gradient':
+            await applyGradientTheme(theme as GradientTheme)
+            break
+    }
+}
+
+/**
+ * Unified theme setter - handles both built-in and custom themes
+ */
+export async function setThemeUnified(
+    themeId: string,
+    getCustomTheme?: (id: string) => CustomTheme | undefined
+): Promise<void> {
+    // Handle Spotify default (no theme)
+    if (themeId === 'spotify') {
+        removeTheme()
+        removeCustomThemeStyles()
+        return
+    }
+
+    // Check if it's a custom theme
+    if (isCustomThemeId(themeId) && getCustomTheme) {
+        const customTheme = getCustomTheme(themeId)
+        if (customTheme) {
+            await setCustomTheme(customTheme)
+            return
+        }
+    }
+
+    // Assume it's a built-in theme
+    await setTheme(themeId as ThemeName)
 }

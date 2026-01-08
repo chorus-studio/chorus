@@ -19,8 +19,14 @@
 /* background */
 .main-home-homeHeader,
 .main-entityHeader-backgroundColor,
-.main-actionBarBackground-background {
-    display: none;
+.main-actionBarBackground-background,
+.playlist-playlist-actionBarBackground-background {
+    background: transparent !important;
+}
+
+.wgtzoAN2iFV0pENAqJko {
+    border-radius: var(--br-2);
+    padding: var(--br-2);
 }
 
 .main-topBar-overlay {

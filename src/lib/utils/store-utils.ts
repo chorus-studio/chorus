@@ -1,4 +1,11 @@
 /**
+ * Keys that should be preserved as-is without recursive syncing.
+ * These are typically dynamic collections where the template is empty
+ * but stored data should be kept.
+ */
+const PRESERVE_KEYS = ['releases', 'themes']
+
+/**
  * Ensures that an object has the same keys as a template object.
  * If a key exists in the object but not in the template, it will be removed.
  * If a key exists in the template but not in the object, it will be added with the template's value.
@@ -24,9 +31,9 @@ export function syncWithType<T extends Record<string, any>>(obj: T, template: T)
             typeof template[key] === 'object' &&
             template[key] !== null
         ) {
-            // Special handling for releases property
-            if (key === 'releases') {
-                // Keep the existing releases if they exist
+            // Special handling for keys that should be preserved as-is
+            if (PRESERVE_KEYS.includes(key)) {
+                // Keep the existing data if it exists
                 continue
             }
             // For other objects containing arrays, we need to handle them specially
@@ -58,9 +65,9 @@ export function syncWithType<T extends Record<string, any>>(obj: T, template: T)
             typeof template[key] === 'object' &&
             template[key] !== null
         ) {
-            // Special handling for releases property
-            if (key === 'releases') {
-                // Keep the existing releases if they exist
+            // Special handling for keys that should be preserved as-is
+            if (PRESERVE_KEYS.includes(key)) {
+                // Keep the existing data if it exists
                 continue
             }
             // For other objects containing arrays, we need to handle them specially

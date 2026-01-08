@@ -1,9 +1,11 @@
 import { mount, unmount } from 'svelte'
 
 import { MatchPattern } from 'wxt/sandbox'
-import { setTheme } from '$lib/utils/theming'
+import { setTheme, setCustomTheme } from '$lib/utils/theming'
 import { type SettingsState, SETTINGS_STORE_KEY } from '$lib/stores/settings'
 import { type ContentScriptContext, injectScript, createIntegratedUi } from 'wxt/client'
+import type { CustomThemesState } from '$lib/types/custom-theme'
+import { CUSTOM_THEMES_STORE_KEY } from '$lib/stores/custom-themes'
 
 import '../app.css'
 import App from '../App.svelte'
@@ -19,8 +21,23 @@ async function injectChorusUI(ctx: ContentScriptContext) {
     await injectScript('/media-override.js')
 
     const settings = await storage.getItem<SettingsState>(SETTINGS_STORE_KEY)
-    const theme = settings?.theme ? settings.theme.name : 'spotify'
-    await setTheme(theme)
+
+    // Check for active custom theme first
+    if (settings?.theme?.customThemeId) {
+        const customThemesState = await storage.getItem<CustomThemesState>(CUSTOM_THEMES_STORE_KEY)
+        const customTheme = customThemesState?.themes?.[settings.theme.customThemeId]
+        if (customTheme) {
+            await setCustomTheme(customTheme)
+        } else {
+            // Custom theme not found, fall back to built-in theme
+            const theme = settings?.theme?.name ?? 'spotify'
+            await setTheme(theme)
+        }
+    } else {
+        // Apply built-in theme
+        const theme = settings?.theme?.name ?? 'spotify'
+        await setTheme(theme)
+    }
 
     const ui = createIntegratedUi(ctx, {
         position: 'inline',
@@ -34,7 +51,9 @@ async function injectChorusUI(ctx: ContentScriptContext) {
                 skipBack: document.querySelector('[data-testid="control-button-skip-back"]'),
                 skipForward: document.querySelector('[data-testid="control-button-skip-forward"]'),
                 body: document.querySelector('body'),
-                formInput: document.querySelector('input[data-encore-id="formInput"]') as HTMLInputElement | null,
+                formInput: document.querySelector(
+                    'input[data-encore-id="formInput"]'
+                ) as HTMLInputElement | null,
                 newFeedButton: document.querySelector('[data-testid="whats-new-feed-button"]'),
                 configDialog: document.getElementById('chorus-config-dialog-trigger'),
                 blockedTracksDialog: document.getElementById('blocked-tracks-dialog-trigger'),
@@ -79,7 +98,11 @@ async function injectChorusUI(ctx: ContentScriptContext) {
             }
 
             // Mount seek forward and loop buttons
-            if (elements.skipForward?.parentElement && !elements.seekForward && !elements.loopButton) {
+            if (
+                elements.skipForward?.parentElement &&
+                !elements.seekForward &&
+                !elements.loopButton
+            ) {
                 const parentElement = elements.skipForward.parentElement
                 if (parentElement.lastElementChild) {
                     const forwardDiv = document.createElement('div')
