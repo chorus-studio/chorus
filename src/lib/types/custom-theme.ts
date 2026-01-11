@@ -832,6 +832,414 @@ export const BUILTIN_GRADIENT_THEMES: GradientTheme[] = [
             { id: 'rose-4', color: '#4a2a2a', position: 70 },
             { id: 'rose-5', color: '#1a0a0a', position: 100 }
         ]
+    },
+    // Tie-dye and psychedelic themes
+    {
+        id: 'builtin-gradient-tie-dye-classic',
+        name: 'Tie Dye Classic',
+        type: 'gradient',
+        createdAt: 0,
+        updatedAt: 0,
+        hidden: false,
+        config: {
+            type: 'conic',
+            angle: 0,
+            position: { x: 50, y: 50 },
+            repeating: false
+        },
+        stops: [
+            { id: 'tdc-1', color: '#ff1493', position: 0 },
+            { id: 'tdc-2', color: '#ff8c00', position: 20 },
+            { id: 'tdc-3', color: '#ffff00', position: 40 },
+            { id: 'tdc-4', color: '#00ff00', position: 60 },
+            { id: 'tdc-5', color: '#1e90ff', position: 80 }
+        ]
+    },
+    {
+        id: 'builtin-gradient-acid-spiral',
+        name: 'Acid Spiral',
+        type: 'gradient',
+        createdAt: 0,
+        updatedAt: 0,
+        hidden: false,
+        config: {
+            type: 'conic',
+            angle: 45,
+            position: { x: 50, y: 50 },
+            repeating: true
+        },
+        stops: [
+            { id: 'acid-1', color: '#ff00ff', position: 0 },
+            { id: 'acid-2', color: '#00ffff', position: 5 },
+            { id: 'acid-3', color: '#ff00ff', position: 10 }
+        ]
+    },
+    {
+        id: 'builtin-gradient-psychedelic-sunset',
+        name: 'Psychedelic Sunset',
+        type: 'gradient',
+        createdAt: 0,
+        updatedAt: 0,
+        hidden: false,
+        config: {
+            type: 'radial',
+            shape: 'ellipse',
+            position: { x: 50, y: 100 },
+            repeating: false
+        },
+        stops: [
+            { id: 'psy-1', color: '#ff1493', position: 0 },
+            { id: 'psy-2', color: '#ff4500', position: 25 },
+            { id: 'psy-3', color: '#9400d3', position: 50 },
+            { id: 'psy-4', color: '#4b0082', position: 75 },
+            { id: 'psy-5', color: '#0a0a1a', position: 100 }
+        ]
+    },
+    {
+        id: 'builtin-gradient-rainbow-swirl',
+        name: 'Rainbow Swirl',
+        type: 'gradient',
+        createdAt: 0,
+        updatedAt: 0,
+        hidden: false,
+        config: {
+            type: 'conic',
+            angle: 180,
+            position: { x: 30, y: 70 },
+            repeating: false
+        },
+        stops: [
+            { id: 'rsw-1', color: '#ff0000', position: 0 },
+            { id: 'rsw-2', color: '#ff7f00', position: 17 },
+            { id: 'rsw-3', color: '#ffff00', position: 33 },
+            { id: 'rsw-4', color: '#00ff00', position: 50 },
+            { id: 'rsw-5', color: '#0000ff', position: 67 }
+        ]
+    },
+    {
+        id: 'builtin-gradient-liquid-dreams',
+        name: 'Liquid Dreams',
+        type: 'gradient',
+        createdAt: 0,
+        updatedAt: 0,
+        hidden: false,
+        config: {
+            type: 'radial',
+            shape: 'circle',
+            position: { x: 25, y: 25 },
+            repeating: true
+        },
+        stops: [
+            { id: 'liq-1', color: '#8b00ff', position: 0 },
+            { id: 'liq-2', color: '#ff1493', position: 8 },
+            { id: 'liq-3', color: '#00ced1', position: 16 },
+            { id: 'liq-4', color: '#8b00ff', position: 24 }
+        ]
+    },
+    {
+        id: 'builtin-gradient-neon-tie-dye',
+        name: 'Neon Tie Dye',
+        type: 'gradient',
+        createdAt: 0,
+        updatedAt: 0,
+        hidden: false,
+        config: {
+            type: 'conic',
+            angle: 90,
+            position: { x: 60, y: 40 },
+            repeating: false
+        },
+        stops: [
+            { id: 'ntd-1', color: '#39ff14', position: 0 },
+            { id: 'ntd-2', color: '#ff073a', position: 25 },
+            { id: 'ntd-3', color: '#bc13fe', position: 50 },
+            { id: 'ntd-4', color: '#04d9ff', position: 75 },
+            { id: 'ntd-5', color: '#39ff14', position: 100 }
+        ]
+    },
+    {
+        id: 'builtin-gradient-kaleidoscope',
+        name: 'Kaleidoscope',
+        type: 'gradient',
+        createdAt: 0,
+        updatedAt: 0,
+        hidden: false,
+        config: {
+            type: 'conic',
+            angle: 0,
+            position: { x: 50, y: 50 },
+            repeating: true
+        },
+        stops: [
+            { id: 'kal-1', color: '#ff6b6b', position: 0 },
+            { id: 'kal-2', color: '#feca57', position: 3 },
+            { id: 'kal-3', color: '#48dbfb', position: 6 },
+            { id: 'kal-4', color: '#ff9ff3', position: 9 },
+            { id: 'kal-5', color: '#ff6b6b', position: 12 }
+        ]
+    },
+    {
+        id: 'builtin-gradient-electric-kool-aid',
+        name: 'Electric Kool-Aid',
+        type: 'gradient',
+        createdAt: 0,
+        updatedAt: 0,
+        hidden: false,
+        config: {
+            type: 'linear',
+            angle: 45,
+            repeating: true
+        },
+        stops: [
+            { id: 'eka-1', color: '#ff00ff', position: 0 },
+            { id: 'eka-2', color: '#00ff00', position: 4 },
+            { id: 'eka-3', color: '#ffff00', position: 8 },
+            { id: 'eka-4', color: '#00ffff', position: 12 },
+            { id: 'eka-5', color: '#ff00ff', position: 16 }
+        ]
+    },
+    {
+        id: 'builtin-gradient-mushroom-vision',
+        name: 'Mushroom Vision',
+        type: 'gradient',
+        createdAt: 0,
+        updatedAt: 0,
+        hidden: false,
+        config: {
+            type: 'radial',
+            shape: 'ellipse',
+            position: { x: 50, y: 50 },
+            repeating: true
+        },
+        stops: [
+            { id: 'mush-1', color: '#2a0a3a', position: 0 },
+            { id: 'mush-2', color: '#6b2d5c', position: 5 },
+            { id: 'mush-3', color: '#ff6b35', position: 10 },
+            { id: 'mush-4', color: '#2a0a3a', position: 15 }
+        ]
+    },
+    {
+        id: 'builtin-gradient-groovy',
+        name: 'Groovy',
+        type: 'gradient',
+        createdAt: 0,
+        updatedAt: 0,
+        hidden: false,
+        config: {
+            type: 'conic',
+            angle: 270,
+            position: { x: 75, y: 25 },
+            repeating: false
+        },
+        stops: [
+            { id: 'grv-1', color: '#ff6f61', position: 0 },
+            { id: 'grv-2', color: '#ffb347', position: 20 },
+            { id: 'grv-3', color: '#77dd77', position: 40 },
+            { id: 'grv-4', color: '#89cff0', position: 60 },
+            { id: 'grv-5', color: '#ca9bf7', position: 80 }
+        ]
+    },
+    {
+        id: 'builtin-gradient-trippy-tunnel',
+        name: 'Trippy Tunnel',
+        type: 'gradient',
+        createdAt: 0,
+        updatedAt: 0,
+        hidden: false,
+        config: {
+            type: 'radial',
+            shape: 'circle',
+            position: { x: 50, y: 50 },
+            repeating: true
+        },
+        stops: [
+            { id: 'trip-1', color: '#0a0a1a', position: 0 },
+            { id: 'trip-2', color: '#ff00ff', position: 3 },
+            { id: 'trip-3', color: '#0a0a1a', position: 6 },
+            { id: 'trip-4', color: '#00ffff', position: 9 },
+            { id: 'trip-5', color: '#0a0a1a', position: 12 }
+        ]
+    },
+    {
+        id: 'builtin-gradient-cosmic-spiral',
+        name: 'Cosmic Spiral',
+        type: 'gradient',
+        createdAt: 0,
+        updatedAt: 0,
+        hidden: false,
+        config: {
+            type: 'conic',
+            angle: 135,
+            position: { x: 40, y: 60 },
+            repeating: true
+        },
+        stops: [
+            { id: 'cos-1', color: '#4a0080', position: 0 },
+            { id: 'cos-2', color: '#ff1493', position: 4 },
+            { id: 'cos-3', color: '#00bfff', position: 8 },
+            { id: 'cos-4', color: '#4a0080', position: 12 }
+        ]
+    },
+    {
+        id: 'builtin-gradient-flower-power',
+        name: 'Flower Power',
+        type: 'gradient',
+        createdAt: 0,
+        updatedAt: 0,
+        hidden: false,
+        config: {
+            type: 'conic',
+            angle: 0,
+            position: { x: 50, y: 50 },
+            repeating: false
+        },
+        stops: [
+            { id: 'flw-1', color: '#ff69b4', position: 0 },
+            { id: 'flw-2', color: '#ffa500', position: 25 },
+            { id: 'flw-3', color: '#adff2f', position: 50 },
+            { id: 'flw-4', color: '#40e0d0', position: 75 },
+            { id: 'flw-5', color: '#ff69b4', position: 100 }
+        ]
+    },
+    {
+        id: 'builtin-gradient-lava-lamp',
+        name: 'Lava Lamp',
+        type: 'gradient',
+        createdAt: 0,
+        updatedAt: 0,
+        hidden: false,
+        config: {
+            type: 'radial',
+            shape: 'ellipse',
+            position: { x: 50, y: 80 },
+            repeating: false
+        },
+        stops: [
+            { id: 'lava-1', color: '#ff4500', position: 0 },
+            { id: 'lava-2', color: '#ff1493', position: 30 },
+            { id: 'lava-3', color: '#8b008b', position: 60 },
+            { id: 'lava-4', color: '#1a0a2a', position: 100 }
+        ]
+    },
+    {
+        id: 'builtin-gradient-woodstock',
+        name: 'Woodstock',
+        type: 'gradient',
+        createdAt: 0,
+        updatedAt: 0,
+        hidden: false,
+        config: {
+            type: 'linear',
+            angle: 135,
+            repeating: false
+        },
+        stops: [
+            { id: 'wood-1', color: '#ff6347', position: 0 },
+            { id: 'wood-2', color: '#ffd700', position: 25 },
+            { id: 'wood-3', color: '#32cd32', position: 50 },
+            { id: 'wood-4', color: '#4169e1', position: 75 },
+            { id: 'wood-5', color: '#9932cc', position: 100 }
+        ]
+    },
+    {
+        id: 'builtin-gradient-disco-ball',
+        name: 'Disco Ball',
+        type: 'gradient',
+        createdAt: 0,
+        updatedAt: 0,
+        hidden: false,
+        config: {
+            type: 'conic',
+            angle: 30,
+            position: { x: 50, y: 50 },
+            repeating: true
+        },
+        stops: [
+            { id: 'disc-1', color: '#c0c0c0', position: 0 },
+            { id: 'disc-2', color: '#ff00ff', position: 2 },
+            { id: 'disc-3', color: '#c0c0c0', position: 4 },
+            { id: 'disc-4', color: '#00ffff', position: 6 },
+            { id: 'disc-5', color: '#c0c0c0', position: 8 }
+        ]
+    },
+    {
+        id: 'builtin-gradient-acid-rain',
+        name: 'Acid Rain',
+        type: 'gradient',
+        createdAt: 0,
+        updatedAt: 0,
+        hidden: false,
+        config: {
+            type: 'linear',
+            angle: 180,
+            repeating: true
+        },
+        stops: [
+            { id: 'acr-1', color: '#0a2a0a', position: 0 },
+            { id: 'acr-2', color: '#39ff14', position: 2 },
+            { id: 'acr-3', color: '#0a2a0a', position: 4 }
+        ]
+    },
+    {
+        id: 'builtin-gradient-oil-slick',
+        name: 'Oil Slick',
+        type: 'gradient',
+        createdAt: 0,
+        updatedAt: 0,
+        hidden: false,
+        config: {
+            type: 'linear',
+            angle: 160,
+            repeating: false
+        },
+        stops: [
+            { id: 'oil-1', color: '#0a0a0a', position: 0 },
+            { id: 'oil-2', color: '#1a0a3a', position: 20 },
+            { id: 'oil-3', color: '#003366', position: 40 },
+            { id: 'oil-4', color: '#006633', position: 60 },
+            { id: 'oil-5', color: '#660033', position: 80 }
+        ]
+    },
+    {
+        id: 'builtin-gradient-fractals',
+        name: 'Fractals',
+        type: 'gradient',
+        createdAt: 0,
+        updatedAt: 0,
+        hidden: false,
+        config: {
+            type: 'radial',
+            shape: 'circle',
+            position: { x: 30, y: 30 },
+            repeating: true
+        },
+        stops: [
+            { id: 'frac-1', color: '#000033', position: 0 },
+            { id: 'frac-2', color: '#660066', position: 3 },
+            { id: 'frac-3', color: '#003366', position: 6 },
+            { id: 'frac-4', color: '#006600', position: 9 },
+            { id: 'frac-5', color: '#000033', position: 12 }
+        ]
+    },
+    {
+        id: 'builtin-gradient-plasma',
+        name: 'Plasma',
+        type: 'gradient',
+        createdAt: 0,
+        updatedAt: 0,
+        hidden: false,
+        config: {
+            type: 'conic',
+            angle: 60,
+            position: { x: 70, y: 30 },
+            repeating: true
+        },
+        stops: [
+            { id: 'plas-1', color: '#ff00ff', position: 0 },
+            { id: 'plas-2', color: '#0000ff', position: 5 },
+            { id: 'plas-3', color: '#ff0000', position: 10 },
+            { id: 'plas-4', color: '#ff00ff', position: 15 }
+        ]
     }
 ]
 
