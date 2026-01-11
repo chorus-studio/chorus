@@ -27,7 +27,7 @@
 
     // Generate gradient CSS for preview
     const gradientCSS = $derived(
-        theme.gradientPreview
+        theme.gradientPreview?.config && Array.isArray(theme.gradientPreview?.stops)
             ? generateGradientCSS(theme.gradientPreview.config, theme.gradientPreview.stops)
             : null
     )

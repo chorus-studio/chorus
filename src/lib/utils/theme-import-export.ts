@@ -78,11 +78,11 @@ export function parseImportCode(code: string): {
         const jsonString = decodeURIComponent(escape(atob(base64)))
         const exportData: ThemeExportData = JSON.parse(jsonString)
 
-        // Validate version
+        // Validate version - only reject if from a newer format version
         if (exportData.version > EXPORT_VERSION) {
             return {
                 success: false,
-                error: 'Theme was created with a newer version. Please update your extension.'
+                error: `This theme uses a newer format (v${exportData.version}) that requires updating your Chorus extension to the latest version.`
             }
         }
 
