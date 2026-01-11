@@ -37,6 +37,19 @@
 
     let { open = $bindable(false), mode, initialTheme, onSave, onCancel }: Props = $props()
 
+    // Generate a random 5-character alphanumeric suffix for remix names
+    function generateRemixSuffix(): string {
+        const chars = 'abcdefghijklmnopqrstuvwxyz0123456789'
+        let result = ''
+        for (let i = 0; i < 5; i++) {
+            result += chars.charAt(Math.floor(Math.random() * chars.length))
+        }
+        return result
+    }
+
+    // Whether theme type tabs should be locked (in edit/remix mode)
+    const isTypeLocked = $derived(mode === 'edit' || mode === 'remix')
+
     // Default colors
     const defaultColors: Record<CSSVariable, string> = {
         text: '#ffffff',
@@ -89,11 +102,12 @@
             return
         }
 
-        // Check if it's a built-in theme name
+        // Check if it's a built-in theme name (color theme only)
         if (typeof initialTheme === 'string') {
             const builtInColors = STATIC_THEMES[initialTheme]
             if (builtInColors) {
-                name = mode === 'remix' ? `${initialTheme.replace(/_/g, ' ')} Remix` : ''
+                const suffix = generateRemixSuffix()
+                name = mode === 'remix' ? `${initialTheme.replace(/_/g, ' ')} - ${suffix}` : ''
                 themeType = 'color'
                 colors = { ...builtInColors }
                 remixedFrom = `builtin:${initialTheme}`
@@ -101,9 +115,10 @@
             return
         }
 
-        // It's a custom theme
+        // It's a custom theme (or built-in gradient passed as full object)
         const theme = initialTheme
-        name = mode === 'remix' ? `${theme.name} Remix` : theme.name
+        const suffix = generateRemixSuffix()
+        name = mode === 'remix' ? `${theme.name} - ${suffix}` : theme.name
         themeType = theme.type
         remixedFrom = mode === 'remix' ? theme.id : theme.remixedFrom
 
@@ -192,9 +207,24 @@
 
                 <Tabs.Root bind:value={themeType}>
                     <Tabs.List class="grid w-full grid-cols-3">
-                        <Tabs.Trigger value="color">Colors</Tabs.Trigger>
-                        <Tabs.Trigger value="image">Image</Tabs.Trigger>
-                        <Tabs.Trigger value="gradient">Gradient</Tabs.Trigger>
+                        <Tabs.Trigger
+                            value="color"
+                            disabled={isTypeLocked && themeType !== 'color'}
+                        >
+                            Colors
+                        </Tabs.Trigger>
+                        <Tabs.Trigger
+                            value="image"
+                            disabled={isTypeLocked && themeType !== 'image'}
+                        >
+                            Image
+                        </Tabs.Trigger>
+                        <Tabs.Trigger
+                            value="gradient"
+                            disabled={isTypeLocked && themeType !== 'gradient'}
+                        >
+                            Gradient
+                        </Tabs.Trigger>
                     </Tabs.List>
 
                     <ScrollArea class="mt-4 h-[350px] pr-4">
