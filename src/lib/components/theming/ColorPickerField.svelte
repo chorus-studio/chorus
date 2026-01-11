@@ -2,6 +2,7 @@
     import { Input } from '$lib/components/ui/input'
     import { Label } from '$lib/components/ui/label'
     import * as Tooltip from '$lib/components/ui/tooltip'
+    import Pipette from 'lucide-svelte/icons/pipette'
 
     interface Props {
         label: string
@@ -12,11 +13,16 @@
 
     let { label, description, value = $bindable('#000000'), onchange }: Props = $props()
 
-    let colorInputRef: HTMLInputElement | undefined = $state()
-
-    function openColorPicker() {
-        colorInputRef?.click()
-    }
+    // Calculate if color is light or dark for icon contrast
+    const isLightColor = $derived.by(() => {
+        const hex = value.replace('#', '')
+        const r = parseInt(hex.slice(0, 2), 16)
+        const g = parseInt(hex.slice(2, 4), 16)
+        const b = parseInt(hex.slice(4, 6), 16)
+        // Using relative luminance formula
+        const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255
+        return luminance > 0.5
+    })
 
     function handleColorChange(e: Event) {
         const target = e.target as HTMLInputElement
@@ -39,16 +45,27 @@
     <Tooltip.Provider>
         <Tooltip.Root>
             <Tooltip.Trigger>
-                <button
-                    type="button"
+                <label
                     aria-label="Pick color for {label}"
-                    class="size-8 cursor-pointer rounded-md border border-muted-foreground"
+                    class="group relative flex size-8 cursor-pointer items-center justify-center rounded-md border border-muted-foreground transition-all hover:scale-105 hover:border-foreground"
                     style="background-color: {value}"
-                    onclick={openColorPicker}
-                ></button>
+                >
+                    <!-- Pipette icon overlay on hover -->
+                    <Pipette
+                        class="size-4 opacity-0 drop-shadow-md transition-opacity group-hover:opacity-100"
+                        style="color: {isLightColor ? '#000000' : '#ffffff'}"
+                    />
+                    <!-- Native color picker input -->
+                    <input
+                        type="color"
+                        {value}
+                        oninput={handleColorChange}
+                        class="absolute inset-0 cursor-pointer opacity-0"
+                    />
+                </label>
             </Tooltip.Trigger>
             <Tooltip.Content side="left">
-                <p>{description ?? label}</p>
+                <p>Click to pick color</p>
             </Tooltip.Content>
         </Tooltip.Root>
     </Tooltip.Provider>
@@ -63,13 +80,4 @@
             placeholder="#000000"
         />
     </div>
-
-    <!-- Hidden native color input -->
-    <input
-        type="color"
-        bind:this={colorInputRef}
-        {value}
-        oninput={handleColorChange}
-        class="sr-only"
-    />
 </div>
