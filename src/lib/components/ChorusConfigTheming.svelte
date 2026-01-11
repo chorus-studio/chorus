@@ -4,10 +4,11 @@
     import { setTheme, setThemeUnified } from '$lib/utils/theming'
     import { customThemesStore, visibleThemes } from '$lib/stores/custom-themes'
     import type { CustomTheme, CustomThemeType, ThemeListItem } from '$lib/types/custom-theme'
-    import { isBuiltinGradientId } from '$lib/types/custom-theme'
+    import { isBuiltinGradientId, getBuiltinGradientTheme } from '$lib/types/custom-theme'
 
     import { Button } from '$lib/components/ui/button'
     import { ScrollArea } from '$lib/components/ui/scroll-area'
+    import * as AlertDialog from '$lib/components/ui/alert-dialog'
     import {
         ThemeGrid,
         ThemeSearchBar,
@@ -30,6 +31,8 @@
     let showHiddenThemes = $state(false)
     let showImportExport = $state(false)
     let exportThemeId = $state<string | undefined>(undefined)
+    let showDeleteConfirm = $state(false)
+    let themeToDelete = $state<ThemeListItem | null>(null)
 
     // Current selected theme - use settings store as source of truth
     const currentThemeId = $derived($settingsStore.theme.customThemeId ?? $settingsStore.theme.name)
@@ -116,20 +119,34 @@
         }
     }
 
-    // Handle delete theme
-    async function handleDeleteTheme(theme: ThemeListItem) {
+    // Handle delete theme - show confirmation dialog
+    function handleDeleteTheme(theme: ThemeListItem) {
         if (theme.isBuiltIn) return
-        if (confirm(`Delete theme "${theme.name}"? This cannot be undone.`)) {
-            await customThemesStore.deleteTheme(theme.id)
-            // If deleted theme was active, switch to Spotify default
-            if (currentThemeId === theme.id) {
-                await settingsStore.updateSettings({
-                    theme: { ...$settingsStore.theme, name: 'spotify', customThemeId: null }
-                })
-                await customThemesStore.setActiveTheme(null)
-                await setTheme('spotify')
-            }
+        themeToDelete = theme
+        showDeleteConfirm = true
+    }
+
+    // Confirm delete theme
+    async function confirmDeleteTheme() {
+        if (!themeToDelete) return
+        const themeId = themeToDelete.id
+        await customThemesStore.deleteTheme(themeId)
+        // If deleted theme was active, switch to Spotify default
+        if (currentThemeId === themeId) {
+            await settingsStore.updateSettings({
+                theme: { ...$settingsStore.theme, name: 'spotify', customThemeId: null }
+            })
+            await customThemesStore.setActiveTheme(null)
+            await setTheme('spotify')
         }
+        themeToDelete = null
+        showDeleteConfirm = false
+    }
+
+    // Cancel delete
+    function cancelDeleteTheme() {
+        themeToDelete = null
+        showDeleteConfirm = false
     }
 
     // Handle hide theme
@@ -148,7 +165,16 @@
     // Handle remix theme
     function handleRemixTheme(theme: ThemeListItem) {
         if (theme.isBuiltIn) {
-            editingTheme = theme.id as ThemeName
+            // Check if it's a built-in gradient theme
+            if (isBuiltinGradientId(theme.id)) {
+                const gradientTheme = getBuiltinGradientTheme(theme.id)
+                if (gradientTheme) {
+                    editingTheme = gradientTheme
+                }
+            } else {
+                // Built-in color theme
+                editingTheme = theme.id as ThemeName
+            }
         } else {
             const customTheme = customThemesStore.getThemeById(theme.id)
             if (customTheme) {
@@ -308,3 +334,25 @@
 
 <!-- Import/Export Dialog -->
 <ThemeImportExportDialog bind:open={showImportExport} {exportThemeId} />
+
+<!-- Delete Confirmation Dialog -->
+<AlertDialog.Root bind:open={showDeleteConfirm}>
+    <AlertDialog.Content>
+        <AlertDialog.Header>
+            <AlertDialog.Title>Delete Theme</AlertDialog.Title>
+            <AlertDialog.Description>
+                Are you sure you want to delete "{themeToDelete?.name}"? This action cannot be
+                undone.
+            </AlertDialog.Description>
+        </AlertDialog.Header>
+        <AlertDialog.Footer>
+            <AlertDialog.Cancel onclick={cancelDeleteTheme}>Cancel</AlertDialog.Cancel>
+            <AlertDialog.Action
+                onclick={confirmDeleteTheme}
+                class="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+                Delete
+            </AlertDialog.Action>
+        </AlertDialog.Footer>
+    </AlertDialog.Content>
+</AlertDialog.Root>
