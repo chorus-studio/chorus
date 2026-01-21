@@ -332,22 +332,70 @@ export const STATIC_THEMES: Record<ThemeName, null | Record<CSSVariable, string>
     }
 }
 
+/**
+ * List of CSS custom properties set by Chorus themes
+ */
+const CHORUS_CSS_PROPERTIES = [
+    '--chorus-main',
+    '--chorus-card',
+    '--chorus-sidebar',
+    '--chorus-button',
+    '--chorus-subtext',
+    '--chorus-text',
+    '--chorus-selected-row',
+    '--chorus-shadow',
+    '--chorus-button-active',
+    '--chorus-button-disabled',
+    '--chorus-tab-active',
+    '--chorus-misc',
+    '--chorus-player',
+    '--chorus-notification',
+    '--chorus-notification-error',
+    '--chorus-highlight',
+    '--chorus-highlight-elevated',
+    '--chorus-main-elevated',
+    '--chorus-card-elevated',
+    '--chorus-rgb-shadow',
+    '--chorus-rgb-text',
+    '--chorus-rgb-selected-row'
+]
+
+/**
+ * Remove only Chorus-specific CSS properties instead of clearing all styles
+ */
+function removeChorusCSSProperties(): void {
+    const root = document.documentElement
+    for (const prop of CHORUS_CSS_PROPERTIES) {
+        root.style.removeProperty(prop)
+    }
+}
+
 export function removeTheme() {
     const themeLink = document.getElementById('chorus-theme')
-    document.documentElement.style.cssText = ''
+    // Remove only Chorus CSS properties instead of clearing ALL styles
+    removeChorusCSSProperties()
     const allOverrideStyles = document.querySelectorAll('style[id^="chorus-override-styles-"]')
     allOverrideStyles.forEach((style) => {
         document.head.removeChild(style)
     })
     if (themeLink) document.head.removeChild(themeLink)
+    // Clear tracked theme ID
+    currentAppliedThemeId = null
 }
 
 export async function setTheme(theme: ThemeName): Promise<void> {
     if (theme == 'spotify') {
         removeTheme()
         removeCustomThemeStyles()
+        currentAppliedThemeId = 'spotify'
         return
     }
+
+    // Check if this theme is already applied (avoid flash on route change)
+    if (currentAppliedThemeId === theme && document.getElementById('chorus-theme')) {
+        return
+    }
+
     const themeConfig = STATIC_THEMES[theme]
     if (!themeConfig) return
 
@@ -385,6 +433,9 @@ export async function setTheme(theme: ThemeName): Promise<void> {
     )
     document.documentElement.style.setProperty('--chorus-highlight', themeConfig.main)
     document.documentElement.style.setProperty('--chorus-highlight-elevated', themeConfig.sidebar)
+
+    // Track applied theme
+    currentAppliedThemeId = theme
 }
 
 type ReplacementRule = {
@@ -499,6 +550,9 @@ import {
 const CUSTOM_THEME_STYLE_ID = 'chorus-custom-theme-css'
 const CUSTOM_BACKGROUND_STYLE_ID = 'chorus-custom-background'
 
+// Track currently applied theme to avoid unnecessary reapplication
+let currentAppliedThemeId: string | null = null
+
 /**
  * Check if a theme ID is a custom theme (UUID format)
  */
@@ -515,6 +569,8 @@ export function removeCustomThemeStyles(): void {
 
     if (customStyle) customStyle.remove()
     if (bgStyle) bgStyle.remove()
+    // Note: don't clear currentAppliedThemeId here since this may be called
+    // as part of switching themes, and the new theme will set it
 }
 
 /**
@@ -597,13 +653,8 @@ function injectCustomCSS(id: string, css: string): void {
  * Apply a color-based custom theme
  */
 async function applyColorTheme(theme: ColorTheme): Promise<void> {
-    // Check if color variables are already set (avoid flash on route change)
-    const root = document.documentElement
-    const currentMain = root.style.getPropertyValue('--chorus-main')
-
-    if (currentMain === theme.colors.main && document.getElementById('chorus-theme')) {
-        // Theme already applied, just ensure base styles are present
-        await injectThemeStylesheet()
+    // Check if this exact theme is already applied (avoid flash on route change)
+    if (currentAppliedThemeId === theme.id && document.getElementById('chorus-theme')) {
         return
     }
 
@@ -619,19 +670,17 @@ async function applyColorTheme(theme: ColorTheme): Promise<void> {
 
     // Override external styles
     await overrideExternalStyles()
+
+    // Track applied theme
+    currentAppliedThemeId = theme.id
 }
 
 /**
  * Apply an image-based custom theme
  */
 async function applyImageTheme(theme: ImageTheme): Promise<void> {
-    // Check if this theme's background is already applied (avoid flash on route change)
-    const existingBgStyle = document.getElementById(CUSTOM_BACKGROUND_STYLE_ID)
-    const bgCSS = generateCustomThemeBackgroundCSS(theme)
-
-    if (existingBgStyle && existingBgStyle.textContent === bgCSS) {
-        // Theme already applied, just ensure base styles are present
-        await injectThemeStylesheet()
+    // Check if this exact theme is already applied (avoid flash on route change)
+    if (currentAppliedThemeId === theme.id && document.getElementById(CUSTOM_BACKGROUND_STYLE_ID)) {
         return
     }
 
@@ -655,23 +704,22 @@ async function applyImageTheme(theme: ImageTheme): Promise<void> {
     }
 
     // Apply background image CSS
+    const bgCSS = generateCustomThemeBackgroundCSS(theme)
     injectCustomCSS(CUSTOM_BACKGROUND_STYLE_ID, bgCSS)
 
     // Override external styles
     await overrideExternalStyles()
+
+    // Track applied theme
+    currentAppliedThemeId = theme.id
 }
 
 /**
  * Apply a gradient-based custom theme
  */
 async function applyGradientTheme(theme: GradientTheme): Promise<void> {
-    // Check if this theme's background is already applied (avoid flash on route change)
-    const existingBgStyle = document.getElementById(CUSTOM_BACKGROUND_STYLE_ID)
-    const bgCSS = generateCustomThemeBackgroundCSS(theme)
-
-    if (existingBgStyle && existingBgStyle.textContent === bgCSS) {
-        // Theme already applied, just ensure base styles are present
-        await injectThemeStylesheet()
+    // Check if this exact theme is already applied (avoid flash on route change)
+    if (currentAppliedThemeId === theme.id && document.getElementById(CUSTOM_BACKGROUND_STYLE_ID)) {
         return
     }
 
@@ -694,10 +742,14 @@ async function applyGradientTheme(theme: GradientTheme): Promise<void> {
     }
 
     // Apply gradient background CSS
+    const bgCSS = generateCustomThemeBackgroundCSS(theme)
     injectCustomCSS(CUSTOM_BACKGROUND_STYLE_ID, bgCSS)
 
     // Override external styles
     await overrideExternalStyles()
+
+    // Track applied theme
+    currentAppliedThemeId = theme.id
 }
 
 /**
@@ -741,10 +793,16 @@ export async function setThemeUnified(
     themeId: string,
     getCustomTheme?: (id: string) => CustomTheme | undefined
 ): Promise<void> {
+    // Check if this theme is already applied (avoid flash on route change)
+    if (currentAppliedThemeId === themeId) {
+        return
+    }
+
     // Handle Spotify default (no theme)
     if (themeId === 'spotify') {
         removeTheme()
         removeCustomThemeStyles()
+        currentAppliedThemeId = 'spotify'
         return
     }
 
@@ -753,6 +811,8 @@ export async function setThemeUnified(
         const builtinGradient = getBuiltinGradientTheme(themeId)
         if (builtinGradient) {
             await setCustomTheme(builtinGradient)
+            // Track using the gradient ID instead of theme.id
+            currentAppliedThemeId = themeId
             return
         }
     }
