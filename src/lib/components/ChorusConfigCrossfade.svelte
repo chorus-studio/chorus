@@ -43,7 +43,8 @@
     <div class="flex flex-col gap-y-2">
         <h2 class="text-lg font-semibold text-white">Crossfade Settings</h2>
         <p class="text-sm text-gray-400">
-            Enable Spotify Desktop-style crossfade between tracks. Audio chunks are intercepted and overlapped for smooth transitions.
+            Enable Spotify Desktop-style crossfade between tracks. Audio chunks are intercepted and
+            overlapped for smooth transitions.
         </p>
     </div>
 
@@ -102,15 +103,12 @@
 
     <!-- Fade Curve Type -->
     <div class="flex flex-col gap-y-2">
-        <Label for="crossfade-type" class="text-sm font-medium text-white">
-            Fade Curve Type
-        </Label>
+        <Label for="crossfade-type" class="text-sm font-medium text-white">Fade Curve Type</Label>
         <CustomSelect
             key="crossfade-type"
             selected={$crossfadeStore.type}
             options={fadeTypeOptions}
             onValueChange={updateType}
-            disabled={!$crossfadeStore.enabled}
         />
         <p class="text-xs text-gray-400">
             {#if $crossfadeStore.type === 'equal-power'}
@@ -153,17 +151,14 @@
 
     <!-- Reset Button -->
     <div class="flex w-full justify-between pt-2">
-        <Button
-            size="sm"
-            variant="ghost"
-            class="gap-x-2"
-            onclick={resetToDefaults}
-        >
+        <Button size="sm" variant="ghost" class="gap-x-2" onclick={resetToDefaults}>
             <RotateCcw class="size-4" />
             Reset to Defaults
         </Button>
         <div class="flex items-center gap-x-2">
-            <div class={`size-2 rounded-full ${$crossfadeStore.enabled ? 'bg-green-500' : 'bg-gray-500'}`}></div>
+            <div
+                class={`size-2 rounded-full ${$crossfadeStore.enabled ? 'bg-green-500' : 'bg-gray-500'}`}
+            ></div>
             <span class="text-xs text-gray-400">
                 {$crossfadeStore.enabled ? 'Crossfade Active' : 'Crossfade Inactive'}
             </span>

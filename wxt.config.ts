@@ -61,7 +61,7 @@ export default defineConfig({
                     '/soundtouch.js',
                     '/content-scripts/*.css'
                 ],
-                matches: ['*://open.spotify.com/*']
+                matches: ['*://open.spotify.com/*', '*://*.spotifycdn.com/audio/*']
             }
         ],
         ...perBrowserManifest[browser],

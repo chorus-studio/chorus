@@ -197,21 +197,11 @@ export default defineBackground(() => {
             // Reset tracking for new track or first chunk
             if (start === 0 || isNewTrack) {
                 audioRange = { start, end }
-                const previousTrackId = audioTrackId
                 audioTrackId = trackId
 
-                // If this is a new track (not the first), we want to send this chunk
-                // so the crossfade can use it
-                if (isNewTrack) {
-                    console.log('[Crossfade/BG] Track change detected:', {
-                        from: previousTrackId,
-                        to: trackId
-                    })
-                    // Continue to send this chunk
-                } else {
-                    // First chunk of first track, just track it
-                    return
-                }
+                // First chunk of first track, just track it (don't send)
+                // For new tracks, continue to send the chunk for crossfade
+                if (!isNewTrack) return
             } else {
                 // Only process sequential chunks for same track
                 if (trackId !== audioTrackId || start !== audioRange.end + 1) return
@@ -225,46 +215,23 @@ export default defineBackground(() => {
                     headers: { Range: `bytes=${start}-${end}` }
                 })
 
-                if (!response.ok) {
-                    console.warn('[Crossfade/BG] Fetch failed:', response.status)
-                    return
-                }
+                if (!response.ok) return
 
                 const arrayBuffer = await response.arrayBuffer()
                 const base64Data = arrayBufferToBase64(arrayBuffer)
 
-                console.log('[Crossfade/BG] Sending chunk to page:', {
-                    trackId,
-                    range: { start, end },
-                    size: arrayBuffer.byteLength
-                })
-
-                // Send to page context
-                const { tabId } = await activeOpenTab()
-                if (!tabId) {
-                    console.warn('[Crossfade/BG] No active tab')
-                    return
-                }
-
-                await browser.scripting.executeScript({
-                    args: [
-                        {
-                            type: 'FROM_CROSSFADE_BUFFER',
-                            data: {
-                                data: base64Data,
-                                range: { start, end },
-                                trackId,
-                                url: details.url
-                            }
-                        }
-                    ],
-                    target: { tabId },
-                    func: (message) => {
-                        window.postMessage(message, '*')
+                // Send to page context via executeScript
+                await executeScript({
+                    type: 'FROM_CROSSFADE_BUFFER',
+                    data: {
+                        data: base64Data,
+                        range: { start, end },
+                        trackId,
+                        url: details.url
                     }
                 })
             } catch (error) {
-                console.error('[Crossfade/BG] Error:', error)
+                console.error('[Crossfade] Error fetching audio chunk:', error)
             }
         },
         {

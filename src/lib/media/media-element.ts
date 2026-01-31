@@ -68,12 +68,7 @@ export default class MediaElement {
 
                 // Handle crossfade separately since it doesn't need mediaOverride
                 if (type === 'FROM_CROSSFADE_BUFFER') {
-                    console.log('[MediaElement] Received crossfade buffer message')
-                    if (this._crossfade) {
-                        this._crossfade.updateBuffer(data)
-                    } else {
-                        console.warn('[MediaElement] Crossfade not initialized')
-                    }
+                    this._crossfade?.updateBuffer(data)
                     return
                 }
 

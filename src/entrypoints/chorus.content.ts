@@ -34,7 +34,9 @@ async function injectChorusUI(ctx: ContentScriptContext) {
                 skipBack: document.querySelector('[data-testid="control-button-skip-back"]'),
                 skipForward: document.querySelector('[data-testid="control-button-skip-forward"]'),
                 body: document.querySelector('body'),
-                formInput: document.querySelector('input[data-encore-id="formInput"]') as HTMLInputElement | null,
+                formInput: document.querySelector(
+                    'input[data-encore-id="formInput"]'
+                ) as HTMLInputElement | null,
                 newFeedButton: document.querySelector('[data-testid="whats-new-feed-button"]'),
                 configDialog: document.getElementById('chorus-config-dialog-trigger'),
                 blockedTracksDialog: document.getElementById('blocked-tracks-dialog-trigger'),
@@ -79,7 +81,11 @@ async function injectChorusUI(ctx: ContentScriptContext) {
             }
 
             // Mount seek forward and loop buttons
-            if (elements.skipForward?.parentElement && !elements.seekForward && !elements.loopButton) {
+            if (
+                elements.skipForward?.parentElement &&
+                !elements.seekForward &&
+                !elements.loopButton
+            ) {
                 const parentElement = elements.skipForward.parentElement
                 if (parentElement.lastElementChild) {
                     const forwardDiv = document.createElement('div')
@@ -106,7 +112,7 @@ async function injectChorusUI(ctx: ContentScriptContext) {
 const watchPattern = new MatchPattern('*://open.spotify.com/*')
 
 export default defineContentScript({
-    matches: ['*://open.spotify.com/*'],
+    matches: ['*://open.spotify.com/*', '*://*.spotifycdn.com/audio/*'],
 
     async main(ctx) {
         await injectChorusUI(ctx)
