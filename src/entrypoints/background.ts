@@ -44,6 +44,7 @@ export default defineBackground(() => {
                 }
             ],
             target: { tabId },
+            world: 'MAIN',
             func: (data) => {
                 if (data.type == 'theme_change') {
                     document.dispatchEvent(
@@ -55,6 +56,14 @@ export default defineBackground(() => {
                     const { playback, effect } = data?.value
                     window.postMessage({ type: 'FROM_EFFECTS_LISTENER', data: effect }, '*')
                     window.postMessage({ type: 'FROM_PLAYBACK_LISTENER', data: playback }, '*')
+                } else if (data.type === 'FROM_CROSSFADE_BUFFER') {
+                    document.dispatchEvent(
+                        new CustomEvent('FROM_CROSSFADE_BUFFER', { detail: data?.value })
+                    )
+                } else if (data.type === 'FROM_CROSSFADE_TRACK_CHANGE') {
+                    document.dispatchEvent(
+                        new CustomEvent('FROM_CROSSFADE_TRACK_CHANGE', { detail: data?.value })
+                    )
                 } else {
                     window.postMessage({ type: data.type, data: data?.value }, '*')
                 }
@@ -155,10 +164,14 @@ export default defineBackground(() => {
 
     // ============================================================================
     // Crossfade: Audio chunk interception for track transitions
+    // Uses MSE approach: cache init segments, decode next track with MediaSource
     // ============================================================================
 
-    let audioRange = { start: 0, end: 0 }
     let audioTrackId: string | null = null
+    // Cache init segments per track (keyed by trackId)
+    const initSegmentCache = new Map<string, string>()
+    // Track URLs for fetching init segments
+    const trackUrlCache = new Map<string, string>()
 
     function arrayBufferToBase64(buffer: ArrayBuffer): string {
         const bytes = new Uint8Array(buffer)
@@ -174,6 +187,10 @@ export default defineBackground(() => {
 
             if (!details?.url.includes('spotifycdn.com/audio')) return
 
+            // Extract track ID from URL
+            const trackId = details.url.split('audio/')[1]?.split('?')[0]
+            if (!trackId) return
+
             // Extract Range header
             const rangeHeader = details?.requestHeaders?.find(
                 (h) => h.name.toLowerCase() === 'range'
@@ -187,51 +204,159 @@ export default defineBackground(() => {
             const start = parseInt(match[1], 10)
             const end = parseInt(match[2], 10)
 
-            // Extract track ID from URL
-            const trackId = details.url.split('audio/')[1]?.split('?')[0]
-            if (!trackId) return
-
-            // Track change detected - new track starting
-            const isNewTrack = audioTrackId && audioTrackId !== trackId
-
-            // Reset tracking for new track or first chunk
-            if (start === 0 || isNewTrack) {
-                audioRange = { start, end }
-                audioTrackId = trackId
-
-                // First chunk of first track, just track it (don't send)
-                // For new tracks, continue to send the chunk for crossfade
-                if (!isNewTrack) return
-            } else {
-                // Only process sequential chunks for same track
-                if (trackId !== audioTrackId || start !== audioRange.end + 1) return
-
-                audioRange = { start, end }
+            // Cache the track URL (base URL without range)
+            if (!trackUrlCache.has(trackId)) {
+                trackUrlCache.set(trackId, details.url)
             }
 
+            // Check if this track is currently being processed or already sent
+            const sentKey = trackId + '_sent'
+            const processingKey = trackId + '_processing'
+            const isProcessingOrSent =
+                trackUrlCache.get(sentKey) || trackUrlCache.get(processingKey)
+
+            // NOTE: We no longer send FROM_CROSSFADE_TRACK_CHANGE here because Spotify
+            // pre-fetches media segments for the next track BEFORE it starts playing.
+            // This caused the track change event to fire too early (while current track
+            // was still playing), which cleared nextTrackData before crossfade could start.
+            // Instead, crossfade is triggered by polling time remaining in media-override.ts.
+
+            // Detect track change - we want to send data during PRE-FETCH (init segment)
+            // not during playback (media segment), so crossfade can prepare in advance
+            const isNewTrack = audioTrackId && audioTrackId !== trackId
+
+            // For same track or media segment, update audioTrackId and return
+            if (!isNewTrack || start > 0) {
+                if (!audioTrackId || audioTrackId !== trackId) {
+                    audioTrackId = trackId
+                }
+                return
+            }
+
+            // This is an INIT segment for a new track (pre-fetch)
+            // Skip if already processing or sent (prevents our own fetch from triggering)
+            if (isProcessingOrSent) {
+                return
+            }
+
+            // Mark as processing BEFORE fetch to prevent duplicates
+            trackUrlCache.set(processingKey, 'true')
+
+            console.log(
+                '[Crossfade BG] New track detected:',
+                audioTrackId?.slice(0, 8),
+                '->',
+                trackId.slice(0, 8)
+            )
+
+            // Fetch enough for crossfade duration (~40KB per second at 320kbps)
+            const crossfadeDuration = crossfadeSettings.duration || 10
+            const bytesNeeded = crossfadeDuration * 50000 // ~50KB per second to be safe
+
+            // Fetch init segment if not cached
+            // Need to get enough to include the full moov box (can be 10-20KB)
+            let initSegment = initSegmentCache.get(trackId)
+            let initSegmentSize = 0
+            if (!initSegment) {
+                console.log('[Crossfade BG] Fetching init segment...')
+                try {
+                    // Fetch first 30KB to ensure we get the full moov box
+                    const initResponse = await fetch(details.url, {
+                        headers: { Range: 'bytes=0-30000' }
+                    })
+                    if (initResponse.ok) {
+                        const initBuffer = await initResponse.arrayBuffer()
+                        initSegmentSize = initBuffer.byteLength
+
+                        // Find the end of the moov box to get just the init segment
+                        const view = new DataView(initBuffer)
+                        let offset = 0
+                        let moovEnd = initBuffer.byteLength
+
+                        // Parse MP4 boxes to find moov end
+                        while (offset < initBuffer.byteLength - 8) {
+                            const size = view.getUint32(offset)
+                            if (size === 0 || size > initBuffer.byteLength - offset) break
+
+                            const type = String.fromCharCode(
+                                view.getUint8(offset + 4),
+                                view.getUint8(offset + 5),
+                                view.getUint8(offset + 6),
+                                view.getUint8(offset + 7)
+                            )
+
+                            if (type === 'moov') {
+                                moovEnd = offset + size
+                                console.log(
+                                    '[Crossfade BG] Found moov box, size:',
+                                    size,
+                                    'ends at:',
+                                    moovEnd
+                                )
+                                break
+                            }
+                            offset += size
+                        }
+
+                        // Extract just the init segment (up to end of moov)
+                        const initData = initBuffer.slice(0, moovEnd)
+                        initSegment = arrayBufferToBase64(initData)
+                        initSegmentSize = moovEnd
+                        initSegmentCache.set(trackId, initSegment)
+                        console.log('[Crossfade BG] Init segment size:', initSegmentSize)
+                    }
+                } catch (error) {
+                    console.error('[Crossfade BG] Init fetch error:', error)
+                }
+            }
+
+            if (!initSegment) {
+                console.log('[Crossfade BG] No init segment, aborting')
+                return
+            }
+
+            // Fetch media segment starting right after the init segment
+            const mediaStart = initSegmentSize > 0 ? initSegmentSize : start === 0 ? end + 1 : start
+            const mediaEnd = mediaStart + bytesNeeded
+
+            console.log('[Crossfade BG] Fetching media segment:', mediaStart, '-', mediaEnd)
+
             try {
-                // Fetch audio chunk
                 const response = await fetch(details.url, {
-                    headers: { Range: `bytes=${start}-${end}` }
+                    headers: { Range: `bytes=${mediaStart}-${mediaEnd}` }
                 })
 
-                if (!response.ok) return
+                if (!response.ok) {
+                    console.log('[Crossfade BG] Media fetch failed:', response.status)
+                    return
+                }
 
                 const arrayBuffer = await response.arrayBuffer()
-                const base64Data = arrayBufferToBase64(arrayBuffer)
+                const mediaSegment = arrayBufferToBase64(arrayBuffer)
 
-                // Send to page context via executeScript
+                // Mark as sent, clear processing flag
+                trackUrlCache.set(trackId + '_sent', 'true')
+                trackUrlCache.delete(trackId + '_processing')
+
+                // Send crossfade data to page
                 await executeScript({
                     type: 'FROM_CROSSFADE_BUFFER',
                     data: {
-                        data: base64Data,
-                        range: { start, end },
+                        initSegment,
+                        mediaSegment,
                         trackId,
-                        url: details.url
+                        url: details.url,
+                        settings: {
+                            duration: crossfadeSettings.duration,
+                            type: crossfadeSettings.type
+                        }
                     }
                 })
-            } catch (error) {
-                console.error('[Crossfade] Error fetching audio chunk:', error)
+
+                // Crossfade is triggered by polling time remaining in media-override.ts
+            } catch {
+                // Clear processing flag on error
+                trackUrlCache.delete(trackId + '_processing')
             }
         },
         {

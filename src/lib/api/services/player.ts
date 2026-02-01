@@ -6,6 +6,7 @@ const PLAYER_COMMAND_API_URL = 'https://guc3-spclient.spotify.com/connect-state/
 
 export interface PlayerService {
     playRelease(uri: string): Promise<unknown>
+    seek(positionMs: number): Promise<unknown>
 }
 
 export class PlayerService implements PlayerService {
@@ -19,6 +20,23 @@ export class PlayerService implements PlayerService {
                 },
                 options: { license: 'tft', skip_to: {}, player_options_override: {} },
                 endpoint: 'play'
+            }
+        }
+
+        const options = await setOptions({ method: 'POST', body })
+        if (!options) throw new Error('No options found')
+
+        const device_id = await storage.getItem('local:chorus_device_id')
+        const url = `${PLAYER_COMMAND_API_URL}from/${device_id}/to/${device_id}`
+
+        return await request({ url, options })
+    }
+
+    async seek(positionMs: number): Promise<unknown> {
+        const body = {
+            command: {
+                value: positionMs,
+                endpoint: 'seek_to'
             }
         }
 

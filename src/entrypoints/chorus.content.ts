@@ -2,6 +2,7 @@ import { mount, unmount } from 'svelte'
 
 import { MatchPattern } from 'wxt/sandbox'
 import { setTheme } from '$lib/utils/theming'
+import { getPlayerService } from '$lib/api/services/player'
 import { type SettingsState, SETTINGS_STORE_KEY } from '$lib/stores/settings'
 import { type ContentScriptContext, injectScript, createIntegratedUi } from 'wxt/client'
 
@@ -111,10 +112,32 @@ async function injectChorusUI(ctx: ContentScriptContext) {
 
 const watchPattern = new MatchPattern('*://open.spotify.com/*')
 
+// Listen for messages from MAIN world (media-override.ts)
+function setupMessageListener() {
+    window.addEventListener('message', async (event) => {
+        if (event.source !== window) return
+        if (event.data?.type !== 'CHORUS_SEEK_REQUEST') return
+
+        const { positionMs } = event.data
+
+        // API seek as backup - syncs Spotify's internal state
+        // The direct FROM_CROSSFADE_SEEK (currentTime) is the primary seek method
+        try {
+            const timeoutPromise = new Promise<never>((_, reject) =>
+                setTimeout(() => reject(new Error('Timeout')), 3000)
+            )
+            await Promise.race([getPlayerService().seek(positionMs), timeoutPromise])
+        } catch {
+            // PlayerService failed or timed out - direct currentTime seek should work
+        }
+    })
+}
+
 export default defineContentScript({
-    matches: ['*://open.spotify.com/*', '*://*.spotifycdn.com/audio/*'],
+    matches: ['*://open.spotify.com/*'],
 
     async main(ctx) {
+        setupMessageListener()
         await injectChorusUI(ctx)
         ctx.addEventListener(window, 'wxt:locationchange', async ({ newUrl }) => {
             if (watchPattern.includes(newUrl)) await injectChorusUI(ctx)

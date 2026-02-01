@@ -4,7 +4,6 @@ import type { Rate } from '$lib/stores/playback'
 import Equalizer from '$lib/audio-effects/equalizer'
 import MSProcessor from '$lib/audio-effects/ms-processor'
 import AudioManager from '$lib/audio-effects/audio-manager'
-import Crossfade from '$lib/audio-effects/crossfade'
 
 export default class MediaElement {
     private source: HTMLMediaElement
@@ -13,7 +12,6 @@ export default class MediaElement {
     private _equalizer: Equalizer | null = null
     private _msProcessor: MSProcessor | null = null
     private _audioManager: AudioManager | null = null
-    private _crossfade: Crossfade | null = null
 
     constructor(source: HTMLMediaElement) {
         this.source = source
@@ -29,7 +27,6 @@ export default class MediaElement {
         this._reverb = new Reverb(this._audioManager)
         this._equalizer = new Equalizer(this._audioManager)
         this._msProcessor = new MSProcessor(this._audioManager)
-        this._crossfade = new Crossfade(this._audioManager)
 
         this.mediaOverride = new MediaOverride({
             source: this.source,
@@ -65,12 +62,6 @@ export default class MediaElement {
 
             try {
                 const { type, data } = event.data
-
-                // Handle crossfade separately since it doesn't need mediaOverride
-                if (type === 'FROM_CROSSFADE_BUFFER') {
-                    this._crossfade?.updateBuffer(data)
-                    return
-                }
 
                 if (!this.mediaOverride) return
 
@@ -110,6 +101,13 @@ export default class MediaElement {
                     case 'FROM_CURRENT_TIME_LISTENER':
                         this.mediaOverride.updateCurrentTime(Number(data) || 0)
                         break
+
+                    case 'FROM_CROSSFADE_SEEK':
+                        // Only respond if this is the current playing source
+                        if (this.source === (window as any).mediaSource) {
+                            this.source.currentTime = Number(data) || 0
+                        }
+                        break
                 }
             } catch (error) {
                 console.warn('Error handling message:', error)
@@ -118,12 +116,6 @@ export default class MediaElement {
     }
 
     dispose(): void {
-        // Clean up crossfade
-        if (this._crossfade) {
-            this._crossfade.cleanup()
-            this._crossfade = null
-        }
-
         // Clean up audio manager
         if (this._audioManager) {
             this._audioManager.dispose()
