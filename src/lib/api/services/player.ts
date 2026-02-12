@@ -5,12 +5,15 @@ import { defineProxyService } from '@webext-core/proxy-service'
 const PLAYER_COMMAND_API_URL = 'https://guc3-spclient.spotify.com/connect-state/v1/player/command/'
 
 export interface PlayerService {
-    playRelease(uri: string): Promise<unknown>
-    seek(positionMs: number): Promise<unknown>
+    playRelease(uri: string, position_ms?: number): Promise<unknown>
+    seek(position_ms: number): Promise<unknown>
+    skipNext(): Promise<unknown>
+    getNextTrackUri(): Promise<string | null>
+    setNextTrackUri(uri: string | null): Promise<void>
 }
 
 export class PlayerService implements PlayerService {
-    async playRelease(uri: string) {
+    async playRelease(uri: string, position_ms?: number) {
         const body = {
             command: {
                 context: {
@@ -18,7 +21,11 @@ export class PlayerService implements PlayerService {
                     url: `context://${uri}`,
                     metadata: {}
                 },
-                options: { license: 'tft', skip_to: {}, player_options_override: {} },
+                options: {
+                    license: 'tft',
+                    skip_to: {},
+                    player_options_override: { ...(position_ms && { position_ms }) }
+                },
                 endpoint: 'play'
             }
         }
@@ -32,10 +39,10 @@ export class PlayerService implements PlayerService {
         return await request({ url, options })
     }
 
-    async seek(positionMs: number): Promise<unknown> {
+    async seek(position_ms: number): Promise<unknown> {
         const body = {
             command: {
-                value: positionMs,
+                value: position_ms,
                 endpoint: 'seek_to'
             }
         }
@@ -47,6 +54,33 @@ export class PlayerService implements PlayerService {
         const url = `${PLAYER_COMMAND_API_URL}from/${device_id}/to/${device_id}`
 
         return await request({ url, options })
+    }
+
+    async skipNext(): Promise<unknown> {
+        const body = {
+            command: {
+                endpoint: 'skip_next'
+            }
+        }
+
+        const options = await setOptions({ method: 'POST', body })
+        if (!options) throw new Error('No options found')
+
+        const device_id = await storage.getItem('local:chorus_device_id')
+        const url = `${PLAYER_COMMAND_API_URL}from/${device_id}/to/${device_id}`
+
+        return await request({ url, options })
+    }
+
+    // Store next track URI from dealer WebSocket (set by background script)
+    private static _nextTrackUri: string | null = null
+
+    async getNextTrackUri(): Promise<string | null> {
+        return PlayerService._nextTrackUri
+    }
+
+    async setNextTrackUri(uri: string | null): Promise<void> {
+        PlayerService._nextTrackUri = uri
     }
 }
 

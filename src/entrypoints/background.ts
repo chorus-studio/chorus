@@ -7,7 +7,7 @@ import { defaultAudioEffect } from '$lib/stores/effects'
 import type { NowPlaying } from '$lib/stores/now-playing'
 import type { SettingsState } from '$lib/stores/settings'
 import { registerTrackService } from '$lib/api/services/track'
-import { registerPlayerService } from '$lib/api/services/player'
+import { registerPlayerService, getPlayerService } from '$lib/api/services/player'
 import type { CrossfadeSettings } from '$lib/audio-effects/crossfade/types'
 import { registerNewReleasesService } from '$lib/api/services/new-releases'
 import { registerCheckPermissionsService } from '$lib/utils/check-permissions'
@@ -163,6 +163,113 @@ export default defineBackground(() => {
     )
 
     // ============================================================================
+    // Spotify Dealer WebSocket - Real-time player state updates
+    // ============================================================================
+
+    let dealerSocket: WebSocket | null = null
+    let dealerReconnectTimer: ReturnType<typeof setTimeout> | null = null
+
+    async function connectToDealer() {
+        const authToken = await storage.getItem<string>(STORE_KEYS.AUTH_TOKEN)
+        if (!authToken) {
+            console.log('[Dealer] No auth token, skipping connection')
+            return
+        }
+
+        // Extract just the token value (remove "Bearer " prefix if present)
+        const token = authToken.replace(/^Bearer\s+/i, '')
+
+        try {
+            const wsUrl = `wss://guc3-dealer.spotify.com/?access_token=${token}`
+            dealerSocket = new WebSocket(wsUrl)
+
+            dealerSocket.onopen = () => {
+                console.log('[Dealer] Connected')
+                // Subscribe to player state updates
+                if (dealerSocket?.readyState === WebSocket.OPEN) {
+                    dealerSocket.send(
+                        JSON.stringify({
+                            type: 'subscribe',
+                            payloads: [{ uri: 'spotify:user:*:collection' }]
+                        })
+                    )
+                }
+            }
+
+            dealerSocket.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data)
+                    handleDealerMessage(data)
+                } catch {
+                    // Non-JSON message, ignore
+                }
+            }
+
+            dealerSocket.onclose = () => {
+                console.log('[Dealer] Disconnected, reconnecting in 5s...')
+                dealerSocket = null
+                // Reconnect after delay
+                if (dealerReconnectTimer) clearTimeout(dealerReconnectTimer)
+                dealerReconnectTimer = setTimeout(connectToDealer, 5000)
+            }
+
+            dealerSocket.onerror = (error) => {
+                console.warn('[Dealer] WebSocket error:', error)
+            }
+        } catch (error) {
+            console.error('[Dealer] Connection error:', error)
+        }
+    }
+
+    function handleDealerMessage(data: any) {
+        // Dealer messages have various formats, look for player state updates
+        // Common message types: player_state, device_state_changed, etc.
+
+        // Check for track in queue/next track info
+        const payload = data?.payloads?.[0]
+        if (!payload) return
+
+        // Look for cluster updates which contain player state
+        const cluster = payload?.cluster
+        if (cluster?.player_state) {
+            const playerState = cluster.player_state
+            const nextTracks = playerState?.next_tracks
+            if (nextTracks && nextTracks.length > 0) {
+                const nextTrack = nextTracks[0]
+                if (nextTrack?.uri) {
+                    // Store via PlayerService so content script can access it
+                    getPlayerService().setNextTrackUri(nextTrack.uri)
+                    console.log('[Dealer] Next track:', nextTrack.uri)
+                }
+            }
+        }
+
+        // Also check for state_ref updates
+        if (payload?.state_ref?.state) {
+            try {
+                const state = JSON.parse(payload.state_ref.state)
+                if (state?.next_tracks?.[0]?.uri) {
+                    const uri = state.next_tracks[0].uri
+                    getPlayerService().setNextTrackUri(uri)
+                    console.log('[Dealer] Next track (state_ref):', uri)
+                }
+            } catch {
+                // Not JSON state
+            }
+        }
+    }
+
+    // Connect to dealer when auth token is available
+    storage.watch<string>(STORE_KEYS.AUTH_TOKEN, (newToken) => {
+        if (newToken && !dealerSocket) {
+            connectToDealer()
+        }
+    })
+
+    // Initial connection attempt
+    connectToDealer()
+
+    // ============================================================================
     // Crossfade: Audio chunk interception for track transitions
     // Uses MSE approach: cache init segments, decode next track with MediaSource
     // ============================================================================
@@ -242,16 +349,17 @@ export default defineBackground(() => {
             // Mark as processing BEFORE fetch to prevent duplicates
             trackUrlCache.set(processingKey, 'true')
 
-            console.log(
-                '[Crossfade BG] New track detected:',
-                audioTrackId?.slice(0, 8),
-                '->',
-                trackId.slice(0, 8)
-            )
+            console.log('[Crossfade BG] New track detected:', {
+                from: audioTrackId?.slice(0, 8),
+                to: trackId.slice(0, 8),
+                duration: crossfadeSettings.duration,
+                type: crossfadeSettings.type
+            })
 
-            // Fetch enough for crossfade duration (~40KB per second at 320kbps)
+            // Fetch enough for crossfade duration
+            // fMP4 at 320kbps needs ~40KB/sec, but use 80KB/sec for overhead and higher bitrates
             const crossfadeDuration = crossfadeSettings.duration || 10
-            const bytesNeeded = crossfadeDuration * 50000 // ~50KB per second to be safe
+            const bytesNeeded = crossfadeDuration * 80000
 
             // Fetch init segment if not cached
             // Need to get enough to include the full moov box (can be 10-20KB)
@@ -333,6 +441,12 @@ export default defineBackground(() => {
 
                 const arrayBuffer = await response.arrayBuffer()
                 const mediaSegment = arrayBufferToBase64(arrayBuffer)
+
+                console.log('[Crossfade BG] Media segment fetched:', {
+                    requestedBytes: bytesNeeded,
+                    actualBytes: arrayBuffer.byteLength,
+                    initSegmentBytes: initSegmentSize
+                })
 
                 // Mark as sent, clear processing flag
                 trackUrlCache.set(trackId + '_sent', 'true')

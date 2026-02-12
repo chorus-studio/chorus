@@ -5,7 +5,9 @@ const crossfadeState = {
     isFading: false,
     pendingSeekPosition: null as number | null,
     originalVolume: 1,
-    mutedSource: null as HTMLMediaElement | null
+    mutedSource: null as HTMLMediaElement | null,
+    // Pending seek for when new source is created AFTER crossfade completes
+    pendingSeekForNewSource: null as number | null
 }
 
 // Crossfade handler - decodes next track audio and plays with overlap
@@ -25,9 +27,13 @@ function setupCrossfadeHandler() {
     // Secondary audio element for crossfade (plays recorded audio)
     let crossfadeAudio: HTMLAudioElement | null = null
 
-    function getAudioContext(): AudioContext {
+    async function getAudioContext(): Promise<AudioContext> {
         if (!audioContext || audioContext.state === 'closed') {
             audioContext = new AudioContext()
+        }
+        // Ensure context is running (may be suspended until user interaction)
+        if (audioContext.state === 'suspended') {
+            await audioContext.resume()
         }
         return audioContext
     }
@@ -46,7 +52,7 @@ function setupCrossfadeHandler() {
         initSegment: ArrayBuffer,
         mediaSegment: ArrayBuffer
     ): Promise<AudioBuffer | null> {
-        const ctx = getAudioContext()
+        const ctx = await getAudioContext()
 
         // Combine init + media into a single buffer
         const combined = new Uint8Array(initSegment.byteLength + mediaSegment.byteLength)
@@ -111,6 +117,13 @@ function setupCrossfadeHandler() {
         const fadeType = nextTrackData.settings?.type || 'equal-power'
         const originalVolume = mainAudio.volume
 
+        // Debug: log actual crossfade settings being used
+        console.log('[Crossfade] Starting with settings:', {
+            duration,
+            fadeType,
+            settings: nextTrackData.settings
+        })
+
         // Store these before async operations (nextTrackData may be cleared)
         const nextTrackId = nextTrackData.trackId
         const initSegment = nextTrackData.initSegment
@@ -124,9 +137,24 @@ function setupCrossfadeHandler() {
 
         if (audioBuffer) {
             // Decode successful - do true crossfade with audio overlap
-            const bufferDuration = audioBuffer.duration
+            // Use calculated duration from actual samples, not audioBuffer.duration
+            // The duration property can be inaccurate for fMP4 (reads from metadata)
+            const bufferDuration = audioBuffer.length / audioBuffer.sampleRate
 
-            const ctx = getAudioContext()
+            // Use the shorter of crossfade duration or buffer duration
+            // This prevents silence if buffer is shorter than requested crossfade
+            const effectiveDuration = Math.min(duration, bufferDuration)
+
+            const ctx = await getAudioContext()
+
+            console.log('[Crossfade] Buffer decoded:', {
+                bufferDuration: bufferDuration.toFixed(2),
+                metadataDuration: audioBuffer.duration.toFixed(2),
+                requestedDuration: duration,
+                effectiveDuration: effectiveDuration.toFixed(2),
+                sampleRate: audioBuffer.sampleRate,
+                bufferLength: audioBuffer.length
+            })
             const bufferSource = ctx.createBufferSource()
             bufferSource.buffer = audioBuffer
 
@@ -138,15 +166,73 @@ function setupCrossfadeHandler() {
 
             // Start playing the next track audio (silent initially)
             bufferSource.start(0)
+            console.log('[Crossfade] Buffer playback started')
 
             const crossfadeStartTime = Date.now()
             let trackHasChanged = false
             let bufferPlaybackTime = 0 // Track how much of buffer we've played
+            let bufferEnded = false
+            let fadeInterval: ReturnType<typeof setInterval> | null = null
 
-            const fadeInterval = setInterval(() => {
+            // Handle buffer ending (may end early due to incomplete fMP4 fragments)
+            bufferSource.onended = () => {
+                bufferEnded = true
+                const elapsed = (Date.now() - crossfadeStartTime) / 1000
+                console.log('[Crossfade] Buffer ended at', elapsed.toFixed(2), 's')
+
+                // If crossfade hasn't completed, finish it now
+                if (fadeInterval && elapsed < effectiveDuration) {
+                    clearInterval(fadeInterval)
+                    fadeInterval = null
+
+                    // Restore main audio volume
+                    mainAudio.volume = originalVolume
+                    bufferSource.disconnect()
+                    gainNode.disconnect()
+                    crossfadeState.isFading = false
+                    crossfadeStarted = false
+
+                    // Update state
+                    currentTrackId = nextTrackId
+                    nextTrackData = null
+
+                    // Apply seek for the time we played
+                    const seekPos = elapsed
+                    if (seekPos > 0) {
+                        const seekMs = Math.round(seekPos * 1000)
+                        crossfadeState.pendingSeekPosition = null
+
+                        if (crossfadeState.mutedSource) {
+                            crossfadeState.mutedSource.currentTime = seekPos
+                            window.postMessage(
+                                { type: 'CHORUS_SEEK_REQUEST', positionMs: seekMs },
+                                '*'
+                            )
+                            setTimeout(() => {
+                                if (crossfadeState.mutedSource) {
+                                    crossfadeState.mutedSource.volume =
+                                        crossfadeState.originalVolume
+                                    crossfadeState.mutedSource = null
+                                }
+                            }, 100)
+                        } else {
+                            crossfadeState.pendingSeekForNewSource = seekPos
+                        }
+                    }
+                }
+            }
+
+            // Log gain values periodically (every 2 seconds)
+            let lastGainLog = 0
+            let seekPrimed = false // Track if we've sent the pre-seek
+
+            fadeInterval = setInterval(() => {
+                // If buffer ended early, interval was already cleared
+                if (bufferEnded) return
                 const elapsed = (Date.now() - crossfadeStartTime) / 1000
                 bufferPlaybackTime = elapsed // Update how much we've played
-                const progress = Math.min(elapsed / duration, 1)
+                // Use effective duration to complete crossfade when buffer ends
+                const progress = Math.min(elapsed / effectiveDuration, 1)
 
                 const { fadeOut, fadeIn } = calculateFade(progress, fadeType)
 
@@ -155,9 +241,20 @@ function setupCrossfadeHandler() {
                 // Fade in next track
                 gainNode.gain.value = fadeIn
 
-                // Continuously update pending seek position during crossfade
-                // This ensures we have the correct position when the track actually changes
-                // Cap at buffer duration in case buffer is shorter than crossfade
+                // Log gain values every 2 seconds
+                if (elapsed - lastGainLog >= 2) {
+                    lastGainLog = elapsed
+                    console.log('[Crossfade] Progress:', {
+                        elapsed: elapsed.toFixed(1),
+                        progress: progress.toFixed(2),
+                        fadeOut: fadeOut.toFixed(2),
+                        fadeIn: fadeIn.toFixed(2),
+                        mainVolume: mainAudio.volume.toFixed(2),
+                        bufferGain: gainNode.gain.value.toFixed(2)
+                    })
+                }
+
+                // Track seek position (capped at what we've actually played)
                 crossfadeState.pendingSeekPosition = Math.min(bufferPlaybackTime, bufferDuration)
 
                 // Check if Spotify has changed to the next track
@@ -165,8 +262,26 @@ function setupCrossfadeHandler() {
                     trackHasChanged = true
                 }
 
+                // Prime track B playback ~1 second before crossfade ends for smoother transition
+                const timeRemaining = effectiveDuration - elapsed
+                if (!seekPrimed && timeRemaining <= 1 && timeRemaining > 0) {
+                    seekPrimed = true
+                    // Calculate the final seek position (what it will be when crossfade ends)
+                    const finalSeekPos = effectiveDuration
+                    const finalSeekMs = Math.round(finalSeekPos * 1000)
+                    console.log('[Crossfade] Skipping to track B at', finalSeekMs, 'ms')
+                    // Skip to next track and seek to correct position
+                    window.postMessage(
+                        {
+                            type: 'CHORUS_SKIP_AND_SEEK_REQUEST',
+                            positionMs: finalSeekMs
+                        },
+                        '*'
+                    )
+                }
+
                 if (progress >= 1) {
-                    clearInterval(fadeInterval)
+                    if (fadeInterval) clearInterval(fadeInterval)
                     mainAudio.volume = originalVolume
 
                     bufferSource.stop()
@@ -179,40 +294,27 @@ function setupCrossfadeHandler() {
                     currentTrackId = nextTrackId
                     nextTrackData = null
 
-                    // Send seek - keep source muted until after seek to prevent hearing position 0
-                    if (
-                        crossfadeState.pendingSeekPosition !== null &&
-                        crossfadeState.pendingSeekPosition > 0
-                    ) {
-                        const seekPos = crossfadeState.pendingSeekPosition
-                        const seekMs = Math.round(seekPos * 1000)
-                        crossfadeState.pendingSeekPosition = null
+                    // Apply seek to correct track position after crossfade
+                    const seekPos = crossfadeState.pendingSeekPosition
+                    crossfadeState.pendingSeekPosition = null
 
-                        // Small delay to let Spotify's new source initialize
+                    if (crossfadeState.mutedSource && seekPos && seekPos > 0) {
+                        // New source was created during crossfade - apply seek directly
+                        crossfadeState.mutedSource.currentTime = seekPos
+                        // Unmute after seek applied
                         setTimeout(() => {
-                            // Direct currentTime seek
-                            window.postMessage({ type: 'FROM_CROSSFADE_SEEK', data: seekPos }, '*')
-                            // API seek as backup
-                            window.postMessage(
-                                { type: 'CHORUS_SEEK_REQUEST', positionMs: seekMs },
-                                '*'
-                            )
-
-                            // Unmute after seek is applied
-                            setTimeout(() => {
-                                if (crossfadeState.mutedSource) {
-                                    crossfadeState.mutedSource.volume =
-                                        crossfadeState.originalVolume
-                                    crossfadeState.mutedSource = null
-                                }
-                            }, 100)
-                        }, 200)
-                    } else {
+                            if (crossfadeState.mutedSource) {
+                                crossfadeState.mutedSource.volume = crossfadeState.originalVolume
+                                crossfadeState.mutedSource = null
+                            }
+                        }, 50)
+                    } else if (seekPos && seekPos > 0) {
+                        // New source not yet created - store for when it's added
+                        crossfadeState.pendingSeekForNewSource = seekPos
+                    } else if (crossfadeState.mutedSource) {
                         // No seek needed - unmute immediately
-                        if (crossfadeState.mutedSource) {
-                            crossfadeState.mutedSource.volume = crossfadeState.originalVolume
-                            crossfadeState.mutedSource = null
-                        }
+                        crossfadeState.mutedSource.volume = crossfadeState.originalVolume
+                        crossfadeState.mutedSource = null
                     }
                 }
             }, 50)
@@ -367,6 +469,22 @@ function mediaOverride() {
             crossfadeState.originalVolume = source.volume || 1
             source.volume = 0
             crossfadeState.mutedSource = source
+        } else if (crossfadeState.pendingSeekForNewSource !== null) {
+            // Crossfade completed but new source was created after - apply pending seek
+            const seekPos = crossfadeState.pendingSeekForNewSource
+            const seekMs = Math.round(seekPos * 1000)
+            crossfadeState.pendingSeekForNewSource = null
+
+            // Mute, seek, then unmute
+            const originalVolume = source.volume || 1
+            source.volume = 0
+            source.currentTime = seekPos
+            // API seek as backup
+            window.postMessage({ type: 'CHORUS_SEEK_REQUEST', positionMs: seekMs }, '*')
+            // Unmute after seek
+            setTimeout(() => {
+                source.volume = originalVolume
+            }, 100)
         }
 
         // For cross-origin sources, just use direct playback

@@ -116,19 +116,51 @@ const watchPattern = new MatchPattern('*://open.spotify.com/*')
 function setupMessageListener() {
     window.addEventListener('message', async (event) => {
         if (event.source !== window) return
-        if (event.data?.type !== 'CHORUS_SEEK_REQUEST') return
 
-        const { positionMs } = event.data
+        const { type } = event.data || {}
 
-        // API seek as backup - syncs Spotify's internal state
-        // The direct FROM_CROSSFADE_SEEK (currentTime) is the primary seek method
-        try {
-            const timeoutPromise = new Promise<never>((_, reject) =>
-                setTimeout(() => reject(new Error('Timeout')), 3000)
-            )
-            await Promise.race([getPlayerService().seek(positionMs), timeoutPromise])
-        } catch {
-            // PlayerService failed or timed out - direct currentTime seek should work
+        if (type === 'CHORUS_SEEK_REQUEST') {
+            const { positionMs } = event.data
+            // API seek - syncs Spotify's internal state
+            try {
+                const timeoutPromise = new Promise<never>((_, reject) =>
+                    setTimeout(() => reject(new Error('Timeout')), 3000)
+                )
+                await Promise.race([getPlayerService().seek(positionMs), timeoutPromise])
+            } catch {
+                // PlayerService failed or timed out
+            }
+        }
+
+        if (type === 'CHORUS_SKIP_AND_SEEK_REQUEST') {
+            const { positionMs } = event.data
+            // Start next track at the correct position
+            try {
+                const playerService = getPlayerService()
+                const timeoutPromise = new Promise<never>((_, reject) =>
+                    setTimeout(() => reject(new Error('Timeout')), 3000)
+                )
+
+                // Try to get next track URI from dealer WebSocket
+                const nextTrackUri = await playerService.getNextTrackUri()
+
+                if (nextTrackUri) {
+                    // Use playRelease with the exact track and position
+                    console.log('[Crossfade] Playing', nextTrackUri, 'at', positionMs, 'ms')
+                    await Promise.race([
+                        playerService.playRelease(nextTrackUri, positionMs),
+                        timeoutPromise
+                    ])
+                } else {
+                    // Fallback: skip to next track and seek
+                    console.log('[Crossfade] No URI, using skipNext + seek')
+                    await Promise.race([playerService.skipNext(), timeoutPromise])
+                    await new Promise((r) => setTimeout(r, 100))
+                    await Promise.race([playerService.seek(positionMs), timeoutPromise])
+                }
+            } catch {
+                // PlayerService failed or timed out
+            }
         }
     })
 }
