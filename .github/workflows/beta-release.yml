@@ -19,6 +19,17 @@ jobs:
               with:
                   fetch-depth: 0
 
+            - name: Verify tag is on beta branch
+              run: |
+                  TAG_COMMIT=$(git rev-parse HEAD)
+                  if git branch -r --contains "$TAG_COMMIT" | grep -q 'origin/beta'; then
+                      echo "Tag is on beta branch - proceeding"
+                  else
+                      echo "::error::Beta tags must be on the beta branch."
+                      git branch -r --contains "$TAG_COMMIT"
+                      exit 1
+                  fi
+
             - uses: oven-sh/setup-bun@v2
 
             - name: Install dependencies
