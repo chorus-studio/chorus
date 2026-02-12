@@ -268,14 +268,33 @@ export default class AudioManager {
     }) {
         if (!this.isConnectable || !this._audioContext) return
 
-        // For impulse reverb, we need to handle wet/dry mixing
-        // This is complex, so for now keep the old behavior
-        // TODO: Refactor to support multi-effect with impulse reverb wet/dry
         this.cleanupEffectChain()
 
-        // CRITICAL: Reconnect source to gain node after cleanup
+        // Reconnect source to gain node after cleanup
         this.source!.connect(this._gainNode!)
 
+        // Chain through active effects (EQ, MS processor) before the dry/wet split
+        let currentNode: AudioNode = this._gainNode!
+
+        if (this._activeEffects.equalizer) {
+            if (
+                typeof this._activeEffects.equalizer === 'object' &&
+                'input' in this._activeEffects.equalizer
+            ) {
+                currentNode.connect(this._activeEffects.equalizer.input)
+                currentNode = this._activeEffects.equalizer.output
+            } else {
+                currentNode.connect(this._activeEffects.equalizer)
+                currentNode = this._activeEffects.equalizer
+            }
+        }
+
+        if (this._activeEffects.msProcessor) {
+            currentNode.connect(this._activeEffects.msProcessor)
+            currentNode = this._activeEffects.msProcessor
+        }
+
+        // Apply dry/wet split after all other effects
         const dryGainNode = this._audioContext.createGain()
         const wetGainNode = this._audioContext.createGain()
 
@@ -284,8 +303,8 @@ export default class AudioManager {
         dryGainNode.gain.value = dry
         wetGainNode.gain.value = wet
 
-        this._gainNode!.connect(dryGainNode)
-        this._gainNode!.connect(convolverNode)
+        currentNode.connect(dryGainNode)
+        currentNode.connect(convolverNode)
 
         convolverNode.connect(wetGainNode)
         dryGainNode.connect(this._soundTouchNode!)
@@ -293,7 +312,7 @@ export default class AudioManager {
 
         this._soundTouchNode!.connect(this.destination!)
 
-        // Mark that reverb is active (but using old routing)
+        // Mark that reverb is active (using impulse routing)
         this._activeEffects.reverb = convolverNode
     }
 
@@ -332,18 +351,17 @@ export default class AudioManager {
             this._soundTouchNode.disconnect()
 
             // Disconnect active effects
-            // NOTE: For equalizer with separate input/output nodes, we need to disconnect
-            // both the input and output nodes from the external chain, but NOT the internal
-            // connections between filters (the equalizer class handles those).
+            // NOTE: For equalizer with separate input/output nodes, we only disconnect
+            // the OUTPUT node to break its downstream connection. We must NOT disconnect
+            // the input node — AudioNode.disconnect() removes ALL outputs, which would
+            // sever the internal filter[0] → filter[1] chain. The input's incoming
+            // connection (gain → filter[0]) is already broken by gainNode.disconnect().
             if (this._activeEffects.equalizer) {
                 if (
                     typeof this._activeEffects.equalizer === 'object' &&
                     'input' in this._activeEffects.equalizer
                 ) {
-                    // Disconnect input and output from the external chain
-                    // This prevents duplicate connections when rebuilding
                     try {
-                        this._activeEffects.equalizer.input.disconnect()
                         this._activeEffects.equalizer.output.disconnect()
                     } catch (e) {
                         // Ignore disconnect errors during cleanup

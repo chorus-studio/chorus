@@ -78,19 +78,21 @@ export default class Equalizer {
             this._filters.push(filter)
         })
 
-        // Connect filters in series internally
         if (this._filters.length > 0) {
-            for (let i = 0; i < this._filters.length - 1; i++) {
-                this._filters[i].connect(this._filters[i + 1])
-            }
-
-            // Register the filter chain with separate input/output nodes
-            // AudioManager will connect: previousNode → filters[0] (input)
-            // Then use filters[last] (output) as currentNode for next effect
+            // Register the filter chain with separate input/output nodes FIRST.
+            // This triggers rebuildEffectChain → cleanupEffectChain, which calls
+            // disconnect() on the input/output nodes. We must do this BEFORE
+            // connecting the internal chain, otherwise cleanupEffectChain breaks
+            // the internal filter[0] → filter[1] → ... → filter[n] connections.
             this._audioManager.connectEqualizer({
                 input: this._filters[0],
                 output: this._filters[this._filters.length - 1]
             })
+
+            // Now connect filters in series internally (after cleanup has run)
+            for (let i = 0; i < this._filters.length - 1; i++) {
+                this._filters[i].connect(this._filters[i + 1])
+            }
         }
     }
 
