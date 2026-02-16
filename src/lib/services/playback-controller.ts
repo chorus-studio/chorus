@@ -38,6 +38,10 @@ export class PlaybackController {
             this.mute()
         }
 
+        this.advanceTrack()
+    }
+
+    advanceTrack(): void {
         // Clear temporary snip store to prevent it from affecting the next track
         snipStore.reset()
 

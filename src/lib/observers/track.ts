@@ -5,6 +5,7 @@ import { configStore } from '$lib/stores/config'
 import { effectsStore } from '$lib/stores/effects'
 import { nowPlaying } from '$lib/stores/now-playing'
 import { snipStore, type Snip } from '$lib/stores/snip'
+import { playback } from '$lib/utils/playback'
 import { playbackObserver } from '$lib/observers/playback'
 
 // Refactored services
@@ -12,33 +13,30 @@ import { TrackStateManager } from '$lib/services/track-state-manager'
 import { PlaybackController } from '$lib/services/playback-controller'
 import { TrackNotificationService } from '$lib/services/track-notification-service'
 
-/**
- * Refactored TrackObserver using composition over inheritance
- * Delegates responsibilities to focused service classes
- */
 export class TrackObserver {
     private trackStateManager: TrackStateManager
     private playbackController: PlaybackController
     private notificationService: TrackNotificationService
-    private boundProcessTimeUpdate: (event: CustomEvent) => void
     private boundProcessMediaPlayInit: (event: CustomEvent) => void
+    private _pollInterval: ReturnType<typeof setInterval> | null = null
+    private _skipping = false
 
     constructor() {
-        // Inject dependencies for better testability
         this.trackStateManager = new TrackStateManager()
         this.playbackController = new PlaybackController()
         this.notificationService = new TrackNotificationService()
-        this.boundProcessTimeUpdate = this.processTimeUpdate.bind(this)
         this.boundProcessMediaPlayInit = this.processMediaPlayInit.bind(this)
     }
 
     async initialize() {
         playbackObserver.updateChorusUI()
         await this.processSongTransition()
-        document.addEventListener(
-            'FROM_MEDIA_TIMEUPDATE',
-            this.boundProcessTimeUpdate as EventListener
-        )
+
+        // Poll playback position from Spotify's UI instead of FROM_MEDIA_TIMEUPDATE.
+        // The UI always shows the correct track's position, avoiding stale
+        // currentTime values from old MediaElement instances.
+        this._pollInterval = setInterval(() => this.pollPlaybackPosition(), 200)
+
         document.addEventListener(
             'FROM_MEDIA_PLAY_INIT',
             this.boundProcessMediaPlayInit as EventListener
@@ -100,6 +98,7 @@ export class TrackObserver {
     }
 
     async processSongTransition() {
+        this._skipping = false
         const songInfo = this.currentSong
 
         if (this.playbackController.shouldSkipTrack(songInfo)) {
@@ -114,7 +113,7 @@ export class TrackObserver {
         setTimeout(() => {
             this.playbackController.unMute()
             this.playbackController.setSeeking(false)
-        }, 50)
+        }, 100)
 
         await this.trackStateManager.setPlayback()
         await this.updateTrackType()
@@ -123,76 +122,88 @@ export class TrackObserver {
         await this.notificationService.showTrackChangeNotification(songInfo)
     }
 
-    // Notification handling is now delegated to TrackNotificationService
+    private async pollPlaybackPosition() {
+        if (!this.playbackController.isControlEnabled) return
+        if (!this.currentSong) return
+        if (this._skipping) return
 
-    private async processTimeUpdate(event: CustomEvent) {
-        setTimeout(async () => {
-            const currentSong = this.currentSong
+        const currentSong = this.currentSong
+        const positionSeconds = playback.current()
+        if (positionSeconds == null) return
 
-            if (!currentSong || !this.playbackController.isControlEnabled) return
+        const currentTimeMS = positionSeconds * 1000
+        const snip = this.snip
 
-            const currentTimeMS = event.detail.currentTime * 1000
-            const snip = this.snip
+        // Check if track should be skipped
+        if (this.playbackController.shouldSkipTrack(currentSong)) {
+            this._skipping = true
+            return this.skipTrack()
+        }
 
-            // Check if track should be skipped
-            if (this.playbackController.shouldSkipTrack(currentSong)) {
-                return this.skipTrack()
-            }
+        // Handle snip start position
+        if (currentSong.snip && currentTimeMS < currentSong.snip.start_time * 1000) {
+            return this.updateCurrentTime(currentSong.snip.start_time)
+        }
 
-            // Handle snip start position
-            if (currentSong.snip && currentTimeMS < currentSong.snip.start_time * 1000) {
-                return this.updateCurrentTime(currentSong.snip.start_time)
-            }
+        // Handle temporary snip end
+        if (this.snip && this.isAtTempSnipEnd(currentTimeMS)) {
+            return this.updateCurrentTime(this.snip.start_time)
+        }
 
-            // Handle temporary snip end
-            if (this.snip && this.isAtTempSnipEnd(currentTimeMS)) {
-                return this.updateCurrentTime(this.snip.start_time)
-            }
-
-            // Handle looping if at track/snip end
-            if (this.loop.looping && this.isAtTrackOrSnipEnd(currentTimeMS)) {
-                const loopHandled = await this.playbackController.handleLooping(currentTimeMS)
-                if (loopHandled) return
-                // Loop count exhausted, skip to next track
-                this.skipTrack()
+        // Handle looping if at track/snip end.
+        // For non-snip tracks, check 1s early to beat Spotify's auto-advance
+        // at the natural track end (polling only sees integer seconds).
+        const loopCheckMS = currentSong.snip ? currentTimeMS : currentTimeMS + 1000
+        if (this.loop.looping && this.isAtTrackOrSnipEnd(loopCheckMS)) {
+            // Suppress polls before calling handleLooping to prevent
+            // multiple ticks from decrementing the loop count while
+            // the UI still shows the old (pre-seek) position.
+            this.playbackController.setSeeking(true)
+            const loopHandled = await this.playbackController.handleLooping(currentTimeMS)
+            if (loopHandled) {
+                // Give UI ~1s to reflect the seek back to start
+                setTimeout(() => this.playbackController.setSeeking(false), 1000)
                 return
             }
+            // Loop count exhausted, skip to next track
+            this.playbackController.setSeeking(false)
+            this._skipping = true
+            this.skipTrack()
+            return
+        }
 
-            // Handle shared snip URL cleanup
-            if (snip?.is_shared && location?.search) {
-                history.pushState(null, '', location.pathname)
-            }
+        // Handle shared snip URL cleanup
+        if (snip?.is_shared && location?.search) {
+            history.pushState(null, '', location.pathname)
+        }
 
-            // Check if at or past snip end for auto-advance
-            const atSnipEnd = currentSong.snip && currentTimeMS >= currentSong.snip.end_time * 1000
-            const atTrackEnd = currentTimeMS >= currentSong.duration * 1000 - 100
+        // Check if at or past snip end for auto-advance
+        const atSnipEnd = currentSong.snip && currentTimeMS >= currentSong.snip.end_time * 1000
+        const atTrackEnd = currentTimeMS >= currentSong.duration * 1000 - 100
 
-            // Handle track end or snip end - auto-advance if at or past end
-            const shouldSkip =
-                (currentSong.snip || currentSong.blocked) && (atTrackEnd || atSnipEnd)
+        // Handle track end or snip end
+        const shouldSkip = (currentSong.snip || currentSong.blocked) && (atTrackEnd || atSnipEnd)
 
-            if (shouldSkip) {
-                this.skipTrack()
-                return
-            }
+        if (shouldSkip) {
+            this._skipping = true
+            this.skipTrack()
+            return
+        }
 
-            // Handle end of track after loop count exhausted (for non-snip tracks)
-            // When looping ends, iteration is 0 and looping is false
-            if (this.loop.type === 'amount' && this.loop.iteration === 0 && atTrackEnd) {
-                this.skipTrack()
-                return
-            }
-
-            // Early return if we have a snip but not yet at the end (still playing within snip)
-            if (currentSong.snip && !atSnipEnd) return
-        }, 50)
+        // Handle end of track after loop count exhausted (for non-snip tracks)
+        if (this.loop.type === 'amount' && this.loop.iteration === 0 && atTrackEnd) {
+            this._skipping = true
+            this.skipTrack()
+            return
+        }
     }
 
     async disconnect() {
-        document.removeEventListener(
-            'FROM_MEDIA_TIMEUPDATE',
-            this.boundProcessTimeUpdate as EventListener
-        )
+        if (this._pollInterval) {
+            clearInterval(this._pollInterval)
+            this._pollInterval = null
+        }
+
         document.removeEventListener(
             'FROM_MEDIA_PLAY_INIT',
             this.boundProcessMediaPlayInit as EventListener
