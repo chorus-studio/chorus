@@ -105,6 +105,8 @@
         await nowPlaying.updateState({
             snip: snipData
         })
+
+        nowPlaying.setCurrentTime(snipData.start_time)
     }
 
     async function handleSave() {
