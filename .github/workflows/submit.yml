@@ -35,7 +35,8 @@ jobs:
             - name: Bump Version
               id: version
               run: |
-                  bunx changelogen@latest --bump
+                  LAST_STABLE=$(git tag --list 'v*' --sort=-version:refname | grep -v beta | head -1)
+                  bunx changelogen@latest --bump --from "$LAST_STABLE"
                   NEW_VERSION=$(bun --print 'require("./package.json").version')
                   echo "newVersion=$NEW_VERSION" >> "$GITHUB_OUTPUT"
 
