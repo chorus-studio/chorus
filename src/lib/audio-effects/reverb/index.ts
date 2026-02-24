@@ -28,8 +28,12 @@ export default class Reverb {
         }
 
         this._audioContext = this._audioManager.audioContext
+
+        // Always clean up old reverb nodes first to prevent stale parameters
+        // from bleeding through when switching between presets
+        this.cleanup()
+
         if (effect === 'none') {
-            this.cleanup()
             if (this._audioManager.audioContext) {
                 this._audioManager.removeEffect('reverb')
             }

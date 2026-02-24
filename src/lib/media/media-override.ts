@@ -163,9 +163,13 @@ export default class MediaOverride {
             try {
                 await this.audioManager.ensureAudioChainReady()
 
+                // Mute before chain rebuild to prevent clicks from signal discontinuity
+                this.audioManager.muteForTransition()
+
                 // If clear is requested, disconnect all effects
                 if (effect.clear) {
                     this.audioManager.disconnect()
+                    this.audioManager.unmuteAfterTransition()
                     return
                 }
 
@@ -187,9 +191,13 @@ export default class MediaOverride {
                 if (effect?.reverb && effect.reverb !== 'none') {
                     await this.reverb.setReverbEffect(effect.reverb)
                 }
+
+                // Smooth fade-in after all effects are configured
+                this.audioManager.unmuteAfterTransition()
             } catch (error) {
                 console.error('Error updating audio effects:', error)
                 this.audioManager.disconnect()
+                this.audioManager.unmuteAfterTransition()
             } finally {
                 // Clear the lock when done
                 this._effectUpdateInProgress = null

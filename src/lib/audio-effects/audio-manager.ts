@@ -17,6 +17,7 @@ export default class AudioManager {
 
     private _currentVolume: number = 1
     private _volumeType: 'linear' | 'logarithmic' = 'linear'
+    private _preTransitionGain: number | null = null
 
     // Track active effect nodes for multi-effect chaining
     // Some effects (like equalizer) have separate input/output nodes
@@ -25,6 +26,9 @@ export default class AudioManager {
         msProcessor?: AudioWorkletNode
         reverb?: AudioNode
     } = {}
+
+    // Track impulse reverb's dry/wet gain nodes for proper cleanup
+    private _impulseGainNodes: { dry?: GainNode; wet?: GainNode } = {}
 
     constructor(element: HTMLVideoElement | HTMLAudioElement) {
         this._element = element
@@ -229,6 +233,21 @@ export default class AudioManager {
         this._gainNode.gain.value = Math.max(0, gainValue)
     }
 
+    muteForTransition(): void {
+        if (!this._gainNode || !this._audioContext) return
+        this._preTransitionGain = this._gainNode.gain.value
+        this._gainNode.gain.cancelScheduledValues(this._audioContext.currentTime)
+        this._gainNode.gain.setValueAtTime(0, this._audioContext.currentTime)
+    }
+
+    unmuteAfterTransition(fadeDuration: number = 0.005): void {
+        if (!this._gainNode || !this._audioContext || this._preTransitionGain === null) return
+        const now = this._audioContext.currentTime
+        this._gainNode.gain.setValueAtTime(0, now)
+        this._gainNode.gain.linearRampToValueAtTime(this._preTransitionGain, now + fadeDuration)
+        this._preTransitionGain = null
+    }
+
     getCurrentVolume(): number {
         return this._currentVolume
     }
@@ -314,6 +333,9 @@ export default class AudioManager {
 
         // Mark that reverb is active (using impulse routing)
         this._activeEffects.reverb = convolverNode
+
+        // Track dry/wet gain nodes for proper cleanup
+        this._impulseGainNodes = { dry: dryGainNode, wet: wetGainNode }
     }
 
     connectEqualizer(equalizerNode: AudioNode | { input: AudioNode; output: AudioNode }) {
@@ -372,6 +394,23 @@ export default class AudioManager {
             }
             if (this._activeEffects.msProcessor) this._activeEffects.msProcessor.disconnect()
             if (this._activeEffects.reverb) this._activeEffects.reverb.disconnect()
+
+            // Clean up impulse reverb's dry/wet gain nodes
+            if (this._impulseGainNodes.dry) {
+                try {
+                    this._impulseGainNodes.dry.disconnect()
+                } catch (e) {
+                    // Ignore disconnect errors
+                }
+            }
+            if (this._impulseGainNodes.wet) {
+                try {
+                    this._impulseGainNodes.wet.disconnect()
+                } catch (e) {
+                    // Ignore disconnect errors
+                }
+            }
+            this._impulseGainNodes = {}
         } catch (error) {
             console.warn('Error during cleanup:', error)
         }

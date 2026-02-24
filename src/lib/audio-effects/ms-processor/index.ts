@@ -28,7 +28,11 @@ export default class MSProcessor {
         }
 
         try {
-            await this.createMSProcessor()
+            // Reuse existing worklet node for smoother transitions;
+            // only create a new one if none exists
+            if (!this._msWorkletNode) {
+                await this.createMSProcessor()
+            }
             this.connectMSProcessor()
             this.applyMSEffect(effect)
         } catch (error) {
