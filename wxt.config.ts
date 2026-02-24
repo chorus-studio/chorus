@@ -22,7 +22,7 @@ const perBrowserManifest: Record<string, UserManifest> = {
                 data_collection_permissions: {
                     required: ['none']
                 }
-            }
+            } as Record<string, unknown>
         }
     }
 }
