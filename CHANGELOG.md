@@ -1,6 +1,22 @@
 # Changelog
 
 
+## v2.8.1
+
+[compare changes](https://github.com/chorus-studio/chorus/compare/v2.8.0...v2.8.1)
+
+### 🩹 Fixes
+
+- **audio:** Prevent effect bleed on preset switch and reduce transition clicks ([7ef601f](https://github.com/chorus-studio/chorus/commit/7ef601f))
+- **security:** Replace {@html} SVG strings with native SVG elements ([d46515d](https://github.com/chorus-studio/chorus/commit/d46515d))
+- **manifest:** Add Firefox data_collection_permissions property ([142911d](https://github.com/chorus-studio/chorus/commit/142911d))
+- **types:** Widen gecko manifest type for data_collection_permissions ([7ed4538](https://github.com/chorus-studio/chorus/commit/7ed4538))
+- **types:** Narrow SVG fill-rule/clip-rule types to match SVG attribute union ([8c6ba28](https://github.com/chorus-studio/chorus/commit/8c6ba28))
+
+### ❤️ Contributors
+
+- Cdrani ([@cdrani](https://github.com/cdrani))
+
 ## v2.8.0
 
 [compare changes](https://github.com/chorus-studio/chorus/compare/v2.7.2...v2.8.0)
