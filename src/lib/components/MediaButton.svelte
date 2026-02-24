@@ -4,7 +4,7 @@
     import { mediaStore } from '$lib/stores/media'
     import { Button } from '$lib/components/ui/button'
 
-    type SvgPath = { d: string; fillRule?: string; clipRule?: string }
+    type SvgPath = { d: string; fillRule?: 'inherit' | 'evenodd' | 'nonzero'; clipRule?: 'inherit' | 'evenodd' | 'nonzero' }
     type SvgPolyline = { points: string }
     type SvgElement = SvgPath | SvgPolyline
 
