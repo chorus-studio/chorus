@@ -1,6 +1,10 @@
 import MediaElement from '../lib/media/media-element'
 
 function mediaOverride() {
+    // Guard against re-injection from SPA navigation
+    if ((window as any).__chorusMediaOverrideInitialized) return
+    ;(window as any).__chorusMediaOverrideInitialized = true
+
     // Expose first media source directly
     ;(window as any).mediaSource = null
     let mediaElement: MediaElement | null = null
@@ -28,6 +32,12 @@ function mediaOverride() {
             console.error('Error checking source origin:', error)
             // If we can't determine the origin, use direct playback to be safe
             return
+        }
+
+        // Dispose old MediaElement to prevent leaked event listeners
+        // that would cause duplicate effect processing
+        if (mediaElement) {
+            mediaElement.dispose()
         }
 
         mediaElement = new MediaElement(source)

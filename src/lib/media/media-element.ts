@@ -12,6 +12,7 @@ export default class MediaElement {
     private _equalizer: Equalizer | null = null
     private _msProcessor: MSProcessor | null = null
     private _audioManager: AudioManager | null = null
+    private _abortController = new AbortController()
 
     constructor(source: HTMLMediaElement) {
         this.source = source
@@ -38,6 +39,8 @@ export default class MediaElement {
     }
 
     private setupEventListeners(): void {
+        const { signal } = this._abortController
+
         // Add timeupdate event listener
         this.source.addEventListener('timeupdate', () => {
             document.dispatchEvent(
@@ -45,14 +48,14 @@ export default class MediaElement {
                     detail: { currentTime: this.source.currentTime }
                 })
             )
-        })
+        }, { signal })
 
         this.source.addEventListener('play', () => {
             if (this.mediaOverride) return
 
             this.loadMediaOverride()
             document.dispatchEvent(new CustomEvent('FROM_MEDIA_PLAY_INIT'))
-        })
+        }, { signal })
 
         // Set up window message listener (instance-based, v2.7.1 pattern)
         window.addEventListener('message', (event) => {
@@ -104,10 +107,13 @@ export default class MediaElement {
             } catch (error) {
                 console.warn('Error handling message:', error)
             }
-        })
+        }, { signal })
     }
 
     dispose(): void {
+        // Remove all event listeners (source timeupdate/play + window message)
+        this._abortController.abort()
+
         // Clean up audio manager
         if (this._audioManager) {
             this._audioManager.dispose()

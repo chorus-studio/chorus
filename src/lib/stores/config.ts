@@ -140,7 +140,8 @@ function createConfigStore() {
 
         const effect = {
             equalizer: preset.effect.equalizer,
-            reverb: preset.effect.reverb
+            reverb: preset.effect.reverb,
+            msProcessor: preset.effect.msProcessor
         }
         const playback = {
             pitch: preset.playback.pitch,

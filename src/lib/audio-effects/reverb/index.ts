@@ -141,7 +141,7 @@ export default class Reverb {
             this._reverbWorkletNode ??
             new AudioWorkletNode(this._audioContext, 'DattorroReverb', {
                 channelCountMode: 'explicit',
-                channelCount: 1,
+                channelCount: 2,
                 outputChannelCount: [2]
             })
     }
