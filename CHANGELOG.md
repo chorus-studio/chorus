@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v2.8.3
+
+[compare changes](https://github.com/chorus-studio/chorus/compare/v2.8.2...v2.8.3)
+
+### 🩹 Fixes
+
+- **audio:** Restore parallel dry bypass for digital reverb effects ([0fd3689](https://github.com/chorus-studio/chorus/commit/0fd3689))
+
+### ❤️ Contributors
+
+- Cdrani ([@cdrani](https://github.com/cdrani))
+
 ## v2.8.2
 
 [compare changes](https://github.com/chorus-studio/chorus/compare/v2.8.1...v2.8.2)
