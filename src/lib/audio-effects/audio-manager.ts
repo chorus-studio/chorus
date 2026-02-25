@@ -27,8 +27,8 @@ export default class AudioManager {
         reverb?: AudioNode
     } = {}
 
-    // Track impulse reverb's dry/wet gain nodes for proper cleanup
-    private _impulseGainNodes: { dry?: GainNode; wet?: GainNode } = {}
+    // Track reverb dry/wet gain nodes for proper cleanup (used by both digital and impulse reverb)
+    private _reverbGainNodes: { dry?: GainNode; wet?: GainNode } = {}
 
     constructor(element: HTMLVideoElement | HTMLAudioElement) {
         this._element = element
@@ -335,7 +335,7 @@ export default class AudioManager {
         this._activeEffects.reverb = convolverNode
 
         // Track dry/wet gain nodes for proper cleanup
-        this._impulseGainNodes = { dry: dryGainNode, wet: wetGainNode }
+        this._reverbGainNodes = { dry: dryGainNode, wet: wetGainNode }
     }
 
     connectEqualizer(equalizerNode: AudioNode | { input: AudioNode; output: AudioNode }) {
@@ -395,22 +395,22 @@ export default class AudioManager {
             if (this._activeEffects.msProcessor) this._activeEffects.msProcessor.disconnect()
             if (this._activeEffects.reverb) this._activeEffects.reverb.disconnect()
 
-            // Clean up impulse reverb's dry/wet gain nodes
-            if (this._impulseGainNodes.dry) {
+            // Clean up reverb dry/wet gain nodes (digital bypass + impulse split)
+            if (this._reverbGainNodes.dry) {
                 try {
-                    this._impulseGainNodes.dry.disconnect()
+                    this._reverbGainNodes.dry.disconnect()
                 } catch (e) {
                     // Ignore disconnect errors
                 }
             }
-            if (this._impulseGainNodes.wet) {
+            if (this._reverbGainNodes.wet) {
                 try {
-                    this._impulseGainNodes.wet.disconnect()
+                    this._reverbGainNodes.wet.disconnect()
                 } catch (e) {
                     // Ignore disconnect errors
                 }
             }
-            this._impulseGainNodes = {}
+            this._reverbGainNodes = {}
         } catch (error) {
             console.warn('Error during cleanup:', error)
         }
@@ -451,6 +451,26 @@ export default class AudioManager {
             }
 
             if (this._activeEffects.reverb) {
+                if (this._activeEffects.reverb instanceof AudioWorkletNode) {
+                    // Digital reverb: parallel dry bypass + reverb path.
+                    // This restores the v2.7.1 topology where a dry signal path
+                    // existed alongside the reverb, keeping the dry:wet ratio
+                    // that all digital reverb presets were tuned for.
+                    const dryBypass = this._audioContext!.createGain()
+                    dryBypass.gain.value = 1.0
+
+                    currentNode.connect(dryBypass)
+                    currentNode.connect(this._activeEffects.reverb)
+
+                    dryBypass.connect(this._soundTouchNode)
+                    this._activeEffects.reverb.connect(this._soundTouchNode)
+
+                    this._reverbGainNodes = { dry: dryBypass }
+
+                    this._soundTouchNode.connect(this.destination)
+                    return
+                }
+
                 currentNode.connect(this._activeEffects.reverb)
                 currentNode = this._activeEffects.reverb
             }
