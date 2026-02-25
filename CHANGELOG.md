@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v2.8.2
+
+[compare changes](https://github.com/chorus-studio/chorus/compare/v2.8.1...v2.8.2)
+
+### 🩹 Fixes
+
+- **audio:** Prevent duplicate effect processing and preserve stereo in reverb ([34fd6a1](https://github.com/chorus-studio/chorus/commit/34fd6a1))
+
+### ❤️ Contributors
+
+- Cdrani ([@cdrani](https://github.com/cdrani))
+
 ## v2.8.1
 
 [compare changes](https://github.com/chorus-studio/chorus/compare/v2.8.0...v2.8.1)
