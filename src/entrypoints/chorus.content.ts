@@ -2,6 +2,7 @@ import { mount, unmount } from 'svelte'
 
 import { MatchPattern } from 'wxt/sandbox'
 import { setTheme } from '$lib/utils/theming'
+import { type VolumeState } from '$lib/stores/volume'
 import { type SettingsState, SETTINGS_STORE_KEY } from '$lib/stores/settings'
 import { type ContentScriptContext, injectScript, createIntegratedUi } from 'wxt/client'
 
@@ -109,6 +110,17 @@ export default defineContentScript({
     matches: ['*://open.spotify.com/*'],
 
     async main(ctx) {
+        // When the media element first plays, read the persisted volume directly
+        // from chrome.storage (the single source of truth) and dispatch it to the
+        // main world. This avoids relying on the Svelte store which may still hold
+        // stale defaults at this point.
+        document.addEventListener('FROM_MEDIA_PLAY_INIT', async () => {
+            const volume = await storage.getItem<VolumeState>('local:chorus_volume')
+            if (volume) {
+                window.postMessage({ type: 'FROM_VOLUME_LISTENER', data: volume }, '*')
+            }
+        })
+
         await injectChorusUI(ctx)
         ctx.addEventListener(window, 'wxt:locationchange', async ({ newUrl }) => {
             if (watchPattern.includes(newUrl)) await injectChorusUI(ctx)

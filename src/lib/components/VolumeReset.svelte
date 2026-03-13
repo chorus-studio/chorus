@@ -11,7 +11,11 @@
 
     async function handleResetVolume() {
         await volumeStore.resetVolume(false)
-        port?.postMessage({ type: 'volume', data: $volumeStore })
+        if (port) {
+            port.postMessage({ type: 'volume', data: $volumeStore })
+        } else {
+            volumeStore.dispatchVolumeEvent()
+        }
     }
 
     async function updateVolume({ type, value }: { type: VolumeType; value: number }) {

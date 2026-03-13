@@ -105,13 +105,21 @@ export class TrackObserver {
             return this.skipTrack()
         }
 
-        if (songInfo?.snip) {
+        const mutedForSkip = this.playbackController.mutedForSkip
+        if (mutedForSkip) {
+            this.playbackController.clearMutedForSkip()
+        }
+
+        const mutedForSnip = Boolean(songInfo?.snip)
+        if (mutedForSnip) {
             this.playbackController.setSeeking(true)
             this.playbackController.mute()
         }
 
         setTimeout(() => {
-            this.playbackController.unMute()
+            if (mutedForSnip || mutedForSkip) {
+                this.playbackController.unMute()
+            }
             this.playbackController.setSeeking(false)
         }, 100)
 

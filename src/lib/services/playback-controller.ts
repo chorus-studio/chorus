@@ -12,6 +12,7 @@ import { snipStore } from '$lib/stores/snip'
  */
 export class PlaybackController {
     private seeking: boolean = false
+    private _mutedForSkip: boolean = false
 
     get isControlEnabled(): boolean {
         return !this.seeking
@@ -35,10 +36,19 @@ export class PlaybackController {
     skipTrack(): void {
         const volume = get(volumeStore)
         if (!volume.muted) {
+            this._mutedForSkip = true
             this.mute()
         }
 
         this.advanceTrack()
+    }
+
+    get mutedForSkip(): boolean {
+        return this._mutedForSkip
+    }
+
+    clearMutedForSkip(): void {
+        this._mutedForSkip = false
     }
 
     advanceTrack(): void {

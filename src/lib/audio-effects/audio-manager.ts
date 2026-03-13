@@ -46,8 +46,7 @@ export default class AudioManager {
         this._element.addEventListener('error', (e) => {
             // Don't block playback on CORS errors
             if (this._element instanceof HTMLMediaElement) {
-                this._element.volume = 1
-                this._element.muted = false
+                this.applyElementVolume()
             }
         })
 
@@ -59,9 +58,8 @@ export default class AudioManager {
                 const isCrossOrigin = sourceUrl.origin !== window.location.origin
 
                 if (isCrossOrigin) {
-                    // For cross-origin sources, just use direct playback
-                    this._element.volume = 1
-                    this._element.muted = false
+                    // For cross-origin sources, use direct playback with stored volume
+                    this.applyElementVolume()
                     return
                 }
             }
@@ -69,8 +67,7 @@ export default class AudioManager {
             console.warn('Error checking source origin:', error)
             // If we can't determine the origin, use direct playback to be safe
             if (this._element instanceof HTMLMediaElement) {
-                this._element.volume = 1
-                this._element.muted = false
+                this.applyElementVolume()
             }
             return
         }
@@ -107,10 +104,9 @@ export default class AudioManager {
             this._isInitialized = true
         } catch (error) {
             console.error('Failed to set up Web Audio API:', error)
-            // If Web Audio API setup fails, fall back to direct playback
+            // If Web Audio API setup fails, fall back to direct playback with stored volume
             if (this._element instanceof HTMLMediaElement) {
-                this._element.volume = 1
-                this._element.muted = false
+                this.applyElementVolume()
             }
             throw error
         }
@@ -190,6 +186,15 @@ export default class AudioManager {
         }
     }
 
+    private applyElementVolume(): void {
+        if (!(this._element instanceof HTMLMediaElement)) return
+        const value = this._currentVolume
+        const scaledValue =
+            this._volumeType === 'logarithmic' ? this.linearToLogarithmic(value) : value
+        this._element.volume = Math.min(1, Math.max(0, scaledValue))
+        this._element.muted = value === 0
+    }
+
     private linearToLogarithmic(value: number): number {
         // Prevent negative values
         value = Math.max(value, 0)
@@ -208,6 +213,10 @@ export default class AudioManager {
     }
 
     setGain(value: number, type: 'linear' | 'logarithmic' = 'linear') {
+        // Always store the requested volume so initialize() can apply it after setup
+        this._currentVolume = value
+        this._volumeType = type
+
         // For non-HTMLMediaElement sources or if Web Audio API is not available, use direct volume control
         if (!(this._element instanceof HTMLMediaElement) || !this._gainNode) {
             if (this._element instanceof HTMLMediaElement) {
@@ -218,9 +227,6 @@ export default class AudioManager {
             }
             return
         }
-
-        this._currentVolume = value
-        this._volumeType = type
 
         // Special handling for muting (value = 0)
         if (value === 0) {

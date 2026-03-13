@@ -11,19 +11,27 @@
 
     let { port, pip = false }: { port: chrome.runtime.Port | null; pip?: boolean } = $props()
 
+    function sendVolumeUpdate() {
+        if (port) {
+            port.postMessage({ type: 'volume', data: $volumeStore })
+        } else {
+            volumeStore.dispatchVolumeEvent()
+        }
+    }
+
     async function handleVolumeChange(value: number) {
         await volumeStore.updateVolume({ value }, false)
-        port?.postMessage({ type: 'volume', data: $volumeStore })
+        sendVolumeUpdate()
     }
 
     async function handleMute() {
         await volumeStore.updateVolume({ muted: !$volumeStore.muted }, false)
-        port?.postMessage({ type: 'volume', data: $volumeStore })
+        sendVolumeUpdate()
     }
 
     async function handleVolumeTypeChange(value: string) {
         await volumeStore.updateVolume({ type: value as VolumeType }, false)
-        port?.postMessage({ type: 'volume', data: $volumeStore })
+        sendVolumeUpdate()
     }
 
     onMount(() => {

@@ -13,6 +13,7 @@ export default class MediaElement {
     private _msProcessor: MSProcessor | null = null
     private _audioManager: AudioManager | null = null
     private _abortController = new AbortController()
+    private _pendingVolume: { value: number; muted: boolean; type: 'linear' | 'logarithmic' } | null = null
 
     constructor(source: HTMLMediaElement) {
         this.source = source
@@ -54,6 +55,13 @@ export default class MediaElement {
             if (this.mediaOverride) return
 
             this.loadMediaOverride()
+
+            // Apply any volume setting that arrived before mediaOverride was ready
+            if (this._pendingVolume && this.mediaOverride) {
+                this.mediaOverride.updateVolume(this._pendingVolume)
+                this._pendingVolume = null
+            }
+
             document.dispatchEvent(new CustomEvent('FROM_MEDIA_PLAY_INIT'))
         }, { signal })
 
@@ -65,7 +73,17 @@ export default class MediaElement {
 
             try {
                 const { type, data } = event.data
-                if (!this.mediaOverride) return
+                if (!this.mediaOverride) {
+                    // Buffer volume messages so they can be applied once mediaOverride initializes
+                    if (type === 'FROM_VOLUME_LISTENER') {
+                        this._pendingVolume = {
+                            value: Number(data?.value) || 0,
+                            muted: Boolean(data?.muted),
+                            type: String(data?.type) as 'linear' | 'logarithmic'
+                        }
+                    }
+                    return
+                }
 
                 switch (type) {
                     case 'FROM_NEW_RELEASES':

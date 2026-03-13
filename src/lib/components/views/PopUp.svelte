@@ -110,6 +110,9 @@
     onMount(() => {
         ;(async () => {
             if (pip) await getSpotifyTabStatus()
+            // Load persisted volume from chrome.storage so the popup icon
+            // reflects the actual muted/volume state instead of store defaults.
+            await volumeStore.loadFromStorage()
         })()
         setupPort()
         loadColours()

@@ -101,6 +101,11 @@ function createVolumeStore() {
         const syncedVolume = syncWithType(volume, defaultVolumeState)
         set(syncedVolume)
 
+        // Dispatch the persisted volume so the audio element receives the correct
+        // value. This overwrites any stale default that may have been buffered
+        // before storage finished loading.
+        dispatchVolumeEvent()
+
         // Update storage with synced volume
         isUpdatingStorage = true
         storage
@@ -121,12 +126,20 @@ function createVolumeStore() {
         set(syncedVolume)
     })
 
+    async function loadFromStorage() {
+        const volume = await storage.getItem<VolumeState>(VOLUME_STORE_KEY)
+        if (volume) {
+            set(syncWithType(volume, defaultVolumeState))
+        }
+    }
+
     return {
         mute,
         unMute,
         subscribe,
         resetVolume,
         updateVolume,
+        loadFromStorage,
         updateDefaultVolume,
         dispatchVolumeEvent
     }
