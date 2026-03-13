@@ -5,7 +5,7 @@ import { defaultPlayback } from '$lib/stores/playback'
 import { defaultAudioEffect } from '$lib/stores/effects'
 import type { NowPlaying } from '$lib/stores/now-playing'
 import type { SettingsState } from '$lib/stores/settings'
-import { THEME_NAMES, setTheme } from '$lib/utils/theming'
+import { THEME_NAMES } from '$lib/utils/theming'
 import { registerTrackService } from '$lib/api/services/track'
 import { registerPlayerService } from '$lib/api/services/player'
 import { registerNewReleasesService } from '$lib/api/services/new-releases'
@@ -14,6 +14,14 @@ import { executeButtonClick, registerCommandService } from '$lib/utils/command'
 import { registerNotificationService, showNotification } from '$lib/utils/notifications'
 
 export default defineBackground(() => {
+    // Open onboarding page on first install and set uninstall feedback URL
+    browser.runtime.onInstalled.addListener((details) => {
+        if (details.reason === 'install') {
+            browser.tabs.create({ url: 'https://chorusstudio.org/install' })
+        }
+    })
+    browser.runtime.setUninstallURL('https://chorusstudio.org/uninstall')
+
     const STORE_KEYS = {
         CONFIG: 'local:chorus_config' as const,
         SETTINGS: 'local:chorus_settings' as const,
