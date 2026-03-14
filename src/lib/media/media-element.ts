@@ -53,8 +53,9 @@ export default class MediaElement {
             this.loadMediaOverride()
 
             // Apply any volume setting that arrived before mediaOverride was ready
-            if (this.pendingVolume && this.mediaOverride) {
-                this.mediaOverride.updateVolume(this.pendingVolume)
+            const override = this.mediaOverride as MediaOverride | undefined
+            if (this.pendingVolume && override) {
+                override.updateVolume(this.pendingVolume)
                 this.pendingVolume = null
             }
 
