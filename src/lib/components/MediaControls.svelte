@@ -1,5 +1,7 @@
 <script lang="ts">
     import MediaButton from './MediaButton.svelte'
+    import { seekStore } from '$lib/stores/seek'
+    import { nowPlaying } from '$lib/stores/now-playing'
     import { mediaStore, type Media } from '$lib/stores/media'
 
     let { port, pip = false }: { port: chrome.runtime.Port | null; pip?: boolean } = $props()
@@ -57,6 +59,20 @@
     }
 
     async function handleClick(role: string) {
+        // In PiP, handle seek directly — postMessage reaches MAIN world from content script context
+        if (pip && (role === 'seek-forward' || role === 'seek-rewind')) {
+            const isForward = role === 'seek-forward'
+            const isLongForm = $seekStore.media_type === 'long_form'
+            const offset = isForward
+                ? isLongForm ? $seekStore.long_form.forward : $seekStore.default.forward
+                : isLongForm ? $seekStore.long_form.rewind : $seekStore.default.rewind
+            const target = isForward
+                ? Math.min($nowPlaying.current + offset, $nowPlaying.duration)
+                : Math.max($nowPlaying.current - offset, 0)
+            window.postMessage({ type: 'FROM_CURRENT_TIME_LISTENER', data: target }, '*')
+            return
+        }
+
         port?.postMessage({ type: 'controls', key: role })
         if (role == 'play' && !$mediaStore.playing && !$mediaStore.active) {
             await mediaStore.setActive(true)

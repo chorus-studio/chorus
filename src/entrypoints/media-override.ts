@@ -34,11 +34,9 @@ function mediaOverride() {
             return
         }
 
-        // Dispose old MediaElement to prevent leaked event listeners
-        // that would cause duplicate effect processing
-        if (mediaElement) {
-            mediaElement.dispose()
-        }
+        // Spotify creates a single media element on page load — keep it forever.
+        // Skip if we already captured one.
+        if (mediaElement) return
 
         mediaElement = new MediaElement(source)
     }

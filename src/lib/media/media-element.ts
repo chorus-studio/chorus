@@ -12,8 +12,7 @@ export default class MediaElement {
     private _equalizer: Equalizer | null = null
     private _msProcessor: MSProcessor | null = null
     private _audioManager: AudioManager | null = null
-    private _abortController = new AbortController()
-    private _pendingVolume: { value: number; muted: boolean; type: 'linear' | 'logarithmic' } | null = null
+    public pendingVolume: { value: number; muted: boolean; type: 'linear' | 'logarithmic' } | null = null
 
     constructor(source: HTMLMediaElement) {
         this.source = source
@@ -40,16 +39,13 @@ export default class MediaElement {
     }
 
     private setupEventListeners(): void {
-        const { signal } = this._abortController
-
-        // Add timeupdate event listener
         this.source.addEventListener('timeupdate', () => {
             document.dispatchEvent(
                 new CustomEvent('FROM_MEDIA_TIMEUPDATE', {
                     detail: { currentTime: this.source.currentTime }
                 })
             )
-        }, { signal })
+        })
 
         this.source.addEventListener('play', () => {
             if (this.mediaOverride) return
@@ -57,26 +53,23 @@ export default class MediaElement {
             this.loadMediaOverride()
 
             // Apply any volume setting that arrived before mediaOverride was ready
-            if (this._pendingVolume && this.mediaOverride) {
-                this.mediaOverride.updateVolume(this._pendingVolume)
-                this._pendingVolume = null
+            if (this.pendingVolume && this.mediaOverride) {
+                this.mediaOverride.updateVolume(this.pendingVolume)
+                this.pendingVolume = null
             }
 
             document.dispatchEvent(new CustomEvent('FROM_MEDIA_PLAY_INIT'))
-        }, { signal })
+        })
 
-        // Set up window message listener (instance-based, v2.7.1 pattern)
         window.addEventListener('message', (event) => {
-            // Verify the origin for security
             if (event.source !== window) return
             if (event.data === '@execute_deferreds') return
 
             try {
                 const { type, data } = event.data
                 if (!this.mediaOverride) {
-                    // Buffer volume messages so they can be applied once mediaOverride initializes
                     if (type === 'FROM_VOLUME_LISTENER') {
-                        this._pendingVolume = {
+                        this.pendingVolume = {
                             value: Number(data?.value) || 0,
                             muted: Boolean(data?.muted),
                             type: String(data?.type) as 'linear' | 'logarithmic'
@@ -125,42 +118,7 @@ export default class MediaElement {
             } catch (error) {
                 console.warn('Error handling message:', error)
             }
-        }, { signal })
-    }
-
-    dispose(): void {
-        // Remove all event listeners (source timeupdate/play + window message)
-        this._abortController.abort()
-
-        // Clean up audio manager
-        if (this._audioManager) {
-            this._audioManager.dispose()
-            this._audioManager = null
-        }
-
-        // Clean up reverb
-        if (this._reverb) {
-            ;(this._reverb as any).cleanup?.()
-            this._reverb = null
-        }
-
-        // Clean up equalizer
-        if (this._equalizer) {
-            this._equalizer.disconnect()
-            this._equalizer = null
-        }
-
-        // Clean up MS processor
-        if (this._msProcessor) {
-            ;(this._msProcessor as any).dispose?.()
-            this._msProcessor = null
-        }
-
-        // Clear media override
-        this.mediaOverride = undefined
-
-        // Remove reference from source
-        delete (this.source as any)._chorusMediaElement
+        })
     }
 
     get audioManager(): AudioManager | null {
