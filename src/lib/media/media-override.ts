@@ -132,7 +132,7 @@ export default class MediaOverride {
     }
 
     async updateSoundTouch(data: SoundTouchData) {
-        if (!this.audioManager) return
+        if (!this.audioManager || !this.audioManager.isReady) return
 
         try {
             await this.audioManager.ensureAudioChainReady()
@@ -148,7 +148,7 @@ export default class MediaOverride {
         equalizer?: string
         msProcessor?: string
     }) {
-        if (!this.audioManager || !this.equalizer || !this.reverb || !this.msProcessor) {
+        if (!this.audioManager || !this.audioManager.isReady || !this.equalizer || !this.reverb || !this.msProcessor) {
             return
         }
 
@@ -209,7 +209,7 @@ export default class MediaOverride {
     }
 
     async updateMSParams(params: MSParams): Promise<void> {
-        if (!this.msProcessor) return
+        if (!this.msProcessor || !this.audioManager.isReady) return
 
         try {
             await this.audioManager.ensureAudioChainReady()

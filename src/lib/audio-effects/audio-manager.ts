@@ -162,6 +162,10 @@ export default class AudioManager {
         }
     }
 
+    get isReady(): boolean {
+        return this._isInitialized
+    }
+
     async ensureAudioChainReady() {
         if (!this._setupPromise) {
             throw new Error('AudioManager not properly initialized')
