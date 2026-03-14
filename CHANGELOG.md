@@ -1,6 +1,26 @@
 # Changelog
 
 
+## v2.9.0
+
+[compare changes](https://github.com/chorus-studio/chorus/compare/v2.8.3...v2.9.0)
+
+### 🚀 Enhancements
+
+- **background:** Add onboarding page on install and uninstall feedback URL ([0e4ae4e](https://github.com/chorus-studio/chorus/commit/0e4ae4e))
+
+### 🩹 Fixes
+
+- **volume:** Preserve muted state across page loads and track skips ([6575017](https://github.com/chorus-studio/chorus/commit/6575017))
+- **audio:** Guard effect updates until audio chain is initialized ([0819c03](https://github.com/chorus-studio/chorus/commit/0819c03))
+- **pip:** Resolve audio cutoff and seek in Picture-in-Picture ([ca3b7fc](https://github.com/chorus-studio/chorus/commit/ca3b7fc))
+- **audio:** Reduce impulse reverb intensity and restore mono input for digital reverb ([19383f4](https://github.com/chorus-studio/chorus/commit/19383f4))
+- **types:** Resolve TypeScript narrowing error in MediaElement play handler ([5fd2d3b](https://github.com/chorus-studio/chorus/commit/5fd2d3b))
+
+### ❤️ Contributors
+
+- Cdrani ([@cdrani](https://github.com/cdrani))
+
 ## v2.8.3
 
 [compare changes](https://github.com/chorus-studio/chorus/compare/v2.8.2...v2.8.3)
