@@ -518,6 +518,56 @@ export default class AudioManager {
         this.rebuildEffectChain()
     }
 
+    /**
+     * Route the captured element straight to the destination, removing ALL Chorus
+     * processing (gain, soundTouch worklet, effects) from the signal path. Used by
+     * the master on/off toggle to make audio audibly identical to vanilla Spotify.
+     *
+     * The AudioContext and MediaElementAudioSourceNode are deliberately KEPT alive:
+     * an element can only ever be createMediaElementSource()'d once per page load,
+     * so closing/disposing would make re-enabling impossible without a tab reload.
+     * Once disconnected from the graph the soundTouch worklet is no longer pulled,
+     * so it stops consuming CPU.
+     */
+    bypass() {
+        if (!this.source || !this.destination || !this._gainNode) return
+
+        try {
+            this.cleanupEffectChain()
+            this._activeEffects = {}
+            // Passthrough WITH the gain node retained (source → gain → destination):
+            // keeps the current volume so toggling off causes no loudness jump, while
+            // the soundTouch worklet and all effects are dropped from the path (the
+            // worklet stops being pulled, so it stops consuming CPU).
+            this.source.connect(this._gainNode)
+            this._gainNode.connect(this.destination)
+        } catch (error) {
+            console.warn('Error bypassing audio chain:', error)
+        }
+    }
+
+    /**
+     * Rebuild the basic chain (source → gain → soundTouch → destination) after a
+     * bypass(), restoring the last known volume. Effects/presets re-apply on top
+     * via the normal store dispatch once the UI re-mounts.
+     */
+    restoreChain() {
+        if (!this.isConnectable || !this.source || !this.destination) return
+
+        try {
+            // Clear the bypass wiring (source → gain → destination) before rebuilding,
+            // otherwise the gain node would feed both destination and soundTouch.
+            this.cleanupEffectChain()
+            this._activeEffects = {}
+            this.source.connect(this._gainNode!)
+            this._gainNode!.connect(this._soundTouchNode!)
+            this._soundTouchNode!.connect(this.destination)
+            this.setGain(this._currentVolume, this._volumeType)
+        } catch (error) {
+            console.warn('Error restoring audio chain:', error)
+        }
+    }
+
     private async loadSoundTouch() {
         this._soundTouchManager = new SoundTouch(this.audioContext!)
         await this._soundTouchManager.loadModule()

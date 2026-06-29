@@ -13,6 +13,8 @@ export class TracklistObserver {
         const target = document.querySelector('main')
         if (!target) return
 
+        // Defensive: a singleton observer may be re-observed across App remounts.
+        this.observer?.disconnect()
         this.observer = new MutationObserver(this.handleMutation)
         this.observer.observe(target, { childList: true, subtree: true })
     }
@@ -55,13 +57,27 @@ export class TracklistObserver {
         }
     }
 
+    // Lightweight stop: halt observation only. Safe to run on every App remount
+    // (e.g. when reconcile re-mounts the App after Spotify swaps the widget) — the
+    // per-row buttons are intentionally left in place so they don't churn.
     disconnect() {
         this.observer?.disconnect()
         this.observer = null
-        
+
         if (this.timeout) {
             clearTimeout(this.timeout)
             this.timeout = null
         }
     }
+
+    // Full teardown for master-OFF: stop observing AND remove the per-row block/heart
+    // buttons grafted into Spotify's rows, returning the tracklist to vanilla.
+    teardown() {
+        this.disconnect()
+        this.trackList.teardown()
+    }
 }
+
+// Singleton so master-OFF (removeChorusUI) can fully tear down the per-row buttons,
+// while the App lifecycle only stops/restarts observation across remounts.
+export const tracklistObserver = new TracklistObserver()

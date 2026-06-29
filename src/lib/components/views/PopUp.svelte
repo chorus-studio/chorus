@@ -4,12 +4,14 @@
 
     import { volumeStore } from '$lib/stores/volume'
     import { nowPlaying } from '$lib/stores/now-playing'
+    import { setEnabled } from '$lib/stores/enabled'
     import { settingsStore, type ThemeVibrancy } from '$lib/stores/settings'
 
     import Bell from '@lucide/svelte/icons/bell'
     import BellOff from '@lucide/svelte/icons/bell-off'
     import BellPlus from '@lucide/svelte/icons/bell-plus'
     import BellRing from '@lucide/svelte/icons/bell-ring'
+    import Power from '@lucide/svelte/icons/power'
 
     import { Button } from '$lib/components/ui/button'
     import TrackInfo from '$lib/components/TrackInfo.svelte'
@@ -154,6 +156,19 @@
             ? 'absolute -top-1.5 right-1'
             : 'absolute right-1 top-0.5'} flex w-full items-center justify-end gap-x-0.5"
     >
+        {#if !pip}
+            <Button
+                size="icon"
+                variant="ghost"
+                aria-label="Turn Chorus off"
+                title="Turn Chorus off"
+                onclick={() => setEnabled(false)}
+                class="size-6 border-none bg-transparent text-[#1ed760] hover:bg-transparent hover:text-[#1ed760] [&_svg]:size-[1rem]"
+            >
+                <Power />
+            </Button>
+        {/if}
+
         {#if !pip && !isSpotifyTabOpen}
             <Button
                 variant="link"

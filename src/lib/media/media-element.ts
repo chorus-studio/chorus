@@ -12,6 +12,7 @@ export default class MediaElement {
     private _equalizer: Equalizer | null = null
     private _msProcessor: MSProcessor | null = null
     private _audioManager: AudioManager | null = null
+    private _disabled: boolean = false
     public pendingVolume: { value: number; muted: boolean; type: 'linear' | 'logarithmic' } | null = null
 
     constructor(source: HTMLMediaElement) {
@@ -49,6 +50,8 @@ export default class MediaElement {
 
         this.source.addEventListener('play', () => {
             if (this.mediaOverride) return
+            // Don't build the Chorus audio chain while the extension is disabled
+            if (this._disabled) return
 
             this.loadMediaOverride()
 
@@ -68,6 +71,23 @@ export default class MediaElement {
 
             try {
                 const { type, data } = event.data
+
+                // Master on/off: handled even before the audio chain exists so the
+                // disabled flag can gate chain-building on the next play.
+                if (type === 'FROM_ENABLED_LISTENER') {
+                    this._disabled = data?.enabled === false
+                    if (this.mediaOverride) {
+                        if (this._disabled) this.mediaOverride.teardown()
+                        else this.mediaOverride.rearm()
+                    }
+                    return
+                }
+
+                // While disabled, ignore every audio update (effects/playback/volume/
+                // ms/seek) so nothing rebuilds the bypassed graph or buffers a stale
+                // override for the next play.
+                if (this._disabled) return
+
                 if (!this.mediaOverride) {
                     if (type === 'FROM_VOLUME_LISTENER') {
                         this.pendingVolume = {

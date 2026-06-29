@@ -232,6 +232,69 @@ export class PlaybackObserver {
         this.observer = null
         this.clearCache()
     }
+
+    // Reverse every inline-style mutation this observer made to Spotify's own
+    // controls, returning the player to vanilla. Clearing a style property (= '')
+    // removes only our override and falls back to Spotify's stylesheet.
+    private restoreNativeControls() {
+        document
+            .querySelectorAll(
+                '[data-testid="control-button-playback-speed"], [data-testid="control-button-seek-back-15"], [data-testid="control-button-seek-forward-15"]'
+            )
+            .forEach((button) => ((button as HTMLElement).style.display = ''))
+
+        const volumeBar = document.querySelector('[data-testid="volume-bar"]') as HTMLElement | null
+        if (volumeBar) volumeBar.style.display = ''
+
+        const volumeInner = document.querySelector('[data-testid="volume-bar"] div') as HTMLElement | null
+        const volumeContainer = volumeInner?.parentElement
+        if (volumeContainer) volumeContainer.style.display = ''
+        const volumeRoot = volumeContainer?.parentElement?.parentElement as HTMLElement | null
+        if (volumeRoot) volumeRoot.style.flexDirection = ''
+
+        const progressbar = document.querySelector('[data-testid="playback-progressbar"]') as HTMLElement | null
+        if (progressbar) {
+            progressbar.style.width = ''
+            progressbar.style.visibility = ''
+        }
+        const position = document.querySelector('[data-testid="playback-position"]') as HTMLElement | null
+        if (position) {
+            position.style.visibility = ''
+            position.style.minWidth = ''
+            position.style.width = ''
+        }
+        const duration = document.querySelector('[data-testid="playback-duration"]') as HTMLElement | null
+        if (duration) {
+            duration.style.visibility = ''
+            duration.style.minWidth = ''
+            duration.style.width = ''
+        }
+
+        document
+            .querySelectorAll(
+                '[data-testid="now-playing-widget"] > div > button[data-encore-id="buttonTertiary"]'
+            )
+            .forEach((node) => {
+                const button = node as HTMLElement
+                button.style.visibility = ''
+                button.style.width = ''
+                const parent = button.parentElement
+                if (parent) {
+                    parent.style.margin = ''
+                    parent.style.width = ''
+                    parent.style.gap = ''
+                }
+            })
+    }
+
+    // Full teardown for the master on/off toggle: unmount the Chorus volume/progress
+    // widgets, restore Spotify's native controls, then stop observing.
+    teardown() {
+        this.unmountVolumeSlider()
+        this.unmountProgress()
+        this.restoreNativeControls()
+        this.disconnect()
+    }
 }
 
 export const playbackObserver = new PlaybackObserver()

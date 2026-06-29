@@ -19,9 +19,10 @@ export class SkipIcon extends TrackListIcon {
         const parentElement = heartIcon?.parentElement
         const div = document.createElement('div')
         parentElement?.insertBefore(div, heartIcon)
-        mount(TrackListSkipButton, {
+        const instance = mount(TrackListSkipButton, {
             target: div,
             props: { track }
         })
+        this.track(instance, div)
     }
 }

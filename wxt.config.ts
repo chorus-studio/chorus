@@ -71,6 +71,7 @@ export default defineConfig({
         host_permissions: ['*://*.spotify.com/*'],
         commands: {
             'on/off': {
+                suggested_key: { default: 'Alt+Shift+O' },
                 description: 'Toggle Extension On/Off'
             },
             loop: {
@@ -101,15 +102,18 @@ export default defineConfig({
                 description: 'Seek Track Forwards'
             },
             'save/unsave': {
+                suggested_key: { default: 'Alt+Shift+S' },
                 description: 'Save/Unsave Track'
             },
             'seek-rewind': {
                 description: 'Seek Track Backwards'
             },
             'block-track': {
+                suggested_key: { default: 'Alt+Shift+B' },
                 description: 'Add track to block list'
             },
             'show-track': {
+                suggested_key: { default: 'Alt+Shift+T' },
                 description: 'Show current track as a notification'
             },
             'toggle-new-releases': {

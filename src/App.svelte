@@ -5,7 +5,7 @@
     import { nowPlaying } from '$lib/stores/now-playing'
     import { trackObserver } from '$lib/observers/track'
     import { playbackObserver } from '$lib/observers/playback'
-    import { TracklistObserver } from '$lib/observers/tracklist'
+    import { tracklistObserver } from '$lib/observers/tracklist'
     import { setTheme, removeTheme, type ThemeName } from '$lib/utils/theming'
 
     // Import stores to ensure they're initialized and set up their listeners
@@ -55,10 +55,14 @@
     onMount(() => {
         init()
         setupListener()
-        const tracklistObserver = new TracklistObserver()
         tracklistObserver.observe()
         checkIfPipSupported()
 
+        // Lightweight cleanup only: this runs on every App remount (reconcile
+        // re-mounts when Spotify swaps the now-playing widget), so it must NOT
+        // restore Spotify's native controls or remove per-row buttons — that
+        // heavy, vanilla-restoring teardown is reserved for master-OFF and is
+        // driven from removeChorusUI() in the content script.
         return () => {
             nowPlaying.disconnect()
             mediaStore.disconnect()

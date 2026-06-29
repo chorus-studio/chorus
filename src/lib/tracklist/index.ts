@@ -153,4 +153,9 @@ export class TrackList {
             this.icons.forEach((icon) => icon.setUI({ row, track }))
         })
     }
+
+    // Unmount every per-row block/heart button injected into Spotify's tracklist.
+    teardown() {
+        this.icons.forEach((icon) => icon.teardown())
+    }
 }

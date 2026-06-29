@@ -10,6 +10,8 @@ import { registerTrackService } from '$lib/api/services/track'
 import { registerPlayerService } from '$lib/api/services/player'
 import { registerNewReleasesService } from '$lib/api/services/new-releases'
 import { registerCheckPermissionsService } from '$lib/utils/check-permissions'
+import { getEnabled, toggleEnabled, watchEnabled } from '$lib/stores/enabled'
+import { applyActionIndicator } from '$lib/utils/action-indicator'
 import { executeButtonClick, registerCommandService } from '$lib/utils/command'
 import { registerNotificationService, showNotification } from '$lib/utils/notifications'
 
@@ -21,6 +23,23 @@ export default defineBackground(() => {
         }
     })
     browser.runtime.setUninstallURL('https://chorusstudio.org/uninstall')
+
+    // Mirror the persisted on/off flag in memory so request/command listeners can
+    // gate synchronously, and keep the toolbar icon in sync. The top-level read
+    // runs on every service-worker (re)start (including fresh browser launch and
+    // MV3 respawn), so the OFF icon/title is restored each time. `readyPromise`
+    // lets request listeners defer their storage writes until the real flag is
+    // known, closing the cold-start window where isEnabled is still the optimistic
+    // default. watchEnabled keeps it live afterward.
+    let isEnabled = true
+    const readyPromise = getEnabled().then((enabled) => {
+        isEnabled = enabled
+        applyActionIndicator(enabled)
+    })
+    watchEnabled((enabled) => {
+        isEnabled = enabled
+        applyActionIndicator(enabled)
+    })
 
     const STORE_KEYS = {
         CONFIG: 'local:chorus_config' as const,
@@ -72,6 +91,8 @@ export default defineBackground(() => {
         if (port.name !== 'popup') return
 
         port.onMessage.addListener(async (message) => {
+            if (!isEnabled) return
+
             if (message?.type == 'controls') {
                 return await executeButtonClick({ command: message.key })
             }
@@ -100,16 +121,22 @@ export default defineBackground(() => {
 
                 if (!data?.device?.device_id || !data?.connection_id) return
 
-                storage.setItems([
-                    {
-                        key: STORE_KEYS.DEVICE_ID,
-                        value: data.device.device_id
-                    },
-                    {
-                        key: STORE_KEYS.CONNECTION_ID,
-                        value: data.connection_id
-                    }
-                ])
+                // Defer the write until the persisted flag is known, then re-check.
+                // Avoids harvesting while OFF during the cold-SW-start window, without
+                // dropping the first request on the enabled path.
+                readyPromise.then(() => {
+                    if (!isEnabled) return
+                    storage.setItems([
+                        {
+                            key: STORE_KEYS.DEVICE_ID,
+                            value: data.device.device_id
+                        },
+                        {
+                            key: STORE_KEYS.CONNECTION_ID,
+                            value: data.connection_id
+                        }
+                    ])
+                })
             } catch (error) {
                 console.error('Error in onBeforeRequest listener:', error)
             }
@@ -129,25 +156,31 @@ export default defineBackground(() => {
 
     browser.webRequest.onBeforeSendHeaders.addListener(
         (details) => {
-            if (details.url.includes('areEntitiesInLibrary')) {
-                const trackDetails = getTrackId(details.url)
-                if (!trackDetails) return
+            // Defer all harvesting until the persisted flag is known, then re-check —
+            // closes the cold-SW-start window where a request could be scraped while OFF.
+            readyPromise.then(() => {
+                if (!isEnabled) return
 
-                storage.getItem(STORE_KEYS.NOW_PLAYING).then((nowPlaying) => {
-                    if (!nowPlaying) return
+                if (details.url.includes('areEntitiesInLibrary')) {
+                    const trackDetails = getTrackId(details.url)
+                    if (!trackDetails) return
 
-                    const currentState = nowPlaying as NowPlaying
-                    currentState.track_id = trackDetails
-                    storage.setItem(STORE_KEYS.NOW_PLAYING, currentState)
-                })
-            }
+                    storage.getItem(STORE_KEYS.NOW_PLAYING).then((nowPlaying) => {
+                        if (!nowPlaying) return
 
-            const authHeader = details?.requestHeaders?.find(
-                (header) => header?.name == 'authorization'
-            )
-            if (!authHeader) return
+                        const currentState = nowPlaying as NowPlaying
+                        currentState.track_id = trackDetails
+                        storage.setItem(STORE_KEYS.NOW_PLAYING, currentState)
+                    })
+                }
 
-            storage.setItem(STORE_KEYS.AUTH_TOKEN, authHeader?.value ?? '')
+                const authHeader = details?.requestHeaders?.find(
+                    (header) => header?.name == 'authorization'
+                )
+                if (!authHeader) return
+
+                storage.setItem(STORE_KEYS.AUTH_TOKEN, authHeader?.value ?? '')
+            })
         },
         {
             urls: [
@@ -160,6 +193,17 @@ export default defineBackground(() => {
     )
 
     browser.commands.onCommand.addListener(async (command) => {
+        if (command === 'on/off') {
+            // Master toggle: flips the persisted flag; the content script watches
+            // this key and injects or tears down all Chorus features in response.
+            // watchEnabled (above) updates isEnabled + the toolbar icon.
+            await toggleEnabled()
+            return
+        }
+
+        // Every other command is a Chorus action — no-op while disabled.
+        if (!isEnabled) return
+
         if (
             !command.startsWith('cycle-theme-') &&
             !command.startsWith('audio-preset-') &&

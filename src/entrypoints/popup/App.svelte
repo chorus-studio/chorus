@@ -4,11 +4,16 @@
 
     import { nowPlaying } from '$lib/stores/now-playing'
     import { getColours } from '$lib/utils/vibrant-colors'
+    import { getEnabled, setEnabled, watchEnabled } from '$lib/stores/enabled'
     import { settingsStore, type ThemeVibrancy } from '$lib/stores/settings'
 
     import PopUp from '$lib/components/views/PopUp.svelte'
+    import PowerOffOverlay from '$lib/components/PowerOffOverlay.svelte'
 
     let loading = $state(false)
+    // undefined until the persisted flag resolves, so we never flash the on-state
+    // UI before knowing the extension is off.
+    let enabled = $state<boolean | undefined>(undefined)
 
     function getVibrancy(): ThemeVibrancy {
         return $settingsStore.theme.vibrancy
@@ -35,12 +40,21 @@
         loading = false
     }
 
-    onMount(init)
+    onMount(() => {
+        init()
+        getEnabled().then((value) => (enabled = value))
+        const unwatch = watchEnabled((value) => (enabled = value))
+        return () => unwatch()
+    })
 </script>
 
-{#if loading}
+{#if enabled === undefined}
+    <div class="h-[170px] w-[300px] bg-[var(--bg)]"></div>
+{:else if !enabled}
+    <PowerOffOverlay onenable={() => setEnabled(true)} />
+{:else if loading}
     <div
-        class="flex h-[160px] w-[300px] items-center justify-center bg-[var(--bg)] text-[var(--text)]"
+        class="flex h-[170px] w-[300px] items-center justify-center bg-[var(--bg)] text-[var(--text)]"
     >
         <div
             class="size-16 animate-spin rounded-full border-b-2 border-t-2 border-gray-900 dark:border-white"

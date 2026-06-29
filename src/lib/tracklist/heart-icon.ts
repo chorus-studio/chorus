@@ -18,6 +18,7 @@ export class HeartIcon extends TrackListIcon {
         const parentElement = heartIcon?.parentElement
         const div = document.createElement('div')
         parentElement?.insertBefore(div, heartIcon)
-        mount(TrackListHeartButton, { target: div, props: { track } })
+        const instance = mount(TrackListHeartButton, { target: div, props: { track } })
+        this.track(instance, div)
     }
 }

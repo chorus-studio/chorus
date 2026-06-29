@@ -23,6 +23,12 @@ export default class MediaOverride {
     private _chorusRate: number = 1
     private _chorusPreservesPitch: boolean = true
     private _effectUpdateInProgress: Promise<void> | null = null
+    // Master-off state. While disabled the audio graph must stay bypassed; this
+    // guards against a late-resuming async effect update silently rebuilding it.
+    private _disabled: boolean = false
+    // Speed/pitch captured at disable time so it can be resumed on re-enable.
+    private _savedRate: number = 1
+    private _savedPreservesPitch: boolean = true
 
     constructor(options: MediaOverrideOptions) {
         this.source = options.source
@@ -152,6 +158,9 @@ export default class MediaOverride {
             return
         }
 
+        // Extension is off — never (re)build the effect chain.
+        if (this._disabled) return
+
         // Wait for any in-progress effect update to complete before starting a new one
         // This prevents race conditions where multiple rapid effect changes could cause double-application
         if (this._effectUpdateInProgress) {
@@ -162,6 +171,13 @@ export default class MediaOverride {
         this._effectUpdateInProgress = (async () => {
             try {
                 await this.audioManager.ensureAudioChainReady()
+
+                // A disable may have landed while we were awaiting; if so, re-assert
+                // the bypass instead of rebuilding the chain the user just turned off.
+                if (this._disabled) {
+                    this.audioManager.bypass()
+                    return
+                }
 
                 // Mute before chain rebuild to prevent clicks from signal discontinuity
                 this.audioManager.muteForTransition()
@@ -216,6 +232,62 @@ export default class MediaOverride {
             await this.msProcessor.applyManualParams(params)
         } catch (error) {
             console.error('Error updating MS params:', error)
+        }
+    }
+
+    /**
+     * Master OFF: hand the element back to vanilla Spotify behaviour. Removes the
+     * per-element playbackRate/preservesPitch accessor overrides (reverting to the
+     * native HTMLMediaElement.prototype) and bypasses the audio graph so no effects,
+     * gain, or speed/pitch processing remain. The chain is kept alive for instant
+     * re-enable.
+     */
+    teardown(): void {
+        this._disabled = true
+        // Remember the active speed/pitch so re-enable can resume it.
+        this._savedRate = this._chorusRate
+        this._savedPreservesPitch = this._chorusPreservesPitch
+
+        this._chorusRate = 1
+        this._chorusPreservesPitch = true
+        try {
+            delete (this.source as any).playbackRate
+        } catch (e) {
+            // ignore — property may not be configurable in some engines
+        }
+        try {
+            delete (this.source as any).preservesPitch
+        } catch (e) {
+            // ignore
+        }
+        // The element retained the last Chorus tempo; reset it to vanilla 1x now
+        // that the override is gone (uses the native setter).
+        try {
+            ;(this.source as any).playbackRate = 1
+        } catch (e) {
+            // ignore
+        }
+        this.audioManager.bypass()
+    }
+
+    /**
+     * Master ON: re-install the property overrides, rebuild the Chorus audio chain,
+     * and resume the speed/pitch that were active before disabling. Effects/preset
+     * re-apply on top via the normal store dispatch once the UI re-mounts.
+     */
+    rearm(): void {
+        this._disabled = false
+        this.overrideMediaProperty('playbackRate', this.handlePlaybackRateSetting)
+        this.overrideMediaProperty('preservesPitch', this.handlePreservesPitchSetting)
+        this.audioManager.restoreChain()
+
+        // Resume the pre-disable speed/pitch (the soundTouch worklet still holds its
+        // pitch settings; this re-applies the element tempo the override drives).
+        if (this._savedRate !== 1 || !this._savedPreservesPitch) {
+            this.updatePlaybackSettings({
+                value: this._savedRate,
+                preserves_pitch: this._savedPreservesPitch
+            } as Rate)
         }
     }
 }

@@ -3,6 +3,20 @@ import { mount, unmount } from 'svelte'
 import { pipStore } from '$lib/stores/pip'
 import PipView from '$lib/components/views/Pip.svelte'
 
+// Module-scoped handle to the currently open PiP window so it can be closed from
+// outside the component tree (e.g. when the extension is toggled off and the App —
+// and the PipButton that owned the window — is unmounted).
+let activePipWindow: Window | undefined
+
+export function closePictureInPicture() {
+    try {
+        activePipWindow?.close()
+    } catch (error) {
+        console.warn('Error closing Picture-in-Picture window:', error)
+    }
+    activePipWindow = undefined
+}
+
 export async function applyStyles(pipWindow: Window) {
     // Copy all stylesheets from the main window
     ;[...document.styleSheets].forEach((styleSheet) => {
@@ -66,6 +80,7 @@ export async function togglePictureInPicture() {
 
         // Mount the PipView component
         const app = mount(PipView, { target: pipView })
+        activePipWindow = pipWindow
 
         pipWindow.document.addEventListener('click', async (event) => {
             const target = event.composedPath().at(0) as HTMLElement
@@ -77,11 +92,13 @@ export async function togglePictureInPicture() {
         })
 
         pipWindow.addEventListener('pagehide', async () => {
+            activePipWindow = undefined
             await unmount(app)
             await pipStore.reset()
         })
 
         pipWindow.addEventListener('exitpictureinpicture', async () => {
+            activePipWindow = undefined
             await unmount(app)
             await pipStore.reset()
         })
