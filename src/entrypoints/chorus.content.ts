@@ -1,8 +1,12 @@
 import { mount, unmount } from 'svelte'
 
 import { MatchPattern } from 'wxt/sandbox'
-import { setTheme } from '$lib/utils/theming'
+import { setTheme, removeTheme } from '$lib/utils/theming'
 import { type VolumeState } from '$lib/stores/volume'
+import { closePictureInPicture } from '$lib/utils/pip'
+import { playbackObserver } from '$lib/observers/playback'
+import { tracklistObserver } from '$lib/observers/tracklist'
+import { getEnabled, watchEnabled } from '$lib/stores/enabled'
 import { type SettingsState, SETTINGS_STORE_KEY } from '$lib/stores/settings'
 import { type ContentScriptContext, injectScript, createIntegratedUi } from 'wxt/client'
 
@@ -15,93 +19,339 @@ import SeekButton from '$lib/components/SeekButton.svelte'
 import ChorusConfigDialog from '$lib/components/ChorusConfigDialog.svelte'
 import BlockedTracksDialog from '$lib/components/BlockedTracksDialog.svelte'
 
+// Stable Spotify anchors. The footer `now-playing-bar` persists for the lifetime
+// of the page (only its descendants swap), so it is a reliable observation root.
+// The `now-playing-widget` (track info) and the center control bar are both
+// re-rendered — and frequently *element-swapped* — by Spotify as tracks change.
+const NOW_PLAYING_BAR = '[data-testid="now-playing-bar"]'
+const NOW_PLAYING_WIDGET = '[data-testid="now-playing-widget"]'
+
+// Tracks the master on/off state in this content-script world, kept in sync with
+// the persisted `local:chorus_enabled` flag so injection points can bail fast.
+let chorusEnabled = true
+
+// The WXT integrated UI that owns the main App (#chorus-ui). We deliberately do
+// NOT use its `autoMount()`: that helper decides whether to (re)mount by checking
+// whether *a* node matching the anchor selector exists, which is blind to Spotify
+// swapping the widget element out from under us (old removed + new inserted in one
+// mutation batch keeps the selector "satisfied"). When that happens the App's DOM
+// is destroyed along with the old widget but the Svelte instance keeps running as
+// a zombie — its observers bound to detached nodes — which breaks song-change
+// detection (stale snip/loop → playback yanked backwards) and drops the UI. We
+// drive mount/remount ourselves from `reconcile()` instead.
+let integratedUi: ReturnType<typeof createIntegratedUi> | undefined
+
+// Persistent observer on the stable footer; survives widget/control-bar swaps and
+// re-runs reconcile() so the UI self-heals without a page reload.
+let reconcileObserver: MutationObserver | null = null
+let reconcileTimer: ReturnType<typeof setTimeout> | null = null
+// The element the reconciler is currently observing — `body` only as a bootstrap
+// fallback until the footer exists, then narrowed to the footer to avoid a heavy
+// document-wide subtree observer in steady state.
+let reconcileTarget: Element | null = null
+
+// One-time per page: the main-world scripts can't be un-injected, so guard against
+// re-injecting (and double-installing their listeners) on re-enable/navigation.
+let scriptsInjected = false
+
+// Everything grafted into Spotify's own DOM, tracked so it can be torn down on
+// master-off. `mountedExtras` = Alert + top-bar dialogs; `mountedControlButtons` =
+// the seek/loop buttons grafted into the center control bar (re-injected on demand).
+let mountedExtras: Array<{ instance: Record<string, any>; container?: HTMLElement }> = []
+let mountedControlButtons: Array<{ instance: Record<string, any>; container?: HTMLElement }> = []
+
+// When the media element first plays, read the persisted volume directly from
+// chrome.storage (the single source of truth) and dispatch it to the main world.
+// This avoids relying on the Svelte store which may still hold stale defaults.
+// Module-scoped so it can be added on inject and removed on teardown (dedup is
+// automatic since it's a stable reference).
+async function handleMediaPlayInit() {
+    const volume = await storage.getItem<VolumeState>('local:chorus_volume')
+    if (volume) {
+        window.postMessage({ type: 'FROM_VOLUME_LISTENER', data: volume }, '*')
+    }
+}
+
+// Drop tracked entries whose grafted container Spotify has detached from the DOM,
+// unmounting the orphaned Svelte instance first so its store subscriptions (e.g.
+// LoopButton → loopStore) don't linger as stale subscribers. Without this, every
+// control-bar re-render would leak a fresh set of subscribed-but-invisible buttons.
+function pruneDetached(
+    list: Array<{ instance: Record<string, any>; container?: HTMLElement }>
+) {
+    return list.filter((entry) => {
+        if (entry.container?.isConnected) return true
+        try {
+            unmount(entry.instance)
+        } catch (error) {
+            console.warn('Failed to unmount detached Chorus component', error)
+        }
+        entry.container?.remove()
+        return false
+    })
+}
+
+// Idempotently (re)graft the seek-back / seek-forward / loop buttons into Spotify's
+// center control bar. Each button is created only when missing, so this is safe to
+// call on every reconcile tick — it restores buttons Spotify wiped on a control-bar
+// re-render and no-ops once they're present.
+function injectControlButtons() {
+    if (!chorusEnabled) return
+
+    mountedControlButtons = pruneDetached(mountedControlButtons)
+
+    const skipBack = document.querySelector('[data-testid="control-button-skip-back"]')
+    const skipForward = document.querySelector('[data-testid="control-button-skip-forward"]')
+
+    // Seek-back, immediately before Spotify's skip-back button.
+    if (skipBack?.parentElement && !document.querySelector('#seek-player-rw-button')) {
+        const div = document.createElement('div')
+        skipBack.parentElement.insertBefore(div, skipBack)
+        mountedControlButtons.push({
+            instance: mount(SeekButton, { target: div, props: { role: 'seek-backward' } }),
+            container: div
+        })
+    }
+
+    // Seek-forward (after skip-forward) and loop (end of the control bar).
+    if (skipForward?.parentElement) {
+        const parentElement = skipForward.parentElement
+
+        if (!document.querySelector('#seek-player-ff-button')) {
+            const forwardDiv = document.createElement('div')
+            parentElement.insertBefore(forwardDiv, skipForward.nextSibling)
+            mountedControlButtons.push({
+                instance: mount(SeekButton, {
+                    target: forwardDiv,
+                    props: { role: 'seek-forward' }
+                }),
+                container: forwardDiv
+            })
+        }
+
+        if (!document.querySelector('#loop-button') && parentElement.lastElementChild) {
+            const loopDiv = document.createElement('div')
+            parentElement.insertBefore(loopDiv, parentElement.lastElementChild.nextSibling)
+            mountedControlButtons.push({
+                instance: mount(LoopButton, { target: loopDiv }),
+                container: loopDiv
+            })
+        }
+    }
+}
+
+// Idempotently mount the body-level Alert toaster and the top-bar config / blocked
+// dialogs. Re-runnable because the App can be re-mounted on a widget swap and we
+// must not stack duplicates.
+function injectExtras() {
+    mountedExtras = pruneDetached(mountedExtras)
+
+    const body = document.querySelector('body')
+    if (body && !document.getElementById('chorus-alert-root')) {
+        const alertRoot = document.createElement('div')
+        alertRoot.id = 'chorus-alert-root'
+        body.appendChild(alertRoot)
+        mountedExtras.push({ instance: mount(Alert, { target: alertRoot }), container: alertRoot })
+    }
+
+    const formInput = document.querySelector(
+        'input[data-encore-id="formInput"]'
+    ) as HTMLInputElement | null
+    if (formInput) {
+        formInput.style.paddingRight = '0 !important'
+        formInput.style.paddingLeft = '48px !important'
+    }
+
+    const newFeedButton = document.querySelector('[data-testid="whats-new-feed-button"]')
+    if (newFeedButton?.parentElement) {
+        const parent = newFeedButton.parentElement
+
+        if (!document.getElementById('chorus-config-dialog-trigger')) {
+            const configDialog = document.createElement('div')
+            parent.insertBefore(configDialog, newFeedButton)
+            mountedExtras.push({
+                instance: mount(ChorusConfigDialog, { target: configDialog }),
+                container: configDialog
+            })
+        }
+        if (!document.getElementById('blocked-tracks-dialog-trigger')) {
+            const blockedDialog = document.createElement('div')
+            parent.insertBefore(blockedDialog, newFeedButton)
+            mountedExtras.push({
+                instance: mount(BlockedTracksDialog, { target: blockedDialog }),
+                container: blockedDialog
+            })
+        }
+    }
+}
+
+// The single source of truth for "is the Chorus UI where it should be?". Re-mounts
+// the App into the *current* widget whenever Spotify swapped/destroyed the previous
+// one (which also re-binds the App's song-change/media observers to live nodes),
+// and restores any control-bar buttons Spotify wiped. Cheap and convergent: when
+// everything is healthy it does nothing.
+function reconcile() {
+    if (!chorusEnabled || !integratedUi) return
+
+    // Narrow a bootstrap body-wide observation down to the footer as soon as it
+    // exists, so steady state never watches the whole document.
+    ensureBarScope()
+
+    const widget = document.querySelector(NOW_PLAYING_WIDGET)
+    if (!widget) return
+
+    const appHealthy =
+        Boolean(integratedUi.mounted) &&
+        Boolean(document.getElementById('chorus-ui')) &&
+        widget.contains(integratedUi.wrapper)
+
+    if (!appHealthy) {
+        // Tear down any detached/zombie App (runs the App's cleanup → disconnects
+        // its stale observers) before mounting a fresh one into the live widget.
+        try {
+            integratedUi.remove()
+        } catch (error) {
+            console.warn('Failed to remove stale Chorus UI', error)
+        }
+        integratedUi.mount()
+    }
+
+    injectControlButtons()
+}
+
+// Debounced reconcile — coalesces Spotify's bursty mutation batches. setTimeout
+// (not rAF) so it still fires while the tab is backgrounded, where track changes
+// and the stale-snip rewind would otherwise go unhealed.
+function scheduleReconcile() {
+    if (reconcileTimer != null) return
+    reconcileTimer = setTimeout(() => {
+        reconcileTimer = null
+        reconcile()
+    }, 100)
+}
+
+function startReconciler() {
+    // Prefer the stable footer; fall back to body only until it exists (reconcile
+    // re-scopes to the footer once present to avoid a permanent body-wide observer).
+    const target = document.querySelector(NOW_PLAYING_BAR) ?? document.body
+    reconcileTarget = target
+    reconcileObserver = new MutationObserver(scheduleReconcile)
+    reconcileObserver.observe(target, { childList: true, subtree: true })
+}
+
+// Narrow the observation root from the bootstrap `body` fallback down to the footer
+// once Spotify has rendered it. No-ops once already scoped to the footer.
+function ensureBarScope() {
+    if (!reconcileObserver) return
+    const bar = document.querySelector(NOW_PLAYING_BAR)
+    if (!bar || reconcileTarget === bar) return
+    reconcileObserver.disconnect()
+    reconcileObserver.observe(bar, { childList: true, subtree: true })
+    reconcileTarget = bar
+}
+
 async function injectChorusUI(ctx: ContentScriptContext) {
-    await injectScript('/router.js')
-    await injectScript('/media-override.js')
+    if (!chorusEnabled) return
+
+    // Already set up (re-entry from navigation/re-enable): just let the reconciler
+    // re-sync against whatever the DOM looks like now.
+    if (integratedUi) {
+        scheduleReconcile()
+        return
+    }
+
+    document.addEventListener('FROM_MEDIA_PLAY_INIT', handleMediaPlayInit)
+
+    if (!scriptsInjected) {
+        await injectScript('/router.js')
+        await injectScript('/media-override.js')
+        scriptsInjected = true
+    }
 
     const settings = await storage.getItem<SettingsState>(SETTINGS_STORE_KEY)
     const theme = settings?.theme ? settings.theme.name : 'spotify'
     await setTheme(theme)
 
-    const ui = createIntegratedUi(ctx, {
+    integratedUi = createIntegratedUi(ctx, {
         position: 'inline',
-        anchor: '[data-testid="now-playing-widget"]',
+        anchor: NOW_PLAYING_WIDGET,
         onMount: (container) => {
-            const chorusUI = document.getElementById('chorus-ui')
-            if (chorusUI) return
-
-            // Batch all DOM queries upfront
-            const elements = {
-                skipBack: document.querySelector('[data-testid="control-button-skip-back"]'),
-                skipForward: document.querySelector('[data-testid="control-button-skip-forward"]'),
-                body: document.querySelector('body'),
-                formInput: document.querySelector('input[data-encore-id="formInput"]') as HTMLInputElement | null,
-                newFeedButton: document.querySelector('[data-testid="whats-new-feed-button"]'),
-                configDialog: document.getElementById('chorus-config-dialog-trigger'),
-                blockedTracksDialog: document.getElementById('blocked-tracks-dialog-trigger'),
-                seekBack: document.querySelector('#seek-player-rw-button'),
-                seekForward: document.querySelector('#seek-player-ff-button'),
-                loopButton: document.querySelector('#loop-button')
-            }
+            if (!chorusEnabled) return
+            if (document.getElementById('chorus-ui')) return
 
             // Mount main app
-            mount(App, { target: container })
-            if (elements.body) {
-                mount(Alert, { target: elements.body })
-            }
+            const app = mount(App, { target: container })
 
-            // Apply form input styles
-            if (elements.formInput) {
-                elements.formInput.style.paddingRight = '0 !important'
-                elements.formInput.style.paddingLeft = '48px !important'
-            }
+            injectExtras()
+            injectControlButtons()
 
-            // Mount dialogs in newFeedButton area
-            if (elements.newFeedButton?.parentElement) {
-                const parent = elements.newFeedButton.parentElement
-
-                if (!elements.configDialog) {
-                    const configDialog = document.createElement('div')
-                    parent.insertBefore(configDialog, elements.newFeedButton)
-                    mount(ChorusConfigDialog, { target: configDialog })
-                }
-                if (!elements.blockedTracksDialog) {
-                    const blockedDialog = document.createElement('div')
-                    parent.insertBefore(blockedDialog, elements.newFeedButton)
-                    mount(BlockedTracksDialog, { target: blockedDialog })
-                }
-            }
-
-            // Mount seek back button
-            if (elements.skipBack?.parentElement && !elements.seekBack) {
-                const div = document.createElement('div')
-                elements.skipBack.parentElement.insertBefore(div, elements.skipBack)
-                mount(SeekButton, { target: div, props: { role: 'seek-backward' } })
-            }
-
-            // Mount seek forward and loop buttons
-            if (elements.skipForward?.parentElement && !elements.seekForward && !elements.loopButton) {
-                const parentElement = elements.skipForward.parentElement
-                if (parentElement.lastElementChild) {
-                    const forwardDiv = document.createElement('div')
-                    const loopDiv = document.createElement('div')
-
-                    parentElement.insertBefore(forwardDiv, elements.skipForward.nextSibling)
-                    parentElement.insertBefore(loopDiv, parentElement.lastElementChild.nextSibling)
-
-                    mount(SeekButton, {
-                        target: forwardDiv,
-                        props: { role: 'seek-forward' }
-                    })
-                    mount(LoopButton, { target: loopDiv })
-                }
-            }
+            return app
         },
         onRemove: (app) => {
             if (app) unmount(app)
         }
     })
-    ui.autoMount()
+
+    startReconciler()
+    // Mount immediately if the player is already present; otherwise the reconciler
+    // fires as soon as the now-playing bar/widget appears.
+    reconcile()
+}
+
+// Fully tears down everything `injectChorusUI` added: the integrated App, the
+// buttons/dialogs grafted into Spotify's DOM, the active theme, and any media
+// overrides — leaving the page as vanilla Spotify until re-enabled.
+function removeChorusUI() {
+    // Close any open PiP window first — its UI is useless once the App (and the
+    // observers feeding it) is torn down, and the PipButton that owned the close
+    // handle is about to be unmounted.
+    closePictureInPicture()
+
+    if (reconcileTimer != null) {
+        clearTimeout(reconcileTimer)
+        reconcileTimer = null
+    }
+    reconcileObserver?.disconnect()
+    reconcileObserver = null
+    reconcileTarget = null
+
+    integratedUi?.remove()
+    integratedUi = undefined
+
+    // The App's own cleanup only *stops* the observers (lightweight, so reconcile's
+    // remounts don't churn). Master-OFF additionally restores Spotify's native
+    // controls and removes the per-row tracklist buttons, returning the page to
+    // vanilla. These singletons survive App remounts, so it's safe to call here.
+    playbackObserver.teardown()
+    tracklistObserver.teardown()
+
+    for (const { instance, container } of mountedControlButtons) {
+        try {
+            unmount(instance)
+        } catch (error) {
+            console.warn('Failed to unmount Chorus control button', error)
+        }
+        container?.remove()
+    }
+    mountedControlButtons = []
+
+    for (const { instance, container } of mountedExtras) {
+        try {
+            unmount(instance)
+        } catch (error) {
+            console.warn('Failed to unmount Chorus component', error)
+        }
+        container?.remove()
+    }
+    mountedExtras = []
+
+    document.removeEventListener('FROM_MEDIA_PLAY_INIT', handleMediaPlayInit)
+
+    removeTheme()
+
+    // Hand the audio element back to vanilla Spotify: the main-world override
+    // bypasses its graph (no effects/gain/speed) and restores native rate/pitch.
+    window.postMessage({ type: 'FROM_ENABLED_LISTENER', data: { enabled: false } }, '*')
 }
 
 const watchPattern = new MatchPattern('*://open.spotify.com/*')
@@ -110,18 +360,25 @@ export default defineContentScript({
     matches: ['*://open.spotify.com/*'],
 
     async main(ctx) {
-        // When the media element first plays, read the persisted volume directly
-        // from chrome.storage (the single source of truth) and dispatch it to the
-        // main world. This avoids relying on the Svelte store which may still hold
-        // stale defaults at this point.
-        document.addEventListener('FROM_MEDIA_PLAY_INIT', async () => {
-            const volume = await storage.getItem<VolumeState>('local:chorus_volume')
-            if (volume) {
-                window.postMessage({ type: 'FROM_VOLUME_LISTENER', data: volume }, '*')
+        chorusEnabled = await getEnabled()
+
+        if (chorusEnabled) await injectChorusUI(ctx)
+
+        // React to the master on/off toggle (fired from the keyboard command in the
+        // background or the popup) without needing a page reload.
+        const unwatchEnabled = watchEnabled(async (enabled) => {
+            if (enabled === chorusEnabled) return
+            chorusEnabled = enabled
+            if (enabled) {
+                // Rearm the (still-installed) main-world override first, then re-inject UI.
+                window.postMessage({ type: 'FROM_ENABLED_LISTENER', data: { enabled: true } }, '*')
+                await injectChorusUI(ctx)
+            } else {
+                removeChorusUI()
             }
         })
+        ctx.onInvalidated(() => unwatchEnabled())
 
-        await injectChorusUI(ctx)
         ctx.addEventListener(window, 'wxt:locationchange', async ({ newUrl }) => {
             if (watchPattern.includes(newUrl)) await injectChorusUI(ctx)
         })
