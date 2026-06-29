@@ -163,7 +163,7 @@
                 aria-label="Turn Chorus off"
                 title="Turn Chorus off"
                 onclick={() => setEnabled(false)}
-                class="size-6 border-none bg-transparent text-[#1ed760] hover:bg-transparent hover:text-[#1ed760] [&_svg]:size-[1rem]"
+                class="size-6 border-none bg-transparent text-[var(--text)] brightness-75 hover:bg-transparent hover:text-[var(--text)] [&_svg]:size-[1rem]"
             >
                 <Power />
             </Button>
