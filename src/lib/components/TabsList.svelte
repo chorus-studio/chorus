@@ -8,7 +8,8 @@
     import { Label } from '$lib/components/ui/label'
     import { Switch } from '$lib/components/ui/switch'
 
-    import FXEQ from '$lib/components/views/FXEQ.svelte'
+    import FX from '$lib/components/views/FX.svelte'
+    import EQ from '$lib/components/views/EQ.svelte'
     import Snip from '$lib/components/views/Snip.svelte'
     import Seek from '$lib/components/views/Seek.svelte'
     import Speed from '$lib/components/views/Speed.svelte'
@@ -38,7 +39,8 @@
         pip ? 'player' : '',
         'snip',
         'speed',
-        'fx|eq',
+        'fx',
+        'eq',
         'ms',
         'seek',
         'settings'
@@ -51,7 +53,8 @@
 
     const components: Record<string, Component> = {
         snip: Snip,
-        'fx|eq': FXEQ,
+        fx: FX,
+        eq: EQ,
         ms: MS,
         seek: Seek,
         speed: Speed,
@@ -100,7 +103,9 @@
     }
 
     async function getDefaultView() {
-        const tab = (await storage.getItem<string>(VIEW_KEY)) ?? filteredTabs[0]
+        let tab = (await storage.getItem<string>(VIEW_KEY)) ?? filteredTabs[0]
+        // 'fx|eq' was split into separate 'fx' + 'eq' tabs; migrate a stored default.
+        if (tab === 'fx|eq') tab = 'eq'
         defaultView = tab == 'player' && !pip ? filteredTabs[0] : tab
         activeTab = defaultView
     }
@@ -207,14 +212,15 @@
             class="relative flex {activeTab === 'player' ? 'h-[210px]' : 'h-[205px]'} {[
                 'player',
                 'snip',
-                'fx|eq',
+                'fx',
+                'eq',
                 'ms',
                 'speed'
             ].includes(activeTab)
                 ? 'space-y-2'
                 : ''} w-full flex-col"
         >
-            {#if !['speed', 'settings', 'support', 'player', 'fx|eq', 'ms'].includes(activeTab)}
+            {#if !['speed', 'settings', 'support', 'player', 'fx', 'eq', 'ms'].includes(activeTab)}
                 <TrackInfo />
             {/if}
             {@const View = components[activeTab]}

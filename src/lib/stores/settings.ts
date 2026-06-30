@@ -28,7 +28,8 @@ export type SettingsState = {
         snip: boolean
         seek: boolean
         speed: boolean
-        'fx|eq': boolean
+        fx: boolean
+        eq: boolean
         ms: boolean
     }
     notifications: {
@@ -55,7 +56,8 @@ const defaultSettingsState: SettingsState = {
         speed: true,
         snip: true,
         seek: true,
-        'fx|eq': true,
+        fx: true,
+        eq: true,
         ms: true
     },
     notifications: {

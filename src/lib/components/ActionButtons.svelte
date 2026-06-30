@@ -12,8 +12,6 @@
 
     function getStore() {
         switch (tab) {
-            case 'fx|eq':
-                return effectsStore
             case 'snip':
                 return snipStore
             case 'speed':
@@ -126,12 +124,15 @@
     }
 
     async function handleReset() {
+        // fx/eq share effectsStore but each tab must reset ONLY its own effect —
+        // effectsStore.reset() would wipe both reverb and the equalizer at once.
+        if (tab === 'fx') return effectsStore.updateEffect({ key: 'reverb', value: 'none' })
+        if (tab === 'eq') return effectsStore.updateEffect({ key: 'equalizer', value: 'none' })
+
         const store = getStore()
         if (!store) return
 
-        if (tab === 'fx|eq') {
-            await store?.reset()
-        } else if (tab == 'snip') {
+        if (tab == 'snip') {
             resetSnip()
         } else if (tab == 'speed') {
             await resetSpeed()
@@ -161,7 +162,7 @@
 </script>
 
 <div class="absolute bottom-0 flex items-center gap-x-2">
-    {#if ['fx|eq', 'snip', 'speed', 'seek'].includes(tab)}
+    {#if ['fx', 'eq', 'snip', 'speed', 'seek'].includes(tab)}
         {#if !showDelete}
             <Button
                 variant="outline"
