@@ -1,9 +1,9 @@
 <script lang="ts">
     import { onMount } from 'svelte'
     import { settingsStore } from '$lib/stores/settings'
+    import { setTheme, removeTheme } from '$lib/utils/theming'
     import { playbackObserver } from '$lib/observers/playback'
     import type { SettingsState, SettingsKey } from '$lib/stores/settings'
-    import { setTheme, injectTheme, removeTheme } from '$lib/utils/theming'
 
     import SettingsSwitch from '$lib/components/SettingsSwitch.svelte'
 
@@ -51,7 +51,7 @@
 </script>
 
 <div class="flex h-full w-full flex-col items-center space-y-2">
-    <div class="!mt-4 flex w-full justify-between gap-x-2">
+    <div class="flex w-full justify-between gap-x-2">
         <SettingsSwitch
             title="ui"
             type="ui"

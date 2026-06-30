@@ -12,14 +12,11 @@
     }
 </script>
 
-<div class="z-100 relative flex w-full flex-col justify-between gap-y-3">
+<div class="relative flex w-full flex-col justify-between gap-y-3">
     <div
-        class="flex flex-col justify-between gap-y-2 rounded-sm p-2 outline outline-1 outline-zinc-300"
+        class="flex flex-col gap-y-2 rounded-sm p-3 outline outline-1 outline-zinc-300"
     >
-        <div class="flex flex-col">
-            <p class="text-xs font-semibold">Issues / Feature Requests / Support</p>
-            <span class="text-xs"> Please report issues/bugs using Github or Discord. </span>
-        </div>
+        <p class="text-xs font-semibold">Issues / Feature Requests / Support</p>
         <div class="flex w-full items-center justify-between">
             <Button size="sm" variant="secondary">
                 <a
@@ -73,14 +70,9 @@
         </div>
     </div>
     <div
-        class="flex flex-col justify-between gap-y-2 rounded-sm p-2 outline outline-1 outline-zinc-300"
+        class="flex flex-col gap-y-2 rounded-sm p-2 outline outline-1 outline-zinc-300"
     >
-        <div class="flex flex-col">
-            <p class="text-xs font-semibold">Leave a Rating / Review</p>
-            <span class="text-xs">
-                Would you recommend this to a friend? Share your thoughts with a rating/review.
-            </span>
-        </div>
+        <p class="text-xs font-semibold">Leave a Rating / Review</p>
         <div class="flex w-full items-center justify-between">
             <Button size="sm" variant="secondary">
                 <a

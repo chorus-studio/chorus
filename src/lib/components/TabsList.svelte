@@ -9,7 +9,6 @@
     import { Switch } from '$lib/components/ui/switch'
 
     import FXEQ from '$lib/components/views/FXEQ.svelte'
-    import Info from '$lib/components/views/Info.svelte'
     import Snip from '$lib/components/views/Snip.svelte'
     import Seek from '$lib/components/views/Seek.svelte'
     import Speed from '$lib/components/views/Speed.svelte'
@@ -17,7 +16,7 @@
     import MS from '$lib/components/views/MS.svelte'
     import TrackInfo from '$lib/components/TrackInfo.svelte'
     import AvatarLogo from '$lib/components/AvatarLogo.svelte'
-    import Settings from '$lib/components/views/Settings.svelte'
+    import SettingsInfo from '$lib/components/views/SettingsInfo.svelte'
     import ToggleSelect from '$lib/components/ToggleSelect.svelte'
     import ActionButtons from '$lib/components/ActionButtons.svelte'
 
@@ -42,8 +41,7 @@
         'fx|eq',
         'ms',
         'seek',
-        'settings',
-        pip ? '' : 'info'
+        'settings'
     ].filter(Boolean)
 
     let filteredTabs: string[] = $state(tabs)
@@ -57,8 +55,7 @@
         ms: MS,
         seek: Seek,
         speed: Speed,
-        info: Info,
-        settings: Settings,
+        settings: SettingsInfo,
         player: PopUp
     }
 
@@ -217,7 +214,7 @@
                 ? 'space-y-2'
                 : ''} w-full flex-col"
         >
-            {#if !['speed', 'info', 'settings', 'support', 'player', 'fx|eq', 'ms'].includes(activeTab)}
+            {#if !['speed', 'settings', 'support', 'player', 'fx|eq', 'ms'].includes(activeTab)}
                 <TrackInfo />
             {/if}
             {@const View = components[activeTab]}
@@ -237,7 +234,7 @@
                     />
                 </div>
             {/if}
-            {#if activeTab !== 'info'}
+            {#if activeTab !== 'settings'}
                 <div
                     class="absolute bottom-0 right-0 z-50 flex h-6 w-fit items-center justify-end gap-x-2"
                 >
