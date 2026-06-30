@@ -12,7 +12,7 @@ const BASE_PERMISSIONS = [
 // Vocal separation needs Chrome's offscreen document, which Firefox lacks. These
 // public assets are dead weight in the Firefox build (~51MB model + ~24MB ORT wasm),
 // so we strip them from it via the build:publicAssets hook below.
-const VOCAL_PUBLIC_PREFIXES = ['models/', 'ort/', 'vocal-remove.js', 'vocal-stream-worklet.js']
+const VOCAL_PUBLIC_PREFIXES = ['models/', 'ort/', 'vocal-stream-worklet.js']
 
 const perBrowserManifest: Record<string, UserManifest> = {
     chrome: {
@@ -89,7 +89,7 @@ export default defineConfig({
                     '/soundtouch.js',
                     '/content-scripts/*.css',
                     // Vocal-model assets are Chrome-only (offscreen pipeline); omit on Firefox.
-                    ...(browser === 'firefox' ? [] : ['/vocal-remove.js', '/models/*', '/ort/*'])
+                    ...(browser === 'firefox' ? [] : ['/models/*', '/ort/*'])
                 ],
                 matches: ['*://open.spotify.com/*']
             }
