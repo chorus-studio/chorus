@@ -1,22 +1,16 @@
+// Standard full-spectrum 10-band graphic EQ. Presets are 10-value gain arrays that
+// map 1:1 to these bands (previously there were 19 filters, so preset values only
+// reached the bass 10 bands and everything above 1kHz was inert).
 export const EQ_FILTERS: { freq: number; gain: number; type: string }[] = [
-    { freq: 20, gain: 0, type: 'lowshelf' },
     { freq: 32, gain: 0, type: 'lowshelf' },
-    { freq: 50, gain: 0, type: 'lowshelf' },
     { freq: 64, gain: 0, type: 'peaking' },
     { freq: 125, gain: 0, type: 'peaking' },
-    { freq: 150, gain: 0, type: 'peaking' },
     { freq: 250, gain: 0, type: 'peaking' },
-    { freq: 400, gain: 0, type: 'peaking' },
     { freq: 500, gain: 0, type: 'peaking' },
     { freq: 1000, gain: 0, type: 'peaking' },
     { freq: 2000, gain: 0, type: 'peaking' },
-    { freq: 2400, gain: 0, type: 'peaking' },
-    { freq: 3000, gain: 0, type: 'peaking' },
     { freq: 4000, gain: 0, type: 'peaking' },
-    { freq: 6000, gain: 0, type: 'peaking' },
     { freq: 8000, gain: 0, type: 'peaking' },
-    { freq: 12_000, gain: 0, type: 'peaking' },
-    { freq: 14_000, gain: 0, type: 'highshelf' },
     { freq: 16_000, gain: 0, type: 'highshelf' }
 ]
 
