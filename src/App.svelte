@@ -12,6 +12,8 @@
     import '$lib/stores/effects'
     import '$lib/stores/playback'
     import '$lib/stores/ms-params'
+    import '$lib/stores/reverb-params'
+    import '$lib/stores/eq-bands'
     import '$lib/stores/volume'
 
     import PipButton from '$lib/components/PipButton.svelte'

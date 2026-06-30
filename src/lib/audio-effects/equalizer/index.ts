@@ -96,6 +96,40 @@ export default class Equalizer {
         }
     }
 
+    // Live editor path: ramp raw per-band gains onto the filter chain, building +
+    // connecting it on demand so editing works even from a 'none'/cold state. The
+    // gains array maps to the first gains.length filters; the rest stay flat (0 dB).
+    applyManualGains(gains: number[]) {
+        if (!this._audioManager.audioContext) return
+        this._audioContext = this._audioManager.audioContext
+
+        if (this._filters.length === 0) {
+            this._filters = EQ_FILTERS.map((setting) => {
+                const filter = this._audioContext!.createBiquadFilter()
+                filter.type = setting.type as BiquadFilterType
+                filter.frequency.value = setting.freq || 0
+                filter.gain.value = 0
+                filter.Q.value = 1
+                return filter
+            })
+
+            // Register input/output (triggers chain cleanup) BEFORE wiring the
+            // internal series, same ordering constraint as #applyEQFilters.
+            this._audioManager.connectEqualizer({
+                input: this._filters[0],
+                output: this._filters[this._filters.length - 1]
+            })
+            for (let i = 0; i < this._filters.length - 1; i++) {
+                this._filters[i].connect(this._filters[i + 1])
+            }
+        }
+
+        const t = this._audioContext.currentTime
+        this._filters.forEach((filter, i) => {
+            filter.gain.linearRampToValueAtTime(gains[i] ?? 0, t + 0.05)
+        })
+    }
+
     disconnect() {
         this._filters.forEach((filter) => {
             try {

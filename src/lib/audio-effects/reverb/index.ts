@@ -160,6 +160,30 @@ export default class Reverb {
         }
     }
 
+    // Live editor path: ramp raw param values onto the existing worklet WITHOUT
+    // calling setReverbEffect (which tears down + rebuilds the node every call).
+    // Creates + connects the digital reverb on demand so editing works from cold.
+    async applyManualParams(params: Record<string, number>) {
+        if (!this._audioManager.audioContext) return
+        this._audioContext = this._audioManager.audioContext
+
+        try {
+            if (!this._reverbWorkletNode) {
+                await this.createDigitalReverb()
+                this.connectDigitalReverb()
+            }
+
+            const currentTime = this._audioContext.currentTime
+            Object.entries(params).forEach(([name, value]) => {
+                const param = this._reverbWorkletNode?.parameters.get(name)
+                if (param) param.linearRampToValueAtTime(value, currentTime + 0.05)
+            })
+        } catch (error) {
+            console.error('Error applying manual reverb params:', error)
+            throw error
+        }
+    }
+
     applyReverbEffectParams(effect: string) {
         if (!this._reverbWorkletNode || !this._audioContext) {
             throw new Error('Reverb node or AudioContext not initialized')

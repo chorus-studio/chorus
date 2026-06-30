@@ -4,6 +4,7 @@ import MSProcessor from '$lib/audio-effects/ms-processor'
 import AudioManager from '$lib/audio-effects/audio-manager'
 import type { SoundTouchData, Rate } from '$lib/stores/playback'
 import type { MSParams } from '$lib/stores/ms-params'
+import type { ReverbParams } from '$lib/stores/reverb-params'
 
 type MediaOverrideOptions = {
     reverb: Reverb
@@ -232,6 +233,28 @@ export default class MediaOverride {
             await this.msProcessor.applyManualParams(params)
         } catch (error) {
             console.error('Error updating MS params:', error)
+        }
+    }
+
+    async updateReverbParams(params: ReverbParams): Promise<void> {
+        if (!this.reverb || !this.audioManager.isReady) return
+
+        try {
+            await this.audioManager.ensureAudioChainReady()
+            await this.reverb.applyManualParams(params)
+        } catch (error) {
+            console.error('Error updating reverb params:', error)
+        }
+    }
+
+    async updateEqBands(gains: number[]): Promise<void> {
+        if (!this.equalizer || !this.audioManager.isReady) return
+
+        try {
+            await this.audioManager.ensureAudioChainReady()
+            this.equalizer.applyManualGains(gains)
+        } catch (error) {
+            console.error('Error updating EQ bands:', error)
         }
     }
 

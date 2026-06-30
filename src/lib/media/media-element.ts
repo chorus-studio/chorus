@@ -124,6 +124,14 @@ export default class MediaElement {
                         this.mediaOverride.updateMSParams(data)
                         break
 
+                    case 'FROM_REVERB_PARAMS_LISTENER':
+                        this.mediaOverride.updateReverbParams(data)
+                        break
+
+                    case 'FROM_EQ_PARAMS_LISTENER':
+                        this.mediaOverride.updateEqBands(data)
+                        break
+
                     case 'FROM_VOLUME_LISTENER':
                         this.mediaOverride.updateVolume({
                             value: Number(data?.value) || 0,

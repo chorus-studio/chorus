@@ -8,8 +8,8 @@
     import { Label } from '$lib/components/ui/label'
     import { Switch } from '$lib/components/ui/switch'
 
-    import FX from '$lib/components/views/FX.svelte'
-    import EQ from '$lib/components/views/EQ.svelte'
+    import ReverbView from '$lib/components/views/ReverbView.svelte'
+    import EQView from '$lib/components/views/EQView.svelte'
     import Snip from '$lib/components/views/Snip.svelte'
     import Seek from '$lib/components/views/Seek.svelte'
     import Speed from '$lib/components/views/Speed.svelte'
@@ -53,8 +53,8 @@
 
     const components: Record<string, Component> = {
         snip: Snip,
-        fx: FX,
-        eq: EQ,
+        fx: ReverbView,
+        eq: EQView,
         ms: MS,
         seek: Seek,
         speed: Speed,
