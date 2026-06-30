@@ -3,12 +3,12 @@
     import { buttonVariants } from '$lib/components/ui/button'
     import * as ToggleGroup from '$lib/components/ui/toggle-group'
 
-    let { list, value, label = '', onValueChange, pip = false } = $props()
+    let { list, value, label = '', onValueChange, pip = false, labelClass = 'text-base' } = $props()
 </script>
 
 <div class="flex items-center justify-between gap-x-2">
     {#if label}
-        <Label class="text-base font-semibold lowercase text-muted-foreground">{label}</Label>
+        <Label class="{labelClass} font-semibold lowercase text-muted-foreground">{label}</Label>
     {/if}
     <ToggleGroup.Root type="single" bind:value {onValueChange} class="flex gap-0">
         {#each list as item (item.value)}

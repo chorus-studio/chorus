@@ -1,5 +1,5 @@
 import { storage } from '@wxt-dev/storage'
-import { activeOpenTab } from '$lib/utils/messaging'
+import { activeOpenTab, getActiveTab } from '$lib/utils/messaging'
 import type { ConfigState } from '$lib/stores/config'
 import { defaultPlayback } from '$lib/stores/playback'
 import { defaultAudioEffect } from '$lib/stores/effects'
@@ -109,6 +109,166 @@ export default defineBackground(() => {
     registerNotificationService()
     registerNewReleasesService()
     registerCheckPermissionsService()
+
+    // ---- Real-time vocal remover: tab capture → offscreen document ----
+    // The model runs in an offscreen doc (off the page thread). Tab audio is piped
+    // straight into it via tabCapture (Chrome can't message raw audio). Control
+    // messages (start/stop/params) are small JSON, which messaging handles fine.
+    async function ensureOffscreen() {
+        if (!chrome.offscreen) throw new Error('offscreen API unavailable (Chrome only)')
+        try {
+            if (await chrome.offscreen.hasDocument()) return
+        } catch {
+            // hasDocument unsupported on this version — fall through and create
+        }
+        try {
+            await chrome.offscreen.createDocument({
+                url: 'offscreen.html',
+                reasons: ['USER_MEDIA' as chrome.offscreen.Reason],
+                justification: 'Capture and process tab audio for real-time vocal removal.'
+            })
+        } catch {
+            // already exists — fine
+        }
+    }
+
+    // Serialize start/stop so getMediaStreamId never runs while a stream is live,
+    // and last-write-wins so the user's most recent toggle is the one that sticks.
+    let vocalEpoch = 0
+    let vocalChain: Promise<void> = Promise.resolve()
+    function enqueueVocal(fn: (epoch: number) => Promise<void>): Promise<void> {
+        const epoch = ++vocalEpoch
+        vocalChain = vocalChain.then(() => fn(epoch)).catch(() => {})
+        return vocalChain
+    }
+
+    function safePost(port: chrome.runtime.Port, msg: unknown) {
+        try {
+            port.postMessage(msg)
+        } catch {
+            // port already closed (popup navigated/closed)
+        }
+    }
+
+    async function startVocalCapture(tabId: number, mode?: string, depth?: number) {
+        // Release any capture still held by the offscreen doc first. getMediaStreamId
+        // rejects with "Cannot capture a tab with an active stream" if one is live —
+        // which happens when the popup was reopened while a prior capture kept running.
+        await ensureOffscreen()
+        await chrome.runtime.sendMessage({ target: 'offscreen', cmd: 'stop' }).catch(() => {})
+
+        console.log('[chorus] bg: getMediaStreamId for tab', tabId)
+        const streamId = await new Promise<string>((resolve, reject) => {
+            // getMediaStreamId can hang if the tab isn't capturable yet — time it out
+            // so the toggle fails cleanly (and a retry can succeed) instead of locking.
+            const timer = setTimeout(
+                () => reject(new Error('tab capture timed out — toggle off and on again')),
+                4000
+            )
+            chrome.tabCapture.getMediaStreamId({ targetTabId: tabId }, (id) => {
+                clearTimeout(timer)
+                const err = chrome.runtime.lastError
+                if (err) reject(new Error(err.message))
+                else resolve(id)
+            })
+        })
+        console.log('[chorus] bg: streamId ok, sending start')
+        // Bound the offscreen start: model warmup / session-create can hang (slow GPU
+        // init, first-run load). Because starts are serialized, a hung one would wedge
+        // the whole chain so even a later OFF could never run — time it out to free it.
+        const resp: any = await Promise.race([
+            chrome.runtime.sendMessage({ target: 'offscreen', cmd: 'start', streamId, mode, depth }),
+            new Promise((_, reject) =>
+                setTimeout(
+                    () => reject(new Error('vocal start timed out — toggle off and on again')),
+                    20000
+                )
+            )
+        ])
+        console.log('[chorus] bg: offscreen start response:', resp)
+        // Surface an offscreen-side failure so the UI doesn't show OFF while a
+        // half-built capture lingers (and the next ON hits an active stream).
+        if (resp?.error) throw new Error(resp.error)
+        return resp
+    }
+
+    // Dedicated port (not runtime.onMessage) so the @webext-core proxy-service
+    // message validator never sees these control messages.
+    browser.runtime.onConnect.addListener((port) => {
+        if (port.name !== 'vocal') return
+
+        port.onMessage.addListener((msg: any) => {
+            if (msg?.cmd === 'start') {
+                // Queued so it can't interleave with another start/stop. Resolve the
+                // Spotify tab ourselves so this works from the popup (no sender tab).
+                enqueueVocal(async (epoch) => {
+                    const tab = await getActiveTab()
+                    if (!tab?.id) {
+                        safePost(port, { type: 'status', text: 'no active Spotify tab', error: true })
+                        return
+                    }
+                    try {
+                        await startVocalCapture(tab.id, msg.mode, msg.depth)
+                    } catch (e: any) {
+                        safePost(port, { type: 'status', text: String(e?.message ?? e), error: true })
+                        return
+                    }
+                    if (epoch !== vocalEpoch) {
+                        // A newer toggle arrived while we were starting — roll back so
+                        // the user's latest intent (off / a different tab) wins.
+                        await chrome.runtime.sendMessage({ target: 'offscreen', cmd: 'stop' }).catch(() => {})
+                        return
+                    }
+                    safePost(port, { type: 'status', text: 'active' })
+                })
+            } else if (msg?.cmd === 'stop') {
+                enqueueVocal(async () => {
+                    await chrome.runtime.sendMessage({ target: 'offscreen', cmd: 'stop' }).catch(() => {})
+                    safePost(port, { type: 'status', text: 'off' })
+                })
+            } else if (msg?.cmd === 'setMode') {
+                chrome.runtime
+                    .sendMessage({ target: 'offscreen', cmd: 'setMode', mode: msg.mode })
+                    .catch(() => {})
+            } else if (msg?.cmd === 'setDepth') {
+                chrome.runtime
+                    .sendMessage({ target: 'offscreen', cmd: 'setDepth', depth: msg.depth })
+                    .catch(() => {})
+            } else if (msg?.cmd === 'getState') {
+                // Reflect the real capture state back to the popup so it doesn't try to
+                // start a capture that's already running. Don't spin up an offscreen doc
+                // just to answer — no doc means nothing is capturing.
+                ;(async () => {
+                    let state: { capturing: boolean; mode: string; depth: number } = {
+                        capturing: false,
+                        mode: 'remove',
+                        depth: 1
+                    }
+                    try {
+                        if (chrome.offscreen && (await chrome.offscreen.hasDocument())) {
+                            const s: any = await chrome.runtime.sendMessage({
+                                target: 'offscreen',
+                                cmd: 'getState'
+                            })
+                            // Single global capture: report it as-is. (Per-tab gating
+                            // caused false-offs when another Spotify tab was active.)
+                            if (s) state = s
+                        }
+                    } catch {
+                        // no offscreen / no response → treat as not capturing
+                    }
+                    safePost(port, { type: 'state', ...state })
+                })()
+            } else if (msg?.cmd === 'getStats') {
+                ;(async () => {
+                    const s = await chrome.runtime
+                        .sendMessage({ target: 'offscreen', cmd: 'getStats' })
+                        .catch(() => null)
+                    if (s) safePost(port, { type: 'stats', data: s })
+                })()
+            }
+        })
+    })
 
     browser.webRequest.onBeforeRequest.addListener(
         (details) => {

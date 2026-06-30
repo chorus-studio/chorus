@@ -12,6 +12,7 @@
     import BellPlus from '@lucide/svelte/icons/bell-plus'
     import BellRing from '@lucide/svelte/icons/bell-ring'
     import Power from '@lucide/svelte/icons/power'
+    import AudioLines from '@lucide/svelte/icons/audio-lines'
 
     import { Button } from '$lib/components/ui/button'
     import TrackInfo from '$lib/components/TrackInfo.svelte'
@@ -28,7 +29,9 @@
 
     const version = getVersion()
 
-    let { pip = false }: { pip?: boolean } = $props()
+    // onVoice is passed only from the toolbar popup, so the vocal-separation
+    // entry icon never shows in the in-page player tab or PiP.
+    let { pip = false, onVoice }: { pip?: boolean; onVoice?: () => void } = $props()
 
     let port = $state<chrome.runtime.Port | null>(null)
 
@@ -156,6 +159,19 @@
             ? 'absolute -top-1.5 right-1'
             : 'absolute right-1 top-0.5'} flex w-full items-center justify-end gap-x-0.5"
     >
+        {#if onVoice}
+            <Button
+                size="icon"
+                variant="ghost"
+                aria-label="Vocal separation"
+                title="Vocal separation"
+                onclick={onVoice}
+                class="size-6 border-none bg-transparent text-[var(--text)] brightness-75 hover:bg-transparent hover:text-[var(--text)] [&_svg]:size-[1rem]"
+            >
+                <AudioLines />
+            </Button>
+        {/if}
+
         {#if !pip}
             <Button
                 size="icon"

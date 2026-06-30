@@ -9,9 +9,15 @@ const BASE_PERMISSIONS = [
     'webRequest'
 ]
 
+// Vocal separation needs Chrome's offscreen document, which Firefox lacks. These
+// public assets are dead weight in the Firefox build (~51MB model + ~24MB ORT wasm),
+// so we strip them from it via the build:publicAssets hook below.
+const VOCAL_PUBLIC_PREFIXES = ['models/', 'ort/', 'vocal-remove.js', 'vocal-stream-worklet.js']
+
 const perBrowserManifest: Record<string, UserManifest> = {
     chrome: {
-        permissions: BASE_PERMISSIONS,
+        // offscreen + tabCapture power the real-time vocal remover (Chrome-only).
+        permissions: [...BASE_PERMISSIONS, 'offscreen', 'tabCapture'],
         optional_permissions: ['notifications']
     },
     firefox: {
@@ -47,6 +53,25 @@ export default defineConfig({
     alias: {
         $lib: 'src/lib'
     },
+    hooks: {
+        // Firefox has no chrome.offscreen, so the vocal-separation pipeline can't run
+        // there. Strip its entrypoint + heavy assets so the Firefox build isn't bloated
+        // by ~75MB of unusable binaries (51MB model + 24MB ORT wasm).
+        'entrypoints:resolved'(wxt, entrypoints) {
+            if (wxt.config.browser !== 'firefox') return
+            const i = entrypoints.findIndex((e) => e.name === 'offscreen')
+            if (i !== -1) entrypoints.splice(i, 1)
+        },
+        'build:publicAssets'(wxt, files) {
+            if (wxt.config.browser !== 'firefox') return
+            for (let i = files.length - 1; i >= 0; i--) {
+                const dest = files[i].relativeDest.replace(/\\/g, '/')
+                if (VOCAL_PUBLIC_PREFIXES.some((p) => dest === p || dest.startsWith(p))) {
+                    files.splice(i, 1)
+                }
+            }
+        }
+    },
     manifest: ({ browser }) => ({
         short_name: 'chorus',
         name: 'Chorus - Spotify Enhancer',
@@ -62,11 +87,18 @@ export default defineConfig({
                     '/processor.js',
                     '/ms-processor.js',
                     '/soundtouch.js',
-                    '/content-scripts/*.css'
+                    '/content-scripts/*.css',
+                    // Vocal-model assets are Chrome-only (offscreen pipeline); omit on Firefox.
+                    ...(browser === 'firefox' ? [] : ['/vocal-remove.js', '/models/*', '/ort/*'])
                 ],
                 matches: ['*://open.spotify.com/*']
             }
         ],
+        // onnxruntime-web compiles WASM in the isolated content-script world;
+        // that requires 'wasm-unsafe-eval' in the extension's own CSP.
+        content_security_policy: {
+            extension_pages: "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
+        },
         ...perBrowserManifest[browser],
         host_permissions: ['*://*.spotify.com/*'],
         commands: {

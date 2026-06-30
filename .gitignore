@@ -28,3 +28,13 @@ web-ext.config.ts
 *.njsproj
 *.sln
 *.sw?
+
+# Vocal-separation model weights (large, fetched separately)
+src/public/models/**/*.onnx
+
+# Self-hosted onnxruntime-web wasm runtime (copied from node_modules at build)
+src/public/ort/
+src/public/models/**/*.bin
+
+# Scratch experiments (not part of the build)
+experiments/
