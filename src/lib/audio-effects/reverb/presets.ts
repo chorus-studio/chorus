@@ -20,7 +20,6 @@ const PRESETS: PresetParams = {
     rooms: {
         small: [6.4, 0.56, 0.24, 0.24, 0.24, 0.24, 0.24, 0.4, 0, 0, 0.56, 0.32],
         office: [12, 0.56, 0.32, 0.32, 0.32, 0.24, 0.24, 0.4, 0, 0, 0.56, 0.32],
-        classroom: [12, 0.56, 0.32, 0.32, 0.32, 0.24, 0.24, 0.48, 0, 0, 0.56, 0.32],
         library: [12, 0.48, 0.32, 0.32, 0.24, 0.24, 0.24, 0.56, 0, 0, 0.64, 0.24],
         studio: [12, 0.56, 0.32, 0.32, 0.32, 0.32, 0.32, 0.32, 0, 0, 0.56, 0.32],
         restaurant: [16, 0.48, 0.4, 0.4, 0.4, 0.32, 0.32, 0.4, 0, 0, 0.48, 0.4],
@@ -30,13 +29,10 @@ const PRESETS: PresetParams = {
         basement: [20, 0.32, 0.56, 0.56, 0.64, 0.56, 0.56, 0.32, 0, 0, 0.4, 0.48],
         large: [20, 0.56, 0.48, 0.48, 0.48, 0.48, 0.48, 0.24, 0, 0, 0.4, 0.48],
         garage: [24, 0.48, 0.48, 0.48, 0.56, 0.4, 0.4, 0.4, 0, 0, 0.4, 0.48],
-        factory: [24, 0.48, 0.48, 0.48, 0.56, 0.4, 0.4, 0.32, 0, 0, 0.4, 0.48],
         mall: [28, 0.56, 0.48, 0.48, 0.56, 0.4, 0.4, 0.4, 0, 0, 0.4, 0.48],
         pool: [28, 0.56, 0.48, 0.48, 0.56, 0.4, 0.4, 0.48, 0, 0, 0.32, 0.56],
-        theater: [28, 0.56, 0.56, 0.56, 0.64, 0.56, 0.56, 0.24, 0, 0, 0.32, 0.56],
         hall: [28, 0.56, 0.56, 0.56, 0.64, 0.56, 0.56, 0.24, 0, 0, 0.32, 0.56],
         cave: [28, 0.4, 0.64, 0.64, 0.72, 0.64, 0.64, 0.16, 0.16, 0.16, 0.24, 0.64],
-        gym: [32, 0.48, 0.56, 0.56, 0.64, 0.56, 0.56, 0.24, 0, 0, 0.32, 0.56],
         subway: [32, 0.4, 0.56, 0.56, 0.64, 0.48, 0.48, 0.32, 0.16, 0.16, 0.32, 0.56],
         airport: [36, 0.56, 0.56, 0.56, 0.64, 0.48, 0.48, 0.32, 0, 0, 0.32, 0.56],
         arena: [36, 0.56, 0.64, 0.64, 0.72, 0.64, 0.64, 0.16, 0.08, 0.08, 0.24, 0.64],
@@ -57,7 +53,6 @@ const PRESETS: PresetParams = {
         glass: [8, 0.72, 0.48, 0.48, 0.24, 0.4, 0.4, 0.16, 0.16, 0.16, 0.56, 0.32],
         scifi: [8, 0.4, 0.56, 0.56, 0.4, 0.48, 0.48, 0.32, 0.4, 0.4, 0.32, 0.56],
         metallic: [8, 0.4, 0.64, 0.64, 0.32, 0.56, 0.56, 0.24, 0.16, 0.16, 0.4, 0.48],
-        quantum: [8, 0.56, 0.64, 0.64, 0.32, 0.56, 0.56, 0.24, 0.32, 0.32, 0.32, 0.56],
         crystal: [12, 0.72, 0.4, 0.4, 0.32, 0.32, 0.32, 0.16, 0.24, 0.24, 0.48, 0.4],
         chamber: [12, 0.56, 0.32, 0.32, 0.24, 0.24, 0.24, 0.48, 0, 0, 0.56, 0.32],
         time: [12, 0.56, 0.64, 0.64, 0.4, 0.56, 0.56, 0.32, 0.32, 0.32, 0.4, 0.48],
@@ -66,12 +61,9 @@ const PRESETS: PresetParams = {
         space: [12, 0.64, 0.48, 0.48, 0.64, 0.56, 0.56, 0.16, 0.32, 0.32, 0.24, 0.64],
         dark: [20, 0.24, 0.48, 0.48, 0.56, 0.4, 0.4, 0.64, 0.08, 0.08, 0.4, 0.48],
         canyon: [20, 0.64, 0.48, 0.48, 0.56, 0.4, 0.4, 0.32, 0.16, 0.16, 0.32, 0.56],
-        jungle: [20, 0.56, 0.48, 0.48, 0.48, 0.4, 0.4, 0.32, 0.16, 0.16, 0.32, 0.56],
         storm: [20, 0.32, 0.56, 0.56, 0.48, 0.48, 0.48, 0.56, 0.24, 0.24, 0.32, 0.56],
         underwater: [16, 0.16, 0.32, 0.32, 0.56, 0.32, 0.32, 0.64, 0.08, 0.08, 0.32, 0.56],
-        rain: [16, 0.48, 0.4, 0.4, 0.4, 0.32, 0.32, 0.4, 0.16, 0.16, 0.4, 0.48],
         nightmare: [16, 0.16, 0.64, 0.64, 0.48, 0.56, 0.56, 0.72, 0.32, 0.32, 0.32, 0.56],
-        magic: [16, 0.64, 0.56, 0.56, 0.4, 0.48, 0.48, 0.24, 0.32, 0.32, 0.4, 0.48],
         ghost: [24, 0.56, 0.48, 0.48, 0.4, 0.4, 0.4, 0.32, 0.08, 0.08, 0.56, 0.32],
         ocean: [24, 0.48, 0.4, 0.4, 0.56, 0.32, 0.32, 0.4, 0.16, 0.16, 0.24, 0.64],
         reverse: [0, 0.56, 0.72, 0.72, 0.48, 0.64, 0.64, 0.24, 0.32, 0.32, 0.4, 0.56],
@@ -88,7 +80,26 @@ export const roomPresets = Object.keys(PRESETS.rooms)
 export const customPresets = Object.keys(PRESETS.custom)
 export const impulsePresets = ['kick_ir', 'muffler_ir', 'diffusor_ir', 'telephone_ir']
 
+// Presets removed as near-duplicates of a kept twin (identical or one-param-off
+// vectors). A user's saved effect name still resolves to its twin so old configs
+// keep working and sound essentially the same; the names just leave the dropdowns.
+const PRESET_ALIASES: Record<string, string> = {
+    theater: 'hall', // identical vector
+    classroom: 'office',
+    factory: 'garage',
+    gym: 'hall',
+    jungle: 'canyon',
+    rain: 'water',
+    magic: 'time',
+    quantum: 'metallic'
+}
+
+export const resolveReverbPreset = (effect: string): string => PRESET_ALIASES[effect] ?? effect
+
 export const getParamsListForEffect = ({ effect, preset }: { effect: string; preset: Preset }) => {
-    const effectValues = PRESETS[preset][effect as keyof (typeof PRESETS)[typeof preset]]
+    const resolved = resolveReverbPreset(effect)
+    const effectValues = PRESETS[preset][resolved as keyof (typeof PRESETS)[typeof preset]]
+    // Unknown name (e.g. a stale saved preset): no-op instead of crashing the engine.
+    if (!effectValues) return []
     return effectValues.map((value, idx) => ({ name: PARAMS[idx], value }))
 }

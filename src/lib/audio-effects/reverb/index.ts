@@ -1,5 +1,10 @@
 import AudioManager from '../audio-manager'
-import { customPresets, getParamsListForEffect, impulsePresets } from './presets'
+import {
+    customPresets,
+    getParamsListForEffect,
+    impulsePresets,
+    resolveReverbPreset
+} from './presets'
 
 export default class Reverb {
     _internal: boolean
@@ -26,6 +31,10 @@ export default class Reverb {
         if (!this._audioManager.audioContext) {
             return
         }
+
+        // Saved names of removed near-duplicate presets resolve to their kept twin
+        // (must happen before the isImpulse/isCustom categorization below).
+        effect = resolveReverbPreset(effect)
 
         this._audioContext = this._audioManager.audioContext
 
