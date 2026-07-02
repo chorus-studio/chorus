@@ -87,10 +87,6 @@ export default defineConfig({
                     '/processor.js',
                     '/ms-processor.js',
                     '/soundtouch.js',
-                    // AOT Faust reverbs (jpverb + zita): static CSP-clean worklet
-                    // + its .wasm/.json, fetched via chrome.runtime.getURL.
-                    '/faust/*',
-                    '/faust/*/*',
                     '/content-scripts/*.css',
                     // Vocal-model assets are Chrome-only (offscreen pipeline); omit on Firefox.
                     ...(browser === 'firefox' ? [] : ['/models/*', '/ort/*'])

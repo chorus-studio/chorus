@@ -2,7 +2,6 @@
     "name": "chorus",
     "version": "2.9.0",
     "devDependencies": {
-        "@grame/faustwasm": "0.16.5",
         "@lucide/svelte": "^0.486.0",
         "@tailwindcss/vite": "^4.0.0",
         "@tsconfig/svelte": "^5.0.4",
@@ -27,17 +26,17 @@
     },
     "private": true,
     "scripts": {
-        "predev": "bun run theming/transformer.ts && node scripts/copy-ort.mjs && node scripts/build-faust.mjs",
+        "predev": "bun run theming/transformer.ts && node scripts/copy-ort.mjs",
         "dev": "wxt",
         "dev:fox": "wxt -b firefox",
-        "prebuild": "node scripts/copy-ort.mjs && node scripts/build-faust.mjs",
+        "prebuild": "node scripts/copy-ort.mjs",
         "build": "wxt build",
         "build:fox": "wxt build -b firefox --mv3",
         "zip": "wxt zip",
         "zip:fox": "wxt zip -b firefox --mv3",
         "check": "svelte-check --tsconfig ./tsconfig.json",
         "format": "git diff --name-only --diff-filter=AM | grep -E '\\.(js|ts|svelte|json)$' | xargs prettier --write",
-        "postinstall": "wxt prepare && node scripts/copy-ort.mjs && node scripts/build-faust.mjs"
+        "postinstall": "wxt prepare && node scripts/copy-ort.mjs"
     },
     "type": "module",
     "dependencies": {
