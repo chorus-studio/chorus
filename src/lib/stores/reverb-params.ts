@@ -77,6 +77,14 @@ function createReverbParamsStore() {
     }
 
     async function reset() {
+        await resetSilent()
+        dispatchParams()
+    }
+
+    // Reset values + storage WITHOUT dispatching to the audio side. Used by the
+    // fx tab's reset button: dispatching would rebuild the reverb node on demand
+    // (applyManualParams) right after the reset just tore it down.
+    async function resetSilent() {
         set(defaultReverbParams)
         isUpdatingStorage = true
         try {
@@ -86,7 +94,6 @@ function createReverbParamsStore() {
         } finally {
             isUpdatingStorage = false
         }
-        dispatchParams()
     }
 
     storage
@@ -106,7 +113,7 @@ function createReverbParamsStore() {
         set(syncedValue)
     })
 
-    return { set, reset, subscribe, updateParam, dispatchParams, setFromPreset }
+    return { set, reset, resetSilent, subscribe, updateParam, dispatchParams, setFromPreset }
 }
 
 export const reverbParamsStore = createReverbParamsStore()

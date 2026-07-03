@@ -3,6 +3,7 @@
     import { snipStore } from '$lib/stores/snip'
     import { dataStore } from '$lib/stores/data'
     import { effectsStore } from '$lib/stores/effects'
+    import { reverbParamsStore } from '$lib/stores/reverb-params'
     import { nowPlaying } from '$lib/stores/now-playing'
     import { playbackStore, defaultPlayback } from '$lib/stores/playback'
 
@@ -126,7 +127,12 @@
     async function handleReset() {
         // fx/eq share effectsStore but each tab must reset ONLY its own effect —
         // effectsStore.reset() would wipe both reverb and the equalizer at once.
-        if (tab === 'fx') return effectsStore.updateEffect({ key: 'reverb', value: 'none' })
+        if (tab === 'fx') {
+            // Turn the reverb off AND return the config sliders to the engine
+            // defaults (silently — a dispatch would rebuild the node just torn down).
+            await effectsStore.updateEffect({ key: 'reverb', value: 'none' })
+            return reverbParamsStore.resetSilent()
+        }
         if (tab === 'eq') return effectsStore.updateEffect({ key: 'equalizer', value: 'none' })
 
         const store = getStore()
