@@ -78,7 +78,9 @@
     async function saveCurrent() {
         const name = presetName.trim()
         if (!name) return
-        await userReverbPresetsStore.save(name, get(reverbParamsStore))
+        const params = get(reverbParamsStore)
+        await userReverbPresetsStore.save(name, params)
+        reverbParamsStore.markSeed(params) // saved values become the new reset point
         selectedUserPreset = name
         onUserPresetLoad?.(name)
         presetName = ''
@@ -94,7 +96,8 @@
     const isImpulse = $derived(impulsePresets.includes(activeEffect))
 
     // Seed the sliders from the active digital preset so editing starts where the
-    // current sound is. Uses set() (no dispatch) — that preset is already applied.
+    // current sound is (no dispatch — that preset is already applied). Also records
+    // the config-reset starting point.
     onMount(() => {
         const effect = get(effectsStore).reverb
         if (!effect || effect === 'none' || impulsePresets.includes(effect)) return
@@ -104,7 +107,7 @@
         getParamsListForEffect({ effect, preset }).forEach(({ name, value }) => {
             if (name in seeded) (seeded as Record<string, number>)[name] = value
         })
-        reverbParamsStore.set(seeded)
+        reverbParamsStore.seed(seeded)
     })
 
     const toSamples = (ms: number) => Math.round(ms * (SR / 1000))

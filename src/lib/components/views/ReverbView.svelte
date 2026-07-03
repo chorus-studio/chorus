@@ -2,11 +2,18 @@
     import FX from './FX.svelte'
     import ReverbControls from '$lib/components/ReverbControls.svelte'
     import { effectsStore } from '$lib/stores/effects'
+    import { fxSubView } from '$lib/stores/effects-ui'
     import { resolveReverbPreset } from '$lib/audio-effects/reverb/presets'
 
     let { pip = false }: { pip?: boolean } = $props()
 
     let sub = $state<'presets' | 'config'>('presets')
+
+    // Let the tab-level reset button know which sub-view is active (its semantics
+    // differ: presets = effect off, config = back to the "from:" starting point).
+    $effect(() => {
+        fxSubView.set(sub)
+    })
 
     const subTabs = [
         { id: 'presets', label: 'presets' },

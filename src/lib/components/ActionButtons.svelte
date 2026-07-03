@@ -3,7 +3,10 @@
     import { snipStore } from '$lib/stores/snip'
     import { dataStore } from '$lib/stores/data'
     import { effectsStore } from '$lib/stores/effects'
+    import { get } from 'svelte/store'
     import { reverbParamsStore } from '$lib/stores/reverb-params'
+    import { eqBandsStore } from '$lib/stores/eq-bands'
+    import { eqSubView, fxSubView } from '$lib/stores/effects-ui'
     import { nowPlaying } from '$lib/stores/now-playing'
     import { playbackStore, defaultPlayback } from '$lib/stores/playback'
 
@@ -127,13 +130,20 @@
     async function handleReset() {
         // fx/eq share effectsStore but each tab must reset ONLY its own effect —
         // effectsStore.reset() would wipe both reverb and the equalizer at once.
+        // Reset is context-sensitive: in the config sub-view it returns the sliders
+        // to their "from:" starting point (keeping the effect on); in the presets
+        // sub-view it turns the effect off + flattens the sliders (silently — a
+        // dispatch would rebuild the node just torn down).
         if (tab === 'fx') {
-            // Turn the reverb off AND return the config sliders to the engine
-            // defaults (silently — a dispatch would rebuild the node just torn down).
+            if (get(fxSubView) === 'config') return reverbParamsStore.resetToSeed()
             await effectsStore.updateEffect({ key: 'reverb', value: 'none' })
             return reverbParamsStore.resetSilent()
         }
-        if (tab === 'eq') return effectsStore.updateEffect({ key: 'equalizer', value: 'none' })
+        if (tab === 'eq') {
+            if (get(eqSubView) === 'config') return eqBandsStore.resetToSeed()
+            await effectsStore.updateEffect({ key: 'equalizer', value: 'none' })
+            return eqBandsStore.resetSilent()
+        }
 
         const store = getStore()
         if (!store) return

@@ -41,6 +41,9 @@ function createReverbParamsStore() {
     const store = writable<ReverbParams>(defaultReverbParams)
     const { subscribe, set, update } = store
     let isUpdatingStorage = false
+    // The values the config editor started from (the "from:" preset) — what a
+    // config-view reset returns to. Null = no starting preset (engine defaults).
+    let seedParams: ReverbParams | null = null
 
     function dispatchParams() {
         const params = get(store)
@@ -65,11 +68,42 @@ function createReverbParamsStore() {
 
     async function setFromPreset(params: ReverbParams) {
         set(params)
+        seedParams = { ...params }
         isUpdatingStorage = true
         try {
             await storage.setItem<ReverbParams>(REVERB_PARAMS_STORE_KEY, params)
         } catch (error) {
             console.error('Error setting reverb params from preset:', error)
+        } finally {
+            isUpdatingStorage = false
+        }
+        dispatchParams()
+    }
+
+    // Seed the editor's starting point without persisting/dispatching (the values
+    // are already applied — this just records where a config reset returns to).
+    function seed(params: ReverbParams) {
+        set(params)
+        seedParams = { ...params }
+    }
+
+    // Mark the current values as the new starting point (e.g. after saving them
+    // as a user preset) without touching the applied audio.
+    function markSeed(params: ReverbParams) {
+        seedParams = { ...params }
+    }
+
+    // Config-view reset: back to the "from:" starting point, keeping the reverb
+    // on. With no starting preset, fall back to defaults (silently — dispatching
+    // would arm the reverb node just to play defaults).
+    async function resetToSeed() {
+        if (!seedParams) return resetSilent()
+        set({ ...seedParams })
+        isUpdatingStorage = true
+        try {
+            await storage.setItem<ReverbParams>(REVERB_PARAMS_STORE_KEY, seedParams)
+        } catch (error) {
+            console.error('Error resetting reverb params to seed:', error)
         } finally {
             isUpdatingStorage = false
         }
@@ -86,6 +120,7 @@ function createReverbParamsStore() {
     // (applyManualParams) right after the reset just tore it down.
     async function resetSilent() {
         set(defaultReverbParams)
+        seedParams = null
         isUpdatingStorage = true
         try {
             await storage.setItem<ReverbParams>(REVERB_PARAMS_STORE_KEY, defaultReverbParams)
@@ -113,7 +148,18 @@ function createReverbParamsStore() {
         set(syncedValue)
     })
 
-    return { set, reset, resetSilent, subscribe, updateParam, dispatchParams, setFromPreset }
+    return {
+        set,
+        seed,
+        markSeed,
+        reset,
+        resetSilent,
+        resetToSeed,
+        subscribe,
+        updateParam,
+        dispatchParams,
+        setFromPreset
+    }
 }
 
 export const reverbParamsStore = createReverbParamsStore()
