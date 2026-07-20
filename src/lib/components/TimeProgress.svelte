@@ -15,7 +15,9 @@
     let sliderRef: HTMLDivElement
 
     function handleMouseMove(event: MouseEvent) {
-        if (!sliderRef) return
+        // duration 0 means "never known" — a hover position computed from it
+        // is always 0 and a later click/key would seek there.
+        if (!sliderRef || !($nowPlaying.duration > 0)) return
 
         const rect = sliderRef.getBoundingClientRect()
         const percentage = (event.clientX - rect.left) / rect.width
@@ -24,7 +26,11 @@
     }
 
     function seekTo(seconds: number) {
-        const target = Math.max(0, Math.min(seconds, $nowPlaying.duration))
+        const duration = $nowPlaying.duration
+        // Only clamp the upper bound when duration is known — clamping to the
+        // 0 sentinel would turn every seek into a track restart. Overshoots
+        // are clamped by the media element itself.
+        const target = duration > 0 ? Math.max(0, Math.min(seconds, duration)) : Math.max(0, seconds)
         $nowPlaying.current = target
         if (port) {
             port.postMessage({ type: 'current_time', data: target })
@@ -34,6 +40,8 @@
     }
 
     function setProgress() {
+        // A bar click is a percentage of the duration — meaningless when unknown.
+        if (!($nowPlaying.duration > 0)) return
         seekTo(hoverPosition)
     }
 
@@ -57,6 +65,7 @@
                 target = 0
                 break
             case 'End':
+                if (!($nowPlaying.duration > 0)) return
                 target = $nowPlaying.duration
                 break
             default:

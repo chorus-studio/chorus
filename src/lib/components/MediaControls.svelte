@@ -66,8 +66,12 @@
             const offset = isForward
                 ? isLongForm ? $seekStore.long_form.forward : $seekStore.default.forward
                 : isLongForm ? $seekStore.long_form.rewind : $seekStore.default.rewind
+            // Only clamp forward seeks when duration is known — 0 means "never
+            // known", and clamping to it would restart the track.
             const target = isForward
-                ? Math.min($nowPlaying.current + offset, $nowPlaying.duration)
+                ? $nowPlaying.duration > 0
+                    ? Math.min($nowPlaying.current + offset, $nowPlaying.duration)
+                    : $nowPlaying.current + offset
                 : Math.max($nowPlaying.current - offset, 0)
             window.postMessage({ type: 'FROM_CURRENT_TIME_LISTENER', data: target }, '*')
             return
