@@ -23,13 +23,47 @@
         hoverPosition = Math.max(0, Math.min(seconds, $nowPlaying.duration))
     }
 
-    function setProgress() {
-        $nowPlaying.current = hoverPosition
+    function seekTo(seconds: number) {
+        const target = Math.max(0, Math.min(seconds, $nowPlaying.duration))
+        $nowPlaying.current = target
         if (port) {
-            port.postMessage({ type: 'current_time', data: hoverPosition })
+            port.postMessage({ type: 'current_time', data: target })
         } else {
-            trackObserver?.updateCurrentTime(hoverPosition)
+            trackObserver?.updateCurrentTime(target)
         }
+    }
+
+    function setProgress() {
+        seekTo(hoverPosition)
+    }
+
+    const ARROW_STEP = 5
+
+    function handleKeydown(event: KeyboardEvent) {
+        // Only slider-navigation keys seek. Without this filter, ANY key while the
+        // bar is focused seeks to the stale hoverPosition — including volume media
+        // keys, which Chrome delivers to the focused page as keydown on Windows.
+        let target: number
+        switch (event.key) {
+            case 'ArrowRight':
+            case 'ArrowUp':
+                target = ($nowPlaying.current ?? 0) + ARROW_STEP
+                break
+            case 'ArrowLeft':
+            case 'ArrowDown':
+                target = ($nowPlaying.current ?? 0) - ARROW_STEP
+                break
+            case 'Home':
+                target = 0
+                break
+            case 'End':
+                target = $nowPlaying.duration
+                break
+            default:
+                return
+        }
+        event.preventDefault()
+        seekTo(target)
     }
 
     const isChorus = $derived(id === 'chorus-time-progress')
@@ -64,7 +98,7 @@
             aria-label="Time slider"
             class="relative w-full"
             aria-valuenow={currentPosition}
-            onkeydown={setProgress}
+            onkeydown={handleKeydown}
             onmousedown={setProgress}
             onmousemove={handleMouseMove}
             onmouseenter={() => (isHovering = true)}
