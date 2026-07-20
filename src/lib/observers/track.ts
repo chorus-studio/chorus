@@ -6,6 +6,7 @@ import { effectsStore } from '$lib/stores/effects'
 import { nowPlaying } from '$lib/stores/now-playing'
 import { snipStore, type Snip } from '$lib/stores/snip'
 import { playback } from '$lib/utils/playback'
+import { currentSongInfo } from '$lib/utils/song'
 import { playbackObserver } from '$lib/observers/playback'
 
 // Refactored services
@@ -136,6 +137,17 @@ export class TrackObserver {
         if (this._skipping) return
 
         const currentSong = this.currentSong
+
+        // Bail when the DOM already shows a different track than the store.
+        // User-initiated skips never set _skipping, and the store update is
+        // async — a tick in that window would apply the OLD track's snip/loop
+        // state to the NEW track (e.g. seek it to the old snip's start).
+        // undefined = unreadable (widget mid-swap, or a label the
+        // 'Now playing: ' parse doesn't match, e.g. localized UI) — treat as
+        // unknown, not as a different track, or the poll dies permanently.
+        const domId = currentSongInfo().id
+        if (domId !== undefined && domId !== currentSong.id) return
+
         const positionSeconds = playback.current()
         if (positionSeconds == null) return
 
