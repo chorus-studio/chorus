@@ -187,7 +187,10 @@ export class TrackObserver {
 
         // Check if at or past snip end for auto-advance
         const atSnipEnd = currentSong.snip && currentTimeMS >= currentSong.snip.end_time * 1000
-        const atTrackEnd = currentTimeMS >= currentSong.duration * 1000 - 100
+        // duration 0 means "never known", not a zero-length track — without the
+        // guard it would make atTrackEnd permanently true and insta-skip.
+        const atTrackEnd =
+            currentSong.duration > 0 && currentTimeMS >= currentSong.duration * 1000 - 100
 
         // Handle track end or snip end
         const shouldSkip = (currentSong.snip || currentSong.blocked) && (atTrackEnd || atSnipEnd)

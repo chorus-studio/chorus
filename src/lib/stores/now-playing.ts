@@ -87,7 +87,7 @@ function createNowPlayingStore() {
         const songInfo = currentSongInfo()
         const { id = null, cover = null, url = null } = songInfo
         const [title, artist] = id?.split(' by ') ?? []
-        const { duration = 0, position: current = 0, loop = false } = playback.data()
+        const { duration, position: current = 0, loop = false } = playback.data()
 
         const trackInfo = songInfo?.track_id
             ? dataStore.collectionObject[songInfo.track_id]
@@ -114,7 +114,10 @@ function createNowPlayingStore() {
             cover,
             title,
             artist,
-            duration,
+            // Omit duration when the DOM read is unknown (node absent, "-:--",
+            // remaining-time mode) so the store merge in updateNowPlaying keeps
+            // the last known-good value instead of overwriting it with 0.
+            ...(duration != null ? { duration } : {}),
             current,
             loop,
             url,

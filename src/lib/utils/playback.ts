@@ -7,13 +7,24 @@ export const playback = {
 
         return loopButton.getAttribute('aria-label') === 'Disable repeat one'
     },
-    duration: () => {
+    duration: (): number | null => {
         const getPlaybackDuration = () =>
             document.querySelector('[data-testid="playback-duration"]')
         const playbackDuration = getPlaybackDuration()?.textContent
-        if (!playbackDuration) return 0
+        // Same null discipline as current(): absent node, "-:--" placeholders,
+        // and Spotify's remaining-time display mode must all read as "unknown",
+        // never as a real duration. Remaining-time is rejected on the raw string:
+        // Number("-0") is -0, so "-0:45" would otherwise parse to +45 and slip
+        // past a numeric sign check.
+        if (!playbackDuration || playbackDuration.trim().startsWith('-')) return null
 
-        return timeToSeconds(playbackDuration)
+        const seconds = timeToSeconds(playbackDuration)
+        // > 0, not >= 0: no real track is zero-length, and 0 is the store's
+        // "never known" sentinel — a transient "0:00" must not overwrite the
+        // preserved known-good value with the sentinel.
+        return typeof seconds === 'number' && Number.isFinite(seconds) && seconds > 0
+            ? seconds
+            : null
     },
 
     current: (): number | null => {
@@ -23,8 +34,10 @@ export const playback = {
         // An absent or unparsable position node must read as "unknown" (null),
         // never 0. During Spotify's now-playing-bar element swaps the node
         // vanishes for a few ticks, and a literal 0 would make the snip poll
-        // in TrackObserver yank playback back to the snip start.
-        if (!playbackPosition) return null
+        // in TrackObserver yank playback back to the snip start. A leading "-"
+        // is never a valid elapsed position, and Number("-0") is -0, so
+        // "-0:45" would parse to +45 past the numeric sign check below.
+        if (!playbackPosition || playbackPosition.trim().startsWith('-')) return null
 
         const seconds = timeToSeconds(playbackPosition)
         return typeof seconds === 'number' && Number.isFinite(seconds) && seconds >= 0
@@ -32,9 +45,11 @@ export const playback = {
             : null
     },
     data: () => {
+        // Duration passes through as null-when-unknown so the now-playing store
+        // can keep its last known-good value instead of storing a poisoned 0.
         const duration = playback.duration()
-        // Display consumers (now-playing store) keep the legacy 0 fallback;
-        // only the seeking poll needs to distinguish "unknown" from 0:00.
+        // Position keeps a 0 fallback: its only consumer is display, where a
+        // transient 0 is harmless; the seeking poll calls current() directly.
         const position = playback.current() ?? 0
         const loop = playback.loop()
         return { duration, position, loop }

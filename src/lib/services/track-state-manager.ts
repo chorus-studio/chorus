@@ -39,6 +39,11 @@ export class TrackStateManager {
     isTrackAtSnipEnd(currentTimeMS: number, track: SimpleTrack): boolean {
         const currentSong = get(nowPlaying)
         const { end_time = currentSong.duration } = track?.snip ?? {}
+        // No snip end and duration never known (0) — the track end can't be
+        // judged, so don't treat every tick as "at end". (> 0, not truthy:
+        // also rejects legacy negative durations persisted by pre-fix builds
+        // in remaining-time display mode.)
+        if (!(end_time > 0)) return false
         const atSongEnd = end_time === currentSong.duration
         const endTimeMS = end_time * 1000 - (atSongEnd ? 100 : 0)
 
@@ -58,9 +63,13 @@ export class TrackStateManager {
         const loopEndTimeMS =
             !lastUpdateSet || last_updated === 'start' ? endTimeMS : endTimeMS + 3000
 
-        return (
-            !Number.isNaN(endTimeMS) &&
-            currentTimeMS > Math.min(loopEndTimeMS, currentSong.duration * 1000)
-        )
+        // Only clamp to track duration when it's actually known — a 0 sentinel
+        // would clamp the snip end to 0 and yank playback back every tick.
+        const clampedEndMS =
+            currentSong.duration > 0
+                ? Math.min(loopEndTimeMS, currentSong.duration * 1000)
+                : loopEndTimeMS
+
+        return !Number.isNaN(endTimeMS) && currentTimeMS > clampedEndMS
     }
 }
