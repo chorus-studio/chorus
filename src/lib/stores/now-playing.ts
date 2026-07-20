@@ -128,11 +128,28 @@ function createNowPlayingStore() {
     async function updateNowPlaying(songChanged = false) {
         const songInfo = getSongInfo()
         const currentData = get(store)
+
+        // Detect track changes flag-independently: flagless callers (observe()'s
+        // remount call, the playback observer's per-tick call) can be first to
+        // see a new track when the widget observer is zombied by an element
+        // swap. Without this they stamp the new id over the old track's
+        // snip/blocked/duration — and songChanged() then compares equal ids,
+        // so the flagged cleanup never runs at all.
+        songChanged ||=
+            currentData.id != null && songInfo.id != null && songInfo.id !== currentData.id
+
         if (songChanged) {
             // When song changes, ensure we start fresh without old snip/blocked data
             // This prevents race conditions where old track data persists
             delete currentData?.blocked
             delete currentData?.snip
+
+            // The old track's duration must not survive either: if the new
+            // track's duration node is unreadable (swap window, remaining-time
+            // mode), getSongInfo omits the key and the merge would keep the
+            // WRONG track's length, misfiring loop/snip-end checks at it.
+            // 0 is the safe "never known" sentinel — consumers no-op on it.
+            currentData.duration = 0
 
             // Only restore snip/blocked if the new song explicitly has them
             // This ensures we don't carry over old track's snip to new track
