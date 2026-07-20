@@ -94,10 +94,16 @@
 
         if (!$snipStore) return
 
-        const snipData = {
-            start_time: $snipStore.start_time!,
-            end_time: $snipStore.end_time!
-        }
+        // Reject malformed snips instead of persisting them: an unset bound
+        // would save undefined (the ! only silences the compiler), and
+        // end <= start (e.g. end_time 0 seeded from an unknown duration)
+        // insta-skips the track on every play via the snip-end checks.
+        const { start_time, end_time } = $snipStore
+        if (typeof start_time !== 'number' || typeof end_time !== 'number') return
+        // !(>) instead of (<=) so NaN in either bound is also rejected.
+        if (!(end_time > start_time)) return
+
+        const snipData = { start_time, end_time }
 
         await dataStore.updateTrack({
             track_id: track.track_id!,
