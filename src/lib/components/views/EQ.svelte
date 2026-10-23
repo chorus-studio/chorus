@@ -41,7 +41,10 @@
     type="equalizer"
     {topSelected}
     topOptions={spotifyOptions}
-    topLabel="spotify eq presets"
-    bottomLabel="custom eq presets"
+    topLabel="Spotify presets"
+    topHint="The curves from Spotify's own equalizer"
+    bottomLabel="Custom presets"
+    bottomHint="Chorus curves and your saved configs"
     bottomOptions={customOptions}
+    note="Picking from one list clears the other. Shape the bands in Config."
 />

@@ -4,10 +4,10 @@
     import { reverbParamsStore, type ReverbParams } from '$lib/stores/reverb-params'
     import { userReverbPresetsStore } from '$lib/stores/reverb-user-presets'
     import { effectsStore } from '$lib/stores/effects'
-    import { Input } from '$lib/components/ui/input'
     import * as HoverCard from '$lib/components/ui/hover-card'
     import { CustomSlider } from '$lib/components/ui/custom-slider'
-    import { CustomSelect } from '$lib/components/ui/custom-select'
+    import UserPresetRow from '$lib/components/UserPresetRow.svelte'
+    import Info from '@lucide/svelte/icons/info'
     import {
         customPresets,
         impulsePresets,
@@ -34,23 +34,19 @@
 
     // Only the audible dimensions users know from mainstream reverb UIs: amount
     // (dry/wet), length (decay), distance (pre-delay), brightness (damping). The
-    // plate-topology internals (diffusion/tail/tone/mod) are encoded by the chosen
-    // preset — they still seed the params store and save into user presets, they
-    // just don't get footgun sliders. (What each slider does is documented in the
-    // ⓘ hover-card in ReverbView's header.)
+    // plate-topology internals are encoded by the chosen preset.
     const CONTROLS: Ctl[] = [
         { key: 'dry', label: 'Dry', min: 0, max: 1, step: 0.01, pct: true },
         { key: 'wet', label: 'Wet', min: 0, max: 1, step: 0.01, pct: true },
-        { key: 'preDelay', label: 'Pre-Delay', min: 0, max: 50, step: 1, ms: true },
+        { key: 'preDelay', label: 'Pre-delay', min: 0, max: 50, step: 1, ms: true },
         { key: 'decay', label: 'Decay', min: 0, max: 1, step: 0.01, pct: true },
         { key: 'damping', label: 'Damping', min: 0, max: 1, step: 0.01, pct: true }
     ]
 
-    // Shown in the ⓘ info hover-card that fills the grid's empty last cell.
     const PARAM_HINTS = [
         ['Dry', 'volume of the untouched signal'],
         ['Wet', 'volume of the reverb'],
-        ['Pre-Delay', 'silence before the reverb starts — longer feels like a bigger space'],
+        ['Pre-delay', 'silence before the reverb starts — longer feels like a bigger space'],
         ['Decay', 'how long the reverb tail rings out'],
         ['Damping', 'how fast highs fade — higher = darker, softer tail']
     ] as const
@@ -63,7 +59,6 @@
         { label: 'none', value: 'none' },
         ...Object.keys($userReverbPresetsStore).map((name) => ({ label: name, value: name }))
     ])
-    const hasUserPresets = $derived(Object.keys($userReverbPresetsStore).length > 0)
 
     function loadUserPreset(name: string) {
         selectedUserPreset = name
@@ -119,25 +114,34 @@
 
     function readout(c: Ctl, raw: number) {
         if (c.pct) return `${Math.round(raw * 100)}%`
-        if (c.ms) return `${toMs(raw)}ms`
+        if (c.ms) return `${toMs(raw)} ms`
         return raw.toFixed(2)
     }
 </script>
 
 {#if isImpulse}
-    <p class="px-1 pt-2 text-xs leading-snug text-gray-500">
-        “{activeEffect}” is an impulse-response reverb — its parameters aren't editable. Pick a
-        room or custom preset to tune the config.
-    </p>
+    <div
+        class="flex flex-1 flex-col items-center justify-center gap-y-2 rounded-lg border border-dashed border-hairline-strong px-6 text-center"
+    >
+        <p class="text-xs leading-snug text-ink-fg-2">
+            <span class="font-medium text-ink-fg">{activeEffect}</span> is an impulse-response reverb,
+            so it has no adjustable parameters.
+        </p>
+        <p class="text-[11px] text-ink-muted">
+            Pick a room or custom preset to tune the sound here.
+        </p>
+    </div>
 {:else}
-    <div class="flex flex-1 flex-col gap-y-1.5">
-        <div class="grid grid-cols-2 gap-x-3 gap-y-3 pr-1">
+    <div class="flex h-full flex-col gap-y-2">
+        <div class="grid grid-cols-2 gap-x-4 gap-y-2">
             {#each CONTROLS as c (c.key)}
                 {@const raw = $reverbParamsStore[c.key]}
-                <div class="flex flex-col gap-y-1.5">
+                <div class="flex flex-col gap-y-1">
                     <div class="flex items-center justify-between">
-                        <span class="text-xs text-gray-400">{c.label}</span>
-                        <span class="text-xs text-gray-500">{readout(c, raw)}</span>
+                        <span class="rack-label">{c.label}</span>
+                        <span class="font-mono text-[10px] tabular-nums text-ink-fg-2"
+                            >{readout(c, raw)}</span
+                        >
                     </div>
                     <CustomSlider
                         type="single"
@@ -145,27 +149,27 @@
                         max={c.max}
                         step={c.step}
                         value={c.ms ? toMs(raw) : raw}
+                        label={c.label}
                         onValueChange={(v) => onChange(c, v as number)}
                     />
                 </div>
             {/each}
 
-            <!-- Fills the empty cell beside Damping. The HoverCard trigger renders
-                 as an <a>, so the colors are forced (!) to override page link styles. -->
-            <div class="flex items-end justify-end">
-                <HoverCard.Root openDelay={200} closeDelay={200}>
+            <!-- Fills the empty cell beside Damping. -->
+            <div class="flex items-end justify-end pb-1">
+                <HoverCard.Root openDelay={150} closeDelay={150}>
                     <HoverCard.Trigger
                         aria-label="What the sliders do"
-                        class="flex cursor-help items-center gap-x-1 text-xs !text-gray-500 !no-underline hover:!text-gray-300"
+                        class="inline-flex h-6 cursor-help items-center gap-x-1 rounded-md px-1.5 text-[11px] text-ink-muted hover:bg-surface-2 hover:text-ink-fg"
                     >
-                        <span class="!text-gray-300 mt-0.5">ⓘ</span>
-                        <span class="!text-gray-300">info</span>
+                        <Info class="size-3" />
+                        What these do
                     </HoverCard.Trigger>
-                    <HoverCard.Content class="z-[1000] flex w-64 flex-col gap-y-1 text-xs">
+                    <HoverCard.Content class="flex w-64 flex-col gap-y-1 text-xs">
                         {#each PARAM_HINTS as [name, hint] (name)}
                             <p class="leading-snug">
-                                <span class="font-semibold text-gray-300">{name}</span>
-                                <span class="text-gray-400"> — {hint}</span>
+                                <span class="font-medium text-ink-fg">{name}</span>
+                                <span class="text-ink-muted"> — {hint}</span>
                             </p>
                         {/each}
                     </HoverCard.Content>
@@ -173,43 +177,15 @@
             </div>
         </div>
 
-        <!-- Pinned to the very bottom of the tab, just above the reset row. -->
-        <div class="mt-4 flex items-center gap-x-1.5">
-            <Input
-                placeholder="save config as…"
-                bind:value={presetName}
-                onkeydown={(e: KeyboardEvent) => e.key === 'Enter' && saveCurrent()}
-                class="h-6 min-w-0 flex-1 rounded-sm border-muted-foreground bg-transparent px-2 text-xs"
-            />
-            <button
-                onclick={saveCurrent}
-                disabled={!presetName.trim()}
-                class="h-6 shrink-0 rounded-[2px] bg-green-700 px-2 text-xs font-semibold text-[#fafafa] hover:bg-green-800 disabled:opacity-40"
-            >
-                save
-            </button>
-
-            {#if hasUserPresets}
-                <CustomSelect
-                    {pip}
-                    size="md"
-                    key="user-reverb-presets"
-                    selected={selectedUserPreset}
-                    options={userPresetOptions}
-                    onValueChange={loadUserPreset}
-                    class="shrink-0"
-                />
-                {#if selectedUserPreset !== 'none'}
-                    <button
-                        aria-label="Delete preset"
-                        title="Delete preset"
-                        onclick={deleteSelected}
-                        class="shrink-0 text-xs text-gray-500 hover:text-red-400"
-                    >
-                        ✕
-                    </button>
-                {/if}
-            {/if}
-        </div>
+        <UserPresetRow
+            {pip}
+            selectKey="user-reverb-presets"
+            bind:presetName
+            selected={selectedUserPreset}
+            options={userPresetOptions}
+            onSave={saveCurrent}
+            onLoad={loadUserPreset}
+            onDelete={deleteSelected}
+        />
     </div>
 {/if}
