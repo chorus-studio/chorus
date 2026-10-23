@@ -10,11 +10,8 @@
         customPresets as reverbPresets
     } from '$lib/audio-effects/reverb/presets'
 
-    import { Label } from '$lib/components/ui/label'
-    import { Switch } from '$lib/components/ui/switch'
-    import { Button } from '$lib/components/ui/button'
-    import RotateCcw from '@lucide/svelte/icons/rotate-ccw'
     import { CustomSelect } from '$lib/components/ui/custom-select'
+    import SegmentedControl from '$lib/components/SegmentedControl.svelte'
 
     let { type, preset }: { type: 'reverb' | 'equalizer'; preset: AudioPreset } = $props()
 
@@ -28,7 +25,7 @@
         currentPreset = updatedPreset
     })
 
-    let filteredPresets = $state({
+    const filteredPresets = $derived({
         spotify_eq: spotifyPresets.filter(
             (preset) => !$configStore.fx_eq_presets.spotify_eq_presets.includes(preset)
         ),
@@ -45,26 +42,29 @@
 
     let custom = $state(
         type === 'reverb'
-            ? filteredPresets.custom_reverb.includes(preset.effect.reverb)
-            : filteredPresets.custom_eq.includes(preset.effect.equalizer)
+            ? [...impulsePresets, ...reverbPresets].includes(preset.effect.reverb)
+            : eqPresets.includes(preset.effect.equalizer)
     )
 
-    const typeMap = $derived({
-        reverb: custom ? 'custom_reverb' : 'room_reverb',
-        equalizer: custom ? 'custom_eq' : 'spotify_eq'
-    })
+    const listKey = $derived(
+        type === 'reverb'
+            ? custom
+                ? 'custom_reverb'
+                : 'room_reverb'
+            : custom
+              ? 'custom_eq'
+              : 'spotify_eq'
+    )
 
-    let options = $derived(
-        ['none', ...filteredPresets[typeMap[type] as keyof typeof filteredPresets]].map(
-            (preset) => ({
-                label: preset,
-                value: preset
-            })
-        )
+    const options = $derived(
+        ['none', ...filteredPresets[listKey as keyof typeof filteredPresets]].map((preset) => ({
+            label: preset,
+            value: preset
+        }))
     )
 
     async function handleUpdateEffect(value: string) {
-        const updatedPreset = { ...currentPreset }
+        const updatedPreset = { ...currentPreset, effect: { ...currentPreset.effect } }
         if (type === 'reverb') {
             updatedPreset.effect.reverb = value
         } else {
@@ -80,9 +80,9 @@
         configStore.updateAudioPreset({ preset: updatedPreset, type: 'effect' })
     }
 
-    async function handleCustomToggle(checked: boolean) {
-        custom = checked
-        const updatedPreset = { ...currentPreset }
+    async function handleListChange(value: string) {
+        custom = value === 'custom'
+        const updatedPreset = { ...currentPreset, effect: { ...currentPreset.effect } }
         if (type === 'reverb') {
             updatedPreset.effect.reverb = 'none'
         } else {
@@ -95,36 +95,43 @@
             )
         })
 
-        if (updatedPreset.active) configStore.updateAudioPreset({ preset: updatedPreset, type: 'effect' })
+        if (updatedPreset.active)
+            configStore.updateAudioPreset({ preset: updatedPreset, type: 'effect' })
     }
 
-    let label = $derived(custom ? 'custom' : type === 'reverb' ? 'room' : 'spotify')
-    let selected = $derived(
+    const selected = $derived(
         type === 'reverb' ? currentPreset.effect.reverb : currentPreset.effect.equalizer
+    )
+    const listOptions = $derived(
+        type === 'reverb'
+            ? [
+                  { label: 'Room', value: 'room' },
+                  { label: 'Custom', value: 'custom' }
+              ]
+            : [
+                  { label: 'Spotify', value: 'spotify' },
+                  { label: 'Custom', value: 'custom' }
+              ]
     )
 </script>
 
-<div class="flex flex-col gap-y-2">
-    <div class="flex w-full items-center justify-between rounded-md bg-primary-foreground p-4">
-        <h2 class="text-base capitalize">{type}</h2>
-        <div class="flex w-full justify-end gap-4">
-            <Label for={`${type}-custom`} class="text-sm">custom fx</Label>
-            <Switch checked={custom} onCheckedChange={handleCustomToggle} />
-        </div>
-    </div>
-    <div class="flex w-full justify-between gap-2 rounded-md bg-primary-foreground p-4">
-        <Label for={`${type}-custom`} class="text-base">{label}</Label>
-
-        <div class="flex items-center gap-x-3">
-            <CustomSelect {selected} {options} onValueChange={handleUpdateEffect} />
-            <Button
-                size="icon"
-                variant="ghost"
-                class="size-7 [&:svg]:size-4"
-                onclick={() => handleUpdateEffect('none')}
-            >
-                <RotateCcw class="stroke-white" />
-            </Button>
-        </div>
+<div class="flex h-[34px] items-center justify-between gap-x-3">
+    <span class="w-14 shrink-0 text-xs text-ink-fg-2">{type === 'reverb' ? 'Reverb' : 'EQ'}</span>
+    <div class="flex min-w-0 flex-1 items-center justify-end gap-x-2">
+        <SegmentedControl
+            size="xs"
+            ariaLabel={`${type} list`}
+            value={custom ? 'custom' : listOptions[0].value}
+            onValueChange={handleListChange}
+            options={listOptions}
+        />
+        <CustomSelect
+            size="md"
+            key={`${preset.id}-${type}`}
+            {selected}
+            {options}
+            onValueChange={handleUpdateEffect}
+            class="w-[150px] min-w-0"
+        />
     </div>
 </div>
