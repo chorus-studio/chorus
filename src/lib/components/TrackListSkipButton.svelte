@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { Ban } from 'lucide-svelte'
+    import Ban from '@lucide/svelte/icons/ban'
     import * as Tooltip from '$lib/components/ui/tooltip'
     import { buttonVariants } from '$lib/components/ui/button'
 
@@ -68,24 +68,25 @@
             }
         }
     }
+
+    const label = $derived(isBlocked ? 'Unblock track' : 'Block track')
 </script>
 
-<Tooltip.Provider>
+<Tooltip.Provider delayDuration={300}>
     <Tooltip.Root>
         <Tooltip.Trigger
             role="block"
-            aria-label={isBlocked ? 'Unblock Track' : 'Block Track'}
+            aria-label={label}
+            aria-pressed={isBlocked}
             onclick={handleBlock}
             class={buttonVariants({
-                variant: 'ghost',
-                size: 'icon',
-                class: 'size-7 border-none bg-transparent stroke-current hover:bg-transparent [&_svg]:size-[1.125rem]'
+                variant: 'bar',
+                size: 'icon-sm',
+                class: `[&_svg]:size-[18px] ${isBlocked ? 'text-signal opacity-100' : ''}`
             })}
         >
-            <Ban role="block" size={24} color={isBlocked ? '#1ed760' : 'currentColor'} />
+            <Ban role="block" />
         </Tooltip.Trigger>
-        <Tooltip.Content class="bg-background p-2 text-sm text-white">
-            <p>{isBlocked ? 'Unblock Track' : 'Block Track'}</p>
-        </Tooltip.Content>
+        <Tooltip.Content>{label}</Tooltip.Content>
     </Tooltip.Root>
 </Tooltip.Provider>

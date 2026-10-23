@@ -3,14 +3,13 @@
     import { trackObserver } from '$lib/observers/track'
     import { nowPlaying } from '$lib/stores/now-playing'
 
-    import { Ban } from 'lucide-svelte'
+    import Ban from '@lucide/svelte/icons/ban'
     import * as Tooltip from '$lib/components/ui/tooltip'
     import { buttonVariants } from '$lib/components/ui/button'
 
     async function handleBlock(): Promise<void> {
         if ($nowPlaying.track_id) {
             const { cover, track_id } = $nowPlaying
-            console.log({ cover, track_id })
 
             await dataStore.updateTrack({
                 track_id,
@@ -28,23 +27,21 @@
     }
 </script>
 
-<Tooltip.Provider>
+<Tooltip.Provider delayDuration={300}>
     <Tooltip.Root>
         <Tooltip.Trigger
             role="block"
             id="chorus-block"
-            aria-label="Block Track"
+            aria-label="Block track and skip"
             onclick={handleBlock}
             class={buttonVariants({
-                variant: 'ghost',
-                size: 'icon',
-                class: 'size-7 border-none bg-transparent stroke-current hover:bg-transparent [&_svg]:size-[1.125rem]'
+                variant: 'bar',
+                size: 'icon-sm',
+                class: '[&_svg]:size-[18px]'
             })}
         >
-            <Ban size={24} />
+            <Ban />
         </Tooltip.Trigger>
-        <Tooltip.Content class="bg-background p-2 text-sm text-white">
-            <p>Block Track</p>
-        </Tooltip.Content>
+        <Tooltip.Content>Block track and skip</Tooltip.Content>
     </Tooltip.Root>
 </Tooltip.Provider>

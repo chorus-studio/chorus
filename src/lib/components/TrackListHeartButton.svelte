@@ -1,6 +1,6 @@
 <script lang="ts">
     import { onMount } from 'svelte'
-    import { Heart } from 'lucide-svelte'
+    import Heart from '@lucide/svelte/icons/heart'
 
     import { dataStore } from '$lib/stores/data'
     import type { SimpleTrack } from '$lib/stores/data/cache'
@@ -46,30 +46,25 @@
             isLiked = track?.liked ?? false
         }
     })
+
+    const label = $derived(isLiked ? 'Remove from Liked Songs' : 'Add to Liked Songs')
 </script>
 
-<Tooltip.Provider>
+<Tooltip.Provider delayDuration={300}>
     <Tooltip.Root>
         <Tooltip.Trigger
             role="heart"
             onclick={handleClick}
-            aria-label={isLiked ? 'Remove from Liked Songs' : 'Add to Liked Songs'}
+            aria-label={label}
+            aria-pressed={isLiked}
             class={buttonVariants({
-                variant: 'ghost',
-                size: 'icon',
-                class: 'size-7 border-none bg-transparent stroke-current px-0 hover:bg-transparent [&_svg]:size-[1.125rem]'
+                variant: 'bar',
+                size: 'icon-sm',
+                class: `[&_svg]:size-[18px] ${isLiked ? 'text-signal opacity-100' : ''}`
             })}
         >
-            <Heart
-                role="heart"
-                size={24}
-                class={`${isLiked ? 'fill-[#1ed760]' : 'fill-transparent'} ${
-                    isLiked ? 'stroke-[#1ed760]' : 'stroke-current'
-                }`}
-            />
+            <Heart role="heart" class={isLiked ? 'fill-current' : ''} />
         </Tooltip.Trigger>
-        <Tooltip.Content class="bg-background p-2 text-sm text-white">
-            <p>{isLiked ? 'Remove from Liked Songs' : 'Add to Liked Songs'}</p>
-        </Tooltip.Content>
+        <Tooltip.Content>{label}</Tooltip.Content>
     </Tooltip.Root>
 </Tooltip.Provider>

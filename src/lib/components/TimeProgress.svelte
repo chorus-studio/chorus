@@ -4,6 +4,9 @@
     import { trackObserver } from '$lib/observers/track'
     import { Progress } from '$lib/components/ui/progress'
 
+    // Two homes: grafted into Spotify's player bar (id chorus-time-progress,
+    // inherits Spotify's white-on-black) and inside the popup/PiP, where the
+    // album palette sets --bg / --text / --accent on the root.
     let {
         pip = false,
         port,
@@ -30,7 +33,8 @@
         // Only clamp the upper bound when duration is known — clamping to the
         // 0 sentinel would turn every seek into a track restart. Overshoots
         // are clamped by the media element itself.
-        const target = duration > 0 ? Math.max(0, Math.min(seconds, duration)) : Math.max(0, seconds)
+        const target =
+            duration > 0 ? Math.max(0, Math.min(seconds, duration)) : Math.max(0, seconds)
         $nowPlaying.current = target
         if (port) {
             port.postMessage({ type: 'current_time', data: target })
@@ -76,27 +80,29 @@
     }
 
     const isChorus = $derived(id === 'chorus-time-progress')
-    const progressColor = $derived(isChorus || pip ? 'bg-white' : 'bg-[var(--text)]')
-    const textColor = $derived(isChorus || pip ? 'text-white' : 'text-[var(--text)]')
-    const bgColor = $derived(isChorus || pip ? 'bg-gray-600' : 'bg-[var(--bg)]')
-    const borderColor = $derived(isChorus || pip ? 'border-[#7c7c7c]' : 'border-[var(--text)]')
+    // In the player bar: white fill, green snip region. In the popup/PiP: the
+    // album text colour fills, the adaptive accent marks the snip.
+    const fillClass = $derived(isChorus ? 'bg-ink-fg' : 'bg-[color:var(--text)]')
+    const trackClass = $derived(isChorus ? 'bg-ink-fg/15' : 'bg-[color:var(--text)] opacity-[0.22]')
+    const snipColor = $derived(isChorus ? 'hsl(var(--signal))' : 'var(--album-accent)')
+    const timeClass = $derived(isChorus ? 'text-ink-muted' : 'text-[color:var(--text-2)]')
     const currentPosition = $derived(Math.round($nowPlaying.current ?? 0))
+    const current = $derived($nowPlaying.current >= 0 ? formatTime($nowPlaying.current) : '-:--')
+    const total = $derived($nowPlaying.duration ? formatTime($nowPlaying.duration) : '-:--')
 </script>
 
-<div class="relative flex w-full items-center {isChorus ? 'mt-2' : ''} justify-between gap-x-3">
+<div class="relative flex w-full items-center gap-x-2 {isChorus ? 'mt-1' : ''}">
     {#if isChorus && $nowPlaying.playback}
-        <span class="min-w-7 text-xs font-semibold text-[#1ed760]">
-            {$nowPlaying.playback.rate}x
+        <span class="min-w-7 text-right font-mono text-[11px] font-medium tabular-nums text-signal">
+            {$nowPlaying.playback.rate.value}×
         </span>
     {/if}
 
-    <div
-        class="flex w-full {isChorus ? 'gap-x-3' : 'mt-3.5 flex-col'} items-center justify-between"
-    >
+    <div class="flex w-full {isChorus ? 'items-center gap-x-2' : 'flex-col gap-y-1.5'}">
         {#if isChorus}
-            <span class="min-w-7 text-xs font-semibold text-white">
-                {$nowPlaying.current >= 0 ? formatTime($nowPlaying.current) : '-:--'}
-            </span>
+            <span class="min-w-8 text-right font-mono text-[11px] {timeClass} tabular-nums"
+                >{current}</span
+            >
         {/if}
 
         <div
@@ -105,22 +111,24 @@
             tabindex={0}
             bind:this={sliderRef}
             aria-label="Time slider"
-            class="relative w-full"
+            aria-valuemin={0}
+            aria-valuemax={$nowPlaying.duration || 0}
             aria-valuenow={currentPosition}
+            class="group relative w-full cursor-pointer py-1.5 focus-visible:outline-none"
             onkeydown={handleKeydown}
             onmousedown={setProgress}
             onmousemove={handleMouseMove}
             onmouseenter={() => (isHovering = true)}
             onmouseleave={() => (isHovering = false)}
         >
-            {#if isHovering}
+            {#if isHovering && $nowPlaying.duration > 0}
                 <div
-                    class="absolute bottom-full -translate-x-1/2 rounded-sm px-1"
+                    class="pointer-events-none absolute bottom-full -translate-x-1/2 rounded-sm bg-surface-2 px-1 py-0.5"
                     style="left: {(hoverPosition / $nowPlaying.duration) * 100}%"
                 >
-                    <span class="text-xs font-semibold {textColor} brightness-75">
-                        {formatTime(hoverPosition)}
-                    </span>
+                    <span class="font-mono text-[10px] text-ink-fg"
+                        >{formatTime(hoverPosition)}</span
+                    >
                 </div>
             {/if}
             <Progress
@@ -129,40 +137,26 @@
                           {
                               start: $nowPlaying.snip?.start_time,
                               end: $nowPlaying.snip?.end_time,
-                              color: '#1ed760'
+                              color: snipColor
                           }
                       ]
                     : []}
+                dividerColor={snipColor}
                 value={currentPosition ?? 0}
                 max={$nowPlaying.duration ?? 100}
-                innerClass="{progressColor} {isChorus ? 'brightness-100' : 'brightness-75'}"
-                class="h-1.5 {isChorus
-                    ? 'rounded-sm'
-                    : 'rounded-none'} border-[0.5px] {borderColor} {bgColor} {isChorus
-                    ? 'brightness-100'
-                    : 'brightness-75'}"
+                innerClass={fillClass}
+                class="h-1 rounded-full {trackClass} transition-all group-hover:h-1.5 group-focus-visible:ring-2 group-focus-visible:ring-signal/60"
             />
         </div>
 
         {#if isChorus}
-            <span class="min-w-7 text-xs font-semibold text-white">
-                {$nowPlaying.duration ? formatTime($nowPlaying.duration) : '-:--'}
-            </span>
+            <span class="min-w-8 font-mono text-[11px] {timeClass} tabular-nums">{total}</span>
         {:else}
-            <div class="flex w-full items-center justify-between gap-1">
-                <span class="text-xs font-semibold text-[var(--text)] brightness-75">
-                    {$nowPlaying.current >= 0 ? formatTime($nowPlaying.current) : '-:--'}
-                </span>
-
-                {#if $nowPlaying.playback}
-                    <span class="text-xs font-semibold text-[var(--text)] brightness-75">
-                        {$nowPlaying.playback.rate}x
-                    </span>
-                {/if}
-
-                <span class="text-xs font-semibold text-[var(--text)] brightness-75">
-                    {$nowPlaying.duration ? formatTime($nowPlaying.duration) : '-:--'}
-                </span>
+            <div
+                class="flex w-full items-center justify-between font-mono text-[10px] {timeClass} tabular-nums"
+            >
+                <span>{current}</span>
+                <span>{total}</span>
             </div>
         {/if}
     </div>
