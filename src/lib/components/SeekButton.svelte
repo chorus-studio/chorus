@@ -4,16 +4,22 @@
     import * as Tooltip from '$lib/components/ui/tooltip'
     import { buttonVariants } from '$lib/components/ui/button'
 
-    export let role: 'seek-forward' | 'seek-backward'
+    let { role }: { role: 'seek-forward' | 'seek-backward' } = $props()
 
-    function handleSeek() {
-        const offset = isForward
+    const isForward = $derived(role == 'seek-forward')
+    const isLongForm = $derived($seekStore.media_type == 'long_form')
+    const seekValue = $derived(
+        isForward
             ? isLongForm
                 ? $seekStore.long_form.forward
                 : $seekStore.default.forward
             : isLongForm
               ? $seekStore.long_form.rewind
               : $seekStore.default.rewind
+    )
+
+    function handleSeek() {
+        const offset = seekValue
 
         // Only clamp forward seeks when duration is known — 0 means "never
         // known", and clamping to it would restart the track. The media
@@ -27,52 +33,43 @@
         window.postMessage({ type: 'FROM_CURRENT_TIME_LISTENER', data: value }, '*')
     }
 
-    const id = role == 'seek-forward' ? 'seek-player-ff-button' : 'seek-player-rw-button'
-    $: isForward = role == 'seek-forward'
-    $: isLongForm = $seekStore.media_type == 'long_form'
-    $: seekValue = isForward
-        ? isLongForm
-            ? $seekStore.long_form.forward
-            : $seekStore.default.forward
-        : isLongForm
-          ? $seekStore.long_form.rewind
-          : $seekStore.default.rewind
+    const id = $derived(role == 'seek-forward' ? 'seek-player-ff-button' : 'seek-player-rw-button')
+    const label = $derived(
+        isForward ? `Seek forward ${seekValue} seconds` : `Seek back ${seekValue} seconds`
+    )
 </script>
 
-<Tooltip.Provider>
+<Tooltip.Provider delayDuration={300}>
     <Tooltip.Root>
         <Tooltip.Trigger
             {id}
             onclick={handleSeek}
-            aria-label={role == 'seek-forward' ? 'Seek forward' : 'Seek backward'}
+            aria-label={label}
             class={buttonVariants({
-                variant: 'ghost',
+                variant: 'bar',
                 size: 'icon',
-                class: 'relative flex size-8 items-center justify-center border-none bg-transparent stroke-none px-0 hover:bg-transparent [&_svg]:size-[1.5rem]'
+                class: 'relative [&_svg]:size-[22px]'
             })}
         >
             <span
-                class="absolute top-1/2 bg-transparent text-center text-xs font-bold {role ==
-                'seek-forward'
-                    ? 'left-[50%]'
-                    : 'right-[50%]'}"
+                class="pointer-events-none absolute inset-x-0 top-[12px] text-center font-mono text-[8px] font-bold leading-none"
             >
                 {seekValue}
             </span>
             <svg
-                class="-z-10 h-6 w-6 fill-none stroke-current stroke-[5] {role == 'seek-forward'
-                    ? 'scale-x-[-1]'
-                    : ''}"
-                viewBox="0 0 64 64"
-                xmlns="http://www.w3.org/2000/svg"
-                preserveAspectRatio="xMidYMid meet"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                class={isForward ? '-scale-x-100' : ''}
+                aria-hidden="true"
             >
-                <path d="M34.46,53.91A21.91,21.91,0,1,0,12.55,31.78"></path>
-                <polyline points="4.65 22.33 12.52 32.62 22.81 24.75"></polyline>
+                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                <path d="M3 3v5h5" />
             </svg>
         </Tooltip.Trigger>
-        <Tooltip.Content class="bg-background p-2 text-sm text-white">
-            <p>{role == 'seek-forward' ? `Seek forward` : `Seek backward`}</p>
-        </Tooltip.Content>
+        <Tooltip.Content>{label}</Tooltip.Content>
     </Tooltip.Root>
 </Tooltip.Provider>

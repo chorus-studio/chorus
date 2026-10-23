@@ -1,10 +1,12 @@
 <script lang="ts">
+    import { onMount } from 'svelte'
     import { pipStore } from '$lib/stores/pip'
     import { settingsStore } from '$lib/stores/settings'
     import { togglePictureInPicture } from '$lib/utils/pip'
 
-    import { Button } from '$lib/components/ui/button'
-    import PictureInPicture from '@lucide/svelte/icons/picture-in-picture'
+    import * as Tooltip from '$lib/components/ui/tooltip'
+    import { buttonVariants } from '$lib/components/ui/button'
+    import PictureInPicture2 from '@lucide/svelte/icons/picture-in-picture-2'
 
     let pipWindow: DocumentPictureInPictureWindow | undefined = $state()
 
@@ -19,6 +21,7 @@
     }
 
     const show = $derived($settingsStore.ui.pip)
+    const label = $derived($pipStore.active ? 'Close floating player' : 'Open floating player')
 
     onMount(() => {
         pipStore.reset()
@@ -27,15 +30,22 @@
 </script>
 
 {#if show}
-    <Button
-        size="icon"
-        id="chorus-pip"
-        variant="secondary"
-        onclick={togglePip}
-        class="size-7 border-none {$pipStore.active
-            ? 'text-[#1ed367]'
-            : 'text-muted-foreground'}  bg-transparent stroke-current hover:bg-transparent [&_svg]:size-[1.125rem]"
-    >
-        <PictureInPicture />
-    </Button>
+    <Tooltip.Provider delayDuration={300}>
+        <Tooltip.Root>
+            <Tooltip.Trigger
+                id="chorus-pip"
+                onclick={togglePip}
+                aria-label={label}
+                aria-pressed={$pipStore.active}
+                class={buttonVariants({
+                    variant: 'bar',
+                    size: 'icon-sm',
+                    class: `[&_svg]:size-[18px] ${$pipStore.active ? 'text-signal opacity-100' : ''}`
+                })}
+            >
+                <PictureInPicture2 />
+            </Tooltip.Trigger>
+            <Tooltip.Content>{label}</Tooltip.Content>
+        </Tooltip.Root>
+    </Tooltip.Provider>
 {/if}
