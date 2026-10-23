@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 440 280" width="440" height="280">
+  <defs>
+    <radialGradient id="glow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(0 0) scale(396 196)">
+      <stop offset="0" stop-color="#1ed760" stop-opacity="0.18"/>
+      <stop offset="0.6" stop-color="#1ed760" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="440" height="280" fill="#121212"/>
+  <rect width="440" height="280" fill="url(#glow)"/>
+  <g transform="translate(370 -60) scale(2.34)" opacity="0.08" fill="none">
+    <path d="M107.2 36.97A51 51 0 1 0 107.2 91.03" stroke="#1ed760" stroke-width="14" stroke-linecap="round"/>
+    <path d="M86.98 44.72A30 30 0 1 0 86.98 83.28" stroke="#1ed760" stroke-width="14" stroke-linecap="round"/>
+    <circle cx="64" cy="64" r="10" fill="#ffffff"/>
+  </g>
+  <g transform="translate(36 32) scale(0.375)" fill="none">
+    <path d="M107.2 36.97A51 51 0 1 0 107.2 91.03" stroke="#1ed760" stroke-width="14" stroke-linecap="round"/>
+    <path d="M86.98 44.72A30 30 0 1 0 86.98 83.28" stroke="#1ed760" stroke-width="14" stroke-linecap="round"/>
+    <circle cx="64" cy="64" r="10" fill="#ffffff"/>
+  </g>
+  <text x="98" y="63" font-family="Space Grotesk, Inter, Helvetica Neue, Arial, sans-serif" font-weight="700" font-size="34" letter-spacing="-1" fill="#ffffff">Chorus</text>
+  <text x="98" y="80" font-family="Space Mono, Menlo, monospace" font-size="11" letter-spacing="2" fill="#b3b3b3">FOR SPOTIFY</text>
+  <text x="36" y="178" font-family="Space Grotesk, Inter, Helvetica Neue, Arial, sans-serif" font-weight="700" font-size="26" letter-spacing="-0.8" fill="#ffffff">The studio</text>
+  <text x="36" y="206" font-family="Space Grotesk, Inter, Helvetica Neue, Arial, sans-serif" font-weight="700" font-size="26" letter-spacing="-0.8" fill="#1ed760">Spotify forgot.</text>
+  <g font-family="Inter, Helvetica Neue, Arial, sans-serif" font-size="11" fill="#dcdcdc">
+    <rect x="36" y="226" width="106" height="22" rx="11" fill="none" stroke="#ffffff" stroke-opacity="0.14"/>
+    <text x="89" y="240.5" text-anchor="middle">Loop any section</text>
+    <rect x="148" y="226" width="118" height="22" rx="11" fill="none" stroke="#ffffff" stroke-opacity="0.14"/>
+    <text x="207" y="240.5" text-anchor="middle">Speed · pitch · key</text>
+    <rect x="272" y="226" width="82" height="22" rx="11" fill="none" stroke="#ffffff" stroke-opacity="0.14"/>
+    <text x="313" y="240.5" text-anchor="middle">EQ &amp; reverb</text>
+    <rect x="360" y="226" width="64" height="22" rx="11" fill="none" stroke="#ffffff" stroke-opacity="0.14"/>
+    <text x="392" y="240.5" text-anchor="middle">Auto-skip</text>
+  </g>
+</svg>

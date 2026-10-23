@@ -41,6 +41,7 @@ export default defineConfig({
     zip: {
         excludeSources: [
             '.claude/**/*',
+            'branding/**/*',
             '.github/**/*',
             '.vscode/**/*',
             'promo/**/*',

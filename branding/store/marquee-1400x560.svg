@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 560" width="1400" height="560">
+  <defs>
+    <radialGradient id="glow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(0 280) scale(980 504)">
+      <stop offset="0" stop-color="#1ed760" stop-opacity="0.14"/>
+      <stop offset="0.6" stop-color="#1ed760" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1400" height="560" fill="#121212"/>
+  <rect width="1400" height="560" fill="url(#glow)"/>
+  <!-- large watermark mark -->
+  <g transform="translate(900 -60) scale(5.2)" opacity="0.06" fill="none">
+    <path d="M107.2 36.97A51 51 0 1 0 107.2 91.03" stroke="#1ed760" stroke-width="14" stroke-linecap="round"/>
+    <path d="M86.98 44.72A30 30 0 1 0 86.98 83.28" stroke="#1ed760" stroke-width="14" stroke-linecap="round"/>
+    <circle cx="64" cy="64" r="10" fill="#ffffff"/>
+  </g>
+  <!-- lock-up -->
+  <g transform="translate(80 92) scale(0.44)" fill="none">
+    <path d="M107.2 36.97A51 51 0 1 0 107.2 91.03" stroke="#1ed760" stroke-width="14" stroke-linecap="round"/>
+    <path d="M86.98 44.72A30 30 0 1 0 86.98 83.28" stroke="#1ed760" stroke-width="14" stroke-linecap="round"/>
+    <circle cx="64" cy="64" r="10" fill="#ffffff"/>
+  </g>
+  <text x="152" y="128" font-family="Space Grotesk, Inter, Helvetica Neue, Arial, sans-serif" font-weight="700" font-size="40" letter-spacing="-1.2" fill="#ffffff">Chorus</text>
+  <text x="152" y="150" font-family="Space Mono, Menlo, monospace" font-size="12" letter-spacing="2.2" fill="#b3b3b3">FOR SPOTIFY · FREE &amp; OPEN SOURCE</text>
+  <text x="80" y="262" font-family="Space Grotesk, Inter, Helvetica Neue, Arial, sans-serif" font-weight="700" font-size="56" letter-spacing="-1.8" fill="#ffffff">The studio</text>
+  <text x="80" y="320" font-family="Space Grotesk, Inter, Helvetica Neue, Arial, sans-serif" font-weight="700" font-size="56" letter-spacing="-1.8" fill="#1ed760">Spotify forgot.</text>
+  <text font-family="Inter, Helvetica Neue, Arial, sans-serif" font-size="18" fill="#b3b3b3">
+    <tspan x="80" y="372">Loop the chorus forever, change speed, pitch and key, shape the sound</tspan>
+    <tspan x="80" y="398">with EQ and reverb, and auto-skip the tracks you never want to hear again.</tspan>
+  </text>
+  <g font-family="Inter, Helvetica Neue, Arial, sans-serif" font-size="13" fill="#dcdcdc">
+    <rect x="80" y="430" width="118" height="30" rx="15" fill="none" stroke="#ffffff" stroke-opacity="0.14"/><text x="139" y="449.5" text-anchor="middle">Snips &amp; loops</text>
+    <rect x="208" y="430" width="146" height="30" rx="15" fill="none" stroke="#ffffff" stroke-opacity="0.14"/><text x="281" y="449.5" text-anchor="middle">Speed · pitch · key</text>
+    <rect x="364" y="430" width="104" height="30" rx="15" fill="none" stroke="#ffffff" stroke-opacity="0.14"/><text x="416" y="449.5" text-anchor="middle">10-band EQ</text>
+    <rect x="478" y="430" width="78" height="30" rx="15" fill="none" stroke="#ffffff" stroke-opacity="0.14"/><text x="517" y="449.5" text-anchor="middle">Reverb</text>
+    <rect x="566" y="430" width="140" height="30" rx="15" fill="none" stroke="#ffffff" stroke-opacity="0.14"/><text x="636" y="449.5" text-anchor="middle">Auto-skip &amp; block</text>
+  </g>
+  <!-- product vignette: popup + popover silhouettes -->
+  <g transform="translate(820 110)">
+    <rect x="300" y="0" width="320" height="196" rx="10" fill="#1b6b63" stroke="#ffffff" stroke-opacity="0.14"/>
+    <rect x="312" y="40" width="52" height="52" rx="6" fill="#2a9d8f"/>
+    <rect x="374" y="44" width="110" height="10" rx="3" fill="#eafff9"/>
+    <rect x="374" y="62" width="60" height="8" rx="3" fill="#eafff9" fill-opacity="0.7"/>
+    <rect x="312" y="112" width="296" height="4" rx="2" fill="#eafff9" fill-opacity="0.22"/>
+    <rect x="394" y="109" width="72" height="10" rx="2" fill="#eafff9" fill-opacity="0.2" stroke="#eafff9" stroke-width="2"/>
+    <rect x="312" y="112" width="100" height="4" rx="2" fill="#eafff9"/>
+    <circle cx="460" cy="160" r="16" fill="#eafff9"/>
+    <rect x="0" y="70" width="400" height="320" rx="12" fill="#121212" stroke="#ffffff" stroke-opacity="0.16"/>
+    <rect x="0" y="114" width="400" height="1" fill="#ffffff" fill-opacity="0.08"/>
+    <g transform="translate(12 83) scale(0.14)" fill="none">
+      <path d="M107.2 36.97A51 51 0 1 0 107.2 91.03" stroke="#1ed760" stroke-width="14" stroke-linecap="round"/>
+      <path d="M86.98 44.72A30 30 0 1 0 86.98 83.28" stroke="#1ed760" stroke-width="14" stroke-linecap="round"/>
+      <circle cx="64" cy="64" r="10" fill="#ffffff"/>
+    </g>
+    <rect x="38" y="84" width="58" height="26" rx="6" fill="#2a2a2a"/>
+    <text x="67" y="101" font-family="Inter, Helvetica Neue, Arial, sans-serif" font-size="12" font-weight="500" fill="#ffffff" text-anchor="middle">Snip</text>
+    <g fill="#b3b3b3"><rect x="104" y="92" width="10" height="10" rx="2"/><rect x="134" y="92" width="10" height="10" rx="2"/><rect x="164" y="92" width="10" height="10" rx="2"/><rect x="194" y="92" width="10" height="10" rx="2"/><rect x="224" y="92" width="10" height="10" rx="2"/><rect x="254" y="92" width="10" height="10" rx="2"/><rect x="374" y="92" width="10" height="10" rx="2"/></g>
+    <text x="16" y="138" font-family="Inter, Helvetica Neue, Arial, sans-serif" font-size="12" font-weight="500" fill="#ffffff">Midnight City</text>
+    <text x="100" y="138" font-family="Inter, Helvetica Neue, Arial, sans-serif" font-size="12" fill="#b3b3b3">· M83</text>
+    <rect x="16" y="166" width="368" height="30" rx="6" fill="#0a0a0a" stroke="#ffffff" stroke-opacity="0.08"/>
+    <rect x="117" y="167" width="90" height="28" fill="#1ed760" fill-opacity="0.16"/>
+    <rect x="112" y="162" width="10" height="38" rx="4" fill="#1ed760"/>
+    <rect x="202" y="162" width="10" height="38" rx="4" fill="#1ed760"/>
+    <rect x="143" y="160" width="2" height="38" fill="#ffffff"/>
+    <text x="117" y="214" font-family="Space Mono, Menlo, monospace" font-size="10" fill="#1ed760" text-anchor="middle">1:07.0</text>
+    <text x="207" y="214" font-family="Space Mono, Menlo, monospace" font-size="10" fill="#1ed760" text-anchor="middle">2:06.0</text>
+    <rect x="16" y="246" width="110" height="28" rx="6" fill="#0a0a0a" stroke="#ffffff" stroke-opacity="0.08"/>
+    <rect x="146" y="246" width="110" height="28" rx="6" fill="#0a0a0a" stroke="#ffffff" stroke-opacity="0.08"/>
+    <rect x="276" y="246" width="108" height="28" rx="6" fill="#0a0a0a" stroke="#ffffff" stroke-opacity="0.08"/>
+    <text x="71" y="264" font-family="Space Mono, Menlo, monospace" font-size="12" fill="#ffffff" text-anchor="middle">01:07.0</text>
+    <text x="201" y="264" font-family="Space Mono, Menlo, monospace" font-size="12" fill="#ffffff" text-anchor="middle">02:06.0</text>
+    <text x="330" y="264" font-family="Space Mono, Menlo, monospace" font-size="12" fill="#b3b3b3" text-anchor="middle">0:59.0</text>
+    <rect x="0" y="350" width="400" height="1" fill="#ffffff" fill-opacity="0.08"/>
+    <rect x="318" y="356" width="70" height="28" rx="6" fill="#1ed760"/>
+    <text x="353" y="374" font-family="Inter, Helvetica Neue, Arial, sans-serif" font-size="12" font-weight="500" fill="#121212" text-anchor="middle">Update</text>
+    <text x="256" y="374" font-family="Inter, Helvetica Neue, Arial, sans-serif" font-size="12" font-weight="500" fill="#f15e6c">Delete</text>
+  </g>
+</svg>

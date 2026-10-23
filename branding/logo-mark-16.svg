@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" fill="none">
+  <!-- 16px: one arc and the voice dot; the inner arc would turn to mush at this size. -->
+  <path d="M107.2 36.97A51 51 0 1 0 107.2 91.03" stroke="#1ed760" stroke-width="24" stroke-linecap="round"/>
+  <circle cx="64" cy="64" r="16" fill="#1ed760"/>
+</svg>
