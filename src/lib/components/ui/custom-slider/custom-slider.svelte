@@ -5,6 +5,7 @@
         min = 0,
         max = 100,
         step = 1,
+        label = 'slider',
         onValueChange
     }: {
         type: 'single' | 'multiple'
@@ -12,6 +13,7 @@
         min: number
         max: number
         step: number
+        label?: string
         onValueChange: (value: number | number[]) => void
     } = $props()
 
@@ -19,26 +21,24 @@
     let leftInput: HTMLInputElement
     let rightInput: HTMLInputElement | null = $state(null)
 
-    // Calculate initial percentages
+    // Keep the fill (--start/--stop) and the native inputs in sync with `value`.
     $effect(() => {
-        const range = max - min
+        const range = max - min || 1
         if (sliderElement && leftInput) {
             if (type === 'single') {
-                let currentValue = value as number
+                const currentValue = value as number
                 const percent = ((currentValue - min) / range) * 100
                 sliderElement.style.setProperty('--start', '0%')
                 sliderElement.style.setProperty('--stop', `${percent}%`)
                 leftInput.value = currentValue.toString()
             } else if (type === 'multiple' && rightInput) {
-                let currentValue = value as number[]
-                const startPercent =
-                    ((Math.min(currentValue[0], currentValue[1]) - min) / range) * 100
-                const stopPercent =
-                    ((Math.max(currentValue[0], currentValue[1]) - min) / range) * 100
-                sliderElement.style.setProperty('--start', `${startPercent}%`)
-                sliderElement.style.setProperty('--stop', `${stopPercent}%`)
-                leftInput.value = Math.min(currentValue[0], currentValue[1]).toString()
-                rightInput.value = Math.max(currentValue[0], currentValue[1]).toString()
+                const currentValue = value as number[]
+                const lo = Math.min(currentValue[0], currentValue[1])
+                const hi = Math.max(currentValue[0], currentValue[1])
+                sliderElement.style.setProperty('--start', `${((lo - min) / range) * 100}%`)
+                sliderElement.style.setProperty('--stop', `${((hi - min) / range) * 100}%`)
+                leftInput.value = lo.toString()
+                rightInput.value = hi.toString()
             }
         }
     })
@@ -47,42 +47,29 @@
         const target = e.target as HTMLInputElement
         const newValue = +target.value
         const index = +(target.dataset.index ?? '0')
-        let next
+        let next: number[] | undefined
         if (type === 'multiple') {
             next = [...(value as number[])]
-
-            // Prevent crossing by constraining the values
+            // Thumbs may not cross.
             if (index === 0) {
-                // Left thumb - cannot go beyond right thumb
                 next[0] = Math.min(newValue, next[1])
-                // Update the input value to reflect the constraint
                 target.value = next[0].toString()
             } else {
-                // Right thumb - cannot go below left thumb
                 next[1] = Math.max(newValue, next[0])
-                // Update the input value to reflect the constraint
                 target.value = next[1].toString()
             }
         }
         onValueChange(next ?? newValue)
 
-        // Calculate percentages for CSS variables
-        const range = max - min
+        const range = max - min || 1
+        const slider = target.closest('.slider') as HTMLElement
+        if (!slider) return
         if (type === 'single') {
-            const percent = ((newValue - min) / range) * 100
-            const slider = target.closest('.slider') as HTMLElement
-            if (slider) {
-                slider.style.setProperty('--start', '0%')
-                slider.style.setProperty('--stop', `${percent}%`)
-            }
-        } else if (type === 'multiple' && next) {
-            const startPercent = ((Math.min(...next) - min) / range) * 100
-            const stopPercent = ((Math.max(...next) - min) / range) * 100
-            const slider = target.closest('.slider') as HTMLElement
-            if (slider) {
-                slider.style.setProperty('--start', `${startPercent}%`)
-                slider.style.setProperty('--stop', `${stopPercent}%`)
-            }
+            slider.style.setProperty('--start', '0%')
+            slider.style.setProperty('--stop', `${((newValue - min) / range) * 100}%`)
+        } else if (next) {
+            slider.style.setProperty('--start', `${((Math.min(...next) - min) / range) * 100}%`)
+            slider.style.setProperty('--stop', `${((Math.max(...next) - min) / range) * 100}%`)
         }
     }
 </script>
@@ -94,6 +81,7 @@
         {step}
         type="range"
         data-index="0"
+        aria-label={type === 'multiple' ? `${label} start` : label}
         bind:this={leftInput}
         oninput={handleValueChange}
         value={Array.isArray(value) ? value[0] : value}
@@ -105,6 +93,7 @@
             {step}
             type="range"
             data-index="1"
+            aria-label={`${label} end`}
             bind:this={rightInput}
             oninput={handleValueChange}
             value={Array.isArray(value) ? value[1] : value}
@@ -114,89 +103,79 @@
 
 <style>
     .slider {
-        position: relative;
-        height: 4px;
-        background: #fafafa33;
-    }
-
-    .slider input {
         --start: 0%;
         --stop: 100%;
-        -webkit-appearance: none;
-        appearance: none;
-        background: none;
-        pointer-events: none;
-        position: absolute;
-        height: 4px;
-        width: 100%;
+        height: 16px;
     }
 
+    /* track */
     .slider::before {
         content: '';
         position: absolute;
         left: 0;
         right: 0;
+        top: 50%;
         height: 4px;
+        transform: translateY(-50%);
+        border-radius: 999px;
         background: linear-gradient(
             to right,
-            #fafafa33 var(--start),
-            #22c55e var(--start),
-            #22c55e var(--stop),
-            #fafafa33 var(--stop)
+            hsl(var(--ink-fg) / 0.14) var(--start),
+            hsl(var(--signal)) var(--start),
+            hsl(var(--signal)) var(--stop),
+            hsl(var(--ink-fg) / 0.14) var(--stop)
         );
     }
 
-    /* Default state - no box-shadow */
-    .slider ::-moz-range-thumb {
-        cursor: pointer;
-        pointer-events: auto;
-        width: 10px;
-        height: 10px;
-        border-radius: 50%;
-        background: white;
+    .slider input {
         -webkit-appearance: none;
         appearance: none;
-        margin-top: -1px;
-        box-shadow: none;
-        transition: box-shadow 0.2s ease;
-    }
-
-    /* Hover state */
-    .slider ::-moz-range-thumb:hover {
-        box-shadow: 0 0 0 3px #22c55e;
-    }
-
-    /* Active/focus state */
-    .slider ::-moz-range-thumb:active,
-    .slider ::-moz-range-thumb:focus {
-        box-shadow: 0 0 0 3px #22c55e;
+        background: none;
+        pointer-events: none;
+        position: absolute;
+        top: 0;
+        left: 0;
+        height: 16px;
+        width: 100%;
+        margin: 0;
         outline: none;
     }
 
-    /* Default state - no box-shadow */
-    .slider ::-webkit-slider-thumb {
-        cursor: pointer;
-        pointer-events: auto;
-        width: 10px;
-        height: 10px;
-        border-radius: 50%;
-        background: white;
+    .slider input::-moz-range-track {
+        background: transparent;
+        height: 16px;
+    }
+
+    .slider input::-moz-range-thumb,
+    .slider input::-webkit-slider-thumb {
         -webkit-appearance: none;
         appearance: none;
-        margin-top: -1px;
-        box-shadow: none;
-        transition: box-shadow 0.2s ease;
+        pointer-events: auto;
+        cursor: pointer;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        border: 2px solid hsl(var(--ink));
+        background: hsl(var(--ink-fg));
+        box-shadow: 0 0 0 0 hsl(var(--signal) / 0);
+        transition:
+            box-shadow 0.15s ease,
+            transform 0.15s ease;
+    }
+    .slider input::-webkit-slider-thumb {
+        margin-top: 0;
     }
 
-    /* Hover state */
-    .slider ::-webkit-slider-thumb:hover {
-        box-shadow: 0 0 0 3px #22c55e;
+    .slider input:hover::-webkit-slider-thumb,
+    .slider input:active::-webkit-slider-thumb,
+    .slider input:focus-visible::-webkit-slider-thumb {
+        box-shadow: 0 0 0 4px hsl(var(--signal) / 0.3);
+        transform: scale(1.08);
     }
-
-    /* Active/focus state */
-    .slider ::-webkit-slider-thumb:active,
-    .slider ::-webkit-slider-thumb:focus {
-        box-shadow: 0 0 0 3px #22c55e;
-        outline: none;
+    .slider input:hover::-moz-range-thumb,
+    .slider input:active::-moz-range-thumb,
+    .slider input:focus-visible::-moz-range-thumb {
+        box-shadow: 0 0 0 4px hsl(var(--signal) / 0.3);
+        transform: scale(1.08);
     }
 </style>
