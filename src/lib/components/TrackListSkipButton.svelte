@@ -41,7 +41,7 @@
     async function handleBlock() {
         isBlocked = !isBlocked
 
-        if (track) {
+        if (track?.track_id) {
             const cover = track?.cover || getCoverArt()
             await dataStore.updateTrack({
                 track_id: track.track_id,

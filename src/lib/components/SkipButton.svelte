@@ -10,7 +10,6 @@
     async function handleBlock(): Promise<void> {
         if ($nowPlaying.track_id) {
             const { cover, track_id } = $nowPlaying
-            console.log({ cover, track_id })
 
             await dataStore.updateTrack({
                 track_id,
