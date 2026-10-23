@@ -23,6 +23,35 @@ const config: Config = {
         },
         extend: {
             colors: {
+                // ---- studio tokens ----
+                ink: {
+                    DEFAULT: 'hsl(var(--ink) / <alpha-value>)',
+                    fg: 'hsl(var(--ink-fg) / <alpha-value>)',
+                    'fg-2': 'hsl(var(--ink-fg-2) / <alpha-value>)',
+                    muted: 'hsl(var(--ink-muted) / <alpha-value>)',
+                    dim: 'hsl(var(--ink-dim) / <alpha-value>)'
+                },
+                panel: 'hsl(var(--panel) / <alpha-value>)',
+                surface: {
+                    DEFAULT: 'hsl(var(--surface) / <alpha-value>)',
+                    2: 'hsl(var(--surface-2) / <alpha-value>)'
+                },
+                inset: 'hsl(var(--inset) / <alpha-value>)',
+                hairline: {
+                    DEFAULT: 'hsl(var(--ink-fg) / 0.08)',
+                    strong: 'hsl(var(--ink-fg) / 0.14)'
+                },
+                dim: 'hsl(var(--ink-dim) / <alpha-value>)',
+                signal: {
+                    DEFAULT: 'hsl(var(--signal) / <alpha-value>)',
+                    bright: 'hsl(var(--signal-bright) / <alpha-value>)',
+                    dark: 'hsl(var(--signal-dark) / <alpha-value>)'
+                },
+                amber: 'hsl(var(--amber) / <alpha-value>)',
+                alarm: 'hsl(var(--alarm) / <alpha-value>)',
+                spotify: 'hsl(var(--spotify) / <alpha-value>)',
+
+                // ---- shadcn aliases ----
                 border: 'hsl(var(--border) / <alpha-value>)',
                 input: 'hsl(var(--input) / <alpha-value>)',
                 ring: 'hsl(var(--ring) / <alpha-value>)',
@@ -55,26 +84,29 @@ const config: Config = {
                 card: {
                     DEFAULT: 'hsl(var(--card) / <alpha-value>)',
                     foreground: 'hsl(var(--card-foreground) / <alpha-value>)'
-                },
-                sidebar: {
-                    DEFAULT: 'hsl(var(--sidebar-background))',
-                    foreground: 'hsl(var(--sidebar-foreground))',
-                    primary: 'hsl(var(--sidebar-primary))',
-                    'primary-foreground': 'hsl(var(--sidebar-primary-foreground))',
-                    accent: 'hsl(var(--sidebar-accent))',
-                    'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
-                    border: 'hsl(var(--sidebar-border))',
-                    ring: 'hsl(var(--sidebar-ring))'
                 }
             },
             borderRadius: {
                 xl: 'calc(var(--radius) + 4px)',
                 lg: 'var(--radius)',
-                md: 'calc(var(--radius) - 2px)',
-                sm: 'calc(var(--radius) - 4px)'
+                md: 'calc(var(--radius) - 4px)',
+                sm: 'calc(var(--radius) - 6px)'
             },
             fontFamily: {
-                sans: [...fontFamily.sans]
+                sans: [...fontFamily.sans],
+                mono: [
+                    'ui-monospace',
+                    'SFMono-Regular',
+                    'SF Mono',
+                    'Menlo',
+                    'Consolas',
+                    'Liberation Mono',
+                    'monospace'
+                ]
+            },
+            boxShadow: {
+                float: '0 12px 40px -12px hsl(var(--ink) / 0.9), 0 0 0 1px hsl(var(--ink-fg) / 0.06)',
+                led: '0 0 6px 1px hsl(var(--signal) / 0.55)'
             },
             keyframes: {
                 'accordion-down': {
@@ -88,12 +120,17 @@ const config: Config = {
                 'caret-blink': {
                     '0%,70%,100%': { opacity: '1' },
                     '20%,50%': { opacity: '0' }
+                },
+                'led-pulse': {
+                    '0%,100%': { opacity: '1' },
+                    '50%': { opacity: '0.45' }
                 }
             },
             animation: {
                 'accordion-down': 'accordion-down 0.2s ease-out',
                 'accordion-up': 'accordion-up 0.2s ease-out',
-                'caret-blink': 'caret-blink 1.25s ease-out infinite'
+                'caret-blink': 'caret-blink 1.25s ease-out infinite',
+                'led-pulse': 'led-pulse 1.6s ease-in-out infinite'
             }
         }
     },
