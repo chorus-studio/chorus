@@ -34,12 +34,49 @@
         }
     }
 
-    function setUILabel(key: keyof SettingsState[SettingsKey]) {
-        const keyStr = String(key)
-        if (key in $settingsStore.views) return `show ${keyStr} tab`
-        if (key == 'playlist') return 'add to playlist'
-        return `v2 ${keyStr} `
-    }
+    const UI_ITEMS = [
+        {
+            key: 'progress',
+            label: 'Chorus progress bar',
+            hint: 'Replaces Spotify’s seek bar with one that shows your snip'
+        },
+        {
+            key: 'volume',
+            label: 'Chorus volume slider',
+            hint: 'Volume up to 300% with a reset point'
+        },
+        {
+            key: 'pip',
+            label: 'Picture-in-picture',
+            hint: 'Float the player in its own window'
+        },
+        {
+            key: 'playlist',
+            label: 'Add-to-playlist button',
+            hint: 'Spotify’s own button next to the track title'
+        },
+        {
+            key: 'theme',
+            label: 'Apply colour theme',
+            hint: 'Recolour Spotify with the theme chosen in Settings'
+        },
+        {
+            key: 'popup',
+            label: 'Palette picker in popup',
+            hint: 'Choose which album colour the popup uses'
+        }
+    ]
+
+    const VIEW_ITEMS = [
+        { key: 'snip', label: 'Snip' },
+        { key: 'speed', label: 'Speed' },
+        { key: 'fx', label: 'Reverb' },
+        { key: 'eq', label: 'EQ' },
+        { key: 'ms', label: 'Stereo' },
+        { key: 'seek', label: 'Seek' }
+    ]
+
+    const uiItems = $derived(UI_ITEMS.filter((item) => item.key !== 'pip' || pipSupported))
 
     function checkIfPipSupported() {
         if (typeof window !== 'undefined' && 'pictureInPictureEnabled' in document) {
@@ -50,27 +87,7 @@
     onMount(checkIfPipSupported)
 </script>
 
-<div class="flex h-full w-full flex-col items-center space-y-2">
-    <div class="flex w-full justify-between gap-x-2">
-        <SettingsSwitch
-            title="ui"
-            type="ui"
-            className="mr-0"
-            setLabel={setUILabel}
-            handleCheckedChange={toggleSettings}
-            list={Object.keys($settingsStore.ui).filter((key) => {
-                if (key == 'pip') return pipSupported
-                return true
-            })}
-        />
-
-        <SettingsSwitch
-            list={Object.keys($settingsStore.views)}
-            title="views"
-            type="views"
-            className="mr-0"
-            setLabel={setUILabel}
-            handleCheckedChange={toggleSettings}
-        />
-    </div>
+<div class="grid grid-cols-2 gap-x-5">
+    <SettingsSwitch title="Player bar" type="ui" items={uiItems} onToggle={toggleSettings} />
+    <SettingsSwitch title="Tabs shown" type="views" items={VIEW_ITEMS} onToggle={toggleSettings} />
 </div>

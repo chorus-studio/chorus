@@ -1,18 +1,22 @@
 <script lang="ts">
+    import { get } from 'svelte/store'
     import { seekStore } from '$lib/stores/seek'
     import { snipStore } from '$lib/stores/snip'
     import { dataStore } from '$lib/stores/data'
     import { effectsStore } from '$lib/stores/effects'
-    import { get } from 'svelte/store'
     import { reverbParamsStore } from '$lib/stores/reverb-params'
     import { eqBandsStore } from '$lib/stores/eq-bands'
     import { eqSubView, fxSubView } from '$lib/stores/effects-ui'
     import { nowPlaying } from '$lib/stores/now-playing'
     import { playbackStore, defaultPlayback } from '$lib/stores/playback'
 
+    import Check from '@lucide/svelte/icons/check'
+    import Power from '@lucide/svelte/icons/power'
+    import Trash2 from '@lucide/svelte/icons/trash-2'
+    import RotateCcw from '@lucide/svelte/icons/rotate-ccw'
     import { Button } from '$lib/components/ui/button'
 
-    export let tab: string
+    let { tab }: { tab: string } = $props()
 
     function getStore() {
         switch (tab) {
@@ -163,59 +167,80 @@
         }
     }
 
-    $: showDelete =
-        (tab == 'snip' && $nowPlaying?.snip) ||
-        (tab == 'speed' && $nowPlaying?.playback && !$playbackStore.is_default)
-    $: showSave =
-        (tab == 'snip' &&
-            $snipStore &&
-            (($nowPlaying?.snip &&
-                ($snipStore.start_time !== $nowPlaying.snip.start_time ||
-                    $snipStore.end_time !== $nowPlaying.snip.end_time)) ||
-                (!$nowPlaying?.snip &&
-                    ($snipStore.start_time !== 0 ||
-                        $snipStore.end_time !== $nowPlaying.duration)))) ||
-        (tab == 'speed' &&
-            !$playbackStore.is_default &&
-            ($playbackStore.track.rate.value != 1 ||
-                !$playbackStore.track.rate.preserves_pitch ||
-                $playbackStore.track.pitch != 1 ||
-                $playbackStore.track.semitone != 0))
+    const showDelete = $derived(
+        Boolean(
+            (tab == 'snip' && $nowPlaying?.snip) ||
+                (tab == 'speed' && $nowPlaying?.playback && !$playbackStore.is_default)
+        )
+    )
+    const showSave = $derived(
+        Boolean(
+            (tab == 'snip' &&
+                $snipStore &&
+                (($nowPlaying?.snip &&
+                    ($snipStore.start_time !== $nowPlaying.snip.start_time ||
+                        $snipStore.end_time !== $nowPlaying.snip.end_time)) ||
+                    (!$nowPlaying?.snip &&
+                        ($snipStore.start_time !== 0 ||
+                            $snipStore.end_time !== $nowPlaying.duration)))) ||
+                (tab == 'speed' &&
+                    !$playbackStore.is_default &&
+                    ($playbackStore.track.rate.value != 1 ||
+                        !$playbackStore.track.rate.preserves_pitch ||
+                        $playbackStore.track.pitch != 1 ||
+                        $playbackStore.track.semitone != 0))
+        )
+    )
+    const hasActions = $derived(['fx', 'eq', 'snip', 'speed', 'seek'].includes(tab))
+    // fx/eq: "Turn off" in the presets view, "Reset config" while editing.
+    const effectSub = $derived(tab === 'fx' ? $fxSubView : tab === 'eq' ? $eqSubView : null)
+    const resetLabel = $derived(
+        effectSub === null ? 'Reset' : effectSub === 'config' ? 'Reset config' : 'Turn off'
+    )
+    const resetTitle = $derived(
+        tab === 'snip'
+            ? 'Reset the bounds to the whole track'
+            : tab === 'speed'
+              ? 'Reset rate, pitch and key to normal'
+              : tab === 'seek'
+                ? 'Back to 10 s / 30 s'
+                : effectSub === 'config'
+                  ? 'Return the sliders to where you started'
+                  : 'Switch the effect off'
+    )
 </script>
 
-<div class="absolute bottom-0 flex items-center gap-x-2">
-    {#if ['fx', 'eq', 'snip', 'speed', 'seek'].includes(tab)}
+{#if hasActions}
+    <div class="flex items-center gap-1">
         {#if !showDelete}
-            <Button
-                variant="outline"
-                size="sm"
-                class="h-5 rounded-[2px] border-none bg-amber-500 px-2 py-0 pb-[0.125rem] text-sm font-semibold text-[#fafafa] hover:bg-amber-600 hover:text-[#fafafa]"
-                onclick={handleReset}
-            >
-                reset
+            <Button variant="ghost" size="sm" onclick={handleReset} title={resetTitle}>
+                {#if resetLabel === 'Turn off'}
+                    <Power class="size-3.5" />
+                {:else}
+                    <RotateCcw class="size-3.5" />
+                {/if}
+                {resetLabel}
             </Button>
         {/if}
 
         {#if showDelete}
             <Button
-                variant="outline"
+                variant="ghost"
                 size="sm"
-                class="h-5 rounded-[2px] border-none bg-red-500 px-2 py-0 pb-[0.125rem] text-sm font-semibold text-[#fafafa] hover:bg-red-600 hover:text-[#fafafa]"
                 onclick={handleDelete}
+                class="text-alarm hover:bg-alarm/10 hover:text-alarm"
+                title={tab === 'snip' ? 'Remove saved snip' : 'Remove saved track speed'}
             >
-                delete
+                <Trash2 class="size-3.5" />
+                Delete
             </Button>
         {/if}
 
         {#if showSave}
-            <Button
-                variant="outline"
-                size="sm"
-                onclick={handleSave}
-                class="h-5 rounded-[2px] border-none bg-green-700 px-2 py-0 pb-[0.125rem] text-sm font-semibold text-[#fafafa] hover:bg-green-800 hover:text-[#fafafa]"
-            >
-                {showDelete ? 'update' : 'save'}
+            <Button size="sm" onclick={handleSave}>
+                <Check class="size-3.5" />
+                {showDelete ? 'Update' : 'Save'}
             </Button>
         {/if}
-    {/if}
-</div>
+    </div>
+{/if}

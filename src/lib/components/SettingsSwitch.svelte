@@ -1,41 +1,40 @@
 <script lang="ts">
-    import { Label } from '$lib/components/ui/label'
     import { Switch } from '$lib/components/ui/switch'
     import { type SettingsState, settingsStore, type SettingsKey } from '$lib/stores/settings'
 
+    // A titled list of switch rows for one settings group.
     let {
-        list,
         title,
         type,
-        className,
-        setLabel,
-        handleCheckedChange
+        items,
+        onToggle
     }: {
-        list: string[]
         title: string
         type: SettingsKey
-        className?: string
-        setLabel: (key: keyof SettingsState[SettingsKey]) => string
-        handleCheckedChange: ({
-            type,
-            key
-        }: {
-            type: SettingsKey
-            key: keyof SettingsState[SettingsKey]
-        }) => void
+        items: Array<{ key: string; label: string; hint?: string }>
+        onToggle: (args: { type: SettingsKey; key: keyof SettingsState[SettingsKey] }) => void
     } = $props()
 </script>
 
-<div class="mr-2 flex w-1/2 flex-col gap-y-2 {className}">
-    <h2 class="text-base font-semibold">{title}</h2>
-    {#each list as key}
-        <div class="flex items-center gap-2">
+<div class="flex min-w-0 flex-col gap-y-0.5">
+    <span class="rack-label flex h-[18px] items-center">{title}</span>
+    {#each items as item (item.key)}
+        {@const checked = Boolean(
+            $settingsStore[type][item.key as keyof SettingsState[typeof type]]
+        )}
+        <label
+            class="flex h-[26px] cursor-pointer items-center justify-between gap-x-2 text-xs {checked
+                ? 'text-ink-fg-2'
+                : 'text-ink-muted'}"
+            title={item.hint}
+        >
+            <span class="truncate">{item.label}</span>
             <Switch
-                checked={$settingsStore[type][key as keyof SettingsState[typeof type]]}
+                {checked}
+                aria-label={item.label}
                 onCheckedChange={() =>
-                    handleCheckedChange({ type, key: key as keyof SettingsState[typeof type] })}
+                    onToggle({ type, key: item.key as keyof SettingsState[typeof type] })}
             />
-            <Label>{setLabel(key as keyof SettingsState[typeof type])}</Label>
-        </div>
+        </label>
     {/each}
 </div>
