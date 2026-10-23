@@ -9,17 +9,20 @@
     const options: { label: string; value: ThemeVibrancy }[] = [
         { label: 'Auto', value: 'Auto' },
         { label: 'Vibrant', value: 'Vibrant' },
-        { label: 'DarkVibrant', value: 'DarkVibrant' },
-        { label: 'LightVibrant', value: 'LightVibrant' },
+        { label: 'Dark vibrant', value: 'DarkVibrant' },
+        { label: 'Light vibrant', value: 'LightVibrant' },
         { label: 'Muted', value: 'Muted' },
-        { label: 'DarkMuted', value: 'DarkMuted' },
-        { label: 'LightMuted', value: 'LightMuted' }
+        { label: 'Dark muted', value: 'DarkMuted' },
+        { label: 'Light muted', value: 'LightMuted' }
     ]
 </script>
 
 <CustomSelect
     size="sm"
+    tone="inherit"
+    key="vibrancy"
     {options}
     selected={$settingsStore.theme.vibrancy}
     onValueChange={setVibrancy}
+    class="w-[104px] min-w-0"
 />

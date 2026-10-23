@@ -2,16 +2,18 @@
     import { onMount } from 'svelte'
     import { cn } from '$lib/utils.js'
 
-    export let text: string
-    export let as: string = 'span'
-    export let className: string = ''
-    export let handleClick: () => void = () => {}
+    let {
+        text,
+        as = 'span',
+        className = '',
+        handleClick = () => {}
+    }: { text: string; as?: string; className?: string; handleClick?: () => void } = $props()
 
     let containerEl: HTMLDivElement
     let measureEl: HTMLSpanElement
-    let scroll = false
+    let scroll = $state(false)
 
-    const baseClasses = 'whitespace-nowrap text-xs xs:text-sm sm:text-base text-muted-foreground'
+    const baseClasses = 'whitespace-nowrap leading-tight'
 
     function checkOverflow() {
         if (containerEl?.clientWidth && measureEl?.scrollWidth) {
@@ -23,13 +25,15 @@
         }
     }
 
-    $: text, checkOverflow()
+    $effect(() => {
+        void text
+        checkOverflow()
+    })
 
     onMount(() => {
         checkOverflow()
         const resizeObserver = new ResizeObserver(() => checkOverflow())
         resizeObserver.observe(containerEl)
-
         return () => resizeObserver.disconnect()
     })
 </script>
@@ -37,7 +41,7 @@
 <!-- Hidden element for measurement -->
 <span
     bind:this={measureEl}
-    class={cn(baseClasses, className, 'absolute -left-[9999px]')}
+    class={cn(baseClasses, className, 'pointer-events-none absolute -left-[9999px]')}
     aria-hidden="true"
 >
     {text}
@@ -47,20 +51,17 @@
     role={as === 'a' ? 'link' : undefined}
     onclick={handleClick}
     bind:this={containerEl}
-    class="relative w-full overflow-hidden whitespace-nowrap"
+    class="relative flex w-full overflow-hidden whitespace-nowrap"
+    class:cursor-pointer={as === 'a'}
 >
     {#if scroll}
-        <slot {as} class={cn(baseClasses, 'marquee', className)}>
-            <span class={cn(baseClasses, 'marquee inline-block text-[var(--text)]', className)}>
-                {text} • {text}
-            </span>
-        </slot>
+        <span class={cn(baseClasses, 'marquee inline-block', className)}>
+            {text} • {text}
+        </span>
     {:else}
-        <slot {as} class={cn(baseClasses, 'text-[var(--text)]', className)}>
-            <span class={cn(baseClasses, className)}>
-                {text}
-            </span>
-        </slot>
+        <span class={cn(baseClasses, 'block max-w-full truncate', className)}>
+            {text}
+        </span>
     {/if}
 </div>
 
