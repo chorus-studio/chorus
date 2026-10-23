@@ -48,7 +48,7 @@
             </Tooltip.Provider>
         </Popover.Trigger>
         <Popover.Content
-            customAnchor="[data-testid='CoverSlotCollapsed__container']"
+            customAnchor="[data-testid='cover-art-container']"
             side="left"
             align="end"
             class="fixed bottom-20 left-[80px] h-[280px] w-[360px] p-0"

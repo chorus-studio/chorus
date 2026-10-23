@@ -16,13 +16,13 @@ export type CurrentSongInfo = {
 
 export const currentSongInfo = (): CurrentSongInfo => {
     const songLabel = document
-        .querySelector('[data-testid="now-playing-widget"]')
+        .querySelector('[data-testid="now-playing-widget-v2"]')
         ?.getAttribute('aria-label')
     const image = document.querySelector(
-        '[data-testid="CoverSlotCollapsed__container"] img'
+        '[data-testid="cover-art-container"] img'
     ) as HTMLImageElement
     const anchor = document.querySelector(
-        '[data-testid="now-playing-widget"] a'
+        '[data-testid="now-playing-widget-v2"] a'
     ) as HTMLAnchorElement
 
     // Remove 'Now playing: ' prefix

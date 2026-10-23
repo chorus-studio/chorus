@@ -205,7 +205,7 @@ function createNowPlayingStore() {
     }
 
     async function observe() {
-        const target = document.querySelector('[data-testid="now-playing-widget"]')
+        const target = document.querySelector('[data-testid="now-playing-widget-v2"]')
         if (!target) return
 
         observer = new MutationObserver(handleMutation)

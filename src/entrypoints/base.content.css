@@ -13,7 +13,7 @@ a[href$='/download'] {
     display: none !important;
 }
 
-[data-test-id='upgrade-button'] {
+[data-testid='upgrade-button'] {
     display: none !important;
 }
 
