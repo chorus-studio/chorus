@@ -59,6 +59,11 @@ export default defineConfig({
         // there. Strip its entrypoint + heavy assets so the Firefox build isn't bloated
         // by ~75MB of unusable binaries (51MB model + 24MB ORT wasm).
         'entrypoints:resolved'(wxt, entrypoints) {
+            // The UI preview gallery is a dev-only page; keep it out of real builds.
+            if (!process.env.CHORUS_PREVIEW) {
+                const p = entrypoints.findIndex((e) => e.name === 'preview')
+                if (p !== -1) entrypoints.splice(p, 1)
+            }
             if (wxt.config.browser !== 'firefox') return
             const i = entrypoints.findIndex((e) => e.name === 'offscreen')
             if (i !== -1) entrypoints.splice(i, 1)
