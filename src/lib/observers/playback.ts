@@ -132,7 +132,7 @@ export class PlaybackObserver {
 
     togglePlaylistButton() {
         const addToPlaylistButtons = document.querySelectorAll(
-            '[data-testid="now-playing-widget"] > div > button[data-encore-id="buttonTertiary"]'
+            '[data-testid="now-playing-widget-v2"] > div > button[data-encore-id="buttonTertiary"]'
         ) as NodeListOf<HTMLButtonElement>
 
         if (!addToPlaylistButtons?.length) return
@@ -272,7 +272,7 @@ export class PlaybackObserver {
 
         document
             .querySelectorAll(
-                '[data-testid="now-playing-widget"] > div > button[data-encore-id="buttonTertiary"]'
+                '[data-testid="now-playing-widget-v2"] > div > button[data-encore-id="buttonTertiary"]'
             )
             .forEach((node) => {
                 const button = node as HTMLElement

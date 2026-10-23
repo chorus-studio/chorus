@@ -21,10 +21,10 @@ import BlockedTracksDialog from '$lib/components/BlockedTracksDialog.svelte'
 
 // Stable Spotify anchors. The footer `now-playing-bar` persists for the lifetime
 // of the page (only its descendants swap), so it is a reliable observation root.
-// The `now-playing-widget` (track info) and the center control bar are both
+// The `now-playing-widget-v2` (track info) and the center control bar are both
 // re-rendered — and frequently *element-swapped* — by Spotify as tracks change.
 const NOW_PLAYING_BAR = '[data-testid="now-playing-bar"]'
-const NOW_PLAYING_WIDGET = '[data-testid="now-playing-widget"]'
+const NOW_PLAYING_WIDGET = '[data-testid="now-playing-widget-v2"]'
 
 // Tracks the master on/off state in this content-script world, kept in sync with
 // the persisted `local:chorus_enabled` flag so injection points can bail fast.

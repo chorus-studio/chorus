@@ -30,13 +30,12 @@ export class TrackService extends BaseAPIService implements TrackService {
         }
 
         const response = await this.executeGraphQLQuery<any>(COMMON_QUERIES.GET_ALBUM, variables)
+        const trackInfoList = response?.albumUnion?.tracksV2?.items
 
-        if (!response?.albumUnion?.tracksV2?.items) {
-            return null
-        }
+        if (!trackInfoList) return null
 
-        const foundTrack = response.albumUnion.tracksV2.items.find((track: any) => {
-            const artists = track.artists.map((artist: any) => artist.name).join(',')
+        const foundTrack = trackInfoList?.find(({ track }: any) => {
+            const artists = track.artists.items.map((artist: any) => artist.profile.name).join(',')
             const songTitle = `${track.name} by ${artists}`
             return songTitle === songId
         })
