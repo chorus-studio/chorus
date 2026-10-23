@@ -42,6 +42,7 @@ export default defineConfig({
             '.claude/**/*',
             '.github/**/*',
             '.vscode/**/*',
+            'promo/**/*',
             'license.md',
             '.output/**/*',
             'README.md',
