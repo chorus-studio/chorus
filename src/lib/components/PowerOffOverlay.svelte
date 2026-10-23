@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { Power } from 'lucide-svelte'
+    import Logo from '$lib/components/Logo.svelte'
 
     let { onenable }: { onenable: () => void } = $props()
 </script>
@@ -8,14 +8,23 @@
     type="button"
     onclick={onenable}
     aria-label="Turn Chorus on"
-    class="group flex h-[170px] w-[300px] cursor-pointer flex-col items-center justify-center gap-2 bg-[var(--bg)] text-[var(--text)]"
+    class="group flex h-[196px] w-[320px] cursor-pointer flex-col items-center justify-center gap-y-2 bg-ink text-ink-fg focus-visible:outline-none"
 >
-    <Power
-        size={40}
-        class="opacity-60 transition-all duration-150 group-hover:scale-110 group-hover:opacity-100"
+    <Logo
+        size={30}
+        tone="mono"
+        class="transition-transform duration-150 group-hover:scale-110 group-focus-visible:scale-110"
     />
-    <span class="text-sm font-semibold">Chorus is off</span>
-    <span class="text-xs opacity-60 transition-opacity group-hover:opacity-90">
-        Click anywhere to turn on
+    <span class="mt-1 text-[13px] font-semibold">Chorus is off</span>
+    <span class="text-[11px] text-ink-muted transition-colors group-hover:text-ink-fg-2">
+        Click anywhere to turn it on
+    </span>
+    <span class="mt-1.5 flex items-center gap-x-1">
+        {#each ['Alt', 'Shift', 'O'] as key (key)}
+            <kbd
+                class="rounded border border-hairline-strong bg-surface px-1.5 py-0.5 font-mono text-[10px] text-ink-fg-2"
+                >{key}</kbd
+            >
+        {/each}
     </span>
 </button>
