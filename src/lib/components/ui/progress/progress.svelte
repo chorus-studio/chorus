@@ -9,7 +9,7 @@
         max = 100,
         value,
         segments = [],
-        dividerColor = '#fff',
+        dividerColor = 'hsl(var(--signal))',
         ...restProps
     }: WithoutChildrenOrChild<ProgressPrimitive.RootProps> & {
         segments?: Array<{
@@ -57,8 +57,10 @@
         return ((currentValue - segment.start) / (segment.end - segment.start)) * 100
     }
 
+    // Unplayed part of a segment: the segment colour at low alpha, so it reads as
+    // a tinted region rather than a pastel bar.
     function getLighterColor(color: string) {
-        return `color-mix(in srgb, ${color}, white 65%)`
+        return `color-mix(in srgb, ${color} 28%, transparent)`
     }
 </script>
 
@@ -66,7 +68,7 @@
     bind:ref
     value={currentValue}
     class={cn(
-        'relative h-2 w-full overflow-hidden rounded-full bg-primary/20',
+        'relative h-1 w-full overflow-hidden rounded-full bg-ink-fg/15',
         className,
         activeSegment ? 'overflow-visible' : 'overflow-hidden'
     )}
@@ -76,7 +78,7 @@
         <!-- Segment boundary lines -->
         {#each segmentBoundaries as point (point)}
             <div
-                class="absolute -top-[4px] z-10 h-[calc(100%+8px)] w-[2px]"
+                class="absolute -top-[3px] z-10 h-[calc(100%+6px)] w-[2px] rounded-sm"
                 style={`
                     left: ${(point / max) * 100}%;
                     background-color: ${dividerColor};
@@ -108,7 +110,7 @@
 
     {#if !activeSegment}
         <div
-            class={cn('h-full w-full flex-1 bg-primary transition-all', innerClassName)}
+            class={cn('h-full w-full flex-1 bg-ink-fg transition-all', innerClassName)}
             style={`transform: translateX(-${100 - defaultProgress()}%)`}
         ></div>
     {/if}
