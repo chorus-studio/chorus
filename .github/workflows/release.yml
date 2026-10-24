@@ -65,16 +65,21 @@ jobs:
               env:
                   GITHUB_TOKEN: ${{ github.token }}
 
-            - name: Submit to Extension Stores
-              run: |
-                  bun wxt submit \
-                    --chrome-zip .output/*-chrome.zip \
-                    --firefox-zip .output/*-firefox.zip --firefox-sources-zip .output/*-sources.zip
+            # Uploads, waits for the store to finish processing the ~80MB zip, then publishes.
+            # `wxt submit` publishes immediately after upload and fails on large packages.
+            - name: Submit to Chrome Web Store
+              run: node scripts/cws-publish.mjs .output/*-chrome.zip
               env:
                   CHROME_EXTENSION_ID: ${{ secrets.EXTENSION_ID }}
                   CHROME_CLIENT_ID: ${{ secrets.CLIENT_ID }}
                   CHROME_CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
                   CHROME_REFRESH_TOKEN: ${{ secrets.REFRESH_TOKEN }}
+
+            - name: Submit to Firefox Add-ons
+              run: |
+                  bun wxt submit \
+                    --firefox-zip .output/*-firefox.zip --firefox-sources-zip .output/*-sources.zip
+              env:
                   FIREFOX_EXTENSION_ID: ${{ secrets.AMO_ID }}
                   FIREFOX_JWT_ISSUER: ${{ secrets.AMO_ISSUER }}
                   FIREFOX_JWT_SECRET: ${{ secrets.AMO_SECRET }}

@@ -94,9 +94,10 @@ jobs:
                   if-no-files-found: error
                   include-hidden-files: true
 
+            # Uploads, waits for the store to finish processing the ~55MB zip, then publishes.
+            # `wxt submit` publishes immediately after upload and fails on large packages.
             - name: Submit to Chrome Web Store (Beta)
-              run: |
-                  bun wxt submit --chrome-zip .output/*-chrome.zip
+              run: node scripts/cws-publish.mjs .output/*-chrome.zip
               env:
                   CHROME_EXTENSION_ID: ${{ secrets.BETA_EXTENSION_ID }}
                   CHROME_CLIENT_ID: ${{ secrets.BETA_CLIENT_ID }}
