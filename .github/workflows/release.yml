@@ -38,6 +38,7 @@ jobs:
                   echo "newVersion=$NEW_VERSION" >> "$GITHUB_OUTPUT"
 
             - name: Build and Zip
+              id: build
               run: |
                   bun run zip
                   bun run zip:fox
@@ -50,6 +51,7 @@ jobs:
                   include-hidden-files: true
 
             - name: Commit Version Bump
+              id: push
               run: |
                   git add package.json CHANGELOG.md
                   git commit -am "chore(release): v${{ steps.version.outputs.newVersion }}"
@@ -75,7 +77,9 @@ jobs:
                   CHROME_CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
                   CHROME_REFRESH_TOKEN: ${{ secrets.REFRESH_TOKEN }}
 
+            # Runs even when the Chrome submit failed so one store cannot block the other.
             - name: Submit to Firefox Add-ons
+              if: ${{ !cancelled() && steps.build.outcome == 'success' }}
               run: |
                   bun wxt submit \
                     --firefox-zip .output/*-firefox.zip --firefox-sources-zip .output/*-sources.zip
@@ -84,7 +88,9 @@ jobs:
                   FIREFOX_JWT_ISSUER: ${{ secrets.AMO_ISSUER }}
                   FIREFOX_JWT_SECRET: ${{ secrets.AMO_SECRET }}
 
+            # The release commit and tag already exist by now, so sync even if a store submit failed.
             - name: Sync main back to develop
+              if: ${{ !cancelled() && steps.push.outcome == 'success' }}
               run: |
                   git fetch origin develop
                   git checkout develop

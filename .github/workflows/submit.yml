@@ -6,6 +6,18 @@ on:
                 default: false
                 type: boolean
                 description: Skip submission and perform a dry run
+            bump:
+                default: true
+                type: boolean
+                description: Bump the version, then commit, tag and create the GitHub release (off = resubmit the version already in package.json)
+            chrome:
+                default: true
+                type: boolean
+                description: Submit to the Chrome Web Store
+            firefox:
+                default: true
+                type: boolean
+                description: Submit to Firefox Add-ons
 
 jobs:
     validate:
@@ -35,12 +47,15 @@ jobs:
             - name: Bump Version
               id: version
               run: |
-                  LAST_STABLE=$(git tag --list 'v*' --sort=-version:refname | grep -v beta | head -1)
-                  bunx changelogen@latest --bump --from "$LAST_STABLE"
+                  if [ "${{ inputs.bump }}" = "true" ]; then
+                      LAST_STABLE=$(git tag --list 'v*' --sort=-version:refname | grep -v beta | head -1)
+                      bunx changelogen@latest --bump --from "$LAST_STABLE"
+                  fi
                   NEW_VERSION=$(bun --print 'require("./package.json").version')
                   echo "newVersion=$NEW_VERSION" >> "$GITHUB_OUTPUT"
 
             - name: Build and Zip
+              id: build
               run: |
                   bun run zip
                   bun run zip:fox
@@ -55,6 +70,7 @@ jobs:
             # Uploads, waits for the store to finish processing the ~80MB zip, then publishes.
             # `wxt submit` publishes immediately after upload and fails on large packages.
             - name: Submit to Chrome Web Store
+              if: ${{ inputs.chrome }}
               run: node scripts/cws-publish.mjs .output/*-chrome.zip
               env:
                   DRY_RUN: ${{ inputs.dryRun }}
@@ -63,7 +79,9 @@ jobs:
                   CHROME_CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
                   CHROME_REFRESH_TOKEN: ${{ secrets.REFRESH_TOKEN }}
 
+            # Runs even when the Chrome submit failed so one store cannot block the other.
             - name: Submit to Firefox Add-ons
+              if: ${{ inputs.firefox && !cancelled() && steps.build.outcome == 'success' }}
               run: |
                   bun wxt submit \
                     --firefox-zip .output/*-firefox.zip --firefox-sources-zip .output/*-sources.zip
@@ -78,7 +96,7 @@ jobs:
                   # EDGE_ACCESS_TOKEN_URL: ${{ secrets.EDGE_ACCESS_TOKEN_URL }}
 
             - name: Commit and Push
-              if: ${{ !inputs.dryRun }}
+              if: ${{ !inputs.dryRun && inputs.bump }}
               run: |
                   git add package.json CHANGELOG.md
                   git commit -am "chore(release): v$NEW_VERSION"
@@ -89,10 +107,12 @@ jobs:
                   NEW_VERSION: ${{ steps.version.outputs.newVersion }}
 
             - name: Release
-              if: ${{ !inputs.dryRun }}
+              if: ${{ !inputs.dryRun && inputs.bump }}
               run: npx changelogen@latest gh release ${{ steps.version.outputs.newVersion }} --token ${{ github.token }}
 
             # Don't upload sources zip - it can contain .env files, which may include secrets
             - name: Upload ZIPs
-              if: ${{ !inputs.dryRun }}
-              run: gh release upload ${{ steps.version.outputs.newVersion }} .output/*-chrome.zip .output/*-firefox.zip
+              if: ${{ !inputs.dryRun && inputs.bump }}
+              run: gh release upload v${{ steps.version.outputs.newVersion }} .output/*-chrome.zip .output/*-firefox.zip
+              env:
+                  GITHUB_TOKEN: ${{ github.token }}
