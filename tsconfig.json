@@ -7,5 +7,6 @@
             "$lib": ["src/lib"],
             "$lib/*": ["src/lib/*"]
         }
-    }
+    },
+    "exclude": [".output", "promo"]
 }
