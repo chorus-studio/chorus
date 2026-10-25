@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 128" width="420" height="128" fill="none">
+  <!-- Horizontal lock-up for dark backgrounds. Type: Space Grotesk 700 (fallback: Helvetica Neue / Arial). -->
+  <path d="M107.2 36.97A51 51 0 1 0 107.2 91.03" stroke="#1ed760" stroke-width="14" stroke-linecap="round"/>
+  <path d="M86.98 44.72A30 30 0 1 0 86.98 83.28" stroke="#1ed760" stroke-width="14" stroke-linecap="round"/>
+  <circle cx="64" cy="64" r="10" fill="#ffffff"/>
+  <text x="148" y="88" font-family="Space Grotesk, Inter, Helvetica Neue, Arial, sans-serif" font-weight="700" font-size="72" letter-spacing="-2.2" fill="#ffffff">Chorus</text>
+</svg>

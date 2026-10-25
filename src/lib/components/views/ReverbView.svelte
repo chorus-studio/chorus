@@ -1,6 +1,8 @@
 <script lang="ts">
     import FX from './FX.svelte'
     import ReverbControls from '$lib/components/ReverbControls.svelte'
+    import EffectStatus from '$lib/components/EffectStatus.svelte'
+    import SegmentedControl from '$lib/components/SegmentedControl.svelte'
     import { effectsStore } from '$lib/stores/effects'
     import { fxSubView } from '$lib/stores/effects-ui'
     import { resolveReverbPreset } from '$lib/audio-effects/reverb/presets'
@@ -14,11 +16,6 @@
     $effect(() => {
         fxSubView.set(sub)
     })
-
-    const subTabs = [
-        { id: 'presets', label: 'presets' },
-        { id: 'config', label: 'config' }
-    ] as const
 
     // What the config is starting from: the last-loaded user preset, else the
     // active built-in preset, else the engine defaults.
@@ -36,29 +33,23 @@
     })
 </script>
 
-<div class="flex h-full w-full flex-col gap-y-2">
+<div class="flex h-full flex-col gap-y-2.5">
     <div class="flex items-center justify-between gap-x-2">
-        <div class="flex min-w-0 flex-1 items-center gap-x-1.5">
-            {#if sub === 'config'}
-                <span class="truncate text-xs text-gray-500"
-                    >from: <span class="text-gray-400">{fromLabel}</span></span
-                >
-            {/if}
-        </div>
-
-        <div class="flex shrink-0 items-center gap-x-1.5">
-            {#each subTabs as t (t.id)}
-                <button
-                    onclick={() => (sub = t.id)}
-                    class="rounded-[2px] px-1.5 py-0 pb-[0.125rem] text-sm font-semibold leading-[18px] text-[#fafafa] transition-colors {sub ===
-                    t.id
-                        ? 'bg-green-700 hover:bg-green-800'
-                        : 'bg-zinc-700 hover:bg-zinc-500'}"
-                >
-                    {t.label}
-                </button>
-            {/each}
-        </div>
+        <EffectStatus
+            name="Reverb"
+            value={$effectsStore.reverb}
+            from={sub === 'config' ? fromLabel : ''}
+        />
+        <SegmentedControl
+            size="xs"
+            ariaLabel="Reverb view"
+            value={sub}
+            onValueChange={(v) => (sub = v as 'presets' | 'config')}
+            options={[
+                { label: 'Presets', value: 'presets' },
+                { label: 'Config', value: 'config' }
+            ]}
+        />
     </div>
 
     {#if sub === 'presets'}

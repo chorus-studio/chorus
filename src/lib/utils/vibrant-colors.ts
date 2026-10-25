@@ -143,29 +143,35 @@ async function getColours({ url, vibrancy }: { url: string; vibrancy: ThemeVibra
     // Check cache first
     const cacheKey = `${url}_${vibrancy}`
     const cached = colorCache.get(cacheKey)
-    
+
     if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
-        await nowPlaying.updateState({ text_colour: cached.text_colour, bg_colour: cached.bg_colour })
+        await nowPlaying.updateState({
+            text_colour: cached.text_colour,
+            bg_colour: cached.bg_colour
+        })
         return { text_colour: cached.text_colour, bg_colour: cached.bg_colour }
     }
-    
+
     // Use requestIdleCallback for non-critical color processing
     return new Promise<{ text_colour: string; bg_colour: string }>((resolve) => {
         const processColors = async () => {
             let img: HTMLImageElement | null = new Image(64, 64)
-            
+
             try {
                 await loadImage(url, img)
                 const colors = await getVibrant({ image: img, vibrancy })
-                
+
                 // Cache the result
                 colorCache.set(cacheKey, {
                     text_colour: colors.text_colour!,
                     bg_colour: colors.bg_colour!,
                     timestamp: Date.now()
                 })
-                
-                await nowPlaying.updateState({ text_colour: colors.text_colour, bg_colour: colors.bg_colour })
+
+                await nowPlaying.updateState({
+                    text_colour: colors.text_colour,
+                    bg_colour: colors.bg_colour
+                })
                 resolve({ text_colour: colors.text_colour!, bg_colour: colors.bg_colour! })
             } catch (error) {
                 console.error('Color processing error:', error)
@@ -174,14 +180,80 @@ async function getColours({ url, vibrancy }: { url: string; vibrancy: ThemeVibra
                 img = null
             }
         }
-        
+
         // Use requestIdleCallback if available, otherwise setTimeout
         if ('requestIdleCallback' in window) {
-            (window as any).requestIdleCallback(processColors, { timeout: 5000 })
+            ;(window as any).requestIdleCallback(processColors, { timeout: 5000 })
         } else {
             setTimeout(processColors, 0)
         }
     })
+}
+
+// ---- Legibility helpers for the album-coloured popup ----------------------
+
+function channel(c: number) {
+    const v = c / 255
+    return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4)
+}
+
+export function relativeLuminance(hex: string): number {
+    const [r, g, b] = hexToRgb(hex)
+    return 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b)
+}
+
+/** WCAG contrast ratio between two hex colours (1..21). */
+export function contrastRatio(a: string, b: string): number {
+    const la = relativeLuminance(a)
+    const lb = relativeLuminance(b)
+    const [hi, lo] = la > lb ? [la, lb] : [lb, la]
+    return (hi + 0.05) / (lo + 0.05)
+}
+
+export const SIGNAL_GREEN = '#1ed760'
+
+/**
+ * The album palette drives the popup, but legibility can't depend on the
+ * cover: if Vibrant's text colour doesn't clear 4.5:1 on the background, fall
+ * back to plain white or near-black, whichever reads better.
+ */
+export function readableText(bg: string, candidate: string | null | undefined): string {
+    if (candidate && contrastRatio(bg, candidate) >= 4.5) return candidate
+    return contrastRatio(bg, '#ffffff') >= contrastRatio(bg, '#121212') ? '#ffffff' : '#121212'
+}
+
+/** Spotify green for active states when it clears 3:1 on the album colour, else the text colour. */
+export function pickAccent(bg: string, text: string): string {
+    return contrastRatio(bg, SIGNAL_GREEN) >= 3 ? SIGNAL_GREEN : text
+}
+
+/** Mix `text` at `alpha` over `bg` for secondary text, as a hex colour. */
+export function mixHex(fg: string, bg: string, alpha: number): string {
+    const f = hexToRgb(fg)
+    const b = hexToRgb(bg)
+    const out = f.map((c, i) => Math.round(c * alpha + b[i] * (1 - alpha))) as [
+        number,
+        number,
+        number
+    ]
+    return rgbToHex(out)
+}
+
+/**
+ * Push the palette onto the popup/PiP root as CSS variables:
+ *   --bg, --text, --text-2 (secondary text), --accent (adaptive green).
+ */
+export function applyPalette(
+    root: HTMLElement,
+    { bg_colour, text_colour }: { bg_colour: string; text_colour: string | null | undefined }
+) {
+    const bg = bg_colour
+    const text = readableText(bg, text_colour)
+    root.style.setProperty('--bg', bg)
+    root.style.setProperty('--text', text)
+    root.style.setProperty('--text-2', mixHex(text, bg, 0.72))
+    root.style.setProperty('--album-accent', pickAccent(bg, text))
+    return { bg, text }
 }
 
 export {

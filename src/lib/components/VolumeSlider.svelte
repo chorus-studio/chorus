@@ -5,9 +5,9 @@
     import * as HoverCard from '$lib/components/ui/hover-card'
     import VolumeIcon from '$lib/components/VolumeIcon.svelte'
     import VolumeReset from '$lib/components/VolumeReset.svelte'
-    import ToggleSelect from '$lib/components/ToggleSelect.svelte'
+    import SegmentedControl from '$lib/components/SegmentedControl.svelte'
     import { CustomSlider } from '$lib/components/ui/custom-slider'
-    import { Button, buttonVariants } from '$lib/components/ui/button'
+    import { buttonVariants } from '$lib/components/ui/button'
 
     let { port, pip = false }: { port: chrome.runtime.Port | null; pip?: boolean } = $props()
 
@@ -37,69 +37,65 @@
     onMount(() => {
         volumeStore.dispatchVolumeEvent()
     })
+
+    const shown = $derived($volumeStore.muted ? 0 : $volumeStore.value)
+    const muteLabel = $derived($volumeStore.muted ? 'Unmute' : 'Mute')
 </script>
 
 <div
     id="chorus-volume"
-    class="relative flex w-full {pip
-        ? ''
-        : 'max-w-[220px]'} items-center justify-between gap-x-2 self-end"
+    class="flex w-full items-center gap-x-1.5 {pip ? '' : 'max-w-[240px] self-end'}"
 >
-    <div class="-mt-4">
-        <VolumeReset {pip} {port} />
-    </div>
+    <VolumeReset {pip} {port} />
 
-    {#if pip}
-        <Button
-            size="icon"
+    <HoverCard.Root openDelay={pip ? 100000 : 600} closeDelay={300}>
+        <HoverCard.Trigger
+            role="volume"
+            id="volume-button"
             onclick={handleMute}
-            aria-label={$volumeStore.muted ? `Disable volume` : `Enable volume`}
-            class="relative size-8 border-none bg-transparent text-popover-foreground hover:bg-transparent [&_svg]:size-[1rem]"
+            aria-label={muteLabel}
+            aria-pressed={$volumeStore.muted}
+            class={buttonVariants({
+                variant: pip ? 'ghost' : 'bar',
+                size: 'icon',
+                class: '[&_svg]:size-4'
+            })}
         >
             <VolumeIcon />
-        </Button>
-    {:else}
-        <HoverCard.Root>
-            <HoverCard.Trigger
-                role="volume"
-                id="volume-button"
-                onclick={handleMute}
-                aria-label={$volumeStore.muted ? `Disable volume` : `Enable volume`}
-                class={buttonVariants({
-                    variant: 'ghost',
-                    size: 'icon',
-                    class: 'relative size-8 border-none bg-transparent hover:bg-transparent [&_svg]:size-[1rem]'
-                })}
-            >
-                <VolumeIcon />
-            </HoverCard.Trigger>
-            <HoverCard.Content class="relative max-w-24">
-                <div class="flex w-full flex-col items-center justify-between gap-2">
-                    <ToggleSelect
-                        value={$volumeStore.type}
-                        onValueChange={handleVolumeTypeChange}
-                        list={[
-                            { label: 'ln', value: 'linear' },
-                            { label: 'lg', value: 'logarithmic' }
-                        ]}
-                    />
-                    <p class="text-xs text-muted-foreground">{$volumeStore.type}</p>
-                </div></HoverCard.Content
-            >
-        </HoverCard.Root>
-    {/if}
+        </HoverCard.Trigger>
+        <HoverCard.Content class="flex w-44 flex-col gap-y-2" side="top">
+            <span class="rack-label">Volume curve</span>
+            <SegmentedControl
+                grow
+                size="sm"
+                ariaLabel="Volume curve"
+                value={$volumeStore.type}
+                onValueChange={handleVolumeTypeChange}
+                options={[
+                    { label: 'Linear', value: 'linear' },
+                    { label: 'Log', value: 'logarithmic' }
+                ]}
+            />
+            <span class="text-[11px] leading-snug text-ink-muted">
+                Log feels more even at low levels. Boost goes up to 300%.
+            </span>
+        </HoverCard.Content>
+    </HoverCard.Root>
 
     <CustomSlider
         onValueChange={(value) => handleVolumeChange(value as number)}
         type="single"
-        value={$volumeStore.muted ? 0 : $volumeStore.value}
+        label="Volume"
+        value={shown}
         min={0}
         max={300}
         step={1}
     />
-    <div class="flex flex-col items-end gap-1">
-        <p class="text-xs text-muted-foreground">
-            {$volumeStore.muted ? 0 : $volumeStore.value}%
-        </p>
-    </div>
+    <span
+        class="min-w-9 text-right font-mono text-[11px] tabular-nums {pip
+            ? 'text-ink-muted'
+            : 'opacity-80'}"
+    >
+        {shown}%
+    </span>
 </div>

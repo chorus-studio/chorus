@@ -7,47 +7,50 @@
     async function toggleLoop() {
         await loopStore.toggleLoop()
     }
+
+    const label = $derived(
+        $loopStore.looping
+            ? `Stop looping (${$loopStore.type === 'infinite' ? 'forever' : `${$loopStore.iteration} left`})`
+            : 'Loop snip or track'
+    )
 </script>
 
-<div class="space-between flex border-none">
-    <HoverCard.Root>
-        <HoverCard.Trigger
-            role="loop"
-            id="loop-button"
-            onclick={toggleLoop}
-            aria-label={$loopStore.looping
-                ? `Disable ${$loopStore.type} loop`
-                : `Enable ${$loopStore.type} loop`}
-            class={buttonVariants({
-                variant: 'ghost',
-                size: 'icon',
-                class: 'relative size-8 border-none bg-transparent hover:bg-transparent [&_svg]:size-[1.125rem]'
-            })}
+<HoverCard.Root openDelay={400} closeDelay={200}>
+    <HoverCard.Trigger
+        role="loop"
+        id="loop-button"
+        onclick={toggleLoop}
+        aria-label={label}
+        aria-pressed={$loopStore.looping}
+        class={buttonVariants({
+            variant: 'bar',
+            size: 'icon',
+            class: `relative [&_svg]:size-[20px] ${$loopStore.looping ? 'text-signal opacity-100' : ''}`
+        })}
+    >
+        <svg
+            id="loop-icon"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
         >
-            {#if $loopStore.looping}
-                <span
-                    class="absolute left-1/2 top-5 -translate-x-1/2 bg-transparent text-center text-xs font-bold text-[#1ed760]"
-                >
-                    {$loopStore.type === 'infinite' ? '∞' : $loopStore.iteration}
-                </span>
-            {/if}
-            <svg
-                id="loop-icon"
-                class="stroke-linecap-round -z-10 size-6 {$loopStore.looping
-                    ? 'fill-[#1ed760] stroke-[#1ed760]'
-                    : 'fill-current stroke-current'} stroke-[0.2]"
-                viewBox="0 0 32 32"
-                xmlns="http://www.w3.org/2000/svg"
-                preserveAspectRatio="xMidYMid meet"
+            <path
+                d="M12 12c-2-2.67-4-4-6-4a4 4 0 1 0 0 8c2 0 4-1.33 6-4Zm0 0c2 2.67 4 4 6 4a4 4 0 0 0 0-8c-2 0-4 1.33-6 4Z"
+            />
+        </svg>
+        {#if $loopStore.looping && $loopStore.type !== 'infinite'}
+            <span
+                class="pointer-events-none absolute inset-x-0 bottom-0 text-center font-mono text-[9px] font-bold leading-none"
             >
-                <path
-                    xmlns="http://www.w3.org/2000/svg"
-                    d="m16 28.0063c-4.6831 0-8.49375-3.8075-8.5-8.4894-.005-.4138.02437-5.6125 4.245-9.91878.3962-.40437.8162-.78749 1.2575-1.14874-2.55-.96375-5.92312-1.44938-9.5025-1.44938-.82812 0-1.5-.67188-1.5-1.5s.67188-1.5 1.5-1.5c4.8675 0 9.2506.83875 12.5106 2.50062 3.2563-1.65375 7.6325-2.48812 12.4894-2.48812.8281 0 1.5.67188 1.5 1.5 0 .82813-.6719 1.5-1.5 1.5-3.5712 0-6.9388.48312-9.485 1.44187.4337.35563.8456.73188 1.2356 1.13 4.2219 4.30563 4.2544 9.50443 4.25 9.92003v.0025c-.0006 4.6862-3.8137 8.4994-8.5006 8.4994zm.0081-18.04255c-.7818.51185-1.4887 1.08995-2.12 1.73435-3.4331 3.5025-3.3887 7.7356-3.3881 7.7781v.0301c0 3.0325 2.4675 5.5 5.5 5.5s5.5-2.4675 5.5-5.5v-.0388c0-.1538-.0406-4.3962-3.43-7.8219-.6163-.6231-1.3037-1.1837-2.0619-1.68185z"
-                />
-            </svg>
-        </HoverCard.Trigger>
-        <HoverCard.Content class="w-40 p-3">
-            <LoopToggle />
-        </HoverCard.Content>
-    </HoverCard.Root>
-</div>
+                {$loopStore.iteration}
+            </span>
+        {/if}
+    </HoverCard.Trigger>
+    <HoverCard.Content class="w-52 p-3" side="top">
+        <LoopToggle />
+    </HoverCard.Content>
+</HoverCard.Root>

@@ -4,9 +4,17 @@
     import { storage } from '@wxt-dev/storage'
 
     import * as Tabs from '$lib/components/ui/tabs'
-    import { Badge } from '$lib/components/ui/badge'
-    import { Label } from '$lib/components/ui/label'
-    import { Switch } from '$lib/components/ui/switch'
+    import * as Tooltip from '$lib/components/ui/tooltip'
+
+    import Pin from '@lucide/svelte/icons/pin'
+    import Play from '@lucide/svelte/icons/play'
+    import Gauge from '@lucide/svelte/icons/gauge'
+    import Waves from '@lucide/svelte/icons/waves'
+    import Scissors from '@lucide/svelte/icons/scissors'
+    import Settings from '@lucide/svelte/icons/settings'
+    import FastForward from '@lucide/svelte/icons/fast-forward'
+    import MoveHorizontal from '@lucide/svelte/icons/move-horizontal'
+    import SlidersHorizontal from '@lucide/svelte/icons/sliders-horizontal'
 
     import ReverbView from '$lib/components/views/ReverbView.svelte'
     import EQView from '$lib/components/views/EQView.svelte'
@@ -15,41 +23,51 @@
     import Speed from '$lib/components/views/Speed.svelte'
     import PopUp from '$lib/components/views/PopUp.svelte'
     import MS from '$lib/components/views/MS.svelte'
-    import TrackInfo from '$lib/components/TrackInfo.svelte'
-    import AvatarLogo from '$lib/components/AvatarLogo.svelte'
+    import Logo from '$lib/components/Logo.svelte'
     import SettingsInfo from '$lib/components/views/SettingsInfo.svelte'
-    import ToggleSelect from '$lib/components/ToggleSelect.svelte'
     import ActionButtons from '$lib/components/ActionButtons.svelte'
+    import SegmentedControl from '$lib/components/SegmentedControl.svelte'
 
     import { dataStore } from '$lib/stores/data'
     import { snipStore } from '$lib/stores/snip'
+    import { effectsStore } from '$lib/stores/effects'
     import { nowPlaying } from '$lib/stores/now-playing'
     import { playbackStore } from '$lib/stores/playback'
     import { settingsStore } from '$lib/stores/settings'
     import { volumeStore, type VolumeType } from '$lib/stores/volume'
     import { getVersion } from '$lib/utils/version'
+    import { cn } from '$lib/utils.js'
 
-    let { pip = false }: { pip?: boolean } = $props()
+    let { pip = false, initialTab }: { pip?: boolean; initialTab?: string } = $props()
 
     const version = getVersion()
-
     const VIEW_KEY = 'local:chorus_view'
 
-    let tabs = [
-        pip ? 'player' : '',
-        'snip',
-        'speed',
-        'fx',
-        'eq',
-        'ms',
-        'seek',
-        'settings'
-    ].filter(Boolean)
+    type TabMeta = { id: string; label: string; icon: Component }
+    const TAB_META: TabMeta[] = [
+        { id: 'player', label: 'Player', icon: Play },
+        { id: 'snip', label: 'Snip', icon: Scissors },
+        { id: 'speed', label: 'Speed', icon: Gauge },
+        { id: 'fx', label: 'Reverb', icon: Waves },
+        { id: 'eq', label: 'EQ', icon: SlidersHorizontal },
+        { id: 'ms', label: 'Stereo', icon: MoveHorizontal },
+        { id: 'seek', label: 'Seek', icon: FastForward }
+    ]
 
-    let filteredTabs: string[] = $state(tabs)
+    const tabs = $derived(
+        (pip ? TAB_META : TAB_META.filter((t) => t.id !== 'player')).map((t) => t.id)
+    )
+    // Tabs the user has switched off in Settings are dropped from the rail.
+    const filteredTabs = $derived(
+        tabs.filter((tab) => {
+            const views = $settingsStore.views
+            if (!Object.keys(views).includes(tab)) return true
+            return views[tab as keyof typeof views]
+        })
+    )
 
     let activeTab = $state<string | undefined>()
-    let defaultView = $state<string>(tabs[0])
+    let defaultView = $state<string>('snip')
 
     const components: Record<string, Component> = {
         snip: Snip,
@@ -62,18 +80,27 @@
         player: PopUp
     }
 
-    async function handleCheckedChange(checked: boolean) {
-        if (!activeTab) return
-        if (checked) {
-            defaultView = activeTab
-            await storage.setItem(VIEW_KEY, activeTab)
-        }
+    // Which features currently carry state — shown as an LED on the tab.
+    const engaged = $derived<Record<string, boolean>>({
+        snip: Boolean($nowPlaying?.snip),
+        speed: Boolean($nowPlaying?.playback),
+        fx: $effectsStore.reverb !== 'none',
+        eq: $effectsStore.equalizer !== 'none',
+        ms: $effectsStore.msProcessor !== 'none'
+    })
+
+    const activeMeta = $derived(TAB_META.find((t) => t.id === activeTab))
+    const isDefault = $derived(defaultView === activeTab)
+
+    async function pinDefault() {
+        if (!activeTab || activeTab === 'settings') return
+        defaultView = activeTab
+        await storage.setItem(VIEW_KEY, activeTab)
     }
 
-    function setActiveTab(tab: string) {
-        if (tab === 'snip') {
-            setSnip()
-        }
+    function setActiveTab(tab: string | undefined) {
+        if (!tab) return
+        if (tab === 'snip') setSnip()
         activeTab = tab
     }
 
@@ -103,7 +130,7 @@
     }
 
     async function getDefaultView() {
-        let tab = (await storage.getItem<string>(VIEW_KEY)) ?? filteredTabs[0]
+        let tab = initialTab ?? (await storage.getItem<string>(VIEW_KEY)) ?? filteredTabs[0]
         // 'fx|eq' was split into separate 'fx' + 'eq' tabs; migrate a stored default.
         if (tab === 'fx|eq') tab = 'eq'
         defaultView = tab == 'player' && !pip ? filteredTabs[0] : tab
@@ -120,145 +147,120 @@
         if (activeTab === 'snip') setSnip()
         if (activeTab === 'speed') setupSpeed()
 
-        const unsubscribeSettingsViews = settingsStore.subscribe((state) => {
-            const settingsViews = state.views
-            filteredTabs = tabs.filter((tab) => {
-                if (!Object.keys(settingsViews).includes(tab)) return true
-                return settingsViews[tab as keyof typeof settingsViews]
-            })
-        })
-
         return () => {
-            unsubscribeSettingsViews()
             snipStore.reset()
         }
     })
 </script>
 
-<Tabs.Root value={activeTab} class="h-7 w-full p-0">
-    <Tabs.List class="flex h-full items-center justify-end gap-x-1 bg-transparent p-0">
-        {#if pip}
-            <div class="absolute left-0">
-                <AvatarLogo class="bg-black" />
-            </div>
-        {/if}
+<Tabs.Root value={activeTab} onValueChange={setActiveTab} class="flex h-full w-full flex-col">
+    <!-- header: brand + tab rail + settings -->
+    <header class="flex h-11 shrink-0 items-center gap-2 border-b border-hairline pl-3 pr-2">
+        <Logo size={18} class="shrink-0" />
 
-        {#each filteredTabs as tab (tab)}
-            <Tabs.Trigger
-                value={tab}
-                class="flex items-center justify-center  p-0 {pip ? 'gap-y-3' : ''}"
-                onclick={() => setActiveTab(tab)}
-            >
-                <Badge
-                    variant="outline"
-                    class="rounded-[2px] text-[#fafafa] {['settings', 'info', 'support'].includes(
-                        tab
-                    )
-                        ? 'p-0'
-                        : 'px-1.5 py-0 pb-[0.125rem]'} text-sm font-semibold leading-[18px] {activeTab ===
-                    tab
-                        ? 'bg-green-700 hover:bg-green-800'
-                        : 'bg-zinc-700 hover:bg-zinc-500'}"
-                >
-                    {#if tab === 'settings'}
-                        <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            class="lucide lucide-settings-icon lucide-settings h-5 w-5 fill-none stroke-2 p-1"
-                            ><path
-                                d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"
-                            /><circle cx="12" cy="12" r="3" /></svg
-                        >
-                    {:else if tab === 'info'}
-                        <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            class="lucide lucide-circle-help-icon lucide-circle-help h-5 w-5 fill-none stroke-2 p-1"
-                            ><circle cx="12" cy="12" r="10" /><path
-                                d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"
-                            /><path d="M12 17h.01" /></svg
-                        >
-                    {:else if tab === 'support'}
-                        <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            class="lucide lucide-coffee-icon lucide-coffee h-5 w-5 fill-none stroke-2 p-1"
-                            ><path d="M10 2v2" /><path d="M14 2v2" /><path
-                                d="M16 8a1 1 0 0 1 1 1v8a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1h14a4 4 0 1 1 0 8h-1"
-                            /><path d="M6 2v2" /></svg
-                        >
-                    {:else}
-                        {tab}
-                    {/if}
-                </Badge>
-            </Tabs.Trigger>
-        {/each}
-    </Tabs.List>
+        <Tabs.List
+            aria-label="Chorus views"
+            class="h-7 flex-1 justify-start gap-0.5 border-0 bg-transparent p-0"
+        >
+            {#each filteredTabs as tab (tab)}
+                {@const meta = TAB_META.find((t) => t.id === tab)}
+                {@const active = activeTab === tab}
+                {#if meta}
+                    <Tabs.Trigger
+                        value={tab}
+                        title={meta.label}
+                        aria-label={meta.label}
+                        class={cn(
+                            'relative h-7 gap-1.5 px-2 text-xs data-[state=active]:bg-surface-2',
+                            !active && 'w-7 justify-center px-0'
+                        )}
+                    >
+                        <meta.icon class="size-[14px] shrink-0" />
+                        {#if active}
+                            <span>{meta.label}</span>
+                        {/if}
+                        {#if engaged[tab]}
+                            <span class="led absolute right-1 top-1 size-1" aria-label="active"
+                            ></span>
+                        {/if}
+                    </Tabs.Trigger>
+                {/if}
+            {/each}
+        </Tabs.List>
+
+        <Tabs.Trigger
+            value="settings"
+            title="Settings"
+            aria-label="Settings"
+            class="h-7 w-7 justify-center px-0 data-[state=active]:bg-surface-2"
+        >
+            <Settings class="size-[15px]" />
+        </Tabs.Trigger>
+    </header>
 
     {#if activeTab}
         <Tabs.Content
             value={activeTab}
-            class="relative flex {activeTab === 'player' ? 'h-[210px]' : 'h-[205px]'} {[
-                'player',
-                'snip',
-                'fx',
-                'eq',
-                'ms',
-                'speed'
-            ].includes(activeTab)
-                ? 'space-y-2'
-                : ''} w-full flex-col"
+            class="chorus-scroll mt-0 flex min-h-0 flex-1 flex-col gap-y-2.5 overflow-y-auto px-4 pb-2 pt-3"
         >
-            {#if !['speed', 'settings', 'support', 'player', 'fx', 'eq', 'ms'].includes(activeTab)}
-                <TrackInfo />
-            {/if}
             {@const View = components[activeTab]}
             <View {pip} />
+        </Tabs.Content>
 
-            {#if activeTab === 'player'}
-                <div class="absolute bottom-0 z-50 flex w-full items-center gap-x-2">
-                    <span class="text-sm text-muted-foreground">vol</span>
-                    <ToggleSelect
-                        {pip}
+        <!-- footer: default-view pin, context, actions -->
+        <footer
+            class="flex h-10 shrink-0 items-center justify-between gap-2 border-t border-hairline px-2"
+        >
+            <div class="flex items-center gap-1.5">
+                {#if activeTab === 'settings'}
+                    <span class="pl-1 font-mono text-[10px] tracking-wider text-ink-muted"
+                        >v{version}</span
+                    >
+                {:else if activeTab === 'player'}
+                    <SegmentedControl
+                        size="xs"
+                        ariaLabel="Volume curve"
                         value={$volumeStore.type}
                         onValueChange={handleVolumeTypeChange}
-                        list={[
-                            { label: 'ln', value: 'linear' },
-                            { label: 'lg', value: 'logarithmic' }
+                        options={[
+                            { label: 'Linear', value: 'linear', title: 'Linear volume curve' },
+                            {
+                                label: 'Log',
+                                value: 'logarithmic',
+                                title: 'Logarithmic volume curve'
+                            }
                         ]}
                     />
-                </div>
-            {/if}
+                {:else}
+                    <Tooltip.Provider delayDuration={300}>
+                        <Tooltip.Root>
+                            <Tooltip.Trigger
+                                onclick={pinDefault}
+                                aria-pressed={isDefault}
+                                aria-label="Open this tab first"
+                                class={cn(
+                                    'inline-flex h-7 items-center gap-1.5 rounded-md px-2 text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal/60',
+                                    isDefault
+                                        ? 'text-signal-bright'
+                                        : 'text-ink-muted hover:bg-surface-2 hover:text-ink-fg'
+                                )}
+                            >
+                                <Pin class={cn('size-3.5', isDefault && 'fill-current')} />
+                                <span>{isDefault ? 'Default' : 'Set default'}</span>
+                            </Tooltip.Trigger>
+                            <Tooltip.Content side="top">
+                                {isDefault
+                                    ? `${activeMeta?.label ?? 'This tab'} opens first`
+                                    : `Open ${activeMeta?.label ?? 'this tab'} first next time`}
+                            </Tooltip.Content>
+                        </Tooltip.Root>
+                    </Tooltip.Provider>
+                {/if}
+            </div>
+
             {#if activeTab !== 'settings'}
-                <div
-                    class="absolute bottom-0 right-0 z-50 flex h-6 w-fit items-center justify-end gap-x-2"
-                >
-                    <Label class="text-sm text-muted-foreground">set default view</Label>
-                    <Switch
-                        checked={defaultView === activeTab}
-                        onCheckedChange={handleCheckedChange}
-                    />
-                </div>
                 <ActionButtons tab={activeTab} />
             {/if}
-            <div
-                class="absolute {pip
-                    ? '-bottom-4'
-                    : '-bottom-3'} left-1/2 flex w-full -translate-x-1/2 justify-center"
-            >
-                <span class="text-xs font-black text-[var(--text)] opacity-50">v{version}</span>
-            </div>
-        </Tabs.Content>
+        </footer>
     {/if}
 </Tabs.Root>

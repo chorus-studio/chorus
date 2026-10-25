@@ -55,8 +55,8 @@ export async function togglePictureInPicture() {
 
     try {
         const pipWindow = await window.documentPictureInPicture.requestWindow({
-            width: 400,
-            height: 280
+            width: 440,
+            height: 320
         })
 
         // Create a container for the PipView
@@ -68,7 +68,7 @@ export async function togglePictureInPicture() {
         pipView.style.transform = 'translate(-50%, -50%)'
         pipView.style.width = '100%'
         pipView.style.height = '100%'
-        pipView.style.background = '#000000'
+        pipView.style.background = '#121212'
         pipView.style.display = 'flex'
         pipView.style.flexDirection = 'column'
         pipView.style.justifyContent = 'center'

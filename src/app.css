@@ -2,66 +2,61 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ============================================================
+   Chorus — "studio rack" design tokens
+   Dark-only product in Spotify's own palette: Spotify green as the
+   single signal accent, Spotify's neutral greys as layered surfaces,
+   hairline borders, inset mono readouts.
+   The shadcn names below are kept so the bits-ui primitives keep
+   working; the studio names are the ones new code should reach for.
+   ============================================================ */
 @layer base {
-    :root {
-        --background: 0 0% 100%;
-        --foreground: 240 10% 3.9%;
-        --muted: 240 4.8% 95.9%;
-        --muted-foreground: 240 3.8% 46.1%;
-        --popover: 0 0% 100%;
-        --popover-foreground: 240 10% 3.9%;
-        --card: 0 0% 100%;
-        --card-foreground: 240 10% 3.9%;
-        --border: 240 5.9% 90%;
-        --input: 240 5.9% 90%;
-        --primary: 240 5.9% 10%;
-        --primary-foreground: 0 0% 98%;
-        --secondary: 240 4.8% 95.9%;
-        --secondary-foreground: 240 5.9% 10%;
-        --accent: 240 4.8% 95.9%;
-        --accent-foreground: 240 5.9% 10%;
-        --destructive: 0 72.2% 50.6%;
-        --destructive-foreground: 0 0% 98%;
-        --ring: 240 10% 3.9%;
-        --radius: 0.5rem;
-        --sidebar-background: 0 0% 98%;
-        --sidebar-foreground: 240 5.3% 26.1%;
-        --sidebar-primary: 240 5.9% 10%;
-        --sidebar-primary-foreground: 0 0% 98%;
-        --sidebar-accent: 240 4.8% 95.9%;
-        --sidebar-accent-foreground: 240 5.9% 10%;
-        --sidebar-border: 220 13% 91%;
-        --sidebar-ring: 217.2 91.2% 59.8%;
-    }
-
+    :root,
     .dark {
-        --background: 240 10% 3.9%;
-        --foreground: 0 0% 98%;
-        --muted: 240 3.7% 15.9%;
-        --muted-foreground: 240 5% 64.9%;
-        --popover: 240 10% 3.9%;
-        --popover-foreground: 0 0% 98%;
-        --card: 240 10% 3.9%;
-        --card-foreground: 0 0% 98%;
-        --border: 240 3.7% 15.9%;
-        --input: 240 3.7% 15.9%;
-        --primary: 0 0% 98%;
-        --primary-foreground: 240 5.9% 10%;
-        --secondary: 240 3.7% 15.9%;
-        --secondary-foreground: 0 0% 98%;
-        --accent: 240 3.7% 15.9%;
-        --accent-foreground: 0 0% 98%;
-        --destructive: 0 62.8% 30.6%;
-        --destructive-foreground: 0 0% 98%;
-        --ring: 240 4.9% 83.9%;
-        --sidebar-background: 240 5.9% 10%;
-        --sidebar-foreground: 240 4.8% 95.9%;
-        --sidebar-primary: 224.3 76.3% 48%;
-        --sidebar-primary-foreground: 0 0% 100%;
-        --sidebar-accent: 240 3.7% 15.9%;
-        --sidebar-accent-foreground: 240 4.8% 95.9%;
-        --sidebar-border: 240 3.7% 15.9%;
-        --sidebar-ring: 217.2 91.2% 59.8%;
+        /* studio surfaces (HSL triplets, consumed via hsl(var(--x) / a)) */
+        --ink: 0 0% 7%; /* #121212  popover / page */
+        --panel: 0 0% 9.4%; /* #181818  raised cards */
+        --surface: 0 0% 12.2%; /* #1f1f1f  overlays, menus */
+        --surface-2: 0 0% 16.5%; /* #2a2a2a  hover / tracks */
+        --inset: 0 0% 3.9%; /* #0a0a0a  inputs, readouts */
+
+        /* text hierarchy */
+        --ink-fg: 0 0% 100%; /* #ffffff */
+        --ink-fg-2: 0 0% 86.3%; /* #dcdcdc */
+        --ink-muted: 0 0% 70.2%; /* #b3b3b3 */
+        --ink-dim: 0 0% 49.8%; /* #7f7f7f  disabled / placeholder only */
+
+        /* signal accent */
+        --signal: 141 76% 48%; /* #1ed760  Spotify green */
+        --signal-bright: 141 75% 50%; /* #1fdf64 */
+        --signal-dark: 141 75% 35%; /* #169c46 */
+
+        /* secondary signals */
+        --amber: 34 100% 58%; /* #ffa42b */
+        --alarm: 354 84% 66%; /* #f15e6c */
+        --spotify: var(--signal);
+
+        /* shadcn aliases */
+        --background: var(--ink);
+        --foreground: var(--ink-fg);
+        --muted: var(--surface);
+        --muted-foreground: var(--ink-muted);
+        --popover: var(--ink);
+        --popover-foreground: var(--ink-fg);
+        --card: var(--panel);
+        --card-foreground: var(--ink-fg);
+        --border: 0 0% 16.5%; /* #2a2a2a */
+        --input: var(--inset);
+        --primary: var(--signal);
+        --primary-foreground: var(--ink);
+        --secondary: var(--surface-2);
+        --secondary-foreground: var(--ink-fg);
+        --accent: var(--surface-2);
+        --accent-foreground: var(--ink-fg);
+        --destructive: var(--alarm);
+        --destructive-foreground: var(--ink-fg);
+        --ring: var(--signal);
+        --radius: 0.625rem;
     }
 }
 
@@ -75,29 +70,67 @@
 }
 
 @layer components {
-    .shadow-slider {
-        box-shadow: 0 0 0 4px #28e269;
+    /* mono rack label: small, tracked, uppercase */
+    .rack-label {
+        @apply font-mono text-[10px] uppercase leading-none tracking-[0.18em] text-ink-muted;
+    }
+
+    /* inset numeric readout (pedal display) */
+    .readout {
+        @apply rounded-md border border-hairline bg-inset font-mono text-[13px] tabular-nums text-ink-fg;
+        font-feature-settings: 'tnum' 1;
+    }
+
+    /* LED status dot */
+    .led {
+        @apply inline-block size-1.5 shrink-0 rounded-full bg-signal;
+        box-shadow: 0 0 6px 1px hsl(var(--signal) / 0.55);
+    }
+    .led-off {
+        @apply bg-dim shadow-none;
+    }
+
+    .chorus-focus {
+        @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal/60 focus-visible:ring-offset-1 focus-visible:ring-offset-ink;
+    }
+
+    /* thin, quiet scrollbars inside Chorus surfaces */
+    .chorus-scroll {
+        scrollbar-width: thin;
+        scrollbar-color: hsl(var(--surface-2)) transparent;
+    }
+    .chorus-scroll::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+    }
+    .chorus-scroll::-webkit-scrollbar-thumb {
+        background: hsl(var(--surface-2));
+        border-radius: 999px;
+    }
+    .chorus-scroll::-webkit-scrollbar-track {
+        background: transparent;
     }
 }
 
 @layer utilities {
-    /* Hide scrollbar for Chrome, Safari and Opera */
     .no-scrollbar::-webkit-scrollbar {
         display: none;
     }
-    /* Hide scrollbar for IE, Edge and Firefox */
     .no-scrollbar {
-        -ms-overflow-style: none; /* IE and Edge */
-        scrollbar-width: none; /* Firefox */
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
+    .tabular {
+        font-variant-numeric: tabular-nums;
+        font-feature-settings: 'tnum' 1;
     }
 }
 
-
+/* ---------- Spotify page fixes (unchanged) ---------- */
 .RpMCAf8TjF6HpQSI7hdx .CFfhVwF52u3lETJ8lRWE {
     padding-left: 48px !important;
 }
 
-/* fix input left padding */
 input[type='search'] {
     padding-right: 0 !important;
     padding-inline-end: 0 !important;
@@ -112,22 +145,18 @@ a[href$='/download'] {
     display: none !important;
 }
 
-.RpMCAf8TjF6HpQSI7hdx .CFfhVwF52u3lETJ8lRWE {
-    padding-left: 48px !important;
-}
-
 .RpMCAf8TjF6HpQSI7hdx .CFfhVwF52u3lETJ8lRWE:-moz-placeholder {
-    padding-inline-end:64px;
+    padding-inline-end: 64px;
     padding-left: 48px;
 }
 
 .RpMCAf8TjF6HpQSI7hdx .CFfhVwF52u3lETJ8lRWE:-ms-input-placeholder {
-    padding-inline-end:64px;
+    padding-inline-end: 64px;
     padding-left: 48px;
 }
 
 .RpMCAf8TjF6HpQSI7hdx .CFfhVwF52u3lETJ8lRWE:placeholder-shown {
     -webkit-padding-end: 64px;
-    padding-inline-end:64px;
+    padding-inline-end: 64px;
     padding-left: 48px;
 }

@@ -1,11 +1,10 @@
 <script lang="ts">
     import { onMount } from 'svelte'
-    import * as Card from '$lib/components/ui/card'
-    import TabsList from '$lib/components/TabsList.svelte'
     import { ModeWatcher } from 'mode-watcher'
-    import AvatarLogo from '$lib/components/AvatarLogo.svelte'
+    import TabsList from '$lib/components/TabsList.svelte'
+    import Logo from '$lib/components/Logo.svelte'
 
-    let timeout = $state<NodeJS.Timeout | null>(null)
+    let timeout = $state<ReturnType<typeof setTimeout> | null>(null)
     let loading = $state(true)
 
     function handleLoad() {
@@ -25,21 +24,15 @@
 
 <ModeWatcher defaultMode="dark" defaultTheme="dark" track={false} />
 
-<Card.Root class="dark rounded-none">
-    <Card.Content class="h-[280px] w-[400px] p-4 pt-2">
-        {#if loading}
-            <div
-                class="relative inset-1/2 left-1/2 top-1/2 flex h-full w-full -translate-x-1/2 -translate-y-1/2 animate-spin items-center justify-center"
-            >
-                <AvatarLogo src={chrome.runtime.getURL('/icon/128.png')} class="size-16" />
-            </div>
-        {:else}
-            <div class="relative flex flex-col justify-center">
-                <TabsList pip={true} />
-            </div>
-        {/if}
-    </Card.Content>
-</Card.Root>
+<div class="dark flex h-[320px] w-[440px] flex-col bg-ink text-ink-fg">
+    {#if loading}
+        <div class="flex flex-1 items-center justify-center">
+            <Logo size={36} class="animate-led-pulse" />
+        </div>
+    {:else}
+        <TabsList pip={true} />
+    {/if}
+</div>
 
 <style lang="postcss">
     :global(.dark) {

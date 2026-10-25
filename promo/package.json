@@ -1,0 +1,27 @@
+{
+    "name": "chorus-promo",
+    "private": true,
+    "version": "1.0.0",
+    "description": "Chrome Web Store promo video for Chorus, built with Remotion",
+    "scripts": {
+        "track": "node scripts/make-track.mjs",
+        "studio": "remotion studio src/index.ts --port=4776",
+        "render": "remotion render src/index.ts ChorusPromo out/chorus-promo.mp4 --codec h264 --crf 17 --port=4777",
+        "render:webm": "remotion render src/index.ts ChorusPromo out/chorus-promo.webm --codec vp9 --port=4777",
+        "thumbnail": "remotion still src/index.ts Thumbnail out/thumbnail.png --port=4777",
+        "still": "remotion still src/index.ts ChorusPromo --port=4777",
+        "typecheck": "tsc --noEmit"
+    },
+    "dependencies": {
+        "@remotion/cli": "^4.0.0",
+        "@remotion/google-fonts": "^4.0.0",
+        "react": "^19.0.0",
+        "react-dom": "^19.0.0",
+        "remotion": "^4.0.0"
+    },
+    "devDependencies": {
+        "@types/react": "^19.0.0",
+        "@types/react-dom": "^19.0.0",
+        "typescript": "^5.6.0"
+    }
+}

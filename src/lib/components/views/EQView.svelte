@@ -1,7 +1,10 @@
 <script lang="ts">
     import EQ from './EQ.svelte'
     import EQControls from '$lib/components/EQControls.svelte'
+    import EffectStatus from '$lib/components/EffectStatus.svelte'
+    import SegmentedControl from '$lib/components/SegmentedControl.svelte'
     import * as HoverCard from '$lib/components/ui/hover-card'
+    import Info from '@lucide/svelte/icons/info'
     import { effectsStore } from '$lib/stores/effects'
     import { eqSubView } from '$lib/stores/effects-ui'
 
@@ -15,19 +18,13 @@
         eqSubView.set(sub)
     })
 
-    const subTabs = [
-        { id: 'presets', label: 'presets' },
-        { id: 'config', label: 'config' }
-    ] as const
-
-    // A quick frequency guide for the ⓘ info hover-card — the band grid is full,
-    // so (unlike reverb) the info trigger lives in the header.
+    // A quick frequency guide for the ⓘ info hover-card.
     const BAND_HINTS = [
-        ['32–64Hz', 'sub-bass — rumble and thump'],
-        ['125–250Hz', 'bass — fullness and warmth'],
-        ['500Hz–1kHz', 'mids — body and vocals'],
-        ['2k–4kHz', 'presence — clarity and edge'],
-        ['8k–16kHz', 'treble — brightness and air']
+        ['32–64 Hz', 'sub-bass — rumble and thump'],
+        ['125–250 Hz', 'bass — fullness and warmth'],
+        ['500 Hz–1 kHz', 'mids — body and vocals'],
+        ['2–4 kHz', 'presence — clarity and edge'],
+        ['8–16 kHz', 'treble — brightness and air']
     ] as const
 
     // What the config is starting from: the last-loaded user preset, else the
@@ -36,7 +33,7 @@
     const fromLabel = $derived.by(() => {
         if (userFrom) return userFrom
         const active = $effectsStore.equalizer
-        return active && active !== 'none' ? active : 'default'
+        return active && active !== 'none' ? active : 'flat'
     })
 
     // Picking a built-in preset supersedes a previously-loaded user preset.
@@ -46,49 +43,46 @@
     })
 </script>
 
-<div class="flex h-full w-full flex-col gap-y-2">
+<div class="flex h-full flex-col gap-y-2.5">
     <div class="flex items-center justify-between gap-x-2">
-        <div class="flex min-w-0 flex-1 items-center justify-between gap-x-1.5">
+        <EffectStatus
+            name="EQ"
+            value={$effectsStore.equalizer}
+            from={sub === 'config' ? fromLabel : ''}
+        >
             {#if sub === 'config'}
-                <span class="truncate text-xs text-gray-500"
-                    >from: <span class="text-gray-400">{fromLabel}</span></span
-                >
-                <HoverCard.Root openDelay={200} closeDelay={200}>
+                <HoverCard.Root openDelay={150} closeDelay={150}>
                     <HoverCard.Trigger
                         aria-label="What the bands do"
-                        class="flex shrink-0 cursor-help items-center gap-x-1 text-xs !text-gray-500 !no-underline hover:!text-gray-300"
+                        class="inline-flex size-5 shrink-0 cursor-help items-center justify-center rounded-md text-ink-muted hover:bg-surface-2 hover:text-ink-fg"
                     >
-                        <span class="text-gray-300 mt-0.5">ⓘ</span>
-                        <span class="text-gray-300">info</span>
+                        <Info class="size-3" />
                     </HoverCard.Trigger>
-                    <HoverCard.Content class="z-[1000] flex w-64 flex-col gap-y-1 text-xs">
-                        <p class="leading-snug text-gray-400">
-                            Boost (+) or cut (−) each frequency band, in dB.
+                    <HoverCard.Content class="flex w-60 flex-col gap-y-1 text-xs">
+                        <p class="leading-snug text-ink-muted">
+                            Boost (+) or cut (−) each band, in dB.
                         </p>
                         {#each BAND_HINTS as [range, hint] (range)}
                             <p class="leading-snug">
-                                <span class="font-semibold text-gray-300">{range}</span>
-                                <span class="text-gray-400"> — {hint}</span>
+                                <span class="font-mono text-ink-fg">{range}</span>
+                                <span class="text-ink-muted"> — {hint}</span>
                             </p>
                         {/each}
                     </HoverCard.Content>
                 </HoverCard.Root>
             {/if}
-        </div>
+        </EffectStatus>
 
-        <div class="flex shrink-0 items-center gap-x-1.5">
-            {#each subTabs as t (t.id)}
-                <button
-                    onclick={() => (sub = t.id)}
-                    class="rounded-[2px] px-1.5 py-0 pb-[0.125rem] text-sm font-semibold leading-[18px] text-[#fafafa] transition-colors {sub ===
-                    t.id
-                        ? 'bg-green-700 hover:bg-green-800'
-                        : 'bg-zinc-700 hover:bg-zinc-500'}"
-                >
-                    {t.label}
-                </button>
-            {/each}
-        </div>
+        <SegmentedControl
+            size="xs"
+            ariaLabel="EQ view"
+            value={sub}
+            onValueChange={(v) => (sub = v as 'presets' | 'config')}
+            options={[
+                { label: 'Presets', value: 'presets' },
+                { label: 'Config', value: 'config' }
+            ]}
+        />
     </div>
 
     {#if sub === 'presets'}

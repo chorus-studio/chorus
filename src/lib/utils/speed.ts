@@ -9,8 +9,8 @@ export function padSpeed({ value, key }: Omit<SpeedParams, 'current'>): string {
     const parsedValue = parseFloat(defaultRate)
     if (isNaN(parsedValue)) return defaultRate
 
-    // Use toFixed to ensure we get the exact number of decimal places
-    const decimalPlace = key == 'rate' ? 3 : 2
+    // Rate shows 3 decimals, pitch 2; key (semitones) is a whole number.
+    const decimalPlace = key == 'rate' ? 3 : key == 'semitone' ? 0 : 2
     return parsedValue.toFixed(decimalPlace)
 }
 

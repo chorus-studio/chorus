@@ -41,7 +41,10 @@
     type="reverb"
     {topSelected}
     topOptions={roomOptions}
-    topLabel="room-sized reverb"
-    bottomLabel="custom reverb"
+    topLabel="Room"
+    topHint="Spaces from a small room to a cathedral"
+    bottomLabel="Custom & impulse"
+    bottomHint="Character presets; impulse responses can't be tuned"
     bottomOptions={customOptions}
+    note="Picking from one list clears the other. Tune the sound in Config."
 />

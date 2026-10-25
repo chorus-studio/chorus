@@ -2,7 +2,7 @@
     import { onDestroy, onMount } from 'svelte'
     import { Switch } from '$lib/components/ui/switch'
     import { CustomSlider } from '$lib/components/ui/custom-slider'
-    import ToggleSelect from '$lib/components/ToggleSelect.svelte'
+    import SegmentedControl from '$lib/components/SegmentedControl.svelte'
 
     let on = $state(false)
     let mode = $state<'remove' | 'isolate'>('remove')
@@ -64,8 +64,8 @@
         }
     }
 
-    function setMode(value: string | undefined) {
-        if (value !== 'remove' && value !== 'isolate') return // ignore deselect
+    function setMode(value: string) {
+        if (value !== 'remove' && value !== 'isolate') return
         mode = value
         if (on) send({ cmd: 'setMode', mode })
     }
@@ -86,36 +86,48 @@
     })
 </script>
 
-<div class="flex w-full flex-col gap-y-3 pt-1">
-    <div class="flex items-center justify-between">
-        <span class="text-sm text-gray-300">vocal separation</span>
-        <Switch checked={on} onCheckedChange={toggle} />
+<div class="flex w-full flex-col gap-y-2.5">
+    <div class="flex items-center justify-between gap-x-3">
+        <div class="flex flex-col gap-y-0.5">
+            <span class="text-[13px] font-semibold text-ink-fg">Vocal separation</span>
+            <span class="text-[11px] text-ink-muted">Real-time, applies to this tab</span>
+        </div>
+        <Switch checked={on} onCheckedChange={toggle} aria-label="Vocal separation" />
     </div>
 
     <div
         inert={!on}
-        class="flex flex-col gap-y-3 transition-opacity duration-150 {on
+        class="flex flex-col gap-y-2.5 transition-opacity duration-150 {on
             ? ''
             : 'pointer-events-none opacity-40'}"
     >
-        <ToggleSelect
-            label={mode === 'remove' ? 'Instrumental' : 'Acapella'}
-            labelClass="text-sm"
+        <SegmentedControl
+            grow
+            size="sm"
+            ariaLabel="Mode"
             value={mode}
             onValueChange={setMode}
-            list={[
-                { label: 'I', value: 'remove' },
-                { label: 'A', value: 'isolate' }
+            options={[
+                { label: 'Instrumental', value: 'remove', title: 'Remove the vocals' },
+                { label: 'Acapella', value: 'isolate', title: 'Keep only the vocals' }
             ]}
         />
 
-        <div class="flex flex-col gap-y-1">
+        <div class="flex flex-col gap-y-1.5">
             <div class="flex items-center justify-between">
-                <span class="text-sm text-gray-400">strength</span>
-                <span class="text-xs text-gray-500">{depth}%</span>
+                <span class="rack-label">Strength</span>
+                <span class="font-mono text-[11px] text-ink-fg-2">{depth}%</span>
             </div>
-            <CustomSlider type="single" min={0} max={100} step={1} value={depth} onValueChange={setDepth} />
-            <div class="flex items-center justify-between text-[10px] text-gray-500">
+            <CustomSlider
+                type="single"
+                min={0}
+                max={100}
+                step={1}
+                value={depth}
+                label="Strength"
+                onValueChange={setDepth}
+            />
+            <div class="flex items-center justify-between font-mono text-[9px] text-ink-muted">
                 <span>original</span>
                 <span>full</span>
             </div>
@@ -123,6 +135,6 @@
     </div>
 
     {#if error}
-        <p class="text-xs text-red-400">{error}</p>
+        <p class="text-[11px] text-alarm">{error}</p>
     {/if}
 </div>

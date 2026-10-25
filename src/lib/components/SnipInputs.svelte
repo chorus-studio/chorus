@@ -2,143 +2,145 @@
     import { snipStore } from '$lib/stores/snip'
     import { mediaStore } from '$lib/stores/media'
     import { nowPlaying } from '$lib/stores/now-playing'
-    import { formatTimeInSeconds, timeToSeconds, secondsToTime } from '$lib/utils/time'
+    import { clampSnip, formatSnipTime, parseTimeInput, round1 } from '$lib/utils/snip-time'
 
-    import { Input } from '$lib/components/ui/input'
-    import { Label } from '$lib/components/ui/label'
+    import Play from '@lucide/svelte/icons/play'
+    import Plus from '@lucide/svelte/icons/plus'
+    import Info from '@lucide/svelte/icons/info'
+    import Minus from '@lucide/svelte/icons/minus'
+    import ArrowUpToLine from '@lucide/svelte/icons/arrow-up-to-line'
     import { Button } from '$lib/components/ui/button'
 
-    type SnipKey = 'start_time' | 'end_time'
+    type Which = 'start' | 'end'
+    const MIN_LENGTH = 1
 
-    function timeToMilliseconds(time: number[]) {
-        const [hours, mins, secs, ms] = time
-        return hours * 60 * 60 * 1000 + mins * 60 * 1000 + secs * 1000 + ms
-    }
+    const duration = $derived(Math.max($nowPlaying.duration ?? 0, 0))
+    const start = $derived($snipStore?.start_time ?? 0)
+    const end = $derived($snipStore?.end_time ?? duration)
+    const length = $derived(Math.max(0, end - start))
 
-    function handleChange(event: Event) {
-        const input = event.target as HTMLInputElement
-        const value = input.value
-        const id = input.id as SnipKey
-        if (!value || !$snipStore) return
-
-        const isValid = validateTime({ value, maxValue: secondsToTime($nowPlaying.duration) })
-        if (!isValid) return
-
-        const updatedHandle = id === 'start_time' ? 'start' : 'end'
-        const updatedTime = timeToSeconds(value!)
-        if (updatedTime) {
-            snipStore.set({ ...$snipStore, [id]: updatedTime, last_updated: updatedHandle })
-            nowPlaying.setCurrentTime(updatedTime)
-        }
-    }
-
-    function validateTime({ value, maxValue }: { value: string; maxValue: string }) {
-        const regex = /^(\d{2}):(\d{2}):(\d{2}):(\d{2})$/
-        const match = value.match(regex)
-
-        if (!match) return false
-
-        const totalMilliseconds = timeToMilliseconds(Array.from(match.slice(1)).map(Number))
-        const maxTotalMilliseconds = timeToMilliseconds(maxValue.split(':').map(Number))
-
-        if (totalMilliseconds < 0 || totalMilliseconds > maxTotalMilliseconds) return false
-
-        return true
-    }
-
-    function handlePlayPause() {
-        const playPauseButton = document.querySelector(
-            '[data-testid="control-button-playpause'
-        ) as HTMLButtonElement
-        playPauseButton?.click()
-    }
-
-    function restart() {
+    function commit(which: Which, value: number, seek = true) {
         if (!$snipStore) return
-        nowPlaying.setCurrentTime($snipStore.start_time!)
+        const next = clampSnip(
+            { start: which === 'start' ? value : start, end: which === 'end' ? value : end },
+            duration,
+            MIN_LENGTH
+        )
+        snipStore.set({
+            ...$snipStore,
+            start_time: next.start,
+            end_time: next.end,
+            last_updated: which
+        })
+        if (seek) nowPlaying.setCurrentTime(which === 'start' ? next.start : next.end)
+    }
+
+    function handleChange(event: Event, which: Which) {
+        const input = event.target as HTMLInputElement
+        const parsed = parseTimeInput(input.value)
+        if (parsed === null) {
+            input.value = formatSnipTime(which === 'start' ? start : end)
+            return
+        }
+        commit(which, parsed)
+    }
+
+    function nudge(which: Which, delta: number) {
+        commit(which, (which === 'start' ? start : end) + delta)
+    }
+
+    function setToPlayhead(which: Which) {
+        commit(which, round1($nowPlaying.current ?? 0), false)
+    }
+
+    function ensurePlaying() {
+        if ($mediaStore.playing) return
+        const playPause = document.querySelector(
+            '[data-testid="control-button-playpause"]'
+        ) as HTMLButtonElement | null
+        playPause?.click()
+    }
+
+    function playSnip() {
+        nowPlaying.setCurrentTime(start)
+        ensurePlaying()
+    }
+
+    function playLastSeconds() {
+        nowPlaying.setCurrentTime(Math.max(start, end - 3))
+        ensurePlaying()
     }
 </script>
 
 {#if $snipStore}
-    <p class="-mt-3 flex w-full text-xs text-muted-foreground">
-        * while editing "end", track plays 3 secs past set end
-    </p>
-
-    <div class="-mt-2 grid w-full grid-cols-2">
-        <div class="flex flex-col items-center gap-y-1">
-            <div class="flex h-6 w-full items-center">
-                <Label
-                    for="start_time"
-                    class="h-6 w-12 min-w-12 border-none bg-zinc-700 px-2 py-0 pb-[0.075rem] text-center text-base font-bold lowercase leading-5"
-                    >Start</Label
-                >
-                <Input
-                    id="start_time"
-                    value={formatTimeInSeconds($snipStore.start_time!)}
-                    onchange={handleChange}
-                    class="h-6 w-24 rounded-none border-none bg-green-700 pr-2 text-end text-base font-bold tracking-wide text-white"
-                />
-            </div>
-            <div class="flex w-full items-center">
-                <Label
-                    for="end_time"
-                    class="h-6 w-12 min-w-12 border-none bg-zinc-700 px-2 py-0 pb-[0.075rem] text-center text-base font-bold lowercase leading-5"
-                    >End</Label
-                >
-                <Input
-                    id="end_time"
-                    value={formatTimeInSeconds($snipStore.end_time!)}
-                    onchange={handleChange}
-                    class="h-6 w-24 rounded-none border-none bg-green-700 pr-2 text-end text-base font-bold lowercase tracking-wide text-white"
-                />
-            </div>
-        </div>
-
-        <div class="flex w-full flex-col items-center gap-1">
-            <p class="text-sm text-muted-foreground">
-                snip length: {secondsToTime($snipStore.end_time! - $snipStore.start_time!)}
-            </p>
-            <div class="flex items-center justify-between gap-x-2">
-                <Button
-                    size="icon"
-                    variant="ghost"
-                    onclick={restart}
-                    class="size-6 rounded-full border-none bg-transparent stroke-current hover:bg-transparent [&_svg]:size-[1.25rem]"
-                >
-                    <svg
-                        class="size-5 fill-none stroke-current stroke-[5]"
-                        viewBox="0 0 64 64"
-                        xmlns="http://www.w3.org/2000/svg"
-                        preserveAspectRatio="xMidYMid meet"
+    <div class="grid grid-cols-[minmax(0,1.3fr)_minmax(0,1.3fr)_minmax(0,0.7fr)] gap-x-2.5">
+        {#each [['start', 'Start'], ['end', 'End']] as [which, label] (which)}
+            {@const value = which === 'start' ? start : end}
+            <div class="flex min-w-0 flex-col gap-y-1.5">
+                <div class="flex h-4 items-center justify-between">
+                    <span class="rack-label">{label}</span>
+                    <button
+                        type="button"
+                        onclick={() => setToPlayhead(which as Which)}
+                        title={`Set ${label.toLowerCase()} to the current position`}
+                        class="chorus-focus inline-flex h-4 items-center gap-x-1 whitespace-nowrap rounded-sm px-0.5 text-[11px] text-signal hover:text-signal-bright"
                     >
-                        <path d="M34.46,53.91A21.91,21.91,0,1,0,12.55,31.78"></path>
-                        <polyline points="4.65 22.33 12.52 32.62 22.81 24.75"></polyline>
-                    </svg>
-                </Button>
-                <Button
-                    size="icon"
-                    variant="ghost"
-                    onclick={handlePlayPause}
-                    class="size-7 rounded-full bg-transparent stroke-current hover:bg-transparent [&_svg]:size-[1.5rem]"
-                >
-                    <svg
-                        class="h-6 w-6 fill-none stroke-current stroke-1"
-                        viewBox="-4 -4 24 24"
-                        xmlns="http://www.w3.org/2000/svg"
-                        preserveAspectRatio="xMidYMid meet"
+                        <ArrowUpToLine class="size-[11px]" />
+                        Playhead
+                    </button>
+                </div>
+                <div class="flex items-center gap-x-1">
+                    <button
+                        type="button"
+                        aria-label={`${label} minus one second`}
+                        onclick={() => nudge(which as Which, -1)}
+                        class="chorus-focus inline-flex h-7 w-6 shrink-0 items-center justify-center rounded-md bg-surface-2 text-ink-fg-2 hover:bg-surface-2/80"
                     >
-                        {#if $mediaStore.playing}
-                            <path
-                                d="M2.7 1a.7.7 0 0 0-.7.7v12.6a.7.7 0 0 0 .7.7h2.6a.7.7 0 0 0 .7-.7V1.7a.7.7 0 0 0-.7-.7H2.7zm8 0a.7.7 0 0 0-.7.7v12.6a.7.7 0 0 0 .7.7h2.6a.7.7 0 0 0 .7-.7V1.7a.7.7 0 0 0-.7-.7h-2.6z"
-                            />
-                        {:else}
-                            <path
-                                d="M3 1.713a.7.7 0 0 1 1.05-.607l10.89 6.288a.7.7 0 0 1 0 1.212L4.05 14.894A.7.7 0 0 1 3 14.288V1.713z"
-                            />
-                        {/if}
-                    </svg>
-                </Button>
+                        <Minus class="size-3" />
+                    </button>
+                    <input
+                        aria-label={`${label} time`}
+                        value={formatSnipTime(value)}
+                        onchange={(e) => handleChange(e, which as Which)}
+                        class="readout h-7 w-full min-w-0 flex-1 justify-center text-center focus-visible:border-signal/60 focus-visible:outline-none"
+                    />
+                    <button
+                        type="button"
+                        aria-label={`${label} plus one second`}
+                        onclick={() => nudge(which as Which, 1)}
+                        class="chorus-focus inline-flex h-7 w-6 shrink-0 items-center justify-center rounded-md bg-surface-2 text-ink-fg-2 hover:bg-surface-2/80"
+                    >
+                        <Plus class="size-3" />
+                    </button>
+                </div>
             </div>
+        {/each}
+
+        <div class="flex min-w-0 flex-col gap-y-1.5">
+            <span class="rack-label flex h-4 items-center">Length</span>
+            <div class="readout h-7 justify-center text-ink-muted">{formatSnipTime(length)}</div>
         </div>
+    </div>
+
+    <div class="mt-auto flex items-center justify-between gap-x-2">
+        <div class="flex items-center gap-x-1">
+            <Button variant="secondary" size="sm" onclick={playSnip} class="h-[26px]">
+                <Play class="size-3 fill-current" />
+                Play snip
+            </Button>
+            <Button
+                variant="ghost"
+                size="sm"
+                onclick={playLastSeconds}
+                class="h-[26px]"
+                title="Hear how the snip ends"
+            >
+                Last 3 s
+            </Button>
+        </div>
+        <span class="flex items-center gap-x-1.5 text-[11px] text-ink-muted">
+            <Info class="size-3 shrink-0" />
+            Drag handles · ← → nudge 1 s
+        </span>
     </div>
 {/if}

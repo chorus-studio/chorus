@@ -2,10 +2,7 @@
     import { effectsStore } from '$lib/stores/effects'
 
     import type { Selection } from '$lib/types'
-    import { Label } from '$lib/components/ui/label'
-    import { Button } from '$lib/components/ui/button'
-    import RotateCcw from '@lucide/svelte/icons/rotate-ccw'
-    import { Separator } from '$lib/components/ui/separator'
+    import Info from '@lucide/svelte/icons/info'
     import { CustomSelect } from '$lib/components/ui/custom-select'
 
     let {
@@ -13,16 +10,22 @@
         type,
         topLabel,
         topSelected,
+        topHint = '',
         bottomLabel,
+        bottomHint = '',
         topOptions,
-        bottomOptions
+        bottomOptions,
+        note = 'Choosing from one list clears the other.'
     }: {
         type: 'reverb' | 'equalizer' | 'msProcessor'
         topSelected: boolean
         topLabel: string
+        topHint?: string
         bottomLabel: string
+        bottomHint?: string
         topOptions: Selection[]
         bottomOptions: Selection[]
+        note?: string
         pip?: boolean
     } = $props()
 
@@ -31,12 +34,10 @@
     }
 </script>
 
-<div class="flex w-full flex-col gap-y-2.5">
-    <h2 class="text-base leading-none text-gray-400">{type}</h2>
-
-    <div class="flex w-full flex-col gap-y-1.5">
-        <div class="flex flex-col">
-            <Label for="room" class="w-full text-sm text-gray-400">{topLabel}</Label>
+<div class="flex h-full flex-col gap-y-2">
+    <div class="flex flex-col gap-y-2 rounded-lg border border-hairline bg-panel px-3 py-2">
+        <div class="flex flex-col gap-y-1">
+            <span class="rack-label">{topLabel}</span>
             <CustomSelect
                 {pip}
                 size="md"
@@ -44,11 +45,15 @@
                 selected={topSelected ? $effectsStore[type] : 'none'}
                 options={topOptions}
                 onValueChange={handleUpdateEffect}
+                class="w-full"
             />
+            {#if topHint}
+                <span class="text-[11px] text-ink-muted">{topHint}</span>
+            {/if}
         </div>
 
-        <div class="flex flex-col">
-            <Label for="room" class="w-full text-sm text-gray-400">{bottomLabel}</Label>
+        <div class="flex flex-col gap-y-1">
+            <span class="rack-label">{bottomLabel}</span>
             <CustomSelect
                 {pip}
                 size="md"
@@ -56,23 +61,18 @@
                 selected={!topSelected ? $effectsStore[type] : 'none'}
                 options={bottomOptions}
                 onValueChange={handleUpdateEffect}
+                class="w-full"
             />
+            {#if bottomHint}
+                <span class="text-[11px] text-ink-muted">{bottomHint}</span>
+            {/if}
         </div>
     </div>
 
-    <Separator class="mt-1 h-0.5 w-full" />
-
-    <div class="flex w-full justify-between">
-        <Button
-            size="icon"
-            variant="ghost"
-            class="size-6 w-7 rounded-none [&_svg]:size-4"
-            onclick={() => handleUpdateEffect('none')}
-        >
-            <RotateCcw class="size-4" />
-        </Button>
-        <p class="inline-flex w-full justify-end text-sm text-white">
-            {$effectsStore[type]}
+    {#if note}
+        <p class="mt-auto flex items-center gap-x-1.5 text-[11px] text-ink-muted">
+            <Info class="size-3 shrink-0" />
+            {note}
         </p>
-    </div>
+    {/if}
 </div>

@@ -13,21 +13,20 @@
     import BellRing from '@lucide/svelte/icons/bell-ring'
     import Power from '@lucide/svelte/icons/power'
     import AudioLines from '@lucide/svelte/icons/audio-lines'
+    import ExternalLink from '@lucide/svelte/icons/external-link'
 
-    import { Button } from '$lib/components/ui/button'
+    import Logo from '$lib/components/Logo.svelte'
     import TrackInfo from '$lib/components/TrackInfo.svelte'
-    import VolumeIcon from '$lib/components/VolumeIcon.svelte'
     import CoverImage from '$lib/components/CoverImage.svelte'
     import VolumeSlider from '$lib/components/VolumeSlider.svelte'
     import TimeProgress from '$lib/components/TimeProgress.svelte'
     import MediaControls from '$lib/components/MediaControls.svelte'
     import SelectVibrancy from '$lib/components/SelectVibrancy.svelte'
+    import { formatRulerTime } from '$lib/utils/snip-time'
 
-    import { getColours } from '$lib/utils/vibrant-colors'
+    import { getColours, applyPalette } from '$lib/utils/vibrant-colors'
     import { getCheckPermissionsService } from '$lib/utils/check-permissions'
-    import { getVersion } from '$lib/utils/version'
-
-    const version = getVersion()
+    import { cn } from '$lib/utils.js'
 
     // onVoice is passed only from the toolbar popup, so the vocal-separation
     // entry icon never shows in the in-page player tab or PiP.
@@ -39,7 +38,7 @@
 
     function setupPort() {
         port = chrome.runtime.connect({ name: 'popup' })
-        port.onMessage.addListener(async ({ type, data }: { type: string; data: any }) => {
+        port.onMessage.addListener(async ({ type }: { type: string; data: any }) => {
             if (!['enabled', 'controls'].includes(type)) return
         })
     }
@@ -47,12 +46,7 @@
     let currentCover = $state($nowPlaying.cover)
     let currentVibrancy = $state<ThemeVibrancy>($settingsStore.theme.vibrancy ?? 'Auto')
 
-    async function toggleVolumeMute() {
-        await volumeStore.updateVolume({ muted: !$volumeStore.muted }, false)
-        port?.postMessage({ type: 'volume', data: $volumeStore })
-    }
-
-    function getCurrentState() {
+    function notificationState() {
         if ($settingsStore.notifications.enabled) {
             if ($settingsStore.notifications.on_track_change) return 3
             return 2
@@ -61,7 +55,7 @@
     }
 
     async function toggleNotifications() {
-        const currentState = getCurrentState()
+        const currentState = notificationState()
         await settingsStore.updateSettings({
             notifications: {
                 ...$settingsStore.notifications,
@@ -88,13 +82,11 @@
     async function loadColours() {
         if ($nowPlaying.cover) {
             const vibrancy = getVibrancy()
-            const { bg_colour = '#e3e3e3', text_colour = '#fafafa' } = await getColours({
+            const { bg_colour = '#121212', text_colour = '#ffffff' } = await getColours({
                 url: $nowPlaying.cover,
                 vibrancy
             })
-
-            document.documentElement.style.setProperty('--bg', bg_colour)
-            document.documentElement.style.setProperty('--text', text_colour)
+            applyPalette(document.documentElement, { bg_colour, text_colour })
         }
     }
 
@@ -141,112 +133,126 @@
             unsubscribeVibrancy()
         }
     })
+
+    const notificationLabel = $derived(
+        !$settingsStore.notifications.enabled
+            ? 'Notifications off — click to enable'
+            : $settingsStore.notifications.on_track_change
+              ? 'Notifying on every track change — click to turn off'
+              : 'Notifications on — click to also notify on track change'
+    )
+
+    // Palette-aware icon button for the popup header.
+    const iconBtn =
+        'inline-flex size-6 shrink-0 items-center justify-center rounded-md text-[color:var(--text)] opacity-75 transition-[opacity,background-color] hover:bg-[color:color-mix(in_srgb,var(--text)_12%,transparent)] hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--text)] [&_svg]:size-[15px]'
 </script>
 
 <main
-    class="relative flex h-[170px] flex-col gap-1 {pip
-        ? 'w-full'
-        : 'w-[300px] bg-[var(--bg)] px-3.5 py-3'}"
+    class={cn(
+        'relative flex flex-col',
+        pip
+            ? 'w-full gap-y-2.5'
+            : 'h-[196px] w-[320px] gap-y-2 bg-[color:var(--bg)] px-3 pb-2.5 pt-1.5 text-[color:var(--text)]'
+    )}
 >
     {#if !pip}
-        <div class="absolute left-3 top-0">
-            <span class="text-xs font-black text-[var(--text)] opacity-50">v{version}</span>
-        </div>
+        <header class="flex h-7 items-center gap-x-2">
+            <Logo size={16} tone="current" />
+            <span class="text-xs font-semibold tracking-tight">Chorus</span>
+
+            {#if !isSpotifyTabOpen}
+                <button
+                    type="button"
+                    onclick={openSpotify}
+                    class="inline-flex h-5 items-center gap-x-1 rounded-md px-1.5 text-[11px] text-[color:var(--text)] opacity-80 hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--text)]"
+                >
+                    Open Spotify
+                    <ExternalLink class="size-3" />
+                </button>
+            {/if}
+
+            <div class="ml-auto flex items-center gap-x-0.5">
+                {#if onVoice}
+                    <button
+                        type="button"
+                        aria-label="Vocal separation"
+                        title="Vocal separation"
+                        onclick={onVoice}
+                        class={iconBtn}
+                    >
+                        <AudioLines />
+                    </button>
+                {/if}
+
+                {#if $settingsStore.ui.popup}
+                    <SelectVibrancy />
+                {/if}
+
+                {#if !$settingsStore.notifications.granted}
+                    <button
+                        type="button"
+                        aria-label="Allow notifications"
+                        title="Allow track notifications"
+                        onclick={grantNotificationPermission}
+                        class="inline-flex h-6 items-center gap-x-1 rounded-md bg-[color:var(--text)] px-2 text-[11px] font-medium text-[color:var(--bg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--text)]"
+                    >
+                        <BellPlus class="size-3" />
+                        Allow
+                    </button>
+                {:else}
+                    <button
+                        type="button"
+                        aria-label={notificationLabel}
+                        title={notificationLabel}
+                        onclick={toggleNotifications}
+                        class={iconBtn}
+                    >
+                        {#if $settingsStore.notifications.enabled}
+                            {#if $settingsStore.notifications.on_track_change}
+                                <BellRing />
+                            {:else}
+                                <Bell />
+                            {/if}
+                        {:else}
+                            <BellOff />
+                        {/if}
+                    </button>
+                {/if}
+
+                <button
+                    type="button"
+                    aria-label="Turn Chorus off"
+                    title="Turn Chorus off (Alt+Shift+O)"
+                    onclick={() => setEnabled(false)}
+                    class={iconBtn}
+                >
+                    <Power />
+                </button>
+            </div>
+        </header>
     {/if}
 
-    <div
-        class="{pip
-            ? 'absolute -top-1.5 right-1'
-            : 'absolute right-1 top-0.5'} flex w-full items-center justify-end gap-x-0.5"
-    >
-        {#if onVoice}
-            <Button
-                size="icon"
-                variant="ghost"
-                aria-label="Vocal separation"
-                title="Vocal separation"
-                onclick={onVoice}
-                class="size-6 border-none bg-transparent text-[var(--text)] brightness-75 hover:bg-transparent hover:text-[var(--text)] [&_svg]:size-[1rem]"
-            >
-                <AudioLines />
-            </Button>
-        {/if}
-
-        {#if !pip}
-            <Button
-                size="icon"
-                variant="ghost"
-                aria-label="Turn Chorus off"
-                title="Turn Chorus off"
-                onclick={() => setEnabled(false)}
-                class="size-6 border-none bg-transparent text-[var(--text)] brightness-75 hover:bg-transparent hover:text-[var(--text)] [&_svg]:size-[1rem]"
-            >
-                <Power />
-            </Button>
-        {/if}
-
-        {#if !pip && !isSpotifyTabOpen}
-            <Button
-                variant="link"
-                class="absolute -top-3 left-8 text-xs text-[var(--text)] underline"
-                size="icon"
-                aria-label="Open Spotify"
-                onclick={openSpotify}
-            >
-                open spotify
-            </Button>
-        {/if}
-
-        {#if $settingsStore.ui.popup}
-            <SelectVibrancy />
-        {/if}
-
-        {#if !$settingsStore.notifications.granted}
-            <Button
-                size="sm"
-                variant="outline"
-                aria-label="Notifications"
-                onclick={grantNotificationPermission}
-                class="flex h-5 items-center gap-x-1 bg-[var(--text)] px-2 text-xs text-[var(--bg)] hover:bg-[var(--text)] hover:text-[var(--bg)]"
-            >
-                <BellPlus />
-                grant
-            </Button>
-        {:else}
-            <Button
-                size="icon"
-                variant="ghost"
-                aria-label="Notifications"
-                onclick={toggleNotifications}
-                class="size-6 border-none bg-transparent text-[var(--text)] brightness-75 hover:bg-transparent hover:text-[var(--text)] [&_svg]:size-[1rem]"
-            >
-                {#if $settingsStore.notifications.enabled}
-                    {#if $settingsStore.notifications.on_track_change}
-                        <BellRing />
-                    {:else}
-                        <Bell />
-                    {/if}
-                {:else}
-                    <BellOff />
-                {/if}
-            </Button>
-        {/if}
-
-        <Button
-            variant={pip ? 'default' : 'ghost'}
-            size="icon"
-            aria-label="Volume"
-            onclick={toggleVolumeMute}
-            class="size-6 border-none bg-transparent text-[var(--text)] brightness-75 hover:bg-transparent hover:text-[var(--text)] [&_svg]:size-[1rem]"
-        >
-            <VolumeIcon />
-        </Button>
-    </div>
-
-    <div class="flex h-16 w-full items-center gap-x-2 {pip ? 'mt-1' : 'mt-2'}">
-        <CoverImage />
-        <div class="flex h-16 flex-col justify-center gap-y-1 overflow-hidden text-[var(--text)]">
+    <div class="flex items-center {pip ? 'gap-x-3' : 'gap-x-2.5'}">
+        <CoverImage size={pip ? 56 : 52} />
+        <div class="flex min-w-0 flex-1 flex-col gap-y-1">
             <TrackInfo isPopup />
+            {#if $nowPlaying.snip || $nowPlaying.playback}
+                <div class="flex items-center gap-x-1.5 font-mono text-[10px] leading-none">
+                    {#if $nowPlaying.snip}
+                        <span class="size-1.5 rounded-full bg-[color:var(--album-accent)]"></span>
+                        <span class="text-[color:var(--album-accent)]">
+                            snip {formatRulerTime($nowPlaying.snip.start_time)}–{formatRulerTime(
+                                $nowPlaying.snip.end_time
+                            )}
+                        </span>
+                    {/if}
+                    {#if $nowPlaying.playback}
+                        <span class="text-[color:var(--text-2)]"
+                            >{$nowPlaying.playback.rate.value}×</span
+                        >
+                    {/if}
+                </div>
+            {/if}
         </div>
     </div>
 
@@ -255,15 +261,8 @@
     <MediaControls {port} {pip} />
 
     {#if pip}
-        <div class="pt-1">
+        <div class="mt-auto">
             <VolumeSlider {port} {pip} />
         </div>
     {/if}
 </main>
-
-<style>
-    :root {
-        --bg: #000000;
-        --text: #ffffff;
-    }
-</style>

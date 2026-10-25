@@ -1,16 +1,21 @@
 <script lang="ts">
-    import { padSpeed, validateSpeed, getTitle } from '$lib/utils/speed'
+    import { padSpeed, validateSpeed } from '$lib/utils/speed'
     import { defaultPlayback, playbackStore } from '$lib/stores/playback'
     import type { Rate, Playback, Frequent } from '$lib/stores/playback'
 
-    import { Label } from '$lib/components/ui/label'
-    import { Input } from '$lib/components/ui/input'
     import { Switch } from '$lib/components/ui/switch'
     import { Button } from '$lib/components/ui/button'
     import RotateCcw from '@lucide/svelte/icons/rotate-ccw'
     import BadgeList from '$lib/components/BadgeList.svelte'
 
     let { key, list }: { key: keyof Playback; list: Frequent[] } = $props()
+
+    const META: Record<keyof Playback, { title: string; range: string; unit: string }> = {
+        rate: { title: 'Rate', range: '0.25 – 4', unit: '×' },
+        pitch: { title: 'Pitch', range: '0.25 – 4', unit: '×' },
+        semitone: { title: 'Key', range: '−24 – +24', unit: 'st' }
+    }
+    const meta = $derived(META[key])
 
     async function handleInput(event: Event) {
         const input = event.target as HTMLInputElement
@@ -30,7 +35,7 @@
         playbackStore.dispatchPlaybackSettings($playbackStore[type])
     }
 
-    async function handleBadgeSelect({ key, value }: { key: string; value: number }) {
+    async function handleBadgeSelect(value: number) {
         const type = $playbackStore.is_default ? 'default' : 'track'
         const updateValue =
             key == 'rate' ? { [key]: { ...$playbackStore[type][key], value } } : { [key]: value }
@@ -68,54 +73,51 @@
         playbackStore.dispatchPlaybackSettings($playbackStore[type])
     }
 
-    let type: 'default' | 'track' = $derived($playbackStore.is_default ? 'default' : 'track')
-    let value: number = $derived(
+    const type = $derived($playbackStore.is_default ? 'default' : 'track')
+    const value = $derived(
         key == 'rate'
             ? ($playbackStore[type][key] as Rate).value
             : ($playbackStore[type][key] as number)
     )
-    let preservesPitch: boolean = $derived($playbackStore[type].rate.preserves_pitch)
+    const preservesPitch = $derived($playbackStore[type].rate.preserves_pitch)
+    const format = (v: number) => (key === 'semitone' ? (v > 0 ? `+${v}` : String(v)) : String(v))
 </script>
 
-<div class="flex w-full flex-col space-y-2">
-    <div class="flex items-center {key == 'rate' ? 'justify-between' : 'justify-start'}">
-        <h2 class="text-sm text-gray-400">{getTitle(key)}</h2>
+<div class="flex flex-col gap-y-1 rounded-lg border border-hairline bg-panel px-2.5 pb-1.5 pt-1.5">
+    <div class="flex h-4 items-center justify-between">
+        <div class="flex items-baseline gap-x-2">
+            <span class="rack-label">{meta.title}</span>
+            <span class="font-mono text-[9px] text-ink-muted">{meta.range}</span>
+        </div>
         {#if key == 'rate'}
-            <Switch checked={preservesPitch} onCheckedChange={handlePitchPreservation} />
+            <label class="flex items-center gap-x-1.5 text-[11px] text-ink-fg-2">
+                Keep pitch
+                <Switch checked={preservesPitch} onCheckedChange={handlePitchPreservation} />
+            </label>
         {/if}
     </div>
-    <BadgeList
-        {list}
-        {handlePin}
-        handleSelect={(value: number) => handleBadgeSelect({ key, value })}
-    />
 
-    <div class="flex w-full items-center justify-between">
-        <div class="flex flex-col items-center gap-y-1.5">
-            <div class="flex h-6 w-full items-center justify-between gap-x-1.5">
-                <Button
-                    size="icon"
-                    variant="ghost"
-                    class="size-6 w-7 rounded-none [&_svg]:size-4"
-                    onclick={handleReset}
-                >
-                    <RotateCcw class="size-4" />
-                </Button>
+    <div class="flex items-center gap-x-1">
+        <BadgeList {list} current={value} {format} handleSelect={handleBadgeSelect} {handlePin} />
 
-                <div class="flex h-6 w-full items-center">
-                    <Label
-                        for={key}
-                        class="h-6 w-full border-none bg-zinc-700 pb-[0.125rem] text-center text-base font-bold lowercase leading-5"
-                        >{key == 'semitone' ? 'key' : key}</Label
-                    >
-                    <Input
-                        id={key}
-                        onchange={handleInput}
-                        value={padSpeed({ value, key })}
-                        class="h-6 w-full rounded-none border border-none border-zinc-200 bg-green-700 px-1 text-end text-base font-bold text-white outline-white"
-                    />
-                </div>
-            </div>
+        <div class="flex shrink-0 items-center gap-x-1">
+            <input
+                id={key}
+                aria-label={meta.title}
+                onchange={handleInput}
+                value={padSpeed({ value, key })}
+                class="readout h-6 w-[66px] text-right focus-visible:border-signal/60 focus-visible:outline-none"
+            />
+            <span class="w-4 font-mono text-[10px] text-ink-muted">{meta.unit}</span>
+            <Button
+                size="icon-xs"
+                variant="ghost"
+                aria-label={`Reset ${meta.title.toLowerCase()}`}
+                title="Reset"
+                onclick={handleReset}
+            >
+                <RotateCcw class="size-3.5" />
+            </Button>
         </div>
     </div>
 </div>
