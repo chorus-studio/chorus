@@ -7,12 +7,16 @@
    Dark-only product in Spotify's own palette: Spotify green as the
    single signal accent, Spotify's neutral greys as layered surfaces,
    hairline borders, inset mono readouts.
+   A selected Spotify theme re-tints these surfaces from its hue
+   (utils/theme-surfaces.ts) but keeps the lightness ladder below.
    The shadcn names below are kept so the bits-ui primitives keep
    working; the studio names are the ones new code should reach for.
    ============================================================ */
 @layer base {
-    :root,
-    .dark {
+    /* Tokens live on :root only. Declaring them on .dark as well would re-set
+       the defaults on every Chorus mount (each wraps itself in .dark) and
+       shadow the themed values theming.ts writes inline on <html>. */
+    :root {
         /* studio surfaces (HSL triplets, consumed via hsl(var(--x) / a)) */
         --ink: 0 0% 7%; /* #121212  popover / page */
         --panel: 0 0% 9.4%; /* #181818  raised cards */
@@ -30,6 +34,9 @@
         --signal: 141 76% 48%; /* #1ed760  Spotify green */
         --signal-bright: 141 75% 50%; /* #1fdf64 */
         --signal-dark: 141 75% 35%; /* #169c46 */
+        /* signal for controls grafted into Spotify's player bar: a theme swaps
+           in its own accent when green can't clear 3:1 on the themed bar */
+        --bar-signal: var(--signal);
 
         /* secondary signals */
         --amber: 34 100% 58%; /* #ffa42b */

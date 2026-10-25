@@ -157,7 +157,7 @@
             class={buttonVariants({
                 variant: 'bar',
                 size: 'icon-sm',
-                class: `[&_svg]:size-[18px] ${$nowPlaying.liked ? 'text-signal opacity-100' : ''}`
+                class: `[&_svg]:size-[18px] ${$nowPlaying.liked ? 'text-signal-bar opacity-100' : ''}`
             })}
         >
             <Heart class={$nowPlaying.liked ? 'fill-current' : ''} />

@@ -52,8 +52,8 @@
         <div class="flex flex-col gap-y-0.5">
             <span class="text-[13px] font-medium text-ink-fg">Recolour the Spotify web player</span>
             <span class="text-xs text-ink-muted">
-                Pick a palette for the sidebar, main view and player bar. Chorus's own controls stay
-                the same in every theme.
+                Pick a palette for the sidebar, main view and player bar. Chorus's own panels take
+                on the same tint; green stays the signal colour.
             </span>
         </div>
         <label class="flex shrink-0 items-center gap-x-2 text-xs text-ink-fg-2">

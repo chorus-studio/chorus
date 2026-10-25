@@ -39,6 +39,10 @@ export async function applyStyles(pipWindow: Window) {
         }
     })
 
+    // Theme tokens live inline on the main document's root (utils/theming.ts);
+    // carry them over so the PiP rack is tinted like the page.
+    pipWindow.document.documentElement.style.cssText = document.documentElement.style.cssText
+
     // Add the chorus stylesheet
     const style = chrome.runtime.getURL('content-scripts/chorus.css')
     const link = pipWindow.document.createElement('link')
@@ -68,7 +72,7 @@ export async function togglePictureInPicture() {
         pipView.style.transform = 'translate(-50%, -50%)'
         pipView.style.width = '100%'
         pipView.style.height = '100%'
-        pipView.style.background = '#121212'
+        pipView.style.background = 'hsl(var(--ink))'
         pipView.style.display = 'flex'
         pipView.style.flexDirection = 'column'
         pipView.style.justifyContent = 'center'

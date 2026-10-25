@@ -42,9 +42,12 @@
     const muteLabel = $derived($volumeStore.muted ? 'Unmute' : 'Mute')
 </script>
 
+<!-- In the player bar the fill sits on Spotify's (possibly themed) chrome, so
+     the slider's signal colour follows --bar-signal there. -->
 <div
     id="chorus-volume"
     class="flex w-full items-center gap-x-1.5 {pip ? '' : 'max-w-[240px] self-end'}"
+    style={pip ? undefined : '--signal: var(--bar-signal)'}
 >
     <VolumeReset {pip} {port} />
 

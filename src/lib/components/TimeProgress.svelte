@@ -80,11 +80,12 @@
     }
 
     const isChorus = $derived(id === 'chorus-time-progress')
-    // In the player bar: white fill, green snip region. In the popup/PiP: the
-    // album text colour fills, the adaptive accent marks the snip.
+    // In the player bar: white fill, snip region in the bar signal (green, or
+    // the theme's accent on a themed bar). In the popup/PiP: the album text
+    // colour fills, the adaptive accent marks the snip.
     const fillClass = $derived(isChorus ? 'bg-ink-fg' : 'bg-[color:var(--text)]')
     const trackClass = $derived(isChorus ? 'bg-ink-fg/15' : 'bg-[color:var(--text)] opacity-[0.22]')
-    const snipColor = $derived(isChorus ? 'hsl(var(--signal))' : 'var(--album-accent)')
+    const snipColor = $derived(isChorus ? 'hsl(var(--bar-signal))' : 'var(--album-accent)')
     const timeClass = $derived(isChorus ? 'text-ink-muted' : 'text-[color:var(--text-2)]')
     const currentPosition = $derived(Math.round($nowPlaying.current ?? 0))
     const current = $derived($nowPlaying.current >= 0 ? formatTime($nowPlaying.current) : '-:--')
@@ -93,7 +94,9 @@
 
 <div class="relative flex w-full items-center gap-x-2 {isChorus ? 'mt-1' : ''}">
     {#if isChorus && $nowPlaying.playback}
-        <span class="min-w-7 text-right font-mono text-[11px] font-medium tabular-nums text-signal">
+        <span
+            class="min-w-7 text-right font-mono text-[11px] font-medium tabular-nums text-signal-bar"
+        >
             {$nowPlaying.playback.rate.value}×
         </span>
     {/if}
@@ -145,7 +148,7 @@
                 value={currentPosition ?? 0}
                 max={$nowPlaying.duration ?? 100}
                 innerClass={fillClass}
-                class="h-1 rounded-full {trackClass} transition-all group-hover:h-1.5 group-focus-visible:ring-2 group-focus-visible:ring-signal/60"
+                class="h-1 rounded-full {trackClass} transition-all group-hover:h-1.5 group-focus-visible:ring-2 group-focus-visible:ring-signal-bar/60"
             />
         </div>
 

@@ -19,6 +19,8 @@
 // ; notification-error = Error notification toast.
 // ; misc               = Miscellaneous.
 
+import { applyThemeSurfaces } from './theme-surfaces'
+
 export const THEME_NAMES: ThemeName[] = [
     'spotify',
     'forest_green',
@@ -332,6 +334,36 @@ export const STATIC_THEMES: Record<ThemeName, null | Record<CSSVariable, string>
     }
 }
 
+/**
+ * Write a palette onto the document root: the `--chorus-*` variables theme.css
+ * and the rewritten Spotify stylesheets read, plus the Chorus rack tokens
+ * derived from it (see theme-surfaces.ts). Pure DOM; no stylesheet injection.
+ */
+export function applyThemeVariables(themeConfig: Record<CSSVariable, string>): void {
+    const root = document.documentElement
+    const set = (name: string, value: string) => root.style.setProperty(name, value)
+
+    set('--chorus-main', themeConfig.main)
+    set('--chorus-card', themeConfig.card)
+    set('--chorus-sidebar', themeConfig.sidebar)
+    set('--chorus-button', themeConfig.button)
+    set('--chorus-subtext', themeConfig.subtext)
+    set('--chorus-text', themeConfig.text)
+    set('--chorus-selected-row', themeConfig.selected_row)
+    set('--chorus-shadow', themeConfig.shadow)
+    set('--chorus-button-active', themeConfig.button_active)
+    set('--chorus-button-disabled', themeConfig.button_disabled)
+    set('--chorus-tab-active', themeConfig.tab_active)
+    set('--chorus-misc', themeConfig.misc)
+    set('--chorus-player', themeConfig.player)
+    set('--chorus-notification', themeConfig.notification)
+    set('--chorus-notification-error', themeConfig.notification_error)
+    set('--chorus-highlight', themeConfig.main)
+    set('--chorus-highlight-elevated', themeConfig.sidebar)
+
+    applyThemeSurfaces(root, themeConfig)
+}
+
 export function removeTheme() {
     const themeLink = document.getElementById('chorus-theme')
     document.documentElement.style.cssText = ''
@@ -349,34 +381,9 @@ export async function setTheme(theme: ThemeName): Promise<void> {
 
     await injectTheme(theme)
 
-    const setRoot = document?.documentElement?.style?.setProperty
+    if (!document?.documentElement?.style?.setProperty) return
 
-    if (!setRoot) return
-
-    // colours
-    document.documentElement.style.setProperty('--chorus-main', themeConfig.main)
-    document.documentElement.style.setProperty('--chorus-card', themeConfig.card)
-    document.documentElement.style.setProperty('--chorus-sidebar', themeConfig.sidebar)
-    document.documentElement.style.setProperty('--chorus-button', themeConfig.button)
-    document.documentElement.style.setProperty('--chorus-subtext', themeConfig.subtext)
-    document.documentElement.style.setProperty('--chorus-text', themeConfig.text)
-    document.documentElement.style.setProperty('--chorus-selected-row', themeConfig.selected_row)
-    document.documentElement.style.setProperty('--chorus-shadow', themeConfig.shadow)
-    document.documentElement.style.setProperty('--chorus-button-active', themeConfig.button_active)
-    document.documentElement.style.setProperty(
-        '--chorus-button-disabled',
-        themeConfig.button_disabled
-    )
-    document.documentElement.style.setProperty('--chorus-tab-active', themeConfig.tab_active)
-    document.documentElement.style.setProperty('--chorus-misc', themeConfig.misc)
-    document.documentElement.style.setProperty('--chorus-player', themeConfig.player)
-    document.documentElement.style.setProperty('--chorus-notification', themeConfig.notification)
-    document.documentElement.style.setProperty(
-        '--chorus-notification-error',
-        themeConfig.notification_error
-    )
-    document.documentElement.style.setProperty('--chorus-highlight', themeConfig.main)
-    document.documentElement.style.setProperty('--chorus-highlight-elevated', themeConfig.sidebar)
+    applyThemeVariables(themeConfig)
 }
 
 type ReplacementRule = {
@@ -440,12 +447,15 @@ export async function overrideExternalStyles() {
                 let count = 0
                 for (const { target, replacement } of rulesToReplace) {
                     const regex = new RegExp(target, 'gi')
-                    modifiedCSS = modifiedCSS.replaceAll(regex, (match: string, ...groups: string[]) => {
-                        if (typeof replacement === 'function') {
-                            return `${replacement(match, groups[0] || '')} !important`
+                    modifiedCSS = modifiedCSS.replaceAll(
+                        regex,
+                        (match: string, ...groups: string[]) => {
+                            if (typeof replacement === 'function') {
+                                return `${replacement(match, groups[0] || '')} !important`
+                            }
+                            return `${replacement} !important`
                         }
-                        return `${replacement} !important`
-                    })
+                    )
                     count++
                 }
 

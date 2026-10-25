@@ -25,7 +25,7 @@
         class={buttonVariants({
             variant: 'bar',
             size: 'icon',
-            class: `relative [&_svg]:size-[20px] ${$loopStore.looping ? 'text-signal opacity-100' : ''}`
+            class: `relative [&_svg]:size-[20px] ${$loopStore.looping ? 'text-signal-bar opacity-100' : ''}`
         })}
     >
         <svg

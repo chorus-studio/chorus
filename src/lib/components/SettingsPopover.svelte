@@ -24,7 +24,7 @@
                         class={buttonVariants({
                             variant: 'bar',
                             size: 'icon-sm',
-                            class: `[&_svg]:size-[18px] ${engaged ? 'text-signal-bright opacity-100' : ''} ${isOpen ? 'opacity-100' : ''}`
+                            class: `[&_svg]:size-[18px] ${engaged ? 'text-signal-bar opacity-100' : ''} ${isOpen ? 'opacity-100' : ''}`
                         })}
                     >
                         <svg
