@@ -15,19 +15,24 @@
     import SkipButton from '$lib/components/SkipButton.svelte'
     import SettingsPopover from '$lib/components/SettingsPopover.svelte'
     import { applyPalette } from '$lib/utils/vibrant-colors'
+    import { STATIC_THEMES, applyThemeVariables, type ThemeName } from '$lib/utils/theming'
 
     const params = new URLSearchParams(location.search)
     const scene = params.get('scene') ?? 'tabs'
     const tab = params.get('tab') ?? 'snip'
     const dialog = params.get('dialog') ?? ''
+    // ?theme=hot_pink tints the rack and paints the page in that theme's chrome.
+    const themeConfig = STATIC_THEMES[(params.get('theme') ?? 'spotify') as ThemeName]
+    const chrome = themeConfig?.player ?? '#000000'
 
     onMount(() => {
         document.documentElement.classList.add('dark')
         applyPalette(document.documentElement, { bg_colour: '#1b6b63', text_colour: '#eafff9' })
+        if (themeConfig) applyThemeVariables(themeConfig)
     })
 </script>
 
-<div class="dark min-h-screen bg-black p-6 text-ink-fg">
+<div class="dark min-h-screen p-6 text-ink-fg" style="background: {chrome}">
     {#if scene === 'tabs'}
         <div
             id="frame"
@@ -65,7 +70,8 @@
     {:else if scene === 'bar'}
         <div
             id="frame"
-            class="flex h-[96px] w-[1280px] items-center gap-x-6 bg-black px-4 text-white"
+            class="flex h-[96px] w-[1280px] items-center gap-x-6 px-4 text-white"
+            style="background: {chrome}"
         >
             <div class="flex items-center gap-x-3">
                 <div class="size-14 rounded bg-surface-2"></div>
