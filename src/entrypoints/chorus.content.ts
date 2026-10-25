@@ -76,9 +76,7 @@ async function handleMediaPlayInit() {
 // unmounting the orphaned Svelte instance first so its store subscriptions (e.g.
 // LoopButton → loopStore) don't linger as stale subscribers. Without this, every
 // control-bar re-render would leak a fresh set of subscribed-but-invisible buttons.
-function pruneDetached(
-    list: Array<{ instance: Record<string, any>; container?: HTMLElement }>
-) {
+function pruneDetached(list: Array<{ instance: Record<string, any>; container?: HTMLElement }>) {
     return list.filter((entry) => {
         if (entry.container?.isConnected) return true
         try {
@@ -269,7 +267,9 @@ async function injectChorusUI(ctx: ContentScriptContext) {
     }
 
     const settings = await storage.getItem<SettingsState>(SETTINGS_STORE_KEY)
-    const theme = settings?.theme ? settings.theme.name : 'spotify'
+    // ui.theme is the Theme tab's "Apply theme" switch; a saved palette only
+    // comes back on load while it is on.
+    const theme = settings?.ui?.theme && settings.theme ? settings.theme.name : 'spotify'
     await setTheme(theme)
 
     integratedUi = createIntegratedUi(ctx, {

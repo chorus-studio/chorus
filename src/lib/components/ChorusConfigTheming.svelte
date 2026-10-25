@@ -10,11 +10,13 @@
     async function updateTheme(theme: ThemeName) {
         if (theme === $settingsStore.theme.name) return
 
+        // Picking a palette applies it, and the "Apply theme" switch follows.
         await settingsStore.updateSettings({
-            theme: { ...$settingsStore.theme, name: theme }
+            theme: { ...$settingsStore.theme, name: theme },
+            ui: { ...$settingsStore.ui, theme: theme !== 'spotify' }
         })
 
-        if ($settingsStore.ui.theme) await setTheme(theme)
+        await setTheme(theme)
     }
 
     async function toggleApply(enabled: boolean) {
