@@ -3,8 +3,9 @@
     import { type Frequent } from '$lib/stores/playback'
     import { cn } from '$lib/utils.js'
 
-    // Quick-value chips. With Frequent items a pin toggle appears on hover (always
-    // when pinned) so favourites stick around as the list evolves.
+    // Quick-value chips. Frequent items carry a pin toggle on the chip's leading
+    // edge so favourites stick around as the list evolves. The row never scrolls:
+    // the store caps frequents (FREQUENTS_MAX) so they fit beside the readout.
     let {
         list,
         current,
@@ -20,45 +21,53 @@
     } = $props()
 
     const isFrequentList = $derived(list.length > 0 && typeof list[0] !== 'number')
+    const pinnable = $derived(isFrequentList && !!handlePin)
     const items = $derived(
         (list as Array<number | Frequent>).map((item) =>
             typeof item === 'number' ? { value: item, pinned: false } : item
         )
     )
+
+    const focusRing =
+        'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-signal'
 </script>
 
-<div class="no-scrollbar flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
+<div class="flex min-w-0 flex-1 items-center gap-1 overflow-hidden">
     {#each items as item (item.value)}
         {@const active = current !== undefined && Math.abs(item.value - current) < 1e-9}
-        <div class="group relative shrink-0">
-            <button
-                type="button"
-                data-active={active}
-                onclick={() => handleSelect(item.value)}
-                class={cn(
-                    'inline-flex h-5 items-center gap-1 rounded-md border border-hairline bg-surface px-1.5 font-mono text-[11px] text-ink-fg-2 transition-colors hover:border-hairline-strong hover:text-ink-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal/60',
-                    active && 'border-signal/50 bg-signal/15 text-signal-bright'
-                )}
-            >
-                {#if item.pinned}
-                    <Star class="size-[9px] fill-amber stroke-amber" />
-                {/if}
-                {format(item.value)}
-            </button>
-            {#if isFrequentList && handlePin}
+        <div
+            data-active={active}
+            class={cn(
+                'inline-flex h-5 shrink-0 items-stretch overflow-hidden rounded-md border border-hairline bg-surface text-ink-fg-2 transition-colors hover:border-hairline-strong',
+                active && 'border-signal/50 bg-signal/15 text-signal-bright'
+            )}
+        >
+            {#if pinnable}
                 <button
                     type="button"
-                    aria-label={item.pinned ? 'Unpin value' : 'Pin value'}
+                    aria-pressed={item.pinned}
+                    aria-label={`${item.pinned ? 'Unpin' : 'Pin'} ${format(item.value)}`}
                     title={item.pinned ? 'Unpin' : 'Pin'}
                     onclick={() => handlePin?.(item)}
                     class={cn(
-                        'absolute -right-1 -top-1.5 inline-flex size-3.5 items-center justify-center rounded-full border border-hairline-strong bg-surface-2 text-ink-muted opacity-0 transition-opacity hover:text-amber focus-visible:opacity-100 group-hover:opacity-100',
-                        item.pinned && 'opacity-100'
+                        'inline-flex w-4 items-center justify-center border-r border-hairline text-ink-dim transition-colors hover:text-amber',
+                        focusRing,
+                        item.pinned && 'text-amber'
                     )}
                 >
-                    <Star class={cn('size-2', item.pinned && 'fill-amber stroke-amber')} />
+                    <Star class={cn('size-[9px]', item.pinned && 'fill-current')} />
                 </button>
             {/if}
+            <button
+                type="button"
+                onclick={() => handleSelect(item.value)}
+                class={cn(
+                    'inline-flex items-center px-1.5 font-mono text-[11px] transition-colors hover:text-ink-fg',
+                    focusRing
+                )}
+            >
+                {format(item.value)}
+            </button>
         </div>
     {/each}
 </div>

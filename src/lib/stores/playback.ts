@@ -35,33 +35,48 @@ export const defaultPlayback: Playback = {
 
 const PLAYBACK_STORE_KEY = 'local:chorus_playback'
 
+// Quick-value chips per control. Three keep the row inside its panel without
+// scrolling; pinned values survive both new entries and the cap below.
+export const FREQUENTS_MAX = 3
+
 const defaultPlaybackSettings: PlaybackSettings = {
     is_default: true,
     track: defaultPlayback,
     default: defaultPlayback,
     frequents: {
         pitch: [
-            { value: 0.25, pinned: false },
-            { value: 0.5, pinned: false },
             { value: 0.75, pinned: false },
             { value: 1, pinned: false },
             { value: 1.25, pinned: false }
         ],
         rate: [
-            { value: 0.5, pinned: false },
             { value: 0.9818, pinned: false },
             { value: 1, pinned: false },
-            { value: 1.2, pinned: false },
-            { value: 2, pinned: false }
+            { value: 1.2, pinned: false }
         ],
         semitone: [
-            { value: -2, pinned: false },
             { value: -1, pinned: false },
             { value: 0, pinned: false },
-            { value: 1, pinned: false },
-            { value: 2, pinned: false }
+            { value: 1, pinned: false }
         ]
     }
+}
+
+/** Trims a stored list to the cap, keeping pinned values ahead of unpinned ones. */
+function capFrequents(list: Frequent[]): Frequent[] {
+    if (list.length <= FREQUENTS_MAX) return list
+    const keep = new Set<Frequent>()
+    for (const item of list) if (item.pinned && keep.size < FREQUENTS_MAX) keep.add(item)
+    for (const item of list) if (!item.pinned && keep.size < FREQUENTS_MAX) keep.add(item)
+    return list.filter((item) => keep.has(item))
+}
+
+function capAllFrequents(state: PlaybackSettings): PlaybackSettings {
+    const frequents = { ...state.frequents }
+    for (const key of Object.keys(frequents) as Array<keyof Playback>) {
+        frequents[key] = capFrequents(frequents[key])
+    }
+    return { ...state, frequents }
 }
 
 function createPlaybackStore() {
@@ -115,7 +130,7 @@ function createPlaybackStore() {
                 return state
             }
 
-            if (frequents.length < 5) {
+            if (frequents.length < FREQUENTS_MAX) {
                 // If we have space, add the new value unpinned
                 frequents.push({ value, pinned: false })
             } else {
@@ -167,7 +182,7 @@ function createPlaybackStore() {
             if (!newValues) return
 
             // Sync the stored playback settings with the current type definition
-            const syncedValues = syncWithType(newValues, defaultPlaybackSettings)
+            const syncedValues = capAllFrequents(syncWithType(newValues, defaultPlaybackSettings))
             set(syncedValues)
 
             // Update storage with synced values
@@ -186,7 +201,7 @@ function createPlaybackStore() {
     storage.watch<PlaybackSettings>(PLAYBACK_STORE_KEY, (newValues) => {
         if (!newValues || isUpdatingStorage) return
 
-        const syncedValues = syncWithType(newValues, defaultPlaybackSettings)
+        const syncedValues = capAllFrequents(syncWithType(newValues, defaultPlaybackSettings))
         set(syncedValues)
     })
 
