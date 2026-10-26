@@ -3,7 +3,9 @@
     import { onMount } from 'svelte'
 
     import { nowPlaying } from '$lib/stores/now-playing'
+    import { get } from 'svelte/store'
     import { getColours, applyPalette } from '$lib/utils/vibrant-colors'
+    import { applyRackLook, applyThemePopupPalette, watchSystemMode } from '$lib/utils/theming'
     import { getEnabled, setEnabled, watchEnabled } from '$lib/stores/enabled'
     import { settingsStore, type ThemeVibrancy } from '$lib/stores/settings'
 
@@ -29,6 +31,12 @@
     }
 
     async function loadColours() {
+        // "Popup: Theme" points the palette variables at the rack tokens, which
+        // applyRackLook keeps in step with the chosen palette and appearance.
+        if ($settingsStore.theme.popup === 'theme') {
+            applyThemePopupPalette(document.documentElement)
+            return
+        }
         if (!$nowPlaying.cover) return
 
         const vibrancy = getVibrancy()
@@ -55,7 +63,24 @@
             if (!s.supported) console.debug('[chorus] vocal separation unavailable:', s.reason)
         })
         const unwatch = watchEnabled((value) => (enabled = value))
-        return () => unwatch()
+
+        // Rack tokens (palette, appearance, glass) and the popup's colour source
+        // follow settings; changes made on the page arrive here through storage.
+        let popupColours = $settingsStore.theme.popup
+        const unsubscribeLook = settingsStore.subscribe((s) => {
+            applyRackLook(s, document)
+            if (s.theme.popup !== popupColours) {
+                popupColours = s.theme.popup
+                loadColours()
+            }
+        })
+        const unwatchSystem = watchSystemMode(() => applyRackLook(get(settingsStore), document))
+
+        return () => {
+            unwatch()
+            unsubscribeLook()
+            unwatchSystem()
+        }
     })
 </script>
 

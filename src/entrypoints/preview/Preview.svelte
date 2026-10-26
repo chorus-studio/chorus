@@ -1,6 +1,7 @@
 <script lang="ts">
     import '../../app.css'
     import { onMount } from 'svelte'
+    import { get } from 'svelte/store'
     import TabsList from '$lib/components/TabsList.svelte'
     import PopUp from '$lib/components/views/PopUp.svelte'
     import PowerOffOverlay from '$lib/components/PowerOffOverlay.svelte'
@@ -15,28 +16,72 @@
     import SkipButton from '$lib/components/SkipButton.svelte'
     import SettingsPopover from '$lib/components/SettingsPopover.svelte'
     import { applyPalette } from '$lib/utils/vibrant-colors'
-    import { STATIC_THEMES, applyThemeVariables, type ThemeName } from '$lib/utils/theming'
+    import {
+        STATIC_THEMES,
+        SPOTIFY_PALETTE,
+        applyThemeVariables,
+        applyGlass,
+        applyThemePopupPalette,
+        type ThemeName,
+        type Mode
+    } from '$lib/utils/theming'
+    import { invertPalette } from '$lib/utils/theme-surfaces'
+    import { DEFAULT_GLASS, settingsStore } from '$lib/stores/settings'
 
     const params = new URLSearchParams(location.search)
     const scene = params.get('scene') ?? 'tabs'
     const tab = params.get('tab') ?? 'snip'
     const dialog = params.get('dialog') ?? ''
-    // ?theme=hot_pink tints the rack and paints the page in that theme's chrome.
-    const themeConfig = STATIC_THEMES[(params.get('theme') ?? 'spotify') as ThemeName]
+    // ?theme=hot_pink tints the rack and paints the page in that theme's chrome;
+    // ?mode=light shows the light version of it (of Spotify's own palette when none).
+    const mode: Mode = params.get('mode') === 'light' ? 'light' : 'dark'
+    const staticTheme = STATIC_THEMES[(params.get('theme') ?? 'spotify') as ThemeName]
+    const themeConfig =
+        mode === 'light' ? invertPalette(staticTheme ?? SPOTIFY_PALETTE) : staticTheme
     const chrome = themeConfig?.player ?? '#000000'
+    // ?glass=1 switches the glass surfaces on and paints a busy backdrop (album-like
+    // colour fields and text) behind the frame so the blur has something to show.
+    // ?popup=theme makes the popup wear the theme instead of the album palette.
+    const glass = params.get('glass') === '1'
+    const popupColours = params.get('popup') === 'theme' ? 'theme' : 'album'
+    const backdrop = glass
+        ? `radial-gradient(circle at 18% 28%, #ff6b6b 0, transparent 34%), radial-gradient(circle at 72% 58%, #4d96ff 0, transparent 38%), radial-gradient(circle at 48% 92%, #ffd93d 0, transparent 30%), radial-gradient(circle at 88% 12%, #6bcb77 0, transparent 26%), ${chrome}`
+        : chrome
 
-    onMount(() => {
+    onMount(async () => {
         document.documentElement.classList.add('dark')
+        document.documentElement.setAttribute('data-mode', mode)
         applyPalette(document.documentElement, { bg_colour: '#1b6b63', text_colour: '#eafff9' })
-        if (themeConfig) applyThemeVariables(themeConfig)
+        if (themeConfig) applyThemeVariables(themeConfig, mode)
+        if (popupColours === 'theme') applyThemePopupPalette(document.documentElement)
+        // Components read glass and the popup colour source from the settings
+        // store; the preview shim's storage never fires change events, so seed
+        // the store directly (it writes storage too).
+        const current = get(settingsStore)
+        await settingsStore.updateSettings({
+            ui: { ...current.ui, glass },
+            theme: { ...current.theme, appearance: mode, popup: popupColours, glass: DEFAULT_GLASS }
+        })
+        applyGlass(get(settingsStore))
     })
 </script>
 
-<div class="dark min-h-screen p-6 text-ink-fg" style="background: {chrome}">
+<div class="dark relative min-h-screen p-6 text-ink-fg" style="background: {backdrop}">
+    {#if glass}
+        <div
+            aria-hidden="true"
+            class="pointer-events-none absolute inset-0 select-none overflow-hidden p-6 font-semibold leading-[1.1] text-white/70"
+            style="font-size: 44px"
+        >
+            Caliphate (feat. Vince Staples) · Earl Sweatshirt · Red Room · Hiatus Kaiyote · Easier
+            Said Than Done · Thee Sacred Souls · Nakamarra · Get Sun · Lady Love · Will I See You
+            Again? · Molasses · Weightless · rwm · the booyah! kids
+        </div>
+    {/if}
     {#if scene === 'tabs'}
         <div
             id="frame"
-            class="h-[320px] w-[400px] overflow-hidden rounded-xl border border-hairline-strong bg-ink shadow-float"
+            class="chorus-float relative h-[320px] w-[400px] overflow-hidden rounded-xl border border-hairline-strong bg-ink shadow-float"
         >
             <TabsList initialTab={tab} />
         </div>
@@ -70,8 +115,8 @@
     {:else if scene === 'bar'}
         <div
             id="frame"
-            class="flex h-[96px] w-[1280px] items-center gap-x-6 px-4 text-white"
-            style="background: {chrome}"
+            class="flex h-[96px] w-[1280px] items-center gap-x-6 px-4"
+            style="background: {chrome}; color: {themeConfig?.text ?? '#ffffff'}"
         >
             <div class="flex items-center gap-x-3">
                 <div class="size-14 rounded bg-surface-2"></div>

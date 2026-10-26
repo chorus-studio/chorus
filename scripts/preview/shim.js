@@ -9,7 +9,7 @@
             id: '1',
             url: null,
             liked: true,
-            cover: null,
+            cover: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23ff7a18'/><stop offset='0.7' stop-color='%23af002d'/></linearGradient></defs><rect width='64' height='64' fill='url(%23g)'/></svg>",
             title: 'Midnight City',
             artist: 'M83',
             duration: 244,

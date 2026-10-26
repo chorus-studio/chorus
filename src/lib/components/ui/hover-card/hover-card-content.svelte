@@ -20,7 +20,7 @@
         {sideOffset}
         {align}
         class={cn(
-            'z-[99999] w-56 rounded-lg border border-hairline-strong bg-surface p-3 text-[13px] text-ink-fg shadow-float outline-none',
+            'chorus-float z-[99999] w-56 rounded-lg border border-hairline-strong bg-surface p-3 text-[13px] text-ink-fg shadow-float outline-none',
             className
         )}
         {...restProps}

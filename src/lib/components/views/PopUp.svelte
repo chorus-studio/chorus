@@ -5,7 +5,8 @@
     import { volumeStore } from '$lib/stores/volume'
     import { nowPlaying } from '$lib/stores/now-playing'
     import { setEnabled } from '$lib/stores/enabled'
-    import { settingsStore, type ThemeVibrancy } from '$lib/stores/settings'
+    import { settingsStore, type ThemeVibrancy, type PopupColours } from '$lib/stores/settings'
+    import { applyThemePopupPalette } from '$lib/utils/theming'
 
     import Bell from '@lucide/svelte/icons/bell'
     import BellOff from '@lucide/svelte/icons/bell-off'
@@ -45,6 +46,16 @@
 
     let currentCover = $state($nowPlaying.cover)
     let currentVibrancy = $state<ThemeVibrancy>($settingsStore.theme.vibrancy ?? 'Auto')
+    let currentPopupColours: PopupColours = $settingsStore.theme.popup ?? 'album'
+
+    const glassOn = $derived(Boolean($settingsStore.ui.glass))
+    // Quoted so a cover URL (or a data: URI) with spaces, quotes or
+    // parentheses still parses inside url().
+    const coverBackdrop = $derived(
+        $nowPlaying.cover
+            ? `background-image: url("${$nowPlaying.cover.replace(/["\\\n]/g, (c) => '%' + c.charCodeAt(0).toString(16))}")`
+            : ''
+    )
 
     function notificationState() {
         if ($settingsStore.notifications.enabled) {
@@ -80,6 +91,11 @@
     }
 
     async function loadColours() {
+        // "Popup: Theme" wears the rack tokens instead of the cover's palette.
+        if ($settingsStore.theme.popup === 'theme') {
+            applyThemePopupPalette(document.documentElement)
+            return
+        }
         if ($nowPlaying.cover) {
             const vibrancy = getVibrancy()
             const { bg_colour = '#121212', text_colour = '#ffffff' } = await getColours({
@@ -122,8 +138,12 @@
         })
 
         const unsubscribeVibrancy = settingsStore.subscribe(async (state) => {
-            if (state.theme.vibrancy !== currentVibrancy) {
+            if (
+                state.theme.vibrancy !== currentVibrancy ||
+                state.theme.popup !== currentPopupColours
+            ) {
                 currentVibrancy = state.theme.vibrancy
+                currentPopupColours = state.theme.popup
                 await loadColours()
             }
         })
@@ -149,12 +169,19 @@
 
 <main
     class={cn(
-        'relative flex flex-col',
+        'relative isolate flex flex-col',
+        glassOn && 'overflow-hidden',
         pip
             ? 'w-full gap-y-2.5'
-            : 'h-[196px] w-[320px] gap-y-2 bg-[color:var(--bg)] px-3 pb-2.5 pt-1.5 text-[color:var(--text)]'
+            : 'min-h-[196px] w-[320px] gap-y-2 bg-[color:var(--bg)] px-3 pb-2.5 pt-1.5 text-[color:var(--text)]'
     )}
 >
+    {#if glassOn && $nowPlaying.cover}
+        <!-- Under glass the cover art, blurred and tinted with the popup colour,
+             sits behind everything (z-index -1 inside the isolated main). -->
+        <div aria-hidden="true" class="chorus-glass-backdrop" style={coverBackdrop}></div>
+        <div aria-hidden="true" class="chorus-glass-tint"></div>
+    {/if}
     {#if !pip}
         <header class="flex h-7 items-center gap-x-2">
             <Logo size={16} tone="current" />
@@ -256,9 +283,17 @@
         </div>
     </div>
 
-    <TimeProgress {port} {pip} />
+    <div
+        class={cn(
+            'flex flex-col',
+            pip ? 'gap-y-2.5' : 'gap-y-2',
+            glassOn && 'chorus-glass-card -mx-1.5 rounded-lg px-1.5 py-1'
+        )}
+    >
+        <TimeProgress {port} {pip} />
 
-    <MediaControls {port} {pip} />
+        <MediaControls {port} {pip} />
+    </div>
 
     {#if pip}
         <div class="mt-auto">

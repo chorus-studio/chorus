@@ -1,7 +1,6 @@
 <script lang="ts">
     import { onMount } from 'svelte'
     import { settingsStore } from '$lib/stores/settings'
-    import { setTheme, removeTheme } from '$lib/utils/theming'
     import { playbackObserver } from '$lib/observers/playback'
     import type { SettingsState, SettingsKey } from '$lib/stores/settings'
 
@@ -28,10 +27,8 @@
         if (key === 'progress') playbackObserver.toggleProgress()
         if (key === 'volume') playbackObserver.toggleVolumeSlider()
         if (key === 'playlist') playbackObserver.togglePlaylistButton()
-        if (key === 'theme') {
-            if (!enabled) return removeTheme()
-            await setTheme($settingsStore.theme.name)
-        }
+        // 'theme' and 'glass' need nothing here: App.svelte re-applies the look
+        // whenever settings change.
     }
 
     const UI_ITEMS = [
@@ -59,6 +56,11 @@
             key: 'theme',
             label: 'Apply colour theme',
             hint: 'Recolour Spotify with the theme chosen in Settings'
+        },
+        {
+            key: 'glass',
+            label: 'Glass surfaces',
+            hint: 'Translucent Chorus panels over a blurred view of what sits behind them'
         },
         {
             key: 'popup',

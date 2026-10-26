@@ -43,6 +43,11 @@
         --alarm: 354 84% 66%; /* #f15e6c */
         --spotify: var(--signal);
 
+        /* drop shadows: near-black on the dark rack; light mode swaps in a
+           softer dark grey (theme-surfaces.ts) since ink itself goes white */
+        --shadow: var(--ink);
+        --shadow-alpha: 0.9;
+
         /* shadcn aliases */
         --background: var(--ink);
         --foreground: var(--ink-fg);
@@ -130,6 +135,106 @@
     .tabular {
         font-variant-numeric: tabular-nums;
         font-feature-settings: 'tnum' 1;
+    }
+}
+
+/* ---------- Glass surfaces ----------
+   The Theme tab's "Glass surfaces" switch puts data-glass on <html>, with the
+   chosen opacity and blur as --glass-alpha / --glass-blur (theming.ts).
+   Floating Chorus surfaces (.chorus-float: popover, dialogs, hover cards)
+   then go translucent over a blurred, saturated view of the page, with a
+   specular rim along the top edge and a faint sheen, and every surface
+   inside follows through --surface-alpha (tailwind.config.ts). Text and
+   hairlines keep full strength. data-refraction adds the SVG displacement
+   filter theming.ts injects; a browser that can't run SVG filters in
+   backdrop-filter drops that declaration and keeps the plain blur. Falls
+   back to solid when the system asks for reduced transparency. */
+[data-glass] {
+    --glass-alpha: 0.5;
+    --glass-blur: 40px;
+    --glass-saturate: 1.8;
+}
+[data-glass] .chorus-float {
+    --surface-alpha: var(--glass-alpha);
+    isolation: isolate;
+    border-color: hsl(var(--ink-fg) / 0.16);
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+    backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+    box-shadow:
+        inset 0 1px 0 hsl(var(--ink-fg) / 0.32),
+        inset 0 -1px 0 hsl(var(--shadow) / 0.4),
+        inset 1px 0 0 hsl(var(--ink-fg) / 0.07),
+        0 30px 70px -24px hsl(var(--shadow) / 0.75);
+}
+[data-glass] .chorus-float::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    pointer-events: none;
+    background:
+        linear-gradient(118deg, hsl(var(--ink-fg) / 0.13), transparent 36%),
+        radial-gradient(120% 80% at 100% 0%, hsl(var(--ink-fg) / 0.08), transparent 58%);
+}
+[data-glass][data-refraction] .chorus-float {
+    -webkit-backdrop-filter: url(#chorus-glass) blur(var(--glass-blur))
+        saturate(var(--glass-saturate));
+    backdrop-filter: url(#chorus-glass) blur(var(--glass-blur)) saturate(var(--glass-saturate));
+}
+/* the dialog scrim must stay light enough for the page to show through the glass */
+[data-glass] .chorus-scrim {
+    background-color: hsl(var(--shadow) / 0.3);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+}
+
+/* Popup / PiP player under glass: the cover art, blurred and tinted with the
+   popup's own colour, sits behind the content, and the transport rides on a
+   glass card. Both use the popup palette variables (--bg, --text). */
+.chorus-glass-backdrop {
+    position: absolute;
+    inset: -40px;
+    z-index: -1;
+    pointer-events: none;
+    background-size: cover;
+    background-position: center;
+    filter: blur(var(--glass-blur, 40px)) saturate(1.3);
+    transform: scale(1.15);
+}
+.chorus-glass-tint {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background: linear-gradient(
+        180deg,
+        color-mix(in srgb, var(--bg) 55%, transparent),
+        color-mix(in srgb, var(--bg) 72%, transparent)
+    );
+}
+.chorus-glass-card {
+    background: color-mix(in srgb, var(--bg) 38%, transparent);
+    -webkit-backdrop-filter: blur(24px) saturate(1.6);
+    backdrop-filter: blur(24px) saturate(1.6);
+    box-shadow:
+        inset 0 1px 0 color-mix(in srgb, var(--text) 30%, transparent),
+        0 0 0 1px color-mix(in srgb, var(--text) 10%, transparent);
+}
+@media (prefers-reduced-transparency: reduce) {
+    [data-glass] .chorus-float {
+        --surface-alpha: 1;
+        -webkit-backdrop-filter: none;
+        backdrop-filter: none;
+    }
+    .chorus-glass-backdrop,
+    .chorus-glass-tint {
+        display: none;
+    }
+    .chorus-glass-card {
+        background: color-mix(in srgb, var(--text) 8%, transparent);
+        -webkit-backdrop-filter: none;
+        backdrop-filter: none;
     }
 }
 

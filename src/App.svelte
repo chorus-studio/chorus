@@ -6,7 +6,9 @@
     import { trackObserver } from '$lib/observers/track'
     import { playbackObserver } from '$lib/observers/playback'
     import { tracklistObserver } from '$lib/observers/tracklist'
-    import { setTheme, removeTheme, type ThemeName } from '$lib/utils/theming'
+    import { get } from 'svelte/store'
+    import { applyLook, watchSystemMode } from '$lib/utils/theming'
+    import { settingsStore } from '$lib/stores/settings'
 
     // Import stores to ensure they're initialized and set up their listeners
     import '$lib/stores/effects'
@@ -23,6 +25,8 @@
 
     let supportsPip = false
     let themeChangeListener: (e: Event) => void
+    let unsubscribeLook: (() => void) | undefined
+    let unwatchSystem: (() => void) | undefined
 
     async function init() {
         setMode('dark')
@@ -39,19 +43,23 @@
     }
 
     function setupListener() {
-        themeChangeListener = async (e: Event) => {
-            const customEvent = e as CustomEvent<{ theme: ThemeName }>
-            const theme = customEvent.detail.theme
-            if (theme === 'spotify') return removeTheme()
-            await setTheme(theme)
-        }
+        // Palette, "Apply theme", appearance and glass all live in settings, so
+        // one subscription keeps the page and rack in step whether the change
+        // came from this page, the PiP window or the toolbar popup (via storage).
+        themeChangeListener = () => void applyLook(get(settingsStore))
         document.addEventListener('FROM_THEME_CHANGE', themeChangeListener)
+        unsubscribeLook = settingsStore.subscribe((s) => void applyLook(s))
+        unwatchSystem = watchSystemMode(() => void applyLook(get(settingsStore)))
     }
 
     function removeListener() {
         if (themeChangeListener) {
             document.removeEventListener('FROM_THEME_CHANGE', themeChangeListener)
         }
+        unsubscribeLook?.()
+        unsubscribeLook = undefined
+        unwatchSystem?.()
+        unwatchSystem = undefined
     }
 
     onMount(() => {
