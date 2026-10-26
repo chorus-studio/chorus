@@ -21,6 +21,25 @@
     let leftInput: HTMLInputElement
     let rightInput: HTMLInputElement | null = $state(null)
 
+    // Which input owns clicks on the bare track, so a click anywhere jumps the
+    // value and the native drag carries on from there (thumbs stay grabbable on
+    // their own). A single slider's only input always does; a range slider hands
+    // the track to whichever thumb is nearer the pointer.
+    let trackOwner = $state(0)
+
+    function pickTrackOwner(e: PointerEvent) {
+        if (type !== 'multiple' || e.buttons !== 0 || !sliderElement) return
+        const rect = sliderElement.getBoundingClientRect()
+        if (rect.width === 0) return
+        const [a, b] = value as number[]
+        const lo = Math.min(a, b)
+        const hi = Math.max(a, b)
+        const at = min + ((e.clientX - rect.left) / rect.width) * (max - min)
+        const dLo = Math.abs(at - lo)
+        const dHi = Math.abs(at - hi)
+        trackOwner = dLo < dHi ? 0 : dHi < dLo ? 1 : at <= lo ? 0 : 1
+    }
+
     // Keep the fill (--start/--stop) and the native inputs in sync with `value`.
     $effect(() => {
         const range = max - min || 1
@@ -74,7 +93,11 @@
     }
 </script>
 
-<div class="slider relative flex w-full items-center" bind:this={sliderElement}>
+<div
+    class="slider relative flex w-full items-center"
+    bind:this={sliderElement}
+    onpointermove={pickTrackOwner}
+>
     <input
         {max}
         {min}
@@ -82,6 +105,7 @@
         type="range"
         data-index="0"
         aria-label={type === 'multiple' ? `${label} start` : label}
+        class:owns-track={trackOwner === 0}
         bind:this={leftInput}
         oninput={handleValueChange}
         value={Array.isArray(value) ? value[0] : value}
@@ -94,6 +118,7 @@
             type="range"
             data-index="1"
             aria-label={`${label} end`}
+            class:owns-track={trackOwner === 1}
             bind:this={rightInput}
             oninput={handleValueChange}
             value={Array.isArray(value) ? value[1] : value}
@@ -140,30 +165,51 @@
         margin: 0;
         outline: none;
     }
+    .slider input.owns-track {
+        pointer-events: auto;
+        z-index: 1;
+    }
 
     .slider input::-moz-range-track {
         background: transparent;
         height: 16px;
     }
 
-    .slider input::-moz-range-thumb,
+    /* Thumb: a small outlined ring on the track. Each engine's pseudo-element
+       gets its own rule on purpose: a selector list that contains one the
+       browser doesn't recognise is dropped wholesale, which left Chrome with
+       its default thumb and `pointer-events: none` inherited from the input. */
     .slider input::-webkit-slider-thumb {
         -webkit-appearance: none;
         appearance: none;
         pointer-events: auto;
         cursor: pointer;
-        width: 12px;
-        height: 12px;
+        box-sizing: border-box;
+        width: 10px;
+        height: 10px;
+        margin-top: 0;
         border-radius: 50%;
-        border: 2px solid hsl(var(--ink));
-        background: hsl(var(--ink-fg));
+        border: 1.5px solid hsl(var(--ink-fg));
+        background: hsl(var(--ink));
         box-shadow: 0 0 0 0 hsl(var(--signal) / 0);
         transition:
             box-shadow 0.15s ease,
             transform 0.15s ease;
     }
-    .slider input::-webkit-slider-thumb {
-        margin-top: 0;
+    .slider input::-moz-range-thumb {
+        appearance: none;
+        pointer-events: auto;
+        cursor: pointer;
+        box-sizing: border-box;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        border: 1.5px solid hsl(var(--ink-fg));
+        background: hsl(var(--ink));
+        box-shadow: 0 0 0 0 hsl(var(--signal) / 0);
+        transition:
+            box-shadow 0.15s ease,
+            transform 0.15s ease;
     }
 
     .slider input:hover::-webkit-slider-thumb,
