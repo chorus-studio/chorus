@@ -48,19 +48,17 @@
             class={buttonVariants({
                 variant: 'bar',
                 size: 'icon',
-                class: 'relative [&_svg]:size-[22px]'
+                class: 'relative [&_svg]:size-[20px]'
             })}
         >
-            <span
-                class="pointer-events-none absolute inset-x-0 top-[12px] text-center font-mono text-[8px] font-bold leading-none"
-            >
-                {seekValue}
-            </span>
+            <!-- Arrow sits on the row's centreline like its neighbours; the
+                 seconds hang below it as a badge, the same way the loop count
+                 does, instead of being squeezed inside the circle. -->
             <svg
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
-                stroke-width="2"
+                stroke-width="2.5"
                 stroke-linecap="round"
                 stroke-linejoin="round"
                 class={isForward ? '-scale-x-100' : ''}
@@ -69,6 +67,11 @@
                 <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
                 <path d="M3 3v5h5" />
             </svg>
+            <span
+                class="pointer-events-none absolute inset-x-0 -bottom-0.5 text-center font-mono text-[9px] font-bold leading-none"
+            >
+                {seekValue}
+            </span>
         </Tooltip.Trigger>
         <Tooltip.Content>{label}</Tooltip.Content>
     </Tooltip.Root>
