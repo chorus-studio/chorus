@@ -44,7 +44,7 @@
         </svg>
         {#if $loopStore.looping && $loopStore.type !== 'infinite'}
             <span
-                class="pointer-events-none absolute inset-x-0 bottom-0 text-center font-mono text-[9px] font-bold leading-none"
+                class="pointer-events-none absolute inset-x-0 -bottom-0.5 text-center font-mono text-[9px] font-bold leading-none"
             >
                 {$loopStore.iteration}
             </span>

@@ -55,6 +55,8 @@
     })
 
     const badge = $derived.by(() => {
+        // Seek buttons hang their seconds under the arrow.
+        if (isSeek) return String(seekValue)
         // The loop glyph already reads as ∞; only a counted loop needs a badge.
         if (icon === 'loop' && $loopStore.looping && $loopStore.type !== 'infinite') {
             return String($loopStore.iteration)
@@ -147,11 +149,11 @@
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
-            stroke-width="2"
+            stroke-width="2.5"
             stroke-linecap="round"
             stroke-linejoin="round"
             class={cn(
-                pip ? 'size-[19px]' : 'size-[18px]',
+                pip ? 'size-[18px]' : 'size-[17px]',
                 icon === 'seek-forward' && '-scale-x-100'
             )}
             aria-hidden="true"
@@ -159,11 +161,6 @@
             <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
             <path d="M3 3v5h5" />
         </svg>
-        <span
-            class="pointer-events-none absolute inset-x-0 top-[9px] text-center font-mono text-[7px] font-bold leading-none"
-        >
-            {seekValue}
-        </span>
     {:else if icon === 'previous'}
         <SkipBack class={cn(iconSize, 'fill-current')} />
     {:else if icon === 'next'}
