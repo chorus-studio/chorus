@@ -78,7 +78,7 @@ export async function togglePictureInPicture() {
     try {
         const pipWindow = await window.documentPictureInPicture.requestWindow({
             width: 440,
-            height: 320
+            height: 360
         })
 
         // Create a container for the PipView

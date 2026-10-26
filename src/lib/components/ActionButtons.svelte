@@ -9,6 +9,14 @@
     import { eqSubView, fxSubView } from '$lib/stores/effects-ui'
     import { nowPlaying } from '$lib/stores/now-playing'
     import { playbackStore, defaultPlayback } from '$lib/stores/playback'
+    import {
+        defaultSnip,
+        firstSegmentStart,
+        normalizeRanges,
+        snipsEqual,
+        toSegments,
+        type Snip
+    } from '$lib/utils/snip-ranges'
 
     import Check from '@lucide/svelte/icons/check'
     import Power from '@lucide/svelte/icons/power'
@@ -53,8 +61,7 @@
     }
 
     function resetSnip() {
-        const defaultTimes = { start_time: 0, end_time: $nowPlaying.duration }
-        snipStore.set({ is_shared: false, last_updated: 'start', ...defaultTimes })
+        snipStore.seed(null, $nowPlaying.duration ?? 0)
     }
 
     async function deleteSnip() {
@@ -98,27 +105,25 @@
 
         if (!$snipStore) return
 
-        // Reject malformed snips instead of persisting them: an unset bound
-        // would save undefined (the ! only silences the compiler), and
-        // end <= start (e.g. end_time 0 seeded from an unknown duration)
-        // insta-skips the track on every play via the snip-end checks.
-        const { start_time, end_time } = $snipStore
-        if (typeof start_time !== 'number' || typeof end_time !== 'number') return
-        // !(>) instead of (<=) so NaN in either bound is also rejected.
-        if (!(end_time > start_time)) return
-
-        const snipData = { start_time, end_time }
+        // Persist a clean snip: sorted, clamped to the track, overlapping or
+        // touching sections merged, and nothing shorter than a second (a
+        // zero-length section seeded from an unknown duration would otherwise
+        // insta-skip the track on every play). Play mode over the whole track
+        // is "no snip", so there is nothing to save.
+        const duration = $nowPlaying.duration ?? 0
+        const ranges = normalizeRanges($snipStore.ranges, duration)
+        if (ranges.length === 0) return
+        const snip: Snip = { mode: $snipStore.mode, ranges }
+        if (snipsEqual(snip, defaultSnip(duration))) return
 
         await dataStore.updateTrack({
             track_id: track.track_id!,
-            value: { snip: snipData }
+            value: { snip }
         })
 
-        await nowPlaying.updateState({
-            snip: snipData
-        })
+        await nowPlaying.updateState({ snip })
 
-        nowPlaying.setCurrentTime(snipData.start_time)
+        nowPlaying.setCurrentTime(firstSegmentStart(toSegments(snip, duration)))
     }
 
     async function handleSave() {
@@ -173,16 +178,17 @@
                 (tab == 'speed' && $nowPlaying?.playback && !$playbackStore.is_default)
         )
     )
+    // The draft differs from what is saved — or, with nothing saved, from the
+    // whole-track default it was seeded with.
+    const snipDirty = $derived.by(() => {
+        if (tab !== 'snip' || !$snipStore) return false
+        const draft: Snip = { mode: $snipStore.mode, ranges: $snipStore.ranges }
+        const baseline = $nowPlaying?.snip ?? defaultSnip($nowPlaying.duration ?? 0)
+        return !snipsEqual(draft, baseline)
+    })
     const showSave = $derived(
         Boolean(
-            (tab == 'snip' &&
-                $snipStore &&
-                (($nowPlaying?.snip &&
-                    ($snipStore.start_time !== $nowPlaying.snip.start_time ||
-                        $snipStore.end_time !== $nowPlaying.snip.end_time)) ||
-                    (!$nowPlaying?.snip &&
-                        ($snipStore.start_time !== 0 ||
-                            $snipStore.end_time !== $nowPlaying.duration)))) ||
+            snipDirty ||
                 (tab == 'speed' &&
                     !$playbackStore.is_default &&
                     ($playbackStore.track.rate.value != 1 ||
@@ -199,7 +205,7 @@
     )
     const resetTitle = $derived(
         tab === 'snip'
-            ? 'Reset the bounds to the whole track'
+            ? 'Reset to the whole track'
             : tab === 'speed'
               ? 'Reset rate, pitch and key to normal'
               : tab === 'seek'

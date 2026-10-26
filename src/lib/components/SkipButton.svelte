@@ -23,7 +23,7 @@
             )
         }
 
-        trackObserver?.skipTrack()
+        trackObserver?.nextTrack()
     }
 </script>
 

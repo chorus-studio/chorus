@@ -48,7 +48,7 @@ shot() { # name query width height
 }
 
 for t in "${THEMES[@]}"; do
-    shot "popover-$t" "scene=tabs&tab=snip&theme=$t" 460 380
+    shot "popover-$t" "scene=tabs&tab=snip&theme=$t" 500 420
     shot "dialog-$t" "scene=dialog&theme=$t" 1000 920
     shot "bar-$t" "scene=bar&theme=$t" 1340 150
 done

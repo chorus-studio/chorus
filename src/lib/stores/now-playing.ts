@@ -1,6 +1,7 @@
 import { storage } from '@wxt-dev/storage'
 import { get, writable } from 'svelte/store'
 import { syncWithType } from '$lib/utils/store-utils'
+import { migrateSnip } from '$lib/utils/snip-ranges'
 
 import { dataStore } from '$lib/stores/data'
 import { playback } from '$lib/utils/playback'
@@ -100,7 +101,7 @@ function createNowPlayingStore() {
                 artist: artist ?? ''
             })
         ) {
-            trackObserver?.skipTrack()
+            trackObserver?.nextTrack()
         }
 
         // Filter out null/undefined playback to prevent overwriting current settings
@@ -238,8 +239,12 @@ function createNowPlayingStore() {
         .then((savedState) => {
             if (!savedState) return
 
-            // Sync the stored state with the current type definition
-            const syncedState = syncWithType(savedState, defaultNowPlaying)
+            // Sync the stored state with the current type definition. The snip
+            // may still be in an older build's shape.
+            const syncedState = {
+                ...syncWithType(savedState, defaultNowPlaying),
+                snip: migrateSnip(savedState.snip)
+            }
             set(syncedState)
 
             // Update storage with synced state
@@ -258,7 +263,10 @@ function createNowPlayingStore() {
     storage.watch<NowPlaying>(NOW_PLAYING_STORE_KEY, (newValues) => {
         if (!newValues || isUpdatingStorage) return
 
-        const syncedState = syncWithType(newValues, defaultNowPlaying)
+        const syncedState = {
+            ...syncWithType(newValues, defaultNowPlaying),
+            snip: migrateSnip(newValues.snip)
+        }
         set(syncedState)
     })
 

@@ -1,12 +1,10 @@
 import type { Playback } from '$lib/stores/playback'
+import type { Snip } from '$lib/utils/snip-ranges'
+
+export type { Snip, SnipRange, SnipMode } from '$lib/utils/snip-ranges'
 
 type CacheItem<T> = {
     value: T
-}
-
-export type Snip = {
-    start_time: number
-    end_time: number
 }
 
 export type SimpleTrack = {

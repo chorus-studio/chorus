@@ -265,12 +265,15 @@
             <TrackInfo isPopup />
             {#if $nowPlaying.snip || $nowPlaying.playback}
                 <div class="flex items-center gap-x-1.5 font-mono text-[10px] leading-none">
-                    {#if $nowPlaying.snip}
+                    {#if $nowPlaying.snip?.ranges?.length}
+                        {@const first = $nowPlaying.snip.ranges[0]}
+                        {@const more = $nowPlaying.snip.ranges.length - 1}
                         <span class="size-1.5 rounded-full bg-[color:var(--album-accent)]"></span>
                         <span class="text-[color:var(--album-accent)]">
-                            snip {formatRulerTime($nowPlaying.snip.start_time)}–{formatRulerTime(
-                                $nowPlaying.snip.end_time
-                            )}
+                            {$nowPlaying.snip.mode === 'skip' ? 'skip' : 'snip'}
+                            {formatRulerTime(first.start)}–{formatRulerTime(first.end)}{more > 0
+                                ? ` +${more}`
+                                : ''}
                         </span>
                     {/if}
                     {#if $nowPlaying.playback}

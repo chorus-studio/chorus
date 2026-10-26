@@ -120,14 +120,14 @@
     {#if scene === 'tabs'}
         <div
             id="frame"
-            class="chorus-float relative h-[320px] w-[400px] overflow-hidden rounded-xl border border-hairline-strong bg-ink shadow-float"
+            class="chorus-float relative h-[360px] w-[440px] overflow-hidden rounded-xl border border-hairline-strong bg-ink shadow-float"
         >
             <TabsList initialTab={tab} />
         </div>
     {:else if scene === 'pip'}
         <div
             id="frame"
-            class="h-[320px] w-[440px] overflow-hidden rounded-lg border border-hairline-strong bg-ink"
+            class="h-[360px] w-[440px] overflow-hidden rounded-lg border border-hairline-strong bg-ink"
         >
             <TabsList pip initialTab={tab} />
         </div>

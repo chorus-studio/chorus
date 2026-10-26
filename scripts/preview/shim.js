@@ -1,7 +1,30 @@
 // Stand-in for the chrome.* extension APIs so the built preview page runs from a
 // plain static server. Storage is seeded so the player-bar controls show their
-// active states (liked, looping, snip, per-track rate).
+// active states (liked, looping, snip, per-track rate). ?snip=play|multi|skip|none
+// picks the seeded snip; ?dur=<seconds> sets the track length (a podcast is
+// ~12000).
 ;(() => {
+    const params = new URLSearchParams(location.search)
+    const dur = Number(params.get('dur')) || 244
+    const snips = {
+        play: { mode: 'play', ranges: [{ start: 62, end: 148 }] },
+        multi: {
+            mode: 'play',
+            ranges: [
+                { start: 62, end: 98 },
+                { start: 130, end: 148 }
+            ]
+        },
+        skip: {
+            mode: 'skip',
+            ranges: [
+                { start: 0, end: 14 },
+                { start: 160, end: 172 }
+            ]
+        },
+        none: null
+    }
+    const snipKey = params.get('snip') ?? 'play'
     const seed = {
         chorus_now_playing: {
             song_id: '1',
@@ -12,12 +35,12 @@
             cover: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23ff7a18'/><stop offset='0.7' stop-color='%23af002d'/></linearGradient></defs><rect width='64' height='64' fill='url(%23g)'/></svg>",
             title: 'Midnight City',
             artist: 'M83',
-            duration: 244,
-            current: 96,
+            duration: dur,
+            current: dur === 244 ? 96 : Math.round(dur * 0.45),
             album_id: null,
             text_colour: '#ffffff',
             bg_colour: '#000000',
-            snip: { start_time: 62, end_time: 148, is_shared: false, last_updated: 'end' },
+            snip: snipKey in snips ? snips[snipKey] : snips.play,
             playback: { rate: { value: 1.25, preserves_pitch: true }, pitch: 0, semitone: 0 },
             blocked: false
         },

@@ -1,7 +1,8 @@
 import { storage } from '@wxt-dev/storage'
 import type { NowPlaying } from '$lib/stores/now-playing'
+import { migrateSnip } from '$lib/utils/snip-ranges'
 import { CacheStore, COLLECTION_KEY, USER_COLLECTION_KEY } from './cache'
-import type { Collection, SimpleTrack, UserCollection, Snip } from './cache'
+import type { Collection, SimpleTrack, UserCollection } from './cache'
 
 interface OldTrackData {
     id?: string
@@ -58,13 +59,9 @@ class DataStore {
     }
 
     private convertToNewFormat(trackData: Partial<OldTrackData>): SimpleTrack {
-        const snip =
-            trackData.isSnip && trackData?.endTime && trackData?.startTime
-                ? {
-                      start_time: trackData.startTime,
-                      end_time: trackData.endTime
-                  }
-                : ({} as Snip)
+        const snip = trackData.isSnip
+            ? migrateSnip({ start_time: trackData.startTime, end_time: trackData.endTime })
+            : null
 
         const blocked = trackData.isSkipped ? { blocked: true } : {}
 
@@ -72,9 +69,33 @@ class DataStore {
             song_id: trackData.id!,
             liked: false,
             track_id: trackData.trackId!,
-            ...snip,
+            ...(snip ? { snip } : {}),
             ...blocked
         }
+    }
+
+    /**
+     * Bring every stored snip up to the current shape (`{ mode, ranges }`); a
+     * collection written by an older build holds `{ start_time, end_time }`.
+     */
+    private migrateSnips(collection: Collection): { collection: Collection; changed: boolean } {
+        let changed = false
+        const migrated: Collection = {}
+        for (const [track_id, track] of Object.entries(collection)) {
+            if (track.snip == null) {
+                migrated[track_id] = track
+                continue
+            }
+            const snip = migrateSnip(track.snip)
+            if (snip === track.snip) {
+                migrated[track_id] = track
+                continue
+            }
+            changed = true
+            const { snip: _legacy, ...rest } = track
+            migrated[track_id] = snip ? { ...rest, snip } : rest
+        }
+        return { collection: migrated, changed }
     }
 
     private async cleanupLegacyData(): Promise<void> {
@@ -136,14 +157,17 @@ class DataStore {
     }
 
     async populate() {
-        const storedCollection = await storage.getItem('local:chorus_collection')
-        if (storedCollection) {
+        const stored = await storage.getItem<Collection>('local:chorus_collection')
+        if (stored) {
+            const { collection: storedCollection, changed } = this.migrateSnips(stored)
+            if (changed) await storage.setItem('local:chorus_collection', storedCollection)
+
             const currentCollection = this.get<Collection>(COLLECTION_KEY)
             if (currentCollection) {
                 const mergedCollection = { ...currentCollection, ...storedCollection }
                 this.cache.set(COLLECTION_KEY, mergedCollection)
             } else {
-                this.cache.set(COLLECTION_KEY, storedCollection as Collection)
+                this.cache.set(COLLECTION_KEY, storedCollection)
             }
         }
     }
