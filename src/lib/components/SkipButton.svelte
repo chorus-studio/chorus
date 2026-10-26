@@ -13,7 +13,7 @@
 
             await dataStore.updateTrack({
                 track_id,
-                value: { blocked: true, cover }
+                value: { blocked: true, blocked_at: Date.now(), cover }
             })
 
             document.dispatchEvent(

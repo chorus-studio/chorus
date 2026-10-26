@@ -17,6 +17,8 @@ export type SimpleTrack = {
     snip?: Snip | null
     playback?: Playback | null
     blocked?: boolean | null
+    /** When the track was blocked (ms since epoch); absent on entries from before it was recorded. */
+    blocked_at?: number | null
 }
 
 export const COLLECTION_KEY = 'collection'
