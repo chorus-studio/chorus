@@ -109,12 +109,7 @@
             ? dataStore.collectionObject[$nowPlaying.track_id]
             : dataStore.collection.find((x) => x.song_id === $nowPlaying.id)
 
-        snipStore.set({
-            is_shared: false,
-            last_updated: 'start',
-            start_time: track?.snip?.start_time ?? 0,
-            end_time: track?.snip?.end_time ?? $nowPlaying?.duration ?? 0
-        })
+        snipStore.seed(track?.snip, $nowPlaying?.duration ?? 0)
     }
 
     async function setupSpeed() {

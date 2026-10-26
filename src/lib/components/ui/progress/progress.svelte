@@ -27,12 +27,13 @@
     const hasSegments = $derived(totalSegments > 0)
     const currentValue = $derived(value ?? 0)
 
-    // Get all unique boundary points for segments
+    // Every edge where a segment starts or ends, except the bar's own ends
+    // (a skip-mode cut from 0:00 would otherwise draw a stray tick there).
     const segmentBoundaries = $derived(
         hasSegments
-            ? Array.from(new Set(segments.flatMap((seg) => [seg.start, seg.end]))).sort(
-                  (a, b) => a - b
-              )
+            ? Array.from(new Set(segments.flatMap((seg) => [seg.start, seg.end])))
+                  .filter((point) => point > 0 && point < (max ?? 0))
+                  .sort((a, b) => a - b)
             : []
     )
 

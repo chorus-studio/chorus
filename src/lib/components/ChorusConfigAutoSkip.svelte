@@ -55,7 +55,7 @@
             artist: $nowPlaying.artist ?? ''
         })
 
-        if (shouldSkip) trackObserver.skipTrack()
+        if (shouldSkip) trackObserver.nextTrack()
     }
 
     async function toggleAutoSkipOptions({

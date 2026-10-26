@@ -2,7 +2,6 @@ import { get } from 'svelte/store'
 import { seekStore } from '$lib/stores/seek'
 import { playbackStore, defaultPlayback } from '$lib/stores/playback'
 import { nowPlaying } from '$lib/stores/now-playing'
-import type { SimpleTrack } from '$lib/stores/data/cache'
 import { configStore, type AudioPreset } from '$lib/stores/config'
 
 /**
@@ -34,42 +33,5 @@ export class TrackStateManager {
         }
 
         configStore.updateAudioPreset({ preset: audioPreset, type: 'playback' })
-    }
-
-    isTrackAtSnipEnd(currentTimeMS: number, track: SimpleTrack): boolean {
-        const currentSong = get(nowPlaying)
-        const { end_time = currentSong.duration } = track?.snip ?? {}
-        // No snip end and duration never known (0) — the track end can't be
-        // judged, so don't treat every tick as "at end". (> 0, not truthy:
-        // also rejects legacy negative durations persisted by pre-fix builds
-        // in remaining-time display mode.)
-        if (!(end_time > 0)) return false
-        const atSongEnd = end_time === currentSong.duration
-        const endTimeMS = end_time * 1000 - (atSongEnd ? 100 : 0)
-
-        return currentTimeMS >= endTimeMS
-    }
-
-    isAtTempSnipEnd(
-        currentTimeMS: number,
-        snip: { end_time?: number; last_updated?: string }
-    ): boolean {
-        const { end_time, last_updated } = snip
-        if (!end_time || !last_updated) return false
-
-        const currentSong = get(nowPlaying)
-        const endTimeMS = end_time * 1000 - 100
-        const lastUpdateSet = !!last_updated
-        const loopEndTimeMS =
-            !lastUpdateSet || last_updated === 'start' ? endTimeMS : endTimeMS + 3000
-
-        // Only clamp to track duration when it's actually known — a 0 sentinel
-        // would clamp the snip end to 0 and yank playback back every tick.
-        const clampedEndMS =
-            currentSong.duration > 0
-                ? Math.min(loopEndTimeMS, currentSong.duration * 1000)
-                : loopEndTimeMS
-
-        return !Number.isNaN(endTimeMS) && currentTimeMS > clampedEndMS
     }
 }

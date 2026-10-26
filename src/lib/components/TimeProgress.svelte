@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { toSegments } from '$lib/utils/snip-ranges'
     import { formatTime } from '$lib/utils/time'
     import { nowPlaying } from '$lib/stores/now-playing'
     import { trackObserver } from '$lib/observers/track'
@@ -88,6 +89,17 @@
     const snipColor = $derived(isChorus ? 'hsl(var(--bar-signal))' : 'var(--album-accent)')
     const timeClass = $derived(isChorus ? 'text-ink-muted' : 'text-[color:var(--text-2)]')
     const currentPosition = $derived(Math.round($nowPlaying.current ?? 0))
+    // What plays, in either snip mode: tinted ahead of the playhead, solid
+    // behind it. Nothing until the duration is known, or the maths is NaN.
+    const segments = $derived.by(() => {
+        const duration = $nowPlaying.duration
+        if (!(duration > 0)) return []
+        return toSegments($nowPlaying.snip, duration).map(({ start, end }) => ({
+            start,
+            end: end ?? duration,
+            color: snipColor
+        }))
+    })
     const current = $derived($nowPlaying.current >= 0 ? formatTime($nowPlaying.current) : '-:--')
     const total = $derived($nowPlaying.duration ? formatTime($nowPlaying.duration) : '-:--')
 </script>
@@ -135,15 +147,7 @@
                 </div>
             {/if}
             <Progress
-                segments={$nowPlaying.snip
-                    ? [
-                          {
-                              start: $nowPlaying.snip?.start_time,
-                              end: $nowPlaying.snip?.end_time,
-                              color: snipColor
-                          }
-                      ]
-                    : []}
+                {segments}
                 dividerColor={snipColor}
                 value={currentPosition ?? 0}
                 max={$nowPlaying.duration ?? 100}

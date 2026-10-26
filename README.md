@@ -15,7 +15,7 @@
   <img alt="Mozilla Add-on Rating" src="https://img.shields.io/amo/rating/chorus-spotify-enhancer?label=FireFox%20Rating&style=flat-square">
 <p/>
 
-Enhance Spotify with controls to save favourite track section and auto-skip. Save sections can be used for infinite looping of a chorus, verse, etc. Snips can be shared with others. Auto-skip tracks in a playlists or albums and never hear them again. Additionally set global playback speed and per track speed! More features to come!
+Enhance Spotify with controls to save favourite track sections and auto-skip. Mark one or more sections of a track and choose whether only those sections play (a chorus and the second verse, say) or whether they are skipped (a long intro, a skit). Saved sections can be looped endlessly or a set number of times. Snips can be shared with others. Auto-skip tracks in a playlists or albums and never hear them again. Additionally set global playback speed and per track speed! More features to come!
 
 ## ⬇️ **Install** ⬇️
 
@@ -59,8 +59,6 @@ Enhance Spotify with controls to save favourite track section and auto-skip. Sav
 ⭐ ⌨️ Keyboard Shortcuts. The core functionality of the extension can be triggered via keypress. Additional media commands such as play/pause, shuffle, mute/unmute, etc are also available. Reference ["Setting Browser Keyboard Shortcuts"](https://www.makeuseof.com/open-browser-extensions-keyboard-shortcut/) for your specific browser.
 
 ## 📆 **Upcoming Features** 📆
-
-✂️ Multi-Snips. More snips in a track. For example, snips to only play a chorus and the second verse of a track.
 
 💿 Discography. Keep track of your progress as you work through an artist's discography and resume where you left off.
 

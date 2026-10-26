@@ -61,7 +61,7 @@
 
                 // If the blocked track is currently playing, skip it immediately
                 if (track?.song_id === $nowPlaying.id) {
-                    trackObserver?.skipTrack()
+                    trackObserver?.nextTrack()
                 }
             } else {
                 document.dispatchEvent(

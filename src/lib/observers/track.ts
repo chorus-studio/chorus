@@ -4,10 +4,20 @@ import { mediaStore } from '$lib/stores/media'
 import { configStore } from '$lib/stores/config'
 import { effectsStore } from '$lib/stores/effects'
 import { nowPlaying } from '$lib/stores/now-playing'
-import { snipStore, type Snip } from '$lib/stores/snip'
+import { snipStore } from '$lib/stores/snip'
 import { playback } from '$lib/utils/playback'
 import { currentSongInfo } from '$lib/utils/song'
 import { playbackObserver } from '$lib/observers/playback'
+import {
+    coversWholeTrack,
+    firstSegmentStart,
+    jumpEdge,
+    nextSegment,
+    segmentAt,
+    toSegments,
+    withGrace,
+    type PlaySegment
+} from '$lib/utils/snip-ranges'
 
 // Refactored services
 import { TrackStateManager } from '$lib/services/track-state-manager'
@@ -76,34 +86,45 @@ export class TrackObserver {
         configStore.updateAudioPreset({ preset: this.audioPreset, type: 'effect' })
     }
 
-    private isAtTempSnipEnd(currentTimeMS: number): boolean {
-        const snip = this.snip as Snip
-        return this.trackStateManager.isAtTempSnipEnd(currentTimeMS, snip)
-    }
-
     private async updateTrackType(): Promise<void> {
         await this.trackStateManager.updateTrackType()
         playbackObserver.updateChorusUI()
-    }
-
-    private isAtTrackOrSnipEnd(currentTimeMS: number): boolean {
-        return this.trackStateManager.isTrackAtSnipEnd(currentTimeMS, this.currentSong)
     }
 
     updateCurrentTime(time: number): void {
         this.playbackController.updateCurrentTime(time)
     }
 
-    skipTrack(): void {
-        this.playbackController.skipTrack()
+    nextTrack(): void {
+        this.playbackController.nextTrack()
+    }
+
+    /**
+     * The play segments in force right now: the editor's draft while the snip
+     * tab is open, so edits are heard as they are made, otherwise the saved
+     * snip. A bound the user just moved that is where playback jumps gets a
+     * few seconds of grace, so the join can be heard before it is enforced.
+     */
+    private activeSegments(): { segments: PlaySegment[]; editing: boolean } {
+        const song = this.currentSong
+        const draft = this.snip
+        if (!draft) return { segments: toSegments(song.snip, song.duration), editing: false }
+
+        let segments = toSegments(draft, song.duration)
+        const range = draft.ranges[draft.selected]
+        const moved = draft.last_updated
+        if (range && moved && jumpEdge(draft.mode, range) === range[moved]) {
+            segments = withGrace(segments, range[moved], song.duration)
+        }
+        return { segments, editing: true }
     }
 
     async processSongTransition() {
         this._skipping = false
         const songInfo = this.currentSong
 
-        if (this.playbackController.shouldSkipTrack(songInfo)) {
-            return this.skipTrack()
+        if (this.playbackController.isBlocked(songInfo)) {
+            return this.nextTrack()
         }
 
         const mutedForSkip = this.playbackController.mutedForSkip
@@ -111,14 +132,17 @@ export class TrackObserver {
             this.playbackController.clearMutedForSkip()
         }
 
-        const mutedForSnip = Boolean(songInfo?.snip)
-        if (mutedForSnip) {
+        // A snip whose first section starts later than 0:00 is seeked there by
+        // the first poll; stay muted until then so the opening isn't heard.
+        const segments = toSegments(songInfo?.snip, songInfo?.duration ?? 0)
+        const seeksOnStart = segments.length > 0 && firstSegmentStart(segments) > 0
+        if (seeksOnStart) {
             this.playbackController.setSeeking(true)
             this.playbackController.mute()
         }
 
         setTimeout(() => {
-            if (mutedForSnip || mutedForSkip) {
+            if (seeksOnStart || mutedForSkip) {
                 this.playbackController.unMute()
             }
             this.playbackController.setSeeking(false)
@@ -129,6 +153,20 @@ export class TrackObserver {
         this.setEffect()
 
         await this.notificationService.showTrackChangeNotification(songInfo)
+    }
+
+    /** Loop back to `start`, or move on when a counted loop has run out. */
+    private async loopOrAdvance(start: number) {
+        // Suppress polls before calling handleLooping to prevent multiple
+        // ticks from decrementing the loop count while the UI still shows the
+        // old (pre-seek) position.
+        this.playbackController.setSeeking(true)
+        const looped = await this.playbackController.handleLooping(start)
+        if (looped) return
+
+        this.playbackController.setSeeking(false)
+        this._skipping = true
+        this.nextTrack()
     }
 
     private async pollPlaybackPosition() {
@@ -152,76 +190,54 @@ export class TrackObserver {
         if (positionSeconds == null) return
 
         const currentTimeMS = positionSeconds * 1000
-        const snip = this.snip
 
-        // Check if track should be skipped
-        if (this.playbackController.shouldSkipTrack(currentSong)) {
+        if (this.playbackController.isBlocked(currentSong)) {
             this._skipping = true
-            return this.skipTrack()
+            return this.nextTrack()
         }
 
-        // Handle snip start position. The polled position is Spotify's elapsed
-        // label, i.e. whole seconds (floor of the real position), while snip
-        // bounds are stored at 0.1 s. Compare against the floored start: after a
-        // seek to 65.4 the label reads 65, and 65 < 65.4 would seek again on
-        // every tick, restarting the snip endlessly.
-        if (currentSong.snip && positionSeconds < Math.floor(currentSong.snip.start_time)) {
-            return this.updateCurrentTime(currentSong.snip.start_time)
-        }
+        const { segments, editing } = this.activeSegments()
+        const start = firstSegmentStart(segments)
+        const duration = currentSong.duration
+        // duration 0 means "never known", not a zero-length track — without
+        // the guard it would make atTrackEnd permanently true and insta-skip.
+        const known = duration > 0
+        const atTrackEnd = known && currentTimeMS >= duration * 1000 - 100
+        // Looping at the natural end checks 1 s early to beat Spotify's
+        // auto-advance (polling only sees whole seconds).
+        const nearTrackEnd = known && currentTimeMS + 1000 >= duration * 1000 - 100
 
-        // Handle temporary snip end
-        if (this.snip && this.isAtTempSnipEnd(currentTimeMS)) {
-            return this.updateCurrentTime(this.snip.start_time)
-        }
+        if (!coversWholeTrack(segments)) {
+            const inside = segmentAt(segments, positionSeconds)
+            if (!inside) {
+                // Before or between sections: jump to the next one.
+                const next = nextSegment(segments, positionSeconds)
+                if (next) return this.playbackController.jumpTo(next.start)
 
-        // Handle looping if at track/snip end.
-        // For non-snip tracks, check 1s early to beat Spotify's auto-advance
-        // at the natural track end (polling only sees integer seconds).
-        const loopCheckMS = currentSong.snip ? currentTimeMS : currentTimeMS + 1000
-        if (this.loop.looping && this.isAtTrackOrSnipEnd(loopCheckMS)) {
-            // Suppress polls before calling handleLooping to prevent
-            // multiple ticks from decrementing the loop count while
-            // the UI still shows the old (pre-seek) position.
-            this.playbackController.setSeeking(true)
-            const loopHandled = await this.playbackController.handleLooping(currentTimeMS)
-            if (loopHandled) {
-                // Give UI ~1s to reflect the seek back to start
-                setTimeout(() => this.playbackController.setSeeking(false), 1000)
-                return
+                // Past the last section: the snip has played out.
+                if (editing) return this.playbackController.jumpTo(start)
+                if (this.loop.looping) return this.loopOrAdvance(start)
+                this._skipping = true
+                return this.nextTrack()
             }
-            // Loop count exhausted, skip to next track
-            this.playbackController.setSeeking(false)
-            this._skipping = true
-            this.skipTrack()
-            return
+            // A section that ends before the track does needs nothing more;
+            // one that runs to the end is handled with the track end below.
+            if (inside.end !== null) return
+            // While editing, keep the track going round rather than letting
+            // Spotify move on, so the draft stays audible.
+            if (editing && nearTrackEnd) return this.playbackController.jumpTo(start)
         }
 
-        // Handle shared snip URL cleanup
-        if (snip?.is_shared && location?.search) {
-            history.pushState(null, '', location.pathname)
-        }
+        // The natural end of the track: no snip, or its last section runs to the end.
+        if (this.loop.looping && nearTrackEnd) return this.loopOrAdvance(start)
+        if (!atTrackEnd) return
 
-        // Check if at or past snip end for auto-advance
-        const atSnipEnd = currentSong.snip && currentTimeMS >= currentSong.snip.end_time * 1000
-        // duration 0 means "never known", not a zero-length track — without the
-        // guard it would make atTrackEnd permanently true and insta-skip.
-        const atTrackEnd =
-            currentSong.duration > 0 && currentTimeMS >= currentSong.duration * 1000 - 100
-
-        // Handle track end or snip end
-        const shouldSkip = (currentSong.snip || currentSong.blocked) && (atTrackEnd || atSnipEnd)
-
-        if (shouldSkip) {
+        // A counted loop that ran out, or a snipped / blocked track, moves on
+        // without waiting for Spotify's own auto-advance.
+        const loopExhausted = this.loop.type === 'amount' && this.loop.iteration === 0
+        if (loopExhausted || currentSong.snip || currentSong.blocked) {
             this._skipping = true
-            this.skipTrack()
-            return
-        }
-
-        // Handle end of track after loop count exhausted (for non-snip tracks)
-        if (this.loop.type === 'amount' && this.loop.iteration === 0 && atTrackEnd) {
-            this._skipping = true
-            this.skipTrack()
-            return
+            this.nextTrack()
         }
     }
 
