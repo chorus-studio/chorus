@@ -53,7 +53,7 @@
         customAnchor="[data-testid='cover-art-container']"
         side="left"
         align="end"
-        class="fixed bottom-[88px] left-[72px] h-[320px] w-[400px] overflow-hidden p-0"
+        class="fixed bottom-[88px] left-[72px] h-[360px] w-[440px] overflow-hidden p-0"
     >
         <TabsList />
     </Popover.Content>
