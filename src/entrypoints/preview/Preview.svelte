@@ -7,6 +7,8 @@
     import VocalRemovalToggle from '$lib/components/VocalRemovalToggle.svelte'
     import ChorusConfigDialog from '$lib/components/ChorusConfigDialog.svelte'
     import BlockedTracksDialog from '$lib/components/BlockedTracksDialog.svelte'
+    import { storage } from '@wxt-dev/storage'
+    import { dataStore } from '$lib/stores/data'
     import TimeProgress from '$lib/components/TimeProgress.svelte'
     import VolumeSlider from '$lib/components/VolumeSlider.svelte'
     import LoopButton from '$lib/components/LoopButton.svelte'
@@ -24,6 +26,43 @@
     onMount(() => {
         document.documentElement.classList.add('dark')
         applyPalette(document.documentElement, { bg_colour: '#1b6b63', text_colour: '#eafff9' })
+    })
+
+    // ?dialog=blocked&view=grid seeds a few blocked tracks (solid-colour covers) and
+    // the view preference before the dialog mounts, so both views can be shot.
+    const DAY = 24 * 60 * 60 * 1000
+    const swatch = (hex: string) =>
+        `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64'><rect width='64' height='64' fill='${hex.replace('#', '%23')}'/></svg>`
+    const SAMPLE_BLOCKED = [
+        ['Easier Said Than Done by Thee Sacred Souls', '#6b5a3e', 2 * DAY],
+        ['Red Room by Hiatus Kaiyote', '#2b2b2b', 5 * DAY],
+        ['rwm by the booyah! kids', '#8fb36b', 3 * 60 * 60 * 1000],
+        ['Can I Call You Rose? by Thee Sacred Souls', '#7a4a52', 12 * DAY],
+        ['Nakamarra by Hiatus Kaiyote', '#3f5b73', 40 * DAY],
+        ['Lady Love by Thee Sacred Souls', '#5c4a6b', 0],
+        ['Get Sun by Hiatus Kaiyote', '#b3833a', 90 * DAY]
+    ] as const
+    let ready = $state(dialog !== 'blocked')
+
+    onMount(async () => {
+        if (dialog !== 'blocked') return
+        const view = params.get('view')
+        if (view === 'grid' || view === 'list')
+            await storage.setItem('local:chorus_blocked_view', view)
+        for (const [song_id, hex, age] of SAMPLE_BLOCKED) {
+            const track_id = song_id.toLowerCase().replace(/[^a-z0-9]+/g, '-')
+            await dataStore.updateTrack({
+                track_id,
+                value: {
+                    track_id,
+                    song_id,
+                    cover: swatch(hex),
+                    blocked: true,
+                    blocked_at: age ? Date.now() - age : null
+                }
+            })
+        }
+        ready = true
     })
 </script>
 
@@ -94,7 +133,7 @@
     {:else if scene === 'dialog'}
         <div id="frame" class="flex items-center gap-x-4 rounded-lg bg-ink p-4">
             {#if dialog === 'blocked'}
-                <BlockedTracksDialog open />
+                {#if ready}<BlockedTracksDialog open />{/if}
             {:else}
                 <ChorusConfigDialog open initialTab={dialog || 'auto-skip'} />
             {/if}
