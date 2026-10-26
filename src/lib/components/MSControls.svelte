@@ -44,7 +44,7 @@
 <div class="flex w-full flex-col gap-y-3">
     <!-- Mode Selector -->
     <div class="flex flex-col gap-y-1">
-        <Label for="mode" class="text-sm text-gray-400">Processing Mode</Label>
+        <Label for="mode" class="text-sm text-ink-muted">Processing Mode</Label>
         <CustomSelect
             {pip}
             size="md"
@@ -59,8 +59,8 @@
     {#if isWidthMode}
         <div class="flex flex-col gap-y-1">
             <div class="flex items-center justify-between">
-                <Label for="width" class="text-sm text-gray-400">Stereo Width</Label>
-                <span class="text-xs text-gray-500">{$msParamsStore.width}%</span>
+                <Label for="width" class="text-sm text-ink-muted">Stereo Width</Label>
+                <span class="text-xs text-ink-dim">{$msParamsStore.width}%</span>
             </div>
             <CustomSlider
                 type="single"
@@ -76,8 +76,8 @@
     <!-- Mid Gain Control -->
     <div class="flex flex-col gap-y-1">
         <div class="flex items-center justify-between">
-            <Label for="mid-gain" class="text-sm text-gray-400">Mid Gain</Label>
-            <span class="text-xs text-gray-500"
+            <Label for="mid-gain" class="text-sm text-ink-muted">Mid Gain</Label>
+            <span class="text-xs text-ink-dim"
                 >{$msParamsStore.midGain > 0 ? '+' : ''}{$msParamsStore.midGain.toFixed(1)} dB</span
             >
         </div>
@@ -94,11 +94,9 @@
     <!-- Side Gain Control -->
     <div class="flex flex-col gap-y-1">
         <div class="flex items-center justify-between">
-            <Label for="side-gain" class="text-sm text-gray-400">Side Gain</Label>
-            <span class="text-xs text-gray-500"
-                >{$msParamsStore.sideGain > 0 ? '+' : ''}{$msParamsStore.sideGain.toFixed(
-                    1
-                )} dB</span
+            <Label for="side-gain" class="text-sm text-ink-muted">Side Gain</Label>
+            <span class="text-xs text-ink-dim"
+                >{$msParamsStore.sideGain > 0 ? '+' : ''}{$msParamsStore.sideGain.toFixed(1)} dB</span
             >
         </div>
         <CustomSlider
@@ -114,8 +112,8 @@
     <!-- Balance Control -->
     <div class="flex flex-col gap-y-1">
         <div class="flex items-center justify-between">
-            <Label for="balance" class="text-sm text-gray-400">Balance</Label>
-            <span class="text-xs text-gray-500">
+            <Label for="balance" class="text-sm text-ink-muted">Balance</Label>
+            <span class="text-xs text-ink-dim">
                 {#if $msParamsStore.balance === 0}
                     Center
                 {:else if $msParamsStore.balance < 0}

@@ -214,7 +214,7 @@
         text="new releases"
         id="chorus-new-releases-icon"
         onTrigger={toggleNewReleasesUI}
-        class="relative h-8 w-12 cursor-pointer border-white bg-transparent py-0 hover:bg-transparent [&_svg]:size-[18px]"
+        class="relative h-8 w-12 cursor-pointer border-ink-fg bg-transparent py-0 hover:bg-transparent [&_svg]:size-[18px]"
     >
         <BellPlus class="size-[18px] stroke-[var(--text)]" />
 

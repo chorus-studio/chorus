@@ -177,7 +177,13 @@ export default defineBackground(() => {
         // init, first-run load). Because starts are serialized, a hung one would wedge
         // the whole chain so even a later OFF could never run — time it out to free it.
         const resp: any = await Promise.race([
-            chrome.runtime.sendMessage({ target: 'offscreen', cmd: 'start', streamId, mode, depth }),
+            chrome.runtime.sendMessage({
+                target: 'offscreen',
+                cmd: 'start',
+                streamId,
+                mode,
+                depth
+            }),
             new Promise((_, reject) =>
                 setTimeout(
                     () => reject(new Error('vocal start timed out — toggle off and on again')),
@@ -204,26 +210,38 @@ export default defineBackground(() => {
                 enqueueVocal(async (epoch) => {
                     const tab = await getActiveTab()
                     if (!tab?.id) {
-                        safePost(port, { type: 'status', text: 'no active Spotify tab', error: true })
+                        safePost(port, {
+                            type: 'status',
+                            text: 'no active Spotify tab',
+                            error: true
+                        })
                         return
                     }
                     try {
                         await startVocalCapture(tab.id, msg.mode, msg.depth)
                     } catch (e: any) {
-                        safePost(port, { type: 'status', text: String(e?.message ?? e), error: true })
+                        safePost(port, {
+                            type: 'status',
+                            text: String(e?.message ?? e),
+                            error: true
+                        })
                         return
                     }
                     if (epoch !== vocalEpoch) {
                         // A newer toggle arrived while we were starting — roll back so
                         // the user's latest intent (off / a different tab) wins.
-                        await chrome.runtime.sendMessage({ target: 'offscreen', cmd: 'stop' }).catch(() => {})
+                        await chrome.runtime
+                            .sendMessage({ target: 'offscreen', cmd: 'stop' })
+                            .catch(() => {})
                         return
                     }
                     safePost(port, { type: 'status', text: 'active' })
                 })
             } else if (msg?.cmd === 'stop') {
                 enqueueVocal(async () => {
-                    await chrome.runtime.sendMessage({ target: 'offscreen', cmd: 'stop' }).catch(() => {})
+                    await chrome.runtime
+                        .sendMessage({ target: 'offscreen', cmd: 'stop' })
+                        .catch(() => {})
                     safePost(port, { type: 'status', text: 'off' })
                 })
             } else if (msg?.cmd === 'setMode') {
@@ -397,7 +415,8 @@ export default defineBackground(() => {
             await executeScript({ type: 'theme_change', data: nextTheme })
             await storage.setItem(STORE_KEYS.SETTINGS, {
                 ...settings,
-                theme: { ...settings.theme, name: nextTheme }
+                theme: { ...settings.theme, name: nextTheme },
+                ui: { ...settings.ui, theme: nextTheme !== 'spotify' }
             })
         }
 

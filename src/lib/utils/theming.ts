@@ -19,6 +19,8 @@
 // ; notification-error = Error notification toast.
 // ; misc               = Miscellaneous.
 
+import { applyThemeSurfaces } from './theme-surfaces'
+
 export const THEME_NAMES: ThemeName[] = [
     'spotify',
     'forest_green',
@@ -35,7 +37,15 @@ export const THEME_NAMES: ThemeName[] = [
     'citrus',
     'lava',
     'mars',
-    'desert'
+    'desert',
+    'midnight',
+    'slate',
+    'graphite',
+    'espresso',
+    'olive',
+    'lagoon',
+    'wine',
+    'synthwave'
 ]
 
 export type ThemeName =
@@ -55,6 +65,14 @@ export type ThemeName =
     | 'mars'
     | 'citrus'
     | 'desert'
+    | 'midnight'
+    | 'slate'
+    | 'graphite'
+    | 'espresso'
+    | 'olive'
+    | 'lagoon'
+    | 'wine'
+    | 'synthwave'
 
 export type CSSVariable =
     | 'text'
@@ -98,7 +116,7 @@ export const STATIC_THEMES: Record<ThemeName, null | Record<CSSVariable, string>
         main: '#00587a',
         sidebar: '#00587a',
         player: '#00587a',
-        card: '#007baa',
+        card: '#00698f',
         shadow: '#007baa',
         selected_row: '#9bf3f3',
         button: '#9bf3f3',
@@ -183,7 +201,7 @@ export const STATIC_THEMES: Record<ThemeName, null | Record<CSSVariable, string>
         main: '#a22c5f',
         sidebar: '#a22c5f',
         player: '#a22c5f',
-        card: '#c94277',
+        card: '#86244e',
         shadow: '#c94277',
         selected_row: '#ffd4de',
         button: '#ffd4de',
@@ -200,7 +218,7 @@ export const STATIC_THEMES: Record<ThemeName, null | Record<CSSVariable, string>
         main: '#3b7b2f',
         sidebar: '#3b7b2f',
         player: '#3b7b2f',
-        card: '#51a140',
+        card: '#2f6326',
         shadow: '#51a140',
         selected_row: '#c5f6a3',
         button: '#c5f6a3',
@@ -213,15 +231,15 @@ export const STATIC_THEMES: Record<ThemeName, null | Record<CSSVariable, string>
     },
     raisin: {
         text: '#d6b8d6',
-        subtext: '#a06c99',
+        subtext: '#ad79a6',
         main: '#1a0e17',
         sidebar: '#1a0e17',
         player: '#1a0e17',
         card: '#241221',
         shadow: '#241221',
-        selected_row: '#7b3c6e',
-        button: '#7b3c6e',
-        button_active: '#7b3c6e',
+        selected_row: '#9a4b8a',
+        button: '#9a4b8a',
+        button_active: '#9a4b8a',
         button_disabled: '#331a2e',
         tab_active: '#d6b8d6',
         notification: '#241221',
@@ -234,7 +252,7 @@ export const STATIC_THEMES: Record<ThemeName, null | Record<CSSVariable, string>
         main: '#7a0000',
         sidebar: '#7a0000',
         player: '#7a0000',
-        card: '#a00000',
+        card: '#900000',
         shadow: '#a00000',
         selected_row: '#ff6b47',
         button: '#ff6b47',
@@ -246,12 +264,12 @@ export const STATIC_THEMES: Record<ThemeName, null | Record<CSSVariable, string>
         misc: '#a00000'
     },
     citrus: {
-        text: '#ffebc3',
-        subtext: '#fff6e0',
+        text: '#ffffff',
+        subtext: '#fffcf5',
         main: '#c64e00',
         sidebar: '#c64e00',
         player: '#c64e00',
-        card: '#ff6b00',
+        card: '#a84200',
         shadow: '#ff6b00',
         selected_row: '#ffde98',
         button: '#ffde98',
@@ -280,18 +298,18 @@ export const STATIC_THEMES: Record<ThemeName, null | Record<CSSVariable, string>
         misc: '#b01072'
     },
     imperial: {
-        text: '#d8bfd8',
-        subtext: '#d8bfd8',
+        text: '#f6eefa',
+        subtext: '#efe2f5',
         main: '#9932cc',
         sidebar: '#9932cc',
         player: '#9932cc',
         card: '#9400d3',
         shadow: '#9400d3',
-        selected_row: '#8a2be2',
-        button: '#9932cc',
-        button_active: '#9932cc',
+        selected_row: '#e6ccff',
+        button: '#e6ccff',
+        button_active: '#e6ccff',
         button_disabled: '#ba55d3',
-        tab_active: '#d8bfd8',
+        tab_active: '#f6eefa',
         notification: '#9400d3',
         notification_error: '#fb7c7c',
         misc: '#9932cc'
@@ -321,15 +339,185 @@ export const STATIC_THEMES: Record<ThemeName, null | Record<CSSVariable, string>
         player: '#3b002e',
         card: '#660043',
         shadow: '#660043',
-        selected_row: '#99005e',
-        button: '#99005e',
-        button_active: '#99005e',
-        button_disabled: '#cc0078',
+        selected_row: '#d4007e',
+        button: '#d4007e',
+        button_active: '#d4007e',
+        button_disabled: '#7a0048',
         tab_active: '#ff92d5',
         notification: '#660043',
         notification_error: '#ff6003',
         misc: '#3b002e'
+    },
+    // --- second batch: hues the first set left out (navy, blue-grey, neutral,
+    // coffee, khaki, teal, burgundy, neon purple). Same conventions as above:
+    // main = sidebar = player is the page, card is the hover step, the three
+    // button fields are the accent, button_disabled a mid tone.
+    midnight: {
+        text: '#dbe7ff',
+        subtext: '#f0f5ff',
+        main: '#0f1a2e',
+        sidebar: '#0f1a2e',
+        player: '#0f1a2e',
+        card: '#1b2a46',
+        shadow: '#1b2a46',
+        selected_row: '#8fb8ff',
+        button: '#8fb8ff',
+        button_active: '#8fb8ff',
+        button_disabled: '#2f4a7a',
+        tab_active: '#dbe7ff',
+        notification: '#1b2a46',
+        notification_error: '#ff7a90',
+        misc: '#0f1a2e'
+    },
+    slate: {
+        text: '#e2e8f0',
+        subtext: '#f8fafc',
+        main: '#1e293b',
+        sidebar: '#1e293b',
+        player: '#1e293b',
+        card: '#2d3b52',
+        shadow: '#2d3b52',
+        selected_row: '#93c5fd',
+        button: '#93c5fd',
+        button_active: '#93c5fd',
+        button_disabled: '#475569',
+        tab_active: '#e2e8f0',
+        notification: '#2d3b52',
+        notification_error: '#fb7185',
+        misc: '#1e293b'
+    },
+    graphite: {
+        text: '#ededed',
+        subtext: '#fafafa',
+        main: '#1c1c1e',
+        sidebar: '#1c1c1e',
+        player: '#1c1c1e',
+        card: '#2c2c2e',
+        shadow: '#2c2c2e',
+        selected_row: '#d4d4d8',
+        button: '#d4d4d8',
+        button_active: '#d4d4d8',
+        button_disabled: '#48484a',
+        tab_active: '#ededed',
+        notification: '#2c2c2e',
+        notification_error: '#ff6b6b',
+        misc: '#1c1c1e'
+    },
+    espresso: {
+        text: '#f3e3d3',
+        subtext: '#fff6ec',
+        main: '#2b1a12',
+        sidebar: '#2b1a12',
+        player: '#2b1a12',
+        card: '#3d281d',
+        shadow: '#3d281d',
+        selected_row: '#d9a066',
+        button: '#d9a066',
+        button_active: '#d9a066',
+        button_disabled: '#6b4a33',
+        tab_active: '#f3e3d3',
+        notification: '#3d281d',
+        notification_error: '#ff8a5b',
+        misc: '#2b1a12'
+    },
+    olive: {
+        text: '#e9ecd6',
+        subtext: '#f7f8ee',
+        main: '#232816',
+        sidebar: '#232816',
+        player: '#232816',
+        card: '#343b22',
+        shadow: '#343b22',
+        selected_row: '#c9d96a',
+        button: '#c9d96a',
+        button_active: '#c9d96a',
+        button_disabled: '#5a6333',
+        tab_active: '#e9ecd6',
+        notification: '#343b22',
+        notification_error: '#ff9f68',
+        misc: '#232816'
+    },
+    lagoon: {
+        text: '#d5f5f1',
+        subtext: '#effffd',
+        main: '#0b2f2e',
+        sidebar: '#0b2f2e',
+        player: '#0b2f2e',
+        card: '#124443',
+        shadow: '#124443',
+        selected_row: '#5eead4',
+        button: '#5eead4',
+        button_active: '#5eead4',
+        button_disabled: '#1f6e6a',
+        tab_active: '#d5f5f1',
+        notification: '#124443',
+        notification_error: '#ffb86b',
+        misc: '#0b2f2e'
+    },
+    wine: {
+        text: '#f6dfe6',
+        subtext: '#fff3f6',
+        main: '#33101c',
+        sidebar: '#33101c',
+        player: '#33101c',
+        card: '#4a1829',
+        shadow: '#4a1829',
+        selected_row: '#e3a2b8',
+        button: '#e3a2b8',
+        button_active: '#e3a2b8',
+        button_disabled: '#7a2a45',
+        tab_active: '#f6dfe6',
+        notification: '#4a1829',
+        notification_error: '#ffb070',
+        misc: '#33101c'
+    },
+    synthwave: {
+        text: '#f5e1ff',
+        subtext: '#fff0ff',
+        main: '#1a0b2e',
+        sidebar: '#1a0b2e',
+        player: '#1a0b2e',
+        card: '#2a1247',
+        shadow: '#2a1247',
+        selected_row: '#ff6ec7',
+        button: '#ff6ec7',
+        button_active: '#ff6ec7',
+        button_disabled: '#5b2b8a',
+        tab_active: '#f5e1ff',
+        notification: '#2a1247',
+        notification_error: '#ffb347',
+        misc: '#1a0b2e'
     }
+}
+
+/**
+ * Write a palette onto the document root: the `--chorus-*` variables theme.css
+ * and the rewritten Spotify stylesheets read, plus the Chorus rack tokens
+ * derived from it (see theme-surfaces.ts). Pure DOM; no stylesheet injection.
+ */
+export function applyThemeVariables(themeConfig: Record<CSSVariable, string>): void {
+    const root = document.documentElement
+    const set = (name: string, value: string) => root.style.setProperty(name, value)
+
+    set('--chorus-main', themeConfig.main)
+    set('--chorus-card', themeConfig.card)
+    set('--chorus-sidebar', themeConfig.sidebar)
+    set('--chorus-button', themeConfig.button)
+    set('--chorus-subtext', themeConfig.subtext)
+    set('--chorus-text', themeConfig.text)
+    set('--chorus-selected-row', themeConfig.selected_row)
+    set('--chorus-shadow', themeConfig.shadow)
+    set('--chorus-button-active', themeConfig.button_active)
+    set('--chorus-button-disabled', themeConfig.button_disabled)
+    set('--chorus-tab-active', themeConfig.tab_active)
+    set('--chorus-misc', themeConfig.misc)
+    set('--chorus-player', themeConfig.player)
+    set('--chorus-notification', themeConfig.notification)
+    set('--chorus-notification-error', themeConfig.notification_error)
+    set('--chorus-highlight', themeConfig.main)
+    set('--chorus-highlight-elevated', themeConfig.sidebar)
+
+    applyThemeSurfaces(root, themeConfig)
 }
 
 export function removeTheme() {
@@ -349,34 +537,9 @@ export async function setTheme(theme: ThemeName): Promise<void> {
 
     await injectTheme(theme)
 
-    const setRoot = document?.documentElement?.style?.setProperty
+    if (!document?.documentElement?.style?.setProperty) return
 
-    if (!setRoot) return
-
-    // colours
-    document.documentElement.style.setProperty('--chorus-main', themeConfig.main)
-    document.documentElement.style.setProperty('--chorus-card', themeConfig.card)
-    document.documentElement.style.setProperty('--chorus-sidebar', themeConfig.sidebar)
-    document.documentElement.style.setProperty('--chorus-button', themeConfig.button)
-    document.documentElement.style.setProperty('--chorus-subtext', themeConfig.subtext)
-    document.documentElement.style.setProperty('--chorus-text', themeConfig.text)
-    document.documentElement.style.setProperty('--chorus-selected-row', themeConfig.selected_row)
-    document.documentElement.style.setProperty('--chorus-shadow', themeConfig.shadow)
-    document.documentElement.style.setProperty('--chorus-button-active', themeConfig.button_active)
-    document.documentElement.style.setProperty(
-        '--chorus-button-disabled',
-        themeConfig.button_disabled
-    )
-    document.documentElement.style.setProperty('--chorus-tab-active', themeConfig.tab_active)
-    document.documentElement.style.setProperty('--chorus-misc', themeConfig.misc)
-    document.documentElement.style.setProperty('--chorus-player', themeConfig.player)
-    document.documentElement.style.setProperty('--chorus-notification', themeConfig.notification)
-    document.documentElement.style.setProperty(
-        '--chorus-notification-error',
-        themeConfig.notification_error
-    )
-    document.documentElement.style.setProperty('--chorus-highlight', themeConfig.main)
-    document.documentElement.style.setProperty('--chorus-highlight-elevated', themeConfig.sidebar)
+    applyThemeVariables(themeConfig)
 }
 
 type ReplacementRule = {
@@ -440,12 +603,15 @@ export async function overrideExternalStyles() {
                 let count = 0
                 for (const { target, replacement } of rulesToReplace) {
                     const regex = new RegExp(target, 'gi')
-                    modifiedCSS = modifiedCSS.replaceAll(regex, (match: string, ...groups: string[]) => {
-                        if (typeof replacement === 'function') {
-                            return `${replacement(match, groups[0] || '')} !important`
+                    modifiedCSS = modifiedCSS.replaceAll(
+                        regex,
+                        (match: string, ...groups: string[]) => {
+                            if (typeof replacement === 'function') {
+                                return `${replacement(match, groups[0] || '')} !important`
+                            }
+                            return `${replacement} !important`
                         }
-                        return `${replacement} !important`
-                    })
+                    )
                     count++
                 }
 

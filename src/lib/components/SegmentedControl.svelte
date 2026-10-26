@@ -62,7 +62,7 @@
             title={option.title}
             onclick={() => select(option.value)}
             class={cn(
-                'inline-flex h-full items-center justify-center gap-1 whitespace-nowrap rounded-[4px] font-medium leading-none transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal/60',
+                'inline-flex h-full items-center justify-center gap-1 whitespace-nowrap rounded-[4px] font-medium leading-none transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal',
                 size === 'xs'
                     ? 'px-1.5 text-[11px]'
                     : size === 'sm'

@@ -29,7 +29,7 @@
     >
         {@render children?.()}
         <DialogPrimitive.Close
-            class="absolute right-4 top-4 inline-flex size-7 items-center justify-center rounded-md text-ink-muted transition-colors hover:bg-surface-2 hover:text-ink-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-signal/60 disabled:pointer-events-none"
+            class="absolute right-4 top-4 inline-flex size-7 items-center justify-center rounded-md text-ink-muted transition-colors hover:bg-surface-2 hover:text-ink-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-signal disabled:pointer-events-none"
         >
             <X class="size-4" />
             <span class="sr-only">Close</span>

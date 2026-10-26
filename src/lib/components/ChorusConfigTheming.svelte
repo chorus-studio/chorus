@@ -10,11 +10,13 @@
     async function updateTheme(theme: ThemeName) {
         if (theme === $settingsStore.theme.name) return
 
+        // Picking a palette applies it, and the "Apply theme" switch follows.
         await settingsStore.updateSettings({
-            theme: { ...$settingsStore.theme, name: theme }
+            theme: { ...$settingsStore.theme, name: theme },
+            ui: { ...$settingsStore.ui, theme: theme !== 'spotify' }
         })
 
-        if ($settingsStore.ui.theme) await setTheme(theme)
+        await setTheme(theme)
     }
 
     async function toggleApply(enabled: boolean) {
@@ -52,8 +54,8 @@
         <div class="flex flex-col gap-y-0.5">
             <span class="text-[13px] font-medium text-ink-fg">Recolour the Spotify web player</span>
             <span class="text-xs text-ink-muted">
-                Pick a palette for the sidebar, main view and player bar. Chorus's own controls stay
-                the same in every theme.
+                Pick a palette for the sidebar, main view and player bar. Chorus's own panels take
+                on the same tint; green stays the signal colour.
             </span>
         </div>
         <label class="flex shrink-0 items-center gap-x-2 text-xs text-ink-fg-2">

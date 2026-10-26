@@ -65,8 +65,8 @@
                     'aria-label',
                     `${highlight ? 'Remove from' : 'Save to'} Liked`
                 )
-                svg.style.fill = highlight ? '#1ed760' : 'none'
-                svg.style.stroke = highlight ? '#1ed760' : 'currentColor'
+                svg.style.fill = highlight ? 'hsl(var(--bar-signal))' : 'none'
+                svg.style.stroke = highlight ? 'hsl(var(--bar-signal))' : 'currentColor'
             })
         }, 500)
     }
@@ -157,7 +157,7 @@
             class={buttonVariants({
                 variant: 'bar',
                 size: 'icon-sm',
-                class: `[&_svg]:size-[18px] ${$nowPlaying.liked ? 'text-signal opacity-100' : ''}`
+                class: `[&_svg]:size-[18px] ${$nowPlaying.liked ? 'text-signal-bar opacity-100' : ''}`
             })}
         >
             <Heart class={$nowPlaying.liked ? 'fill-current' : ''} />

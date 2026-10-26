@@ -239,7 +239,7 @@
                                 aria-pressed={isDefault}
                                 aria-label="Open this tab first"
                                 class={cn(
-                                    'inline-flex h-7 items-center gap-1.5 rounded-md px-2 text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal/60',
+                                    'inline-flex h-7 items-center gap-1.5 rounded-md px-2 text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal',
                                     isDefault
                                         ? 'text-signal-bright'
                                         : 'text-ink-muted hover:bg-surface-2 hover:text-ink-fg'
