@@ -1,7 +1,9 @@
 <script lang="ts">
+    import Check from '@lucide/svelte/icons/check'
+    import Search from '@lucide/svelte/icons/search'
     import { configStore } from '$lib/stores/config'
-    import Undo2 from '@lucide/svelte/icons/undo-2'
     import { Button } from '$lib/components/ui/button'
+    import SegmentedControl from '$lib/components/SegmentedControl.svelte'
     import { cn } from '$lib/utils.js'
 
     import {
@@ -15,105 +17,218 @@
     } from '$lib/audio-effects/reverb/presets'
 
     type HiddenKey = keyof typeof $configStore.fx_eq_presets
+    type Section = { title?: string; presets: string[] }
+    type Group = { key: HiddenKey; title: string; sections: Section[] }
 
-    const GROUPS: Array<{ key: HiddenKey; title: string; presets: string[] }> = [
-        { key: 'spotify_eq_presets', title: 'Spotify EQ', presets: spotifyPresets },
-        { key: 'custom_eq_presets', title: 'Custom EQ', presets: eqPresets },
-        { key: 'room_reverb_presets', title: 'Room reverb', presets: roomPresets },
+    // One checklist per picker, alphabetical so a name is quick to find.
+    const alphabetical = (list: string[]) =>
+        [...list].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }))
+
+    const GROUPS: Group[] = [
+        {
+            key: 'spotify_eq_presets',
+            title: 'Spotify EQ',
+            sections: [{ presets: alphabetical(spotifyPresets) }]
+        },
+        {
+            key: 'custom_eq_presets',
+            title: 'Custom EQ',
+            sections: [{ presets: alphabetical(eqPresets) }]
+        },
+        {
+            key: 'room_reverb_presets',
+            title: 'Room reverb',
+            sections: [{ presets: alphabetical(roomPresets) }]
+        },
         {
             key: 'custom_reverb_presets',
             title: 'Custom reverb',
-            presets: [...impulsePresets, ...reverbPresets]
+            sections: [
+                { title: 'Impulse responses', presets: alphabetical(impulsePresets) },
+                { title: 'Algorithmic', presets: alphabetical(reverbPresets) }
+            ]
         }
     ]
 
-    async function setHidden(key: HiddenKey, hidden: string[]) {
+    const presetsOf = (group: Group) => group.sections.flatMap((s) => s.presets)
+    // Only names the picker still offers count; stale entries in storage are ignored.
+    const hiddenIn = (group: Group) => {
+        const hidden = $configStore.fx_eq_presets[group.key]
+        return presetsOf(group).filter((p) => hidden.includes(p)).length
+    }
+
+    let activeKey = $state<HiddenKey>('spotify_eq_presets')
+    let query = $state('')
+
+    const group = $derived(GROUPS.find((g) => g.key === activeKey) ?? GROUPS[0])
+    const hidden = $derived($configStore.fx_eq_presets[group.key])
+    const total = $derived(presetsOf(group).length)
+    const hiddenCount = $derived(hiddenIn(group))
+    const hiddenEverywhere = $derived(GROUPS.reduce((n, g) => n + hiddenIn(g), 0))
+
+    const needle = $derived(query.trim().toLowerCase())
+    const sections = $derived(
+        group.sections
+            .map((s) => ({
+                ...s,
+                presets: needle
+                    ? s.presets.filter((p) => p.toLowerCase().includes(needle))
+                    : s.presets
+            }))
+            .filter((s) => s.presets.length > 0)
+    )
+
+    const options = $derived(
+        GROUPS.map((g) => {
+            const all = presetsOf(g).length
+            const shown = all - hiddenIn(g)
+            return {
+                label: g.title,
+                value: g.key,
+                hint: shown === all ? `${all}` : `${shown}/${all}`
+            }
+        })
+    )
+
+    async function setHidden(key: HiddenKey, next: string[]) {
         await configStore.updateConfig({
-            fx_eq_presets: { ...$configStore.fx_eq_presets, [key]: hidden }
+            fx_eq_presets: { ...$configStore.fx_eq_presets, [key]: next }
         })
     }
 
-    async function toggle(key: HiddenKey, preset: string) {
-        const hidden = $configStore.fx_eq_presets[key]
-        await setHidden(
-            key,
-            hidden.includes(preset) ? hidden.filter((p) => p !== preset) : [...hidden, preset]
-        )
+    async function setShown(preset: string, shown: boolean) {
+        const current = $configStore.fx_eq_presets[group.key]
+        if (shown)
+            return setHidden(
+                group.key,
+                current.filter((p) => p !== preset)
+            )
+        if (!current.includes(preset)) await setHidden(group.key, [...current, preset])
     }
 
-    async function undo(key: HiddenKey) {
-        await setHidden(key, $configStore.fx_eq_presets[key].slice(0, -1))
-    }
+    const showAll = () => setHidden(group.key, [])
+    const hideAll = () => setHidden(group.key, presetsOf(group))
 
-    async function showAll(key: HiddenKey) {
-        await setHidden(key, [])
+    async function showEverywhere() {
+        const cleared = Object.fromEntries(GROUPS.map((g) => [g.key, []]))
+        await configStore.updateConfig({
+            fx_eq_presets: { ...$configStore.fx_eq_presets, ...cleared }
+        })
     }
 </script>
 
-<div class="flex flex-col gap-y-3.5">
-    <div class="flex flex-col gap-y-0.5">
-        <span class="text-[13px] font-medium text-ink-fg">Trim the preset pickers</span>
-        <span class="text-xs text-ink-muted">
-            Click a preset to hide it from the Reverb and EQ pickers. Hidden presets are dimmed here
-            and can be shown again at any time.
-        </span>
+<div class="flex flex-col gap-y-3">
+    <div class="flex items-end justify-between gap-x-4">
+        <div class="flex flex-col gap-y-0.5">
+            <span class="text-[13px] font-medium text-ink-fg">Trim the preset pickers</span>
+            <span class="text-xs text-ink-muted">
+                Untick a preset to hide it from the Reverb and EQ pickers. Nothing is deleted; bring
+                it back any time.
+            </span>
+        </div>
+        <label class="relative w-48 shrink-0">
+            <Search
+                class="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-ink-dim"
+            />
+            <input
+                type="search"
+                placeholder="Filter presets"
+                aria-label="Filter presets"
+                bind:value={query}
+                class="flex h-7 w-full rounded-md border border-hairline bg-inset pl-8 pr-3 text-xs text-ink-fg placeholder:text-dim hover:border-hairline-strong focus-visible:border-signal/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal/30"
+            />
+        </label>
     </div>
 
-    <div class="grid grid-cols-2 gap-3">
-        {#each GROUPS as group (group.key)}
-            {@const hidden = $configStore.fx_eq_presets[group.key]}
-            <div
-                class="flex flex-col gap-y-2.5 rounded-lg border border-hairline bg-panel px-3.5 py-3"
-            >
-                <div class="flex items-center justify-between gap-x-2">
-                    <span class="flex items-baseline gap-x-2 text-[13px] font-medium text-ink-fg">
-                        {group.title}
-                        <span class="text-[11px] font-normal text-ink-muted">
-                            {hidden.length ? `${hidden.length} hidden` : 'none hidden'}
-                        </span>
-                    </span>
-                    <span class="flex items-center gap-x-0.5">
-                        <Button
-                            variant="ghost"
-                            size="xs"
-                            disabled={!hidden.length}
-                            onclick={() => undo(group.key)}
-                        >
-                            <Undo2 class="size-3" />
-                            Undo
-                        </Button>
-                        <Button
-                            variant="ghost"
-                            size="xs"
-                            disabled={!hidden.length}
-                            onclick={() => showAll(group.key)}
-                        >
-                            Show all
-                        </Button>
-                    </span>
-                </div>
-                <div class="flex flex-wrap gap-1.5">
-                    {#each group.presets as preset (preset)}
-                        {@const isHidden = hidden.includes(preset)}
-                        <button
-                            type="button"
+    <SegmentedControl
+        class="self-start"
+        ariaLabel="Preset picker"
+        value={activeKey}
+        onValueChange={(v) => (activeKey = v as HiddenKey)}
+        {options}
+    />
+
+    <div class="flex flex-col gap-y-2.5 rounded-lg border border-hairline bg-panel px-3.5 py-3">
+        <div class="flex items-center justify-between gap-x-2">
+            <span class="flex items-baseline gap-x-2 text-[13px] font-medium text-ink-fg">
+                {group.title}
+                <span class="text-[11px] font-normal text-ink-muted">
+                    {total - hiddenCount} of {total} shown
+                </span>
+            </span>
+            <span class="flex items-center gap-x-0.5">
+                <Button variant="ghost" size="xs" disabled={hiddenCount === 0} onclick={showAll}>
+                    Show all
+                </Button>
+                <Button
+                    variant="ghost"
+                    size="xs"
+                    disabled={hiddenCount === total}
+                    onclick={hideAll}
+                >
+                    Hide all
+                </Button>
+            </span>
+        </div>
+
+        {#if sections.length === 0}
+            <span class="py-6 text-center text-xs text-ink-muted">
+                No presets match “{query.trim()}”
+            </span>
+        {/if}
+
+        {#each sections as section (section.title ?? group.key)}
+            {#if section.title}
+                <span class="rack-label mt-0.5">{section.title} · {section.presets.length}</span>
+            {/if}
+            <div class="grid grid-cols-5 gap-x-3">
+                {#each section.presets as preset (preset)}
+                    {@const shown = !hidden.includes(preset)}
+                    <label
+                        class={cn(
+                            'group flex h-6 min-w-0 cursor-pointer items-center gap-x-2 text-xs transition-colors hover:text-ink-fg',
+                            shown ? 'text-ink-fg-2' : 'text-ink-muted'
+                        )}
+                    >
+                        <input
+                            type="checkbox"
+                            checked={shown}
                             data-key={group.key}
                             data-preset={preset}
-                            aria-pressed={isHidden}
-                            title={isHidden ? 'Show in pickers' : 'Hide from pickers'}
-                            onclick={() => toggle(group.key, preset)}
+                            onchange={(e) => setShown(preset, e.currentTarget.checked)}
+                            class="peer sr-only"
+                        />
+                        <span
+                            aria-hidden="true"
                             class={cn(
-                                'inline-flex h-[26px] items-center rounded-md border px-2.5 text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal/60',
-                                isHidden
-                                    ? 'border-dashed border-hairline-strong bg-transparent text-ink-dim line-through hover:text-ink-muted'
-                                    : 'border-hairline bg-surface text-ink-fg hover:border-hairline-strong'
+                                'inline-flex size-3.5 shrink-0 items-center justify-center rounded-[3px] transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-signal peer-focus-visible:ring-offset-1 peer-focus-visible:ring-offset-panel',
+                                shown
+                                    ? 'bg-signal text-ink'
+                                    : 'border-[1.5px] border-hairline-strong group-hover:border-ink-muted'
                             )}
                         >
-                            {preset}
-                        </button>
-                    {/each}
-                </div>
+                            {#if shown}
+                                <Check class="size-2.5" strokeWidth={3.5} />
+                            {/if}
+                        </span>
+                        <span class="truncate">{preset}</span>
+                    </label>
+                {/each}
             </div>
         {/each}
+    </div>
+
+    <div class="flex items-center justify-between text-[11px] text-ink-muted">
+        <span>
+            {hiddenEverywhere ? `${hiddenEverywhere} hidden across all pickers` : 'Nothing hidden'}
+        </span>
+        <Button
+            variant="ghost"
+            size="xs"
+            disabled={hiddenEverywhere === 0}
+            onclick={showEverywhere}
+        >
+            Show everything
+        </Button>
     </div>
 </div>

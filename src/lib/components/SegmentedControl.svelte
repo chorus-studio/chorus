@@ -2,7 +2,8 @@
     import type { Component } from 'svelte'
     import { cn } from '$lib/utils.js'
 
-    type Option = { label: string; value: string; icon?: Component; title?: string }
+    // `hint` is a small mono annotation after the label, e.g. a count.
+    type Option = { label: string; value: string; icon?: Component; title?: string; hint?: string }
 
     let {
         options,
@@ -77,6 +78,14 @@
                 <Icon class="size-3.5" />
             {/if}
             {option.label}
+            {#if option.hint}
+                <span
+                    class={cn(
+                        'font-mono text-[10px] font-normal tabular-nums',
+                        active ? 'text-signal-bright' : 'text-ink-muted'
+                    )}>{option.hint}</span
+                >
+            {/if}
         </button>
     {/each}
 </div>
