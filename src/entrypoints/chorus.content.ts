@@ -1,7 +1,7 @@
 import { mount, unmount } from 'svelte'
 
 import { MatchPattern } from 'wxt/sandbox'
-import { setTheme, removeTheme } from '$lib/utils/theming'
+import { applyLook, removeTheme } from '$lib/utils/theming'
 import { type VolumeState } from '$lib/stores/volume'
 import { closePictureInPicture } from '$lib/utils/pip'
 import { playbackObserver } from '$lib/observers/playback'
@@ -267,10 +267,9 @@ async function injectChorusUI(ctx: ContentScriptContext) {
     }
 
     const settings = await storage.getItem<SettingsState>(SETTINGS_STORE_KEY)
-    // ui.theme is the Theme tab's "Apply theme" switch; a saved palette only
-    // comes back on load while it is on.
-    const theme = settings?.ui?.theme && settings.theme ? settings.theme.name : 'spotify'
-    await setTheme(theme)
+    // Palette, appearance and glass are all resolved from settings (a saved
+    // palette only comes back while the Theme tab's "Apply theme" is on).
+    if (settings) await applyLook(settings)
 
     integratedUi = createIntegratedUi(ctx, {
         position: 'inline',

@@ -16,6 +16,20 @@
     --background-highlight: var(--chorus-button) !important;
 }
 
+/* Light appearance: the Encore tokens the hex rewrite does not reach stay dark
+   otherwise (pressed elevated surfaces, dividers, quiet icons), and the native
+   scrollbars and form controls follow the page. Spotify puts the theme class on
+   <html>, hence both the compound and the descendant forms. */
+html[data-mode='light'].encore-dark-theme,
+html[data-mode='light'].encore-dark-theme .encore-base-set,
+html[data-mode='light'] .encore-dark-theme,
+html[data-mode='light'] .encore-dark-theme .encore-base-set {
+    color-scheme: light;
+    --background-elevated-press: var(--chorus-button-disabled) !important;
+    --decorative-subdued: var(--chorus-button-disabled) !important;
+    --essential-subdued: var(--chorus-subtext) !important;
+}
+
 /* background */
 .main-home-homeHeader,
 .main-entityHeader-backgroundColor,

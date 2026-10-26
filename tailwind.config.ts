@@ -24,19 +24,21 @@ const config: Config = {
         extend: {
             colors: {
                 // ---- studio tokens ----
+                // Surface colours multiply their alpha by --surface-alpha, which frosted
+                // floating panels lower (app.css) so every surface inside goes translucent.
                 ink: {
-                    DEFAULT: 'hsl(var(--ink) / <alpha-value>)',
+                    DEFAULT: 'hsl(var(--ink) / calc(<alpha-value> * var(--surface-alpha, 1)))',
                     fg: 'hsl(var(--ink-fg) / <alpha-value>)',
                     'fg-2': 'hsl(var(--ink-fg-2) / <alpha-value>)',
                     muted: 'hsl(var(--ink-muted) / <alpha-value>)',
                     dim: 'hsl(var(--ink-dim) / <alpha-value>)'
                 },
-                panel: 'hsl(var(--panel) / <alpha-value>)',
+                panel: 'hsl(var(--panel) / calc(<alpha-value> * var(--surface-alpha, 1)))',
                 surface: {
-                    DEFAULT: 'hsl(var(--surface) / <alpha-value>)',
-                    2: 'hsl(var(--surface-2) / <alpha-value>)'
+                    DEFAULT: 'hsl(var(--surface) / calc(<alpha-value> * var(--surface-alpha, 1)))',
+                    2: 'hsl(var(--surface-2) / calc(<alpha-value> * var(--surface-alpha, 1)))'
                 },
-                inset: 'hsl(var(--inset) / <alpha-value>)',
+                inset: 'hsl(var(--inset) / calc(<alpha-value> * var(--surface-alpha, 1)))',
                 hairline: {
                     DEFAULT: 'hsl(var(--ink-fg) / 0.08)',
                     strong: 'hsl(var(--ink-fg) / 0.14)'
@@ -54,16 +56,18 @@ const config: Config = {
 
                 // ---- shadcn aliases ----
                 border: 'hsl(var(--border) / <alpha-value>)',
-                input: 'hsl(var(--input) / <alpha-value>)',
+                input: 'hsl(var(--input) / calc(<alpha-value> * var(--surface-alpha, 1)))',
                 ring: 'hsl(var(--ring) / <alpha-value>)',
-                background: 'hsl(var(--background) / <alpha-value>)',
+                background:
+                    'hsl(var(--background) / calc(<alpha-value> * var(--surface-alpha, 1)))',
                 foreground: 'hsl(var(--foreground) / <alpha-value>)',
                 primary: {
                     DEFAULT: 'hsl(var(--primary) / <alpha-value>)',
                     foreground: 'hsl(var(--primary-foreground) / <alpha-value>)'
                 },
                 secondary: {
-                    DEFAULT: 'hsl(var(--secondary) / <alpha-value>)',
+                    DEFAULT:
+                        'hsl(var(--secondary) / calc(<alpha-value> * var(--surface-alpha, 1)))',
                     foreground: 'hsl(var(--secondary-foreground) / <alpha-value>)'
                 },
                 destructive: {
@@ -71,19 +75,19 @@ const config: Config = {
                     foreground: 'hsl(var(--destructive-foreground) / <alpha-value>)'
                 },
                 muted: {
-                    DEFAULT: 'hsl(var(--muted) / <alpha-value>)',
+                    DEFAULT: 'hsl(var(--muted) / calc(<alpha-value> * var(--surface-alpha, 1)))',
                     foreground: 'hsl(var(--muted-foreground) / <alpha-value>)'
                 },
                 accent: {
-                    DEFAULT: 'hsl(var(--accent) / <alpha-value>)',
+                    DEFAULT: 'hsl(var(--accent) / calc(<alpha-value> * var(--surface-alpha, 1)))',
                     foreground: 'hsl(var(--accent-foreground) / <alpha-value>)'
                 },
                 popover: {
-                    DEFAULT: 'hsl(var(--popover) / <alpha-value>)',
+                    DEFAULT: 'hsl(var(--popover) / calc(<alpha-value> * var(--surface-alpha, 1)))',
                     foreground: 'hsl(var(--popover-foreground) / <alpha-value>)'
                 },
                 card: {
-                    DEFAULT: 'hsl(var(--card) / <alpha-value>)',
+                    DEFAULT: 'hsl(var(--card) / calc(<alpha-value> * var(--surface-alpha, 1)))',
                     foreground: 'hsl(var(--card-foreground) / <alpha-value>)'
                 }
             },
@@ -106,7 +110,7 @@ const config: Config = {
                 ]
             },
             boxShadow: {
-                float: '0 12px 40px -12px hsl(var(--ink) / 0.9), 0 0 0 1px hsl(var(--ink-fg) / 0.06)',
+                float: '0 12px 40px -12px hsl(var(--shadow) / var(--shadow-alpha)), 0 0 0 1px hsl(var(--ink-fg) / 0.06)',
                 led: '0 0 6px 1px hsl(var(--signal) / 0.55)'
             },
             keyframes: {

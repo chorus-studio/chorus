@@ -15,10 +15,22 @@ export type ThemeVibrancy =
     | 'Muted'
     | 'Auto'
 
+/** Dark or light rack (and page, while a theme is applied); `system` follows the OS. */
+export type Appearance = 'dark' | 'light' | 'system'
+/** Where the toolbar popup and PiP player take their colours from. */
+export type PopupColours = 'album' | 'theme'
+/** Glass material tweaks: panel opacity (0..1), backdrop blur (px), refraction strength (0 = off). */
+export type GlassSettings = {
+    opacity: number
+    blur: number
+    refraction: number
+}
+
 export type SettingsState = {
     ui: {
         pip: boolean
         theme: boolean
+        glass: boolean
         playlist: boolean
         popup: boolean
         volume: boolean
@@ -40,13 +52,19 @@ export type SettingsState = {
     theme: {
         name: ThemeName
         vibrancy: ThemeVibrancy
+        appearance: Appearance
+        popup: PopupColours
+        glass: GlassSettings
     }
 }
+
+export const DEFAULT_GLASS: GlassSettings = { opacity: 0.5, blur: 40, refraction: 22 }
 
 const defaultSettingsState: SettingsState = {
     ui: {
         pip: false,
         theme: false,
+        glass: false,
         popup: false,
         volume: false,
         progress: true,
@@ -67,8 +85,20 @@ const defaultSettingsState: SettingsState = {
     },
     theme: {
         name: 'spotify' as ThemeName,
-        vibrancy: 'LightVibrant' as ThemeVibrancy
+        vibrancy: 'LightVibrant' as ThemeVibrancy,
+        appearance: 'dark',
+        popup: 'album',
+        glass: DEFAULT_GLASS
     }
+}
+
+/** `ui.frosted` became `ui.glass`; carry a saved "on" across so the panels don't go solid on update. */
+function migrate(settings: SettingsState): SettingsState {
+    const ui = settings.ui as SettingsState['ui'] & { frosted?: boolean }
+    if (ui && ui.frosted && ui.glass === undefined) {
+        return { ...settings, ui: { ...ui, glass: true } }
+    }
+    return settings
 }
 
 function createSettingsStore() {
@@ -104,7 +134,7 @@ function createSettingsStore() {
         if (!settings) return
 
         // Sync the stored settings with the current type definition
-        const syncedSettings = syncWithType(settings, defaultSettingsState)
+        const syncedSettings = syncWithType(migrate(settings), defaultSettingsState)
         set(syncedSettings)
 
         // Update storage with synced settings

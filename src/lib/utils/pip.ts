@@ -1,6 +1,8 @@
 import { get } from 'svelte/store'
 import { mount, unmount } from 'svelte'
 import { pipStore } from '$lib/stores/pip'
+import { settingsStore } from '$lib/stores/settings'
+import { applyGlass } from '$lib/utils/theming'
 import PipView from '$lib/components/views/Pip.svelte'
 
 // Module-scoped handle to the currently open PiP window so it can be closed from
@@ -15,6 +17,24 @@ export function closePictureInPicture() {
         console.warn('Error closing Picture-in-Picture window:', error)
     }
     activePipWindow = undefined
+}
+
+// The look lives on the main document's root: theme tokens inline (utils/theming.ts)
+// plus the data-mode / data-glass / data-refraction attributes. Carry them over so
+// the PiP rack is tinted, lit and (optionally) glassed like the page; the glass
+// filter has to exist in the PiP document itself for backdrop-filter to find it.
+const LOOK_ATTRIBUTES = ['data-mode', 'data-glass', 'data-refraction']
+
+function syncLook(pipWindow: Window) {
+    const from = document.documentElement
+    const to = pipWindow.document.documentElement
+    to.style.cssText = from.style.cssText
+    for (const name of LOOK_ATTRIBUTES) {
+        const value = from.getAttribute(name)
+        if (value === null) to.removeAttribute(name)
+        else to.setAttribute(name, value)
+    }
+    applyGlass(get(settingsStore), pipWindow.document)
 }
 
 export async function applyStyles(pipWindow: Window) {
@@ -39,9 +59,7 @@ export async function applyStyles(pipWindow: Window) {
         }
     })
 
-    // Theme tokens live inline on the main document's root (utils/theming.ts);
-    // carry them over so the PiP rack is tinted like the page.
-    pipWindow.document.documentElement.style.cssText = document.documentElement.style.cssText
+    syncLook(pipWindow)
 
     // Add the chorus stylesheet
     const style = chrome.runtime.getURL('content-scripts/chorus.css')
@@ -82,6 +100,14 @@ export async function togglePictureInPicture() {
         await applyStyles(pipWindow)
         pipWindow.document.body.appendChild(pipView)
 
+        // Keep the PiP in step when the theme, appearance or glass is changed
+        // while the window is open.
+        const themeSync = new MutationObserver(() => syncLook(pipWindow))
+        themeSync.observe(document.documentElement, {
+            attributes: true,
+            attributeFilter: ['style', ...LOOK_ATTRIBUTES]
+        })
+
         // Mount the PipView component
         const app = mount(PipView, { target: pipView })
         activePipWindow = pipWindow
@@ -96,12 +122,14 @@ export async function togglePictureInPicture() {
         })
 
         pipWindow.addEventListener('pagehide', async () => {
+            themeSync.disconnect()
             activePipWindow = undefined
             await unmount(app)
             await pipStore.reset()
         })
 
         pipWindow.addEventListener('exitpictureinpicture', async () => {
+            themeSync.disconnect()
             activePipWindow = undefined
             await unmount(app)
             await pipStore.reset()

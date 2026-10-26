@@ -19,7 +19,10 @@
 // ; notification-error = Error notification toast.
 // ; misc               = Miscellaneous.
 
-import { applyThemeSurfaces } from './theme-surfaces'
+import { applyThemeSurfaces, clearThemeSurfaces, invertPalette, type Mode } from './theme-surfaces'
+import type { Appearance, SettingsState } from '$lib/stores/settings'
+
+export type { Mode }
 
 export const THEME_NAMES: ThemeName[] = [
     'spotify',
@@ -90,6 +93,78 @@ export type CSSVariable =
     | 'notification'
     | 'notification_error'
     | 'misc'
+
+/**
+ * Spotify's own colours in palette form. The dark default is never written to
+ * the page (the `spotify` theme means "leave Spotify alone"), but light mode
+ * inverts this to re-skin the page, and the rack derives from it either way.
+ */
+export const SPOTIFY_PALETTE: Record<CSSVariable, string> = {
+    text: '#ffffff',
+    subtext: '#b3b3b3',
+    main: '#121212',
+    sidebar: '#121212',
+    player: '#181818',
+    card: '#282828',
+    shadow: '#000000',
+    selected_row: '#1ed760',
+    button: '#1ed760',
+    button_active: '#1fdf64',
+    button_disabled: '#535353',
+    tab_active: '#333333',
+    notification: '#4687d6',
+    notification_error: '#e22134',
+    misc: '#7f7f7f'
+}
+
+const LIGHT_QUERY = '(prefers-color-scheme: light)'
+
+/** `system` resolves against the OS preference; everything else is literal. */
+export function resolveMode(appearance: Appearance | undefined): Mode {
+    if (appearance === 'light') return 'light'
+    if (appearance === 'system' && typeof window !== 'undefined' && window.matchMedia) {
+        return window.matchMedia(LIGHT_QUERY).matches ? 'light' : 'dark'
+    }
+    return 'dark'
+}
+
+/** Calls back when the OS switches between light and dark; returns the unsubscribe. */
+export function watchSystemMode(onChange: () => void): () => void {
+    if (typeof window === 'undefined' || !window.matchMedia) return () => {}
+    const query = window.matchMedia(LIGHT_QUERY)
+    query.addEventListener('change', onChange)
+    return () => query.removeEventListener('change', onChange)
+}
+
+/** What the settings ask the page and rack to look like. */
+export type Look = {
+    /** Palette name while "Apply theme" is on, else `spotify`. */
+    name: ThemeName
+    mode: Mode
+    /** The palette the rack (and, when recoloured, the page) derives from, already inverted for light. */
+    palette: Record<CSSVariable, string>
+    /** The rack carries theme tokens (a palette other than Spotify's, or light mode). */
+    themedRack: boolean
+    /** Spotify's own page is re-skinned with `palette`. */
+    recolourPage: boolean
+}
+
+export function lookFromSettings(settings: SettingsState): Look {
+    const mode = resolveMode(settings.theme?.appearance)
+    const applied = Boolean(settings.ui?.theme)
+    const name: ThemeName = applied ? (settings.theme?.name ?? 'spotify') : 'spotify'
+    const base = STATIC_THEMES[name] ?? SPOTIFY_PALETTE
+    const light = mode === 'light'
+    const palette = light ? invertPalette(base) : base
+    const themed = applied && name !== 'spotify'
+    return {
+        name,
+        mode,
+        palette,
+        themedRack: themed || light,
+        recolourPage: applied && (themed || light)
+    }
+}
 
 export const STATIC_THEMES: Record<ThemeName, null | Record<CSSVariable, string>> = {
     spotify: null,
@@ -490,39 +565,173 @@ export const STATIC_THEMES: Record<ThemeName, null | Record<CSSVariable, string>
     }
 }
 
+const PAGE_VARS: Record<string, CSSVariable | 'highlight' | 'highlight-elevated'> = {
+    main: 'main',
+    card: 'card',
+    // Spotify's elevated surfaces (context menus, the hover of main-level controls) take the card colour.
+    'main-elevated': 'card',
+    sidebar: 'sidebar',
+    button: 'button',
+    subtext: 'subtext',
+    text: 'text',
+    'selected-row': 'selected_row',
+    shadow: 'shadow',
+    'button-active': 'button_active',
+    'button-disabled': 'button_disabled',
+    'tab-active': 'tab_active',
+    misc: 'misc',
+    player: 'player',
+    notification: 'notification',
+    'notification-error': 'notification_error',
+    highlight: 'highlight',
+    'highlight-elevated': 'highlight-elevated'
+}
+
+/** Overlay alpha multiplier: a dark tint on a light page reads weaker than a light tint on a dark one. */
+const OVERLAY_GAIN: Record<Mode, string> = { dark: '1', light: '1.5' }
+
+/** `r, g, b` for the `rgba(var(--chorus-rgb-x), a)` overlays in the rewritten Spotify stylesheets. */
+function rgbTriplet(hex: string): string {
+    const h = hex.replace('#', '')
+    const full = h.length === 3 ? h.replace(/./g, (c) => c + c) : h
+    const n = parseInt(full, 16)
+    return `${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}`
+}
+
+/**
+ * The `--chorus-*` variables theme.css and the rewritten Spotify stylesheets
+ * read: each palette colour as hex and as an `r, g, b` triplet for the alpha
+ * overlays, plus the overlay gain for the mode.
+ */
+export function applyPageVariables(
+    themeConfig: Record<CSSVariable, string>,
+    mode: Mode = 'dark'
+): void {
+    const root = document.documentElement
+    for (const [name, key] of Object.entries(PAGE_VARS)) {
+        const value =
+            key === 'highlight'
+                ? themeConfig.main
+                : key === 'highlight-elevated'
+                  ? themeConfig.sidebar
+                  : themeConfig[key]
+        root.style.setProperty(`--chorus-${name}`, value)
+        root.style.setProperty(`--chorus-rgb-${name}`, rgbTriplet(value))
+    }
+    root.style.setProperty('--chorus-overlay-gain', OVERLAY_GAIN[mode])
+}
+
+function clearPageVariables(): void {
+    const root = document.documentElement
+    for (const name of Object.keys(PAGE_VARS)) {
+        root.style.removeProperty(`--chorus-${name}`)
+        root.style.removeProperty(`--chorus-rgb-${name}`)
+    }
+    root.style.removeProperty('--chorus-overlay-gain')
+}
+
 /**
  * Write a palette onto the document root: the `--chorus-*` variables theme.css
  * and the rewritten Spotify stylesheets read, plus the Chorus rack tokens
  * derived from it (see theme-surfaces.ts). Pure DOM; no stylesheet injection.
  */
-export function applyThemeVariables(themeConfig: Record<CSSVariable, string>): void {
-    const root = document.documentElement
-    const set = (name: string, value: string) => root.style.setProperty(name, value)
-
-    set('--chorus-main', themeConfig.main)
-    set('--chorus-card', themeConfig.card)
-    set('--chorus-sidebar', themeConfig.sidebar)
-    set('--chorus-button', themeConfig.button)
-    set('--chorus-subtext', themeConfig.subtext)
-    set('--chorus-text', themeConfig.text)
-    set('--chorus-selected-row', themeConfig.selected_row)
-    set('--chorus-shadow', themeConfig.shadow)
-    set('--chorus-button-active', themeConfig.button_active)
-    set('--chorus-button-disabled', themeConfig.button_disabled)
-    set('--chorus-tab-active', themeConfig.tab_active)
-    set('--chorus-misc', themeConfig.misc)
-    set('--chorus-player', themeConfig.player)
-    set('--chorus-notification', themeConfig.notification)
-    set('--chorus-notification-error', themeConfig.notification_error)
-    set('--chorus-highlight', themeConfig.main)
-    set('--chorus-highlight-elevated', themeConfig.sidebar)
-
-    applyThemeSurfaces(root, themeConfig)
+export function applyThemeVariables(
+    themeConfig: Record<CSSVariable, string>,
+    mode: Mode = 'dark'
+): void {
+    applyPageVariables(themeConfig, mode)
+    applyThemeSurfaces(document.documentElement, themeConfig, mode)
 }
 
-export function removeTheme() {
+// ---- Glass ------------------------------------------------------------------
+
+const GLASS_FILTER_ID = 'chorus-glass'
+const SVG_NS = 'http://www.w3.org/2000/svg'
+
+/**
+ * The SVG filter behind the refraction option: low-frequency noise displaces
+ * the blurred backdrop so edges of the page wobble through the panel like
+ * thick glass. Chrome applies it from backdrop-filter; browsers that don't
+ * drop that declaration and keep the plain blur (app.css).
+ */
+function ensureGlassFilter(doc: Document): SVGElement | null {
+    const existing = doc.getElementById(`${GLASS_FILTER_ID}-map`)
+    if (existing) return existing as unknown as SVGElement
+    if (!doc.body) return null
+    const svg = doc.createElementNS(SVG_NS, 'svg')
+    svg.id = `${GLASS_FILTER_ID}-svg`
+    svg.setAttribute('width', '0')
+    svg.setAttribute('height', '0')
+    svg.setAttribute('aria-hidden', 'true')
+    svg.style.cssText = 'position:absolute;width:0;height:0;pointer-events:none'
+    const filter = doc.createElementNS(SVG_NS, 'filter')
+    filter.id = GLASS_FILTER_ID
+    filter.setAttribute('x', '0')
+    filter.setAttribute('y', '0')
+    filter.setAttribute('width', '100%')
+    filter.setAttribute('height', '100%')
+    filter.setAttribute('color-interpolation-filters', 'sRGB')
+    const noise = doc.createElementNS(SVG_NS, 'feTurbulence')
+    noise.setAttribute('type', 'fractalNoise')
+    noise.setAttribute('baseFrequency', '0.006 0.009')
+    noise.setAttribute('numOctaves', '2')
+    noise.setAttribute('seed', '5')
+    noise.setAttribute('result', 'noise')
+    const soften = doc.createElementNS(SVG_NS, 'feGaussianBlur')
+    soften.setAttribute('in', 'noise')
+    soften.setAttribute('stdDeviation', '3')
+    soften.setAttribute('result', 'map')
+    const map = doc.createElementNS(SVG_NS, 'feDisplacementMap')
+    map.id = `${GLASS_FILTER_ID}-map`
+    map.setAttribute('in', 'SourceGraphic')
+    map.setAttribute('in2', 'map')
+    map.setAttribute('scale', '0')
+    map.setAttribute('xChannelSelector', 'R')
+    map.setAttribute('yChannelSelector', 'G')
+    filter.append(noise, soften, map)
+    svg.append(filter)
+    doc.body.append(svg)
+    return map
+}
+
+/**
+ * Glass surfaces: floating Chorus panels go translucent over a blurred,
+ * saturated view of what is behind them (app.css). The settings' opacity and
+ * blur land as variables on the root; refraction toggles the SVG filter.
+ */
+export function applyGlass(settings: SettingsState, doc: Document = document): void {
+    const root = doc.documentElement
+    if (!root) return
+    const on = Boolean(settings.ui?.glass)
+    const { opacity, blur, refraction } = settings.theme?.glass ?? {
+        opacity: 0.5,
+        blur: 40,
+        refraction: 22
+    }
+    root.toggleAttribute('data-glass', on)
+    root.style.setProperty('--glass-alpha', String(opacity))
+    root.style.setProperty('--glass-blur', `${blur}px`)
+    const refract = on && refraction > 0
+    root.toggleAttribute('data-refraction', refract)
+    if (refract) ensureGlassFilter(doc)?.setAttribute('scale', String(refraction))
+}
+
+export function clearGlass(doc: Document = document): void {
+    const root = doc.documentElement
+    if (!root) return
+    root.removeAttribute('data-glass')
+    root.removeAttribute('data-refraction')
+    root.style.removeProperty('--glass-alpha')
+    root.style.removeProperty('--glass-blur')
+    doc.getElementById(`${GLASS_FILTER_ID}-svg`)?.remove()
+}
+
+// ---- Applying a look --------------------------------------------------------
+
+/** Strip the page re-skin: Spotify's own stylesheets and colours come back. */
+export function removePageTheme(): void {
     const themeLink = document.getElementById('chorus-theme')
-    document.documentElement.style.cssText = ''
+    clearPageVariables()
     const allOverrideStyles = document.querySelectorAll('style[id^="chorus-override-styles-"]')
     allOverrideStyles.forEach((style) => {
         document.head.removeChild(style)
@@ -530,106 +739,169 @@ export function removeTheme() {
     if (themeLink) document.head.removeChild(themeLink)
 }
 
-export async function setTheme(theme: ThemeName): Promise<void> {
-    if (theme == 'spotify') return removeTheme()
-    const themeConfig = STATIC_THEMES[theme]
-    if (!themeConfig) return
+/** Everything theming put on the page: re-skin, rack tokens, glass and mode. */
+export function removeTheme(): void {
+    removePageTheme()
+    clearThemeSurfaces(document.documentElement)
+    clearGlass(document)
+    document.documentElement.removeAttribute('data-mode')
+}
 
-    await injectTheme(theme)
+let lookQueue: Promise<void> = Promise.resolve()
 
-    if (!document?.documentElement?.style?.setProperty) return
+/**
+ * Bring the Spotify page and the in-page rack in line with the settings:
+ * palette, appearance (dark / light / system) and glass. Calls are serialised
+ * because re-skinning the page fetches and rewrites Spotify's stylesheets.
+ */
+export function applyLook(settings: SettingsState): Promise<void> {
+    lookQueue = lookQueue
+        .then(() => applyLookNow(settings))
+        .catch((error) => {
+            console.error('Error applying theme:', error)
+        })
+    return lookQueue
+}
 
-    applyThemeVariables(themeConfig)
+async function applyLookNow(settings: SettingsState): Promise<void> {
+    if (typeof document === 'undefined' || !document.documentElement) return
+    const look = lookFromSettings(settings)
+    const root = document.documentElement
+    root.setAttribute('data-mode', look.mode)
+
+    if (look.recolourPage) {
+        await injectThemeCss()
+        applyPageVariables(look.palette, look.mode)
+    } else {
+        removePageTheme()
+    }
+
+    if (look.themedRack) applyThemeSurfaces(root, look.palette, look.mode)
+    else clearThemeSurfaces(root)
+
+    applyGlass(settings, document)
+}
+
+/**
+ * The rack-only part of a look, for documents with no Spotify page in them
+ * (the toolbar popup, and the PiP window alongside its style sync).
+ */
+export function applyRackLook(settings: SettingsState, doc: Document = document): void {
+    const root = doc.documentElement
+    if (!root) return
+    const look = lookFromSettings(settings)
+    root.setAttribute('data-mode', look.mode)
+    if (look.themedRack) applyThemeSurfaces(root, look.palette, look.mode)
+    else clearThemeSurfaces(root)
+    applyGlass(settings, doc)
+}
+
+/**
+ * Point the popup's palette variables (--bg, --text, --text-2, --album-accent,
+ * normally filled from the album art) at the rack tokens, so the popup wears
+ * the theme instead of the cover.
+ */
+export function applyThemePopupPalette(root: HTMLElement): void {
+    root.style.setProperty('--bg', 'hsl(var(--ink))')
+    root.style.setProperty('--text', 'hsl(var(--ink-fg))')
+    root.style.setProperty('--text-2', 'hsl(var(--ink-fg-2))')
+    root.style.setProperty('--album-accent', 'hsl(var(--signal))')
 }
 
 type ReplacementRule = {
     target: string
-    replacement: string | ((match: string, alpha: string) => string)
+    replacement: string | ((match: string, group: string) => string)
 }
 
+/** Below this alpha a translucent white is a hover / selection tint; above it, dimmed text or an icon. */
+const OVERLAY_ALPHA_MAX = 0.25
+
+/**
+ * Spotify's translucent whites, which its build emits as 8-digit hexes. Hover
+ * and selection tints take the palette's `selected_row` colour, scaled by the
+ * mode's overlay gain, so a hovered row shifts towards the theme on a light
+ * page instead of vanishing; dimmed text and icons take the text colour.
+ */
+function translucentWhite(_: string, alphaHex: string): string {
+    const alpha = Math.round((parseInt(alphaHex, 16) / 255) * 100) / 100
+    return alpha <= OVERLAY_ALPHA_MAX
+        ? `rgba(var(--chorus-rgb-selected-row), calc(${alpha} * var(--chorus-overlay-gain, 1)))`
+        : `rgba(var(--chorus-rgb-text), ${alpha})`
+}
+
+const HEX_END = '(?![0-9a-f])'
+
+// Every hex pattern ends in a lookahead, and longer alternatives come first,
+// so `#fff` never eats the start of `#ffffff1a` or `#ffffff`.
 function replacementRules(): ReplacementRule[] {
     return [
-        { target: '#(181818|212121)', replacement: 'var(--chorus-player)' },
-        { target: '#282828', replacement: 'var(--chorus-card)' },
-        { target: '#(242424|1f1f1f)', replacement: 'var(--chorus-main-elevated)' },
-        { target: '#121212', replacement: 'var(--chorus-main)' },
-        { target: '#(242424|1f1f1f)', replacement: 'var(--chorus-card-elevated)' },
-        { target: '#1a1a1a', replacement: 'var(--chorus-highlight)' },
-        { target: '#2a2a2a', replacement: 'var(--chorus-highlight-elevated)' },
-        { target: '#(000|000000)', replacement: 'var(--chorus-shadow)' },
-        { target: '#(fff|ffffff)', replacement: 'var(--chorus-text)' },
-        { target: '#(b3b3b3|a7a7a7)', replacement: 'var(--chorus-subtext)' },
-        { target: '#(1ed760|1fdf64|169c46)', replacement: 'var(--chorus-button-active)' },
-        { target: '#535353', replacement: 'var(--chorus-button-disabled)' },
-        { target: '#(333|333333)', replacement: 'var(--chorus-tab-active)' },
-        { target: '#7f7f7f', replacement: 'var(--chorus-misc)' },
-        { target: '#(4687d6|2e77d0)', replacement: 'var(--chorus-notification)' },
-        { target: '#(e22134|cd1a2b)', replacement: 'var(--chorus-notification-error)' },
+        { target: `#ffffff([0-9a-f]{2})${HEX_END}`, replacement: translucentWhite },
+        { target: `#(181818|212121)${HEX_END}`, replacement: 'var(--chorus-player)' },
+        { target: `#282828${HEX_END}`, replacement: 'var(--chorus-card)' },
+        { target: `#(242424|1f1f1f)${HEX_END}`, replacement: 'var(--chorus-main-elevated)' },
+        { target: `#121212${HEX_END}`, replacement: 'var(--chorus-main)' },
+        { target: `#1a1a1a${HEX_END}`, replacement: 'var(--chorus-highlight)' },
+        { target: `#2a2a2a${HEX_END}`, replacement: 'var(--chorus-highlight-elevated)' },
+        { target: `#(000000|000)${HEX_END}`, replacement: 'var(--chorus-shadow)' },
+        { target: `#(ffffff|fff)${HEX_END}`, replacement: 'var(--chorus-text)' },
+        { target: `#(b3b3b3|a7a7a7)${HEX_END}`, replacement: 'var(--chorus-subtext)' },
+        { target: `#(1ed760|1fdf64|169c46)${HEX_END}`, replacement: 'var(--chorus-button-active)' },
+        { target: `#535353${HEX_END}`, replacement: 'var(--chorus-button-disabled)' },
+        { target: `#(333333|333)${HEX_END}`, replacement: 'var(--chorus-tab-active)' },
+        { target: `#7f7f7f${HEX_END}`, replacement: 'var(--chorus-misc)' },
+        { target: `#(4687d6|2e77d0)${HEX_END}`, replacement: 'var(--chorus-notification)' },
+        { target: `#(e22134|cd1a2b)${HEX_END}`, replacement: 'var(--chorus-notification-error)' },
         {
-            target: `rgba\(18,18,18,([\d\.]+)\)$`,
-            replacement: (_, alpha) => `rgba(var(--chorus-main), ${alpha})`
+            target: 'rgba\\(18,18,18,([\\d.]+)\\)',
+            replacement: (_, alpha) => `rgba(var(--chorus-rgb-main), ${alpha})`
         },
         {
-            target: `rgba\(40,40,40,([\d\.]+)\)$`,
-            replacement: (_, alpha) => `rgba(var(--chorus-card), ${alpha})`
-        },
-        {
-            target: `rgba\(0,0,0,([\d\.]+)\)`,
-            replacement: (_, alpha) => `rgba(var(--chorus-rgb-shadow), ${alpha})`
-        },
-        {
-            target: `hsla\(0,0%,100%,\.9\)`,
-            replacement: (_, alpha) => `rgba(var(--chorus-rgb-text), ${alpha})`
-        },
-        {
-            target: `hsla\(0,0%,100%,([\d\.]+)\)$`,
-            replacement: (_, alpha) => `rgba(var(--chorus-rgb-selected-row), ${alpha})`
+            target: 'rgba\\(40,40,40,([\\d.]+)\\)',
+            replacement: (_, alpha) => `rgba(var(--chorus-rgb-card), ${alpha})`
         }
     ]
 }
 
+/**
+ * Rewrites Spotify's stylesheet text onto the `--chorus-*` variables. Pure,
+ * so the rules can be checked against a saved copy of the stylesheet.
+ */
+export function rewriteSpotifyCss(cssText: string): string {
+    let modified = cssText
+    for (const { target, replacement } of replacementRules()) {
+        const regex = new RegExp(target, 'gi')
+        modified = modified.replaceAll(regex, (match: string, ...groups: string[]) =>
+            typeof replacement === 'function'
+                ? `${replacement(match, groups[0] || '')} !important`
+                : `${replacement} !important`
+        )
+    }
+    // A declaration Spotify already marked important would otherwise get the flag twice and be dropped.
+    return modified.replaceAll(' !important !important', ' !important')
+}
+
 export async function overrideExternalStyles() {
-    const rulesToReplace = replacementRules()
     const styleSheets = Array.from(document.styleSheets)
+    let count = 0
 
     for (const sheet of styleSheets) {
-        // Handle cross-origin stylesheets
-        if (sheet.href) {
-            try {
-                const response = await fetch(sheet.href)
-                const cssText = await response.text()
+        if (!sheet.href) continue
+        try {
+            const response = await fetch(sheet.href)
+            const cssText = await response.text()
 
-                let modifiedCSS = cssText
-                let count = 0
-                for (const { target, replacement } of rulesToReplace) {
-                    const regex = new RegExp(target, 'gi')
-                    modifiedCSS = modifiedCSS.replaceAll(
-                        regex,
-                        (match: string, ...groups: string[]) => {
-                            if (typeof replacement === 'function') {
-                                return `${replacement(match, groups[0] || '')} !important`
-                            }
-                            return `${replacement} !important`
-                        }
-                    )
-                    count++
-                }
-
-                const styleEl = document.createElement('style')
-                styleEl.id = `chorus-override-styles-${count}`
-                styleEl.textContent = modifiedCSS
-                document.head.appendChild(styleEl)
-            } catch (fetchErr) {
-                console.warn('Could not fetch and override:', sheet.href, fetchErr)
-            }
+            const styleEl = document.createElement('style')
+            styleEl.id = `chorus-override-styles-${count++}`
+            styleEl.textContent = rewriteSpotifyCss(cssText)
+            document.head.appendChild(styleEl)
+        } catch (fetchErr) {
+            console.warn('Could not fetch and override:', sheet.href, fetchErr)
         }
     }
 }
 
-export async function injectTheme(theme: ThemeName): Promise<void> {
+export async function injectThemeCss(): Promise<void> {
     if (document.getElementById('chorus-theme')) return
-    const themeConfig = STATIC_THEMES[theme]
-    if (!themeConfig) return
 
     await overrideExternalStyles()
 
