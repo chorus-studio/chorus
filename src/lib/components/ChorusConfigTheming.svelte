@@ -87,6 +87,11 @@
         group.querySelector<HTMLElement>(`[data-theme="${theme}"]`)?.focus()
     }
 
+    // The four look cards share one shell: label on top, the control, then a hint.
+    const CARD = 'flex flex-col gap-y-2 rounded-md border border-hairline bg-panel px-2.5 py-2'
+    const SWITCH_ROW = 'flex h-6 items-center gap-x-2 text-xs text-ink-fg-2'
+    const HINT = 'text-xs leading-snug text-ink-muted'
+
     const SPOTIFY_PREVIEW = {
         main: '#121212',
         sidebar: '#121212',
@@ -112,28 +117,30 @@
 </script>
 
 <div class="flex flex-col gap-y-3">
-    <div class="flex items-center justify-between gap-x-4">
-        <div class="flex flex-col gap-y-0.5">
-            <span class="text-[13px] font-medium text-ink-fg">Recolour the Spotify web player</span>
-            <span class="text-xs text-ink-muted">
-                Pick a palette for the sidebar, main view and player bar. Chorus's own panels take
-                the same tint, a step apart from the page, and its controls use the palette's
-                accent.
-            </span>
-        </div>
-        <label class="flex shrink-0 items-center gap-x-2 text-xs text-ink-fg-2">
-            Apply theme
-            <Switch
-                checked={$settingsStore.ui.theme}
-                onCheckedChange={toggleApply}
-                aria-label="Apply theme"
-            />
-        </label>
+    <div class="flex flex-col gap-y-0.5">
+        <span class="text-[13px] font-medium text-ink-fg">Recolour the Spotify web player</span>
+        <span class="text-xs text-ink-muted">
+            Pick a palette for the sidebar, main view and player bar. Chorus's own panels take the
+            same tint, a step apart from the page, and its controls use the palette's accent.
+        </span>
     </div>
 
-    <div class="grid grid-cols-[auto_1fr] items-center gap-x-4 gap-y-2.5">
-        <span class="rack-label">Appearance</span>
-        <div class="flex items-center gap-x-3">
+    <div class="grid grid-cols-4 gap-3">
+        <div class={CARD}>
+            <span class="rack-label">Apply theme</span>
+            <label class={SWITCH_ROW}>
+                <Switch
+                    checked={$settingsStore.ui.theme}
+                    onCheckedChange={toggleApply}
+                    aria-label="Apply theme"
+                />
+                {$settingsStore.ui.theme ? 'On' : 'Off'}
+            </label>
+            <span class={HINT}>Recolour Spotify with the palette below.</span>
+        </div>
+
+        <div class={CARD}>
+            <span class="rack-label">Appearance</span>
             <SegmentedControl
                 size="xs"
                 ariaLabel="Appearance"
@@ -145,13 +152,13 @@
                     { label: 'System', value: 'system', title: 'Follow the OS setting' }
                 ]}
             />
-            <span class="text-xs text-ink-muted">
-                Light turns any palette into its pale version; System follows your OS.
+            <span class={HINT}>
+                Light makes a pale version of any palette; System follows your OS.
             </span>
         </div>
 
-        <span class="rack-label">Popup</span>
-        <div class="flex items-center gap-x-3">
+        <div class={CARD}>
+            <span class="rack-label">Popup</span>
             <SegmentedControl
                 size="xs"
                 ariaLabel="Popup colours"
@@ -162,25 +169,27 @@
                     { label: 'Theme', value: 'theme', title: 'The same colours as these panels' }
                 ]}
             />
-            <span class="text-xs text-ink-muted">
-                Where the toolbar popup and PiP player take their colours from.
-            </span>
+            <span class={HINT}>Where the toolbar popup and PiP player take their colours from.</span
+            >
         </div>
 
-        <span class="rack-label">Glass</span>
-        <label
-            class="flex items-center gap-x-2 text-xs text-ink-fg-2"
-            title="Chorus panels go translucent over a blurred view of what sits behind them"
-        >
-            <Switch
-                checked={$settingsStore.ui.glass}
-                onCheckedChange={toggleGlass}
-                aria-label="Glass surfaces"
-            />
-            <span class="text-ink-muted">
-                Translucent panels over a blur of the page; the popup blurs the cover art.
+        <div class={CARD}>
+            <span class="rack-label">Glass</span>
+            <label
+                class={SWITCH_ROW}
+                title="Chorus panels go translucent over a blurred view of what sits behind them"
+            >
+                <Switch
+                    checked={$settingsStore.ui.glass}
+                    onCheckedChange={toggleGlass}
+                    aria-label="Glass surfaces"
+                />
+                {$settingsStore.ui.glass ? 'On' : 'Off'}
+            </label>
+            <span class={HINT}>
+                Translucent panels over a blurred page; the popup blurs its cover art.
             </span>
-        </label>
+        </div>
     </div>
 
     {#if $settingsStore.ui.glass}
