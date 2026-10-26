@@ -160,8 +160,12 @@ export class TrackObserver {
             return this.skipTrack()
         }
 
-        // Handle snip start position
-        if (currentSong.snip && currentTimeMS < currentSong.snip.start_time * 1000) {
+        // Handle snip start position. The polled position is Spotify's elapsed
+        // label, i.e. whole seconds (floor of the real position), while snip
+        // bounds are stored at 0.1 s. Compare against the floored start: after a
+        // seek to 65.4 the label reads 65, and 65 < 65.4 would seek again on
+        // every tick, restarting the snip endlessly.
+        if (currentSong.snip && positionSeconds < Math.floor(currentSong.snip.start_time)) {
             return this.updateCurrentTime(currentSong.snip.start_time)
         }
 

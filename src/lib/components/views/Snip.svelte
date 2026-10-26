@@ -23,11 +23,23 @@
 
     onMount(setSnip)
 
-    // Re-seed when the track changes (or its duration first becomes known) so
-    // the editor never shows a stale or zero-length region.
+    // Re-seed when the track changes (or its duration first becomes known) and
+    // when the saved snip changes (save/delete here or from the popup window),
+    // so the editor always mirrors the stored state. Go through deriveds rather
+    // than reading `$nowPlaying` inside the effect: the playback observer
+    // re-emits the whole store on every time tick (and right after each seek a
+    // handle drag schedules), which would reset the bounds mid-drag. A derived
+    // only notifies the effect when its own value changes.
+    const trackId = $derived($nowPlaying.id)
+    const trackDuration = $derived($nowPlaying.duration)
+    const savedStart = $derived($nowPlaying.snip?.start_time ?? null)
+    const savedEnd = $derived($nowPlaying.snip?.end_time ?? null)
+
     $effect(() => {
-        void $nowPlaying.id
-        void $nowPlaying.duration
+        void trackId
+        void trackDuration
+        void savedStart
+        void savedEnd
         untrack(setSnip)
     })
 
