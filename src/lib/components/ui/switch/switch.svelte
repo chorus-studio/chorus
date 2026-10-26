@@ -14,7 +14,7 @@
     bind:ref
     bind:checked
     class={cn(
-        'peer inline-flex h-[18px] w-[30px] shrink-0 cursor-pointer items-center rounded-full border border-transparent transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal/60 focus-visible:ring-offset-1 focus-visible:ring-offset-ink disabled:cursor-not-allowed disabled:opacity-40 data-[state=checked]:bg-signal data-[state=unchecked]:bg-surface-2 data-[state=unchecked]:hover:bg-surface-2/80',
+        'peer inline-flex h-[18px] w-[30px] shrink-0 cursor-pointer items-center rounded-full border border-transparent transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal focus-visible:ring-offset-1 focus-visible:ring-offset-ink disabled:cursor-not-allowed disabled:opacity-40 data-[state=checked]:bg-signal data-[state=unchecked]:bg-surface-2 data-[state=unchecked]:hover:bg-surface-2/80',
         className
     )}
     {...restProps}

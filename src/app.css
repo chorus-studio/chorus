@@ -98,7 +98,7 @@
     }
 
     .chorus-focus {
-        @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal/60 focus-visible:ring-offset-1 focus-visible:ring-offset-ink;
+        @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal focus-visible:ring-offset-1 focus-visible:ring-offset-ink;
     }
 
     /* thin, quiet scrollbars inside Chorus surfaces */

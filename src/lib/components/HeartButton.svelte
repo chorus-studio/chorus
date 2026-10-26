@@ -65,8 +65,8 @@
                     'aria-label',
                     `${highlight ? 'Remove from' : 'Save to'} Liked`
                 )
-                svg.style.fill = highlight ? '#1ed760' : 'none'
-                svg.style.stroke = highlight ? '#1ed760' : 'currentColor'
+                svg.style.fill = highlight ? 'hsl(var(--bar-signal))' : 'none'
+                svg.style.stroke = highlight ? 'hsl(var(--bar-signal))' : 'currentColor'
             })
         }, 500)
     }
