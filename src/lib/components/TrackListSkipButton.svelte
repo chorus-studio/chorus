@@ -45,7 +45,11 @@
             const cover = track?.cover || getCoverArt()
             await dataStore.updateTrack({
                 track_id: track.track_id,
-                value: { blocked: isBlocked || null, cover }
+                value: {
+                    blocked: isBlocked || null,
+                    blocked_at: isBlocked ? Date.now() : null,
+                    cover
+                }
             })
 
             if (isBlocked) {
