@@ -215,6 +215,12 @@ function reconcile() {
     }
 
     injectControlButtons()
+
+    // The progress row and volume column are re-rendered by Spotify on their
+    // own (the music ↔ podcast layout switch, for one), which detaches the
+    // Chorus bar/slider and uncovers the native ones. Idempotent, so it runs
+    // on every tick once the App is up.
+    if (document.getElementById('chorus-ui')) playbackObserver.updateChorusUI()
 }
 
 // Debounced reconcile — coalesces Spotify's bursty mutation batches. setTimeout

@@ -8,115 +8,205 @@ import { settingsStore } from '$lib/stores/settings'
 import TimeProgress from '$lib/components/TimeProgress.svelte'
 import VolumeSlider from '$lib/components/VolumeSlider.svelte'
 
+const PROGRESS_ID = 'chorus-time-progress'
+const VOLUME_ID = 'chorus-volume'
+
+const query = <T extends HTMLElement = HTMLElement>(selector: string) =>
+    document.querySelector(selector) as T | null
+
+// Set an inline style only when it differs, so repeated syncs don't churn.
+function setStyle(
+    el: HTMLElement | null,
+    prop: 'width' | 'minWidth' | 'visibility' | 'display' | 'flexDirection',
+    value: string
+) {
+    if (el && el.style[prop] !== value) el.style[prop] = value
+}
+
+// Grafts the Chorus progress bar and volume slider into Spotify's player bar
+// in place of the native ones, and feeds the now-playing store from the
+// position label. Spotify re-renders parts of that bar on its own — the whole
+// progress row when it switches between the music and podcast layouts, the
+// control cluster on some track changes — which detaches whatever we mounted
+// beside them and discards the inline styles hiding its controls. Nothing
+// here caches nodes, and every `sync*` is idempotent against the live DOM, so
+// the content script's reconciler can run `syncWidgets()` on every footer
+// mutation batch and the bar heals itself.
 export class PlaybackObserver {
     private observer: MutationObserver | null = null
+    private observedPosition: Element | null = null
     private volumeSlider: SvelteComponent | null = null
     private timeProgress: SvelteComponent | null = null
 
-    // Cache frequently accessed DOM elements
-    private cachedElements: {
-        playbackProgressbar?: HTMLElement | null
-        playbackPosition?: HTMLElement | null
-        playbackDuration?: HTMLElement | null
-        volumeBar?: HTMLElement | null
-        skipBack?: Element | null
-        seekButton?: Element | null
-    } = {}
-
-    private clearCache() {
-        this.cachedElements = {}
-    }
-
-    private getElement<T extends HTMLElement = HTMLElement>(
-        selector: string,
-        cacheKey: keyof typeof this.cachedElements
-    ): T | null {
-        if (this.cachedElements[cacheKey] !== undefined) {
-            return this.cachedElements[cacheKey] as T | null
-        }
-        const element = document.querySelector(selector) as T | null
-        this.cachedElements[cacheKey] = element
-        return element
-    }
-
     observe() {
-        const target = document.querySelector('[data-testid="playback-position"]')
-        if (!target) return
-
-        this.observer = new MutationObserver(this.handleMutation)
-        this.observer.observe(target, { characterData: true, subtree: true })
+        this.observePosition()
         this.togglePlaylistButton()
-        this.toggleVolumeSlider()
-        if (this.settings.ui.progress) this.replaceProgress()
         this.updateChorusUI()
     }
 
+    // Everything that must hold after Spotify re-renders the player bar.
     updateChorusUI() {
         this.ensureSeekButtonAfterSkipBack()
         this.removeLongformButtons()
+        this.syncWidgets()
+    }
+
+    syncWidgets() {
+        this.observePosition()
+        this.syncProgress()
+        this.syncVolume()
+    }
+
+    // Watch the elapsed-time label; re-bind when Spotify swaps the node.
+    private observePosition() {
+        const target = query('[data-testid="playback-position"]')
+        if (!target || target === this.observedPosition) return
+        this.observer?.disconnect()
+        this.observer = new MutationObserver(this.handleMutation)
+        this.observer.observe(target, { characterData: true, subtree: true })
+        this.observedPosition = target
     }
 
     private ensureSeekButtonAfterSkipBack() {
-        const skipBack = this.getElement('[data-testid="control-button-skip-back"]', 'skipBack')
-        const seekButton = this.getElement('#seek-player-rw-button', 'seekButton')
-        if (!skipBack?.parentElement || !seekButton?.parentElement) return
-
-        skipBack.parentElement?.insertBefore(seekButton.parentElement, skipBack)
+        const skipBack = query('[data-testid="control-button-skip-back"]')
+        const wrapper = query('#seek-player-rw-button')?.parentElement
+        if (!skipBack?.parentElement || !wrapper) return
+        // Moving a node that is already in place still fires a mutation, which
+        // would re-trigger the reconciler that called us.
+        if (wrapper.nextElementSibling === skipBack) return
+        skipBack.parentElement.insertBefore(wrapper, skipBack)
     }
 
     private removeLongformButtons() {
-        const buttons = document.querySelectorAll(
-            '[data-testid="control-button-playback-speed"], [data-testid="control-button-seek-back-15"], [data-testid="control-button-seek-forward-15"]'
-        ) as NodeListOf<HTMLElement>
-        buttons.forEach((button) => (button.style.display = 'none'))
+        document
+            .querySelectorAll<HTMLElement>(
+                '[data-testid="control-button-playback-speed"], [data-testid="control-button-seek-back-15"], [data-testid="control-button-seek-forward-15"]'
+            )
+            .forEach((button) => setStyle(button, 'display', 'none'))
     }
 
-    private toggleSpotifyVolume() {
-        const showSpotifyVolume = !this.settings.ui.volume
-        const target = this.getElement<HTMLElement>('[data-testid="volume-bar"]', 'volumeBar')
-        if (!target) return
-
-        target.style.display = showSpotifyVolume ? 'flex' : 'none'
+    get settings() {
+        return get(settingsStore)
     }
+
+    // ---- volume -----------------------------------------------------------
 
     toggleVolumeSlider() {
-        if (this.settings.ui.volume) {
-            this.replaceVolumeSlider()
-        } else {
-            this.unmountVolumeSlider()
-        }
-        this.toggleSpotifyVolume()
+        this.syncVolume()
     }
 
     private unmountVolumeSlider() {
         if (!this.volumeSlider) return
-
         unmount(this.volumeSlider, { outro: true })
         this.volumeSlider = null
     }
 
-    private replaceVolumeSlider() {
-        const chorusVolume = document.querySelector('#chorus-volume')
-        if (chorusVolume) return
+    private syncVolume() {
+        if (!this.settings.ui.volume) {
+            this.unmountVolumeSlider()
+            this.setSpotifyVolumeHidden(false)
+            return
+        }
 
-        const target = document.querySelector('[data-testid="volume-bar"] div') as HTMLElement
-        if (!target) return
+        const container = query('[data-testid="volume-bar"] div')?.parentElement ?? null
+        const root = container?.parentElement?.parentElement ?? null
+        const slider = document.getElementById(VOLUME_ID)
+        const present = Boolean(slider && root && root.contains(slider))
 
-        const container = target?.parentElement
-        if (!container) return
-        container.style.display = 'none'
-
-        const root = container.parentElement?.parentElement
+        // Ours is gone or sits in a container Spotify has thrown away.
+        if (this.volumeSlider && !present) this.unmountVolumeSlider()
         if (!root) return
-        root.style.flexDirection = 'column'
-        this.volumeSlider = mount(VolumeSlider, {
-            target: root,
-            props: { id: 'chorus-volume', port: null }
-        }) as SvelteComponent
+        if (!this.volumeSlider && !present) {
+            this.volumeSlider = mount(VolumeSlider, {
+                target: root,
+                props: { id: VOLUME_ID, port: null }
+            }) as SvelteComponent
+        }
+        this.setSpotifyVolumeHidden(true)
+    }
+
+    // Clearing a style property ('') removes only our override and falls back
+    // to Spotify's stylesheet, which is how the native control comes back.
+    private setSpotifyVolumeHidden(hidden: boolean) {
+        setStyle(query('[data-testid="volume-bar"]'), 'display', hidden ? 'none' : '')
+        const container = query('[data-testid="volume-bar"] div')?.parentElement ?? null
+        setStyle(container, 'display', hidden ? 'none' : '')
+        const root = container?.parentElement?.parentElement ?? null
+        setStyle(root, 'flexDirection', hidden ? 'column' : '')
+    }
+
+    // ---- progress ---------------------------------------------------------
+
+    toggleProgress() {
+        this.syncProgress()
+    }
+
+    private unmountProgress() {
+        if (!this.timeProgress) return
+        unmount(this.timeProgress, { outro: true })
+        this.timeProgress = null
+    }
+
+    private syncProgress() {
+        if (!this.settings.ui.progress) {
+            this.unmountProgress()
+            this.setSpotifyProgressHidden(false)
+            return
+        }
+
+        const container = query('[data-testid="playback-progressbar"]')?.parentElement ?? null
+        const bar = document.getElementById(PROGRESS_ID)
+        const present = Boolean(bar && container && container.contains(bar))
+
+        if (this.timeProgress && !present) this.unmountProgress()
+        if (!container) return
+        if (!this.timeProgress && !present) {
+            this.timeProgress = mount(TimeProgress, {
+                target: container,
+                props: { id: PROGRESS_ID, port: null }
+            }) as SvelteComponent
+        }
+        this.setSpotifyProgressHidden(true)
+    }
+
+    private setSpotifyProgressHidden(hidden: boolean) {
+        const bar = query('[data-testid="playback-progressbar"]')
+        setStyle(bar, 'width', hidden ? '0' : '')
+        setStyle(bar, 'visibility', hidden ? 'hidden' : '')
+        for (const id of ['playback-position', 'playback-duration']) {
+            const label = query(`[data-testid="${id}"]`)
+            setStyle(label, 'visibility', hidden ? 'hidden' : '')
+            setStyle(label, 'minWidth', hidden ? '0' : '')
+            setStyle(label, 'width', hidden ? '0' : '')
+        }
+    }
+
+    // ---- playlist button --------------------------------------------------
+
+    togglePlaylistButton() {
+        const addToPlaylistButtons = document.querySelectorAll<HTMLButtonElement>(
+            '[data-testid="now-playing-widget-v2"] > div > button[data-encore-id="buttonTertiary"]'
+        )
+        if (!addToPlaylistButtons.length) return
+
+        const show = this.settings.ui.playlist
+        addToPlaylistButtons.forEach((button) => {
+            const shouldShow = show ? 'visible' : 'hidden'
+            if (button.style.visibility === shouldShow) return
+
+            const parent = button.parentElement
+            if (parent) {
+                parent.style.margin = show ? '0 8px' : '0'
+                parent.style.width = show ? 'auto' : '0'
+                parent.style.gap = show ? '12px' : '0'
+            }
+            button.style.visibility = shouldShow
+            button.style.width = show ? 'auto' : '0'
+        })
     }
 
     private async checkForDJ() {
-        const target = document.querySelector('[data-testid="control-button-npv"]')
+        const target = query('[data-testid="control-button-npv"]')
         if (!target) return
 
         const djUI = target.previousElementSibling as HTMLElement
@@ -126,100 +216,10 @@ export class PlaybackObserver {
         }
     }
 
-    get settings() {
-        return get(settingsStore)
-    }
-
-    togglePlaylistButton() {
-        const addToPlaylistButtons = document.querySelectorAll(
-            '[data-testid="now-playing-widget-v2"] > div > button[data-encore-id="buttonTertiary"]'
-        ) as NodeListOf<HTMLButtonElement>
-
-        if (!addToPlaylistButtons?.length) return
-
-        const show = this.settings.ui.playlist
-        addToPlaylistButtons.forEach((button) => {
-            const shouldShow = show ? 'visible' : 'hidden'
-            const visibility = button.style.visibility
-            if (visibility === shouldShow) return
-
-            const parent = button?.parentElement
-            if (parent) {
-                parent.style.margin = show ? '0 8px' : '0'
-                parent.style.width = show ? 'auto' : '0'
-                parent.style.gap = show ? '12px' : '0'
-            }
-            if (button) {
-                button.style.visibility = shouldShow
-                button.style.width = show ? 'auto' : '0'
-            }
-        })
-    }
-
-    private toggleSpotifyProgress() {
-        const showSpotifyProgress = !this.settings.ui.progress
-
-        const target = this.getElement<HTMLElement>('[data-testid="playback-progressbar"]', 'playbackProgressbar')
-        const playbackPosition = this.getElement<HTMLElement>('[data-testid="playback-position"]', 'playbackPosition')
-        const playbackDuration = this.getElement<HTMLElement>('[data-testid="playback-duration"]', 'playbackDuration')
-
-        if (!target || !playbackPosition || !playbackDuration) return
-
-        const container = playbackPosition.parentElement
-        if (!container) return
-
-        target.style.width = showSpotifyProgress ? '100%' : '0'
-        target.style.visibility = showSpotifyProgress ? 'visible' : 'hidden'
-
-        playbackPosition.style.visibility = showSpotifyProgress ? 'visible' : 'hidden'
-        playbackPosition.style.minWidth = showSpotifyProgress ? '40px' : '0'
-        playbackPosition.style.width = showSpotifyProgress ? 'auto' : '0'
-
-        playbackDuration.style.visibility = showSpotifyProgress ? 'visible' : 'hidden'
-        playbackDuration.style.minWidth = showSpotifyProgress ? '40px' : '0'
-        playbackDuration.style.width = showSpotifyProgress ? 'auto' : '0'
-    }
-
-    toggleProgress() {
-        if (this.settings.ui.progress) {
-            this.replaceProgress()
-        } else {
-            this.unmountProgress()
-        }
-
-        this.toggleSpotifyProgress()
-    }
-
-    private unmountProgress() {
-        if (!this.timeProgress) return
-
-        unmount(this.timeProgress, { outro: true })
-        this.timeProgress = null
-    }
-
-    private replaceProgress() {
-        const chorusTimeProgress = document.querySelector('#chorus-time-progress')
-        if (chorusTimeProgress) return
-
-        const target = this.getElement<HTMLElement>('[data-testid="playback-progressbar"]', 'playbackProgressbar')
-        const container = target?.parentElement
-        if (!container) return
-        this.toggleSpotifyProgress()
-
-        this.timeProgress = mount(TimeProgress, {
-            target: container,
-            props: { id: 'chorus-time-progress', port: null }
-        }) as SvelteComponent
-    }
-
     private handleMutation = async (mutations: MutationRecord[]) => {
         for (const mutation of mutations) {
             if (mutation.type !== 'characterData') return
-            const newValue = mutation.target.nodeValue
-            if (!newValue) return
-
-            // Clear element cache on mutations (track changes, navigation, etc.)
-            this.clearCache()
+            if (!mutation.target.nodeValue) return
 
             await this.checkForDJ()
             await nowPlaying.updateNowPlaying()
@@ -230,52 +230,26 @@ export class PlaybackObserver {
     disconnect() {
         this.observer?.disconnect()
         this.observer = null
-        this.clearCache()
+        this.observedPosition = null
     }
 
-    // Reverse every inline-style mutation this observer made to Spotify's own
-    // controls, returning the player to vanilla. Clearing a style property (= '')
-    // removes only our override and falls back to Spotify's stylesheet.
+    // Reverse every inline-style change this observer made to Spotify's own
+    // controls, returning the player to vanilla.
     private restoreNativeControls() {
         document
-            .querySelectorAll(
+            .querySelectorAll<HTMLElement>(
                 '[data-testid="control-button-playback-speed"], [data-testid="control-button-seek-back-15"], [data-testid="control-button-seek-forward-15"]'
             )
-            .forEach((button) => ((button as HTMLElement).style.display = ''))
+            .forEach((button) => setStyle(button, 'display', ''))
 
-        const volumeBar = document.querySelector('[data-testid="volume-bar"]') as HTMLElement | null
-        if (volumeBar) volumeBar.style.display = ''
-
-        const volumeInner = document.querySelector('[data-testid="volume-bar"] div') as HTMLElement | null
-        const volumeContainer = volumeInner?.parentElement
-        if (volumeContainer) volumeContainer.style.display = ''
-        const volumeRoot = volumeContainer?.parentElement?.parentElement as HTMLElement | null
-        if (volumeRoot) volumeRoot.style.flexDirection = ''
-
-        const progressbar = document.querySelector('[data-testid="playback-progressbar"]') as HTMLElement | null
-        if (progressbar) {
-            progressbar.style.width = ''
-            progressbar.style.visibility = ''
-        }
-        const position = document.querySelector('[data-testid="playback-position"]') as HTMLElement | null
-        if (position) {
-            position.style.visibility = ''
-            position.style.minWidth = ''
-            position.style.width = ''
-        }
-        const duration = document.querySelector('[data-testid="playback-duration"]') as HTMLElement | null
-        if (duration) {
-            duration.style.visibility = ''
-            duration.style.minWidth = ''
-            duration.style.width = ''
-        }
+        this.setSpotifyVolumeHidden(false)
+        this.setSpotifyProgressHidden(false)
 
         document
-            .querySelectorAll(
+            .querySelectorAll<HTMLElement>(
                 '[data-testid="now-playing-widget-v2"] > div > button[data-encore-id="buttonTertiary"]'
             )
-            .forEach((node) => {
-                const button = node as HTMLElement
+            .forEach((button) => {
                 button.style.visibility = ''
                 button.style.width = ''
                 const parent = button.parentElement
