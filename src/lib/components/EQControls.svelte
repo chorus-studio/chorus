@@ -80,7 +80,7 @@
 </script>
 
 <div class="flex h-full flex-col gap-y-2">
-    <div class="grid grid-cols-2 gap-x-6 gap-y-1.5">
+    <div class="grid grid-cols-2 gap-x-6 gap-y-2.5">
         {#each ordered as { band, i } (band.freq)}
             {@const gain = $eqBandsStore[i] ?? 0}
             <div class="flex h-7 items-center gap-x-2">
