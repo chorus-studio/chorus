@@ -27,7 +27,7 @@
         tweakOrigin
     } from '$lib/utils/quick-presets'
     import { presetsSubView } from '$lib/stores/effects-ui'
-    import { boundShortcuts, openShortcutSettings, shortcutKeys } from '$lib/utils/shortcuts'
+    import { boundShortcuts, openShortcutSettings } from '$lib/utils/shortcuts'
 
     import Moon from '@lucide/svelte/icons/moon'
     import FastForward from '@lucide/svelte/icons/fast-forward'
@@ -97,7 +97,6 @@
     import ExternalLink from '@lucide/svelte/icons/external-link'
     import SlidersHorizontal from '@lucide/svelte/icons/sliders-horizontal'
 
-    import { Button } from '$lib/components/ui/button'
     import SegmentedControl from '$lib/components/SegmentedControl.svelte'
     import Texture from '$lib/components/views/Texture.svelte'
     import { cn } from '$lib/utils.js'
@@ -419,133 +418,138 @@
             {/each}
         {:else}
             <div class="flex min-h-0 flex-1 flex-col gap-y-1.5">
-                {#each mine as preset, index (preset.id)}
-                    {@const on = sameValues(current, preset)}
-                    {@const combo = shortcuts[`audio-preset-${index + 1}`] ?? ''}
-                    {@const editing = editingId === preset.id}
-                    <div
-                        class={cn(
-                            'group relative flex h-9 shrink-0 items-center gap-x-2.5 rounded-lg border pl-3 pr-1 transition-colors',
-                            on
-                                ? 'border-signal bg-signal/[0.08]'
-                                : 'border-hairline bg-panel hover:bg-surface-2'
-                        )}
-                    >
-                        {#if !editing}
-                            <button
-                                type="button"
-                                aria-pressed={on}
-                                title={on
-                                    ? `${preset.name} · tap to turn off`
-                                    : recipe(preset).join(' · ')}
-                                onclick={() => togglePreset(preset)}
-                                class="chorus-focus absolute inset-0 rounded-lg"
-                            >
-                                <span class="sr-only">{preset.name}</span>
-                            </button>
-                        {/if}
-                        {#if editing}
-                            <input
-                                type="text"
-                                aria-label="Preset name"
-                                maxlength="24"
-                                bind:value={draftName}
-                                use:focusAndSelect
-                                onblur={commitRename}
-                                onkeydown={(e) => {
-                                    if (e.key === 'Enter') commitRename()
-                                    if (e.key === 'Escape') editingId = null
-                                }}
-                                class="readout relative z-10 h-6 w-32 px-2 text-xs focus-visible:border-signal/60 focus-visible:outline-none"
-                            />
-                        {:else}
+                <div class="grid grid-cols-2 gap-1.5">
+                    {#each mine as preset, index (preset.id)}
+                        {@const on = sameValues(current, preset)}
+                        {@const combo = shortcuts[`audio-preset-${index + 1}`] ?? ''}
+                        {@const editing = editingId === preset.id}
+                        {@const chips = recipe(preset).join(' · ')}
+                        {@const Icon =
+                            ICONS[QUICK_PRESETS.find((p) => sameValues(p, preset))?.icon ?? ''] ??
+                            Star}
+                        <div
+                            class={cn(
+                                'group relative flex h-14 flex-col justify-center gap-y-1 rounded-lg border px-2.5 transition-colors',
+                                on
+                                    ? 'border-signal bg-signal/[0.08]'
+                                    : 'border-hairline bg-panel hover:bg-surface-2'
+                            )}
+                        >
+                            {#if !editing}
+                                <button
+                                    type="button"
+                                    aria-pressed={on}
+                                    title={on ? `${preset.name} · tap to turn off` : chips}
+                                    onclick={() => togglePreset(preset)}
+                                    class="chorus-focus absolute inset-0 rounded-lg"
+                                >
+                                    <span class="sr-only">{preset.name}</span>
+                                </button>
+                            {/if}
                             <span
-                                class="pointer-events-none flex shrink-0 items-center gap-x-1.5 text-xs font-medium text-ink-fg"
+                                class="pointer-events-none flex items-center gap-x-1.5 text-xs font-medium leading-none text-ink-fg"
                             >
-                                <span class="max-w-32 truncate">{preset.name}</span>
-                                {#if on}
-                                    <span class="led" aria-label="active"></span>
+                                {#if editing}
+                                    <input
+                                        type="text"
+                                        aria-label="Preset name"
+                                        maxlength="24"
+                                        bind:value={draftName}
+                                        use:focusAndSelect
+                                        onblur={commitRename}
+                                        onkeydown={(e) => {
+                                            if (e.key === 'Enter') commitRename()
+                                            if (e.key === 'Escape') editingId = null
+                                        }}
+                                        class="readout pointer-events-auto relative z-10 h-6 w-full min-w-0 px-2 text-xs focus-visible:border-signal/60 focus-visible:outline-none"
+                                    />
+                                {:else}
+                                    <Icon
+                                        class={cn(
+                                            'size-3.5 shrink-0',
+                                            on ? 'text-signal' : 'text-ink-muted'
+                                        )}
+                                    />
+                                    <span class="min-w-0 truncate">{preset.name}</span>
+                                    {#if on}
+                                        <span class="led" aria-label="active"></span>
+                                    {/if}
+                                    {#if combo}
+                                        <span
+                                            class="ml-auto flex shrink-0 items-center gap-x-0.5"
+                                            aria-label={`Shortcut ${combo}`}
+                                        >
+                                            <kbd
+                                                class="rounded border border-hairline-strong bg-surface px-1 py-0.5 font-mono text-[9px] leading-none text-ink-fg-2"
+                                                >{combo}</kbd
+                                            >
+                                        </span>
+                                    {/if}
                                 {/if}
                             </span>
-                        {/if}
-                        <span
-                            class="pointer-events-none flex min-w-0 flex-1 items-center gap-x-1 overflow-hidden [mask-image:linear-gradient(to_right,black_calc(100%-20px),transparent)]"
-                        >
-                            {#each recipe(preset) as chip (chip)}
-                                <span
-                                    class="inline-flex h-[18px] shrink-0 items-center rounded-[4px] border border-hairline bg-surface px-1.5 font-mono text-[10px] text-ink-fg-2"
-                                    >{chip}</span
-                                >
-                            {/each}
-                        </span>
-                        {#if combo}
                             <span
-                                class="pointer-events-none flex shrink-0 items-center gap-x-0.5"
-                                aria-label={`Shortcut ${combo}`}
+                                class={cn(
+                                    'pointer-events-none truncate font-mono text-[10px] leading-3 text-ink-muted',
+                                    on ? 'pr-16' : 'pr-10'
+                                )}>{chips}</span
                             >
-                                {#each shortcutKeys(combo) as key (key)}
-                                    <kbd
-                                        class="rounded border border-hairline-strong bg-surface px-1 py-0.5 font-mono text-[10px] leading-none text-ink-fg-2"
-                                        >{key}</kbd
-                                    >
-                                {/each}
+                            {#if on}
+                                <button
+                                    type="button"
+                                    aria-label={`Tweak ${preset.name}`}
+                                    title="Tweak the texture"
+                                    onclick={openRack}
+                                    class="chorus-focus absolute bottom-1 right-11 inline-flex size-5 items-center justify-center rounded text-signal transition-colors hover:bg-surface"
+                                >
+                                    <SlidersHorizontal class="size-3" />
+                                </button>
+                            {/if}
+                            <span
+                                class="absolute bottom-1 right-1 flex items-center opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100"
+                            >
+                                <button
+                                    type="button"
+                                    aria-label={`Rename ${preset.name}`}
+                                    title="Rename"
+                                    onclick={() => startRename(preset)}
+                                    class="chorus-focus inline-flex size-5 items-center justify-center rounded text-ink-muted transition-colors hover:bg-surface hover:text-ink-fg"
+                                >
+                                    <Pencil class="size-3" />
+                                </button>
+                                <button
+                                    type="button"
+                                    aria-label={`Remove ${preset.name}`}
+                                    title="Remove from Mine"
+                                    onclick={() => remove(preset)}
+                                    class="chorus-focus inline-flex size-5 items-center justify-center rounded text-ink-muted transition-colors hover:bg-surface hover:text-alarm"
+                                >
+                                    <Trash2 class="size-3" />
+                                </button>
                             </span>
-                        {/if}
-                        {#if on}
-                            <Button
-                                size="icon-xs"
-                                variant="ghost"
-                                aria-label={`Tweak ${preset.name}`}
-                                title="Tweak the texture"
-                                onclick={openRack}
-                                class="relative z-10 shrink-0 text-signal"
-                            >
-                                <SlidersHorizontal class="size-3" />
-                            </Button>
-                        {/if}
-                        <span
-                            class="relative z-10 flex shrink-0 items-center opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100"
-                        >
-                            <Button
-                                size="icon-xs"
-                                variant="ghost"
-                                aria-label={`Rename ${preset.name}`}
-                                title="Rename"
-                                onclick={() => startRename(preset)}
-                            >
-                                <Pencil class="size-3" />
-                            </Button>
-                            <Button
-                                size="icon-xs"
-                                variant="ghost"
-                                aria-label={`Remove ${preset.name}`}
-                                title="Remove"
-                                onclick={() => remove(preset)}
-                                class="hover:text-alarm"
-                            >
-                                <Trash2 class="size-3" />
-                            </Button>
-                        </span>
-                    </div>
-                {/each}
+                        </div>
+                    {/each}
 
-                {#if slotsLeft > 0}
-                    <button
-                        type="button"
-                        onclick={saveCurrent}
-                        disabled={normal}
-                        title={normal
-                            ? 'Nothing is on. Tap a preset or move a knob first.'
-                            : 'Save the current rate, pitch, key, reverb, EQ, stereo and texture as a slot'}
-                        class="chorus-focus flex h-9 w-full shrink-0 items-center justify-center gap-x-2 rounded-lg border border-dashed border-hairline-strong text-xs text-ink-muted transition-colors enabled:hover:border-signal/50 enabled:hover:text-ink-fg disabled:opacity-50"
-                    >
-                        <Plus class="size-3.5" />
-                        Save what's playing as Preset {mine.length + 1}
-                        <span class="font-mono text-[10px] text-ink-dim"
-                            >· {slotsLeft} {slotsLeft === 1 ? 'slot' : 'slots'} left</span
+                    {#if slotsLeft > 0}
+                        <button
+                            type="button"
+                            onclick={saveCurrent}
+                            disabled={normal}
+                            title={normal
+                                ? 'Nothing is on. Tap a preset or move a knob first.'
+                                : 'Save the current rate, pitch, key, reverb, EQ, stereo and texture as a slot'}
+                            class="chorus-focus flex h-14 flex-col items-center justify-center gap-y-1 rounded-lg border border-dashed border-hairline-strong text-xs text-ink-muted transition-colors enabled:hover:border-signal/50 enabled:hover:text-ink-fg disabled:opacity-50"
                         >
-                    </button>
-                {/if}
+                            <span class="flex items-center gap-x-1.5">
+                                <Plus class="size-3.5" />
+                                Save what's playing
+                            </span>
+                            <span class="font-mono text-[10px] text-ink-dim"
+                                >as Preset {mine.length + 1} · {slotsLeft}
+                                {slotsLeft === 1 ? 'slot' : 'slots'} left</span
+                            >
+                        </button>
+                    {/if}
+                </div>
 
                 <div
                     class="mt-auto flex items-center justify-between gap-x-3 pt-1 text-[11px] text-ink-muted"
