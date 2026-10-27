@@ -22,6 +22,7 @@
         "tailwindcss-animate": "^1.0.7",
         "tslib": "^2.8.1",
         "typescript": "^5.6.3",
+        "vitest": "^4.0.18",
         "wxt": "^0.19.29"
     },
     "private": true,
@@ -35,6 +36,7 @@
         "zip": "wxt zip",
         "zip:fox": "wxt zip -b firefox --mv3",
         "check": "svelte-check --tsconfig ./tsconfig.json",
+        "test": "vitest run",
         "format": "git diff --name-only --diff-filter=AM | grep -E '\\.(js|ts|svelte|json)$' | xargs prettier --write",
         "postinstall": "wxt prepare && node scripts/copy-ort.mjs"
     },
