@@ -1,40 +1,46 @@
-<script lang="ts">
+<script lang="ts" generics="T extends number | string">
     import Star from '@lucide/svelte/icons/star'
-    import { type Frequent } from '$lib/stores/playback'
     import { cn } from '$lib/utils.js'
 
+    type Item = { value: T; pinned: boolean }
+
     // Quick-value chips. Frequent items carry a pin toggle on the chip's leading
-    // edge so favourites stick around as the list evolves. The row never scrolls:
-    // the store caps frequents (FREQUENTS_MAX) so they fit beside the readout.
+    // edge so favourites stick around as the list evolves. By default the row
+    // never scrolls (the stores cap their lists so chips fit beside a readout);
+    // `wrap` lets a longer list run onto further lines instead.
     let {
         list,
         current,
-        format = (v: number) => String(v),
+        format = (v: T) => String(v),
         handleSelect,
-        handlePin
+        handlePin,
+        wrap = false
     }: {
-        list: number[] | Frequent[]
-        current?: number
-        format?: (value: number) => string
-        handleSelect: (value: number) => void
-        handlePin?: (value: Frequent) => void
+        list: T[] | Item[]
+        current?: T
+        format?: (value: T) => string
+        handleSelect: (value: T) => void
+        handlePin?: (value: Item) => void
+        wrap?: boolean
     } = $props()
 
-    const isFrequentList = $derived(list.length > 0 && typeof list[0] !== 'number')
+    const isFrequentList = $derived(list.length > 0 && typeof list[0] === 'object')
     const pinnable = $derived(isFrequentList && !!handlePin)
     const items = $derived(
-        (list as Array<number | Frequent>).map((item) =>
-            typeof item === 'number' ? { value: item, pinned: false } : item
+        (list as Array<T | Item>).map((item) =>
+            typeof item === 'object' ? item : { value: item, pinned: false }
         )
     )
+    const same = (a: T, b: T) =>
+        typeof a === 'number' && typeof b === 'number' ? Math.abs(a - b) < 1e-9 : a === b
 
     const focusRing =
         'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-signal'
 </script>
 
-<div class="flex min-w-0 flex-1 items-center gap-1 overflow-hidden">
+<div class={cn('flex min-w-0 flex-1 items-center gap-1', wrap ? 'flex-wrap' : 'overflow-hidden')}>
     {#each items as item (item.value)}
-        {@const active = current !== undefined && Math.abs(item.value - current) < 1e-9}
+        {@const active = current !== undefined && same(item.value, current)}
         <div
             data-active={active}
             class={cn(

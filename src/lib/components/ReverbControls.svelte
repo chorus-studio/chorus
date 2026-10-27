@@ -4,10 +4,8 @@
     import { reverbParamsStore, type ReverbParams } from '$lib/stores/reverb-params'
     import { userReverbPresetsStore } from '$lib/stores/reverb-user-presets'
     import { effectsStore } from '$lib/stores/effects'
-    import * as HoverCard from '$lib/components/ui/hover-card'
     import { CustomSlider } from '$lib/components/ui/custom-slider'
     import UserPresetRow from '$lib/components/UserPresetRow.svelte'
-    import Info from '@lucide/svelte/icons/info'
     import {
         customPresets,
         impulsePresets,
@@ -42,14 +40,6 @@
         { key: 'decay', label: 'Decay', min: 0, max: 1, step: 0.01, pct: true },
         { key: 'damping', label: 'Damping', min: 0, max: 1, step: 0.01, pct: true }
     ]
-
-    const PARAM_HINTS = [
-        ['Dry', 'volume of the untouched signal'],
-        ['Wet', 'volume of the reverb'],
-        ['Pre-delay', 'silence before the reverb starts — longer feels like a bigger space'],
-        ['Decay', 'how long the reverb tail rings out'],
-        ['Damping', 'how fast highs fade — higher = darker, softer tail']
-    ] as const
 
     // --- User-saved presets: applied via reverbParamsStore's live channel, never
     // the engine's name lookup.
@@ -132,17 +122,19 @@
         </p>
     </div>
 {:else}
-    <div class="flex h-full flex-col gap-y-2">
-        <div class="grid grid-cols-2 gap-x-4 gap-y-2">
-            {#each CONTROLS as c (c.key)}
-                {@const raw = $reverbParamsStore[c.key]}
-                <div class="flex flex-col gap-y-1">
-                    <div class="flex items-center justify-between">
-                        <span class="rack-label">{c.label}</span>
-                        <span class="font-mono text-[10px] tabular-nums text-ink-fg-2"
-                            >{readout(c, raw)}</span
-                        >
-                    </div>
+    <div class="flex h-full flex-col gap-y-1.5">
+        <!-- One column: each slider gets the full width, which is the point of
+             tuning by ear, and the five together fill the frame. -->
+        {#each CONTROLS as c (c.key)}
+            {@const raw = $reverbParamsStore[c.key]}
+            <div class="flex flex-col gap-y-0.5">
+                <div class="flex h-4 items-center justify-between">
+                    <span class="rack-label">{c.label}</span>
+                    <span class="font-mono text-[10px] tabular-nums text-ink-fg-2"
+                        >{readout(c, raw)}</span
+                    >
+                </div>
+                <div class="-my-0.5">
                     <CustomSlider
                         type="single"
                         min={c.min}
@@ -153,29 +145,8 @@
                         onValueChange={(v) => onChange(c, v as number)}
                     />
                 </div>
-            {/each}
-
-            <!-- Fills the empty cell beside Damping. -->
-            <div class="flex items-end justify-end pb-1">
-                <HoverCard.Root openDelay={150} closeDelay={150}>
-                    <HoverCard.Trigger
-                        aria-label="What the sliders do"
-                        class="inline-flex h-6 cursor-help items-center gap-x-1 rounded-md px-1.5 text-[11px] text-ink-muted hover:bg-surface-2 hover:text-ink-fg"
-                    >
-                        <Info class="size-3" />
-                        What these do
-                    </HoverCard.Trigger>
-                    <HoverCard.Content class="flex w-64 flex-col gap-y-1 text-xs">
-                        {#each PARAM_HINTS as [name, hint] (name)}
-                            <p class="leading-snug">
-                                <span class="font-medium text-ink-fg">{name}</span>
-                                <span class="text-ink-muted"> — {hint}</span>
-                            </p>
-                        {/each}
-                    </HoverCard.Content>
-                </HoverCard.Root>
             </div>
-        </div>
+        {/each}
 
         <UserPresetRow
             {pip}

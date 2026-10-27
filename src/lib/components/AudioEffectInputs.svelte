@@ -1,4 +1,5 @@
 <script lang="ts">
+    import type { Snippet } from 'svelte'
     import { effectsStore } from '$lib/stores/effects'
 
     import type { Selection } from '$lib/types'
@@ -15,7 +16,8 @@
         bottomHint = '',
         topOptions,
         bottomOptions,
-        note = 'Choosing from one list clears the other.'
+        note = '',
+        children
     }: {
         type: 'reverb' | 'equalizer' | 'msProcessor'
         topSelected: boolean
@@ -27,6 +29,8 @@
         bottomOptions: Selection[]
         note?: string
         pip?: boolean
+        /** Rendered between the pickers and the note: the Recent chips. */
+        children?: Snippet
     } = $props()
 
     async function handleUpdateEffect(value: string) {
@@ -37,7 +41,12 @@
 <div class="flex h-full flex-col gap-y-2">
     <div class="flex flex-col gap-y-2 rounded-lg border border-hairline bg-panel px-3 py-2">
         <div class="flex flex-col gap-y-1">
-            <span class="rack-label">{topLabel}</span>
+            <div class="flex h-4 items-center justify-between gap-x-3">
+                <span class="rack-label shrink-0">{topLabel}</span>
+                {#if topHint}
+                    <span class="truncate text-[11px] text-ink-muted">{topHint}</span>
+                {/if}
+            </div>
             <CustomSelect
                 {pip}
                 size="md"
@@ -47,13 +56,15 @@
                 onValueChange={handleUpdateEffect}
                 class="w-full"
             />
-            {#if topHint}
-                <span class="text-[11px] text-ink-muted">{topHint}</span>
-            {/if}
         </div>
 
         <div class="flex flex-col gap-y-1">
-            <span class="rack-label">{bottomLabel}</span>
+            <div class="flex h-4 items-center justify-between gap-x-3">
+                <span class="rack-label shrink-0">{bottomLabel}</span>
+                {#if bottomHint}
+                    <span class="truncate text-[11px] text-ink-muted">{bottomHint}</span>
+                {/if}
+            </div>
             <CustomSelect
                 {pip}
                 size="md"
@@ -63,11 +74,10 @@
                 onValueChange={handleUpdateEffect}
                 class="w-full"
             />
-            {#if bottomHint}
-                <span class="text-[11px] text-ink-muted">{bottomHint}</span>
-            {/if}
         </div>
     </div>
+
+    {@render children?.()}
 
     {#if note}
         <p class="mt-auto flex items-center gap-x-1.5 text-[11px] text-ink-muted">

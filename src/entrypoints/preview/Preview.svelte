@@ -33,7 +33,8 @@
     import { NORMAL_VALUES, QUICK_PRESETS, quickPresetById } from '$lib/audio-effects/quick-presets'
     import { applyPresetValues } from '$lib/utils/quick-presets'
     import { lofiStore, type LofiEffectKey } from '$lib/stores/lofi'
-    import { presetsSubView } from '$lib/stores/effects-ui'
+    import { effectsStore } from '$lib/stores/effects'
+    import { eqSubView, fxSubView, presetsSubView } from '$lib/stores/effects-ui'
 
     const params = new URLSearchParams(location.search)
     const scene = params.get('scene') ?? 'tabs'
@@ -86,7 +87,20 @@
         ['Lady Love by Thee Sacred Souls', '#5c4a6b', 0],
         ['Get Sun by Hiatus Kaiyote', '#b3833a', 90 * DAY]
     ] as const
-    let ready = $state(dialog !== 'blocked' && tab !== 'presets')
+    let ready = $state(dialog !== 'blocked' && !['presets', 'fx', 'eq'].includes(tab))
+
+    // ?tab=fx&reverb=hall and ?tab=eq&eq=Rock seed the effect tabs with that
+    // preset on; &view=config opens the Config half instead of Presets.
+    onMount(async () => {
+        if (tab !== 'fx' && tab !== 'eq') return
+        await new Promise((resolve) => setTimeout(resolve, 20))
+        const reverb = params.get('reverb')
+        const eq = params.get('eq')
+        if (reverb) await effectsStore.updateEffect({ key: 'reverb', value: reverb })
+        if (eq) await effectsStore.updateEffect({ key: 'equalizer', value: eq })
+        if (params.get('view') === 'config') (tab === 'fx' ? fxSubView : eqSubView).set('config')
+        ready = true
+    })
 
     // ?tab=presets&preset=nightcore&group=mine&mine=1 seeds the Presets tab: the
     // named built-in applied (so its card is lit), the group to open on, and two

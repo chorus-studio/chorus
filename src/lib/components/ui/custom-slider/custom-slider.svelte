@@ -7,6 +7,7 @@
         step = 1,
         label = 'slider',
         disabled = false,
+        origin,
         onValueChange,
         onValueCommit
     }: {
@@ -16,6 +17,8 @@
         max: number
         step: number
         label?: string
+        /** Where a single slider's fill starts; `min` unless given. A bipolar control (gain, key) fills from 0. */
+        origin?: number
         /** Greys the slider out and ignores input; the fill keeps showing the value. */
         disabled?: boolean
         onValueChange: (value: number | number[]) => void
@@ -46,15 +49,22 @@
         trackOwner = dLo < dHi ? 0 : dHi < dLo ? 1 : at <= lo ? 0 : 1
     }
 
+    /** The fill of a single slider: from the origin to the value, whichever way round. */
+    function fillSingle(slider: HTMLElement, currentValue: number) {
+        const range = max - min || 1
+        const from = (((origin ?? min) - min) / range) * 100
+        const to = ((currentValue - min) / range) * 100
+        slider.style.setProperty('--start', `${Math.min(from, to)}%`)
+        slider.style.setProperty('--stop', `${Math.max(from, to)}%`)
+    }
+
     // Keep the fill (--start/--stop) and the native inputs in sync with `value`.
     $effect(() => {
         const range = max - min || 1
         if (sliderElement && leftInput) {
             if (type === 'single') {
                 const currentValue = value as number
-                const percent = ((currentValue - min) / range) * 100
-                sliderElement.style.setProperty('--start', '0%')
-                sliderElement.style.setProperty('--stop', `${percent}%`)
+                fillSingle(sliderElement, currentValue)
                 leftInput.value = currentValue.toString()
             } else if (type === 'multiple' && rightInput) {
                 const currentValue = value as number[]
@@ -99,8 +109,7 @@
         const slider = target.closest('.slider') as HTMLElement
         if (!slider) return
         if (type === 'single') {
-            slider.style.setProperty('--start', '0%')
-            slider.style.setProperty('--stop', `${((newValue - min) / range) * 100}%`)
+            fillSingle(slider, newValue)
         } else if (next) {
             slider.style.setProperty('--start', `${((Math.min(...next) - min) / range) * 100}%`)
             slider.style.setProperty('--stop', `${((Math.max(...next) - min) / range) * 100}%`)

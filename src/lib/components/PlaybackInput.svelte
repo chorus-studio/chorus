@@ -154,6 +154,7 @@
             min={sliderMin}
             max={sliderMax}
             step={1}
+            origin={key === 'semitone' ? 0 : UNITS / 2}
             label={meta.title}
             onValueChange={handleSlide}
             onValueCommit={handleSlideEnd}

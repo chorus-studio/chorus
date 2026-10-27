@@ -1,4 +1,6 @@
 <script lang="ts">
+    import { onMount } from 'svelte'
+    import { get } from 'svelte/store'
     import EQ from './EQ.svelte'
     import EQControls from '$lib/components/EQControls.svelte'
     import EffectStatus from '$lib/components/EffectStatus.svelte'
@@ -10,13 +12,16 @@
 
     let { pip = false }: { pip?: boolean } = $props()
 
-    let sub = $state<'presets' | 'config'>('presets')
+    // Opens on whatever the store says (Presets, unless something seeded it),
+    // and leaves it on Presets for next time.
+    let sub = $state<'presets' | 'config'>(get(eqSubView))
 
     // Let the tab-level reset button know which sub-view is active (its semantics
     // differ: presets = effect off, config = back to the "from:" starting point).
     $effect(() => {
         eqSubView.set(sub)
     })
+    onMount(() => () => eqSubView.set('presets'))
 
     // A quick frequency guide for the ⓘ info hover-card.
     const BAND_HINTS = [

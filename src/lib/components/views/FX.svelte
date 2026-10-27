@@ -2,6 +2,7 @@
     import { effectsStore } from '$lib/stores/effects'
     import { configStore } from '$lib/stores/config'
     import AudioEffectInputs from '$lib/components/AudioEffectInputs.svelte'
+    import RecentEffects from '$lib/components/RecentEffects.svelte'
 
     import { roomPresets, customPresets, impulsePresets } from '$lib/audio-effects/reverb/presets'
 
@@ -34,6 +35,9 @@
         )
     )
     const topSelected = $derived(roomPresets.includes($effectsStore.reverb))
+    const allowed = $derived(
+        [...roomOptions, ...customOptions].map((o) => o.value).filter((v) => v !== 'none')
+    )
 </script>
 
 <AudioEffectInputs
@@ -44,7 +48,8 @@
     topLabel="Room"
     topHint="Spaces from a small room to a cathedral"
     bottomLabel="Custom & impulse"
-    bottomHint="Character presets; impulse responses can't be tuned"
+    bottomHint="Character presets; impulses aren't tunable"
     bottomOptions={customOptions}
-    note="Picking from one list clears the other. Tune the sound in Config."
-/>
+>
+    <RecentEffects kind="reverb" {allowed} />
+</AudioEffectInputs>
