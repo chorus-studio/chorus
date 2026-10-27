@@ -106,6 +106,7 @@ export default defineConfig({
                     '/processor.js',
                     '/ms-processor.js',
                     '/soundtouch.js',
+                    '/worklets/*',
                     '/content-scripts/*.css',
                     // Vocal-model assets are Chrome-only (offscreen pipeline); omit on Firefox.
                     ...(browser === 'firefox' ? [] : ['/models/*', '/ort/*'])

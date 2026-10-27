@@ -5,8 +5,11 @@ import AudioManager from '$lib/audio-effects/audio-manager'
 import type { SoundTouchData, Rate } from '$lib/stores/playback'
 import type { MSParams } from '$lib/stores/ms-params'
 import type { ReverbParams } from '$lib/stores/reverb-params'
+import type Lofi from '$lib/audio-effects/lofi-rack'
+import type { EffectSettings } from '$lib/audio-effects/lofi/audio/effect-settings'
 
 type MediaOverrideOptions = {
+    lofi: Lofi
     reverb: Reverb
     equalizer: Equalizer
     msProcessor: MSProcessor
@@ -15,6 +18,7 @@ type MediaOverrideOptions = {
 }
 
 export default class MediaOverride {
+    private lofi: Lofi
     private reverb: Reverb
     private equalizer: Equalizer
     private msProcessor: MSProcessor
@@ -23,7 +27,8 @@ export default class MediaOverride {
     private _sources: any[] = []
     private _chorusRate: number = 1
     private _chorusPreservesPitch: boolean = true
-    private _effectUpdateInProgress: Promise<void> | null = null
+    // Chain rebuilds run one at a time, in the order they were asked for.
+    private _effectQueue: Promise<void> = Promise.resolve()
     // Master-off state. While disabled the audio graph must stay bypassed; this
     // guards against a late-resuming async effect update silently rebuilding it.
     private _disabled: boolean = false
@@ -33,6 +38,7 @@ export default class MediaOverride {
 
     constructor(options: MediaOverrideOptions) {
         this.source = options.source
+        this.lofi = options.lofi
         this.reverb = options.reverb
         this.equalizer = options.equalizer
         this.msProcessor = options.msProcessor
@@ -155,21 +161,22 @@ export default class MediaOverride {
         equalizer?: string
         msProcessor?: string
     }) {
-        if (!this.audioManager || !this.audioManager.isReady || !this.equalizer || !this.reverb || !this.msProcessor) {
+        if (
+            !this.audioManager ||
+            !this.audioManager.isReady ||
+            !this.equalizer ||
+            !this.reverb ||
+            !this.msProcessor
+        ) {
             return
         }
 
         // Extension is off — never (re)build the effect chain.
         if (this._disabled) return
 
-        // Wait for any in-progress effect update to complete before starting a new one
-        // This prevents race conditions where multiple rapid effect changes could cause double-application
-        if (this._effectUpdateInProgress) {
-            await this._effectUpdateInProgress
-        }
-
-        // Create a new promise for this update operation
-        this._effectUpdateInProgress = (async () => {
+        // One effect update at a time: rapid changes would otherwise interleave
+        // their chain rebuilds and double-apply nodes.
+        await this.runExclusive(async () => {
             try {
                 await this.audioManager.ensureAudioChainReady()
 
@@ -183,17 +190,18 @@ export default class MediaOverride {
                 // Mute before chain rebuild to prevent clicks from signal discontinuity
                 this.audioManager.muteForTransition()
 
-                // If clear is requested, disconnect all effects
+                // Start from a bare chain. disconnect() drops the lofi rack with the
+                // rest, so it goes straight back in while its effects are on.
+                this.audioManager.disconnect()
+                this.lofi.reconnect()
+
+                // If clear is requested, that is all
                 if (effect.clear) {
-                    this.audioManager.disconnect()
                     this.audioManager.unmuteAfterTransition()
                     return
                 }
 
-                // Disconnect all effects first
-                this.audioManager.disconnect()
-
-                // Apply effects in the order they'll be chained: equalizer → MS processor → reverb
+                // Apply effects in the order they'll be chained: lofi → equalizer → MS processor → reverb
                 // Each effect can be applied independently
                 if (effect?.equalizer && effect.equalizer !== 'none') {
                     this.equalizer.setEQEffect(effect.equalizer)
@@ -214,15 +222,47 @@ export default class MediaOverride {
             } catch (error) {
                 console.error('Error updating audio effects:', error)
                 this.audioManager.disconnect()
+                this.lofi.reconnect()
                 this.audioManager.unmuteAfterTransition()
-            } finally {
-                // Clear the lock when done
-                this._effectUpdateInProgress = null
             }
-        })()
+        })
+    }
 
-        // Wait for this update to complete
-        await this._effectUpdateInProgress
+    /**
+     * The lovelofi rack: every setting arrives at once, so this is one call on
+     * the rack plus adding it to, or dropping it from, the chain as its effects
+     * come and go. Queued with updateAudioEffect since both rebuild the chain.
+     */
+    async updateLofi(settings: EffectSettings): Promise<void> {
+        if (!this.audioManager || !this.audioManager.isReady || !this.lofi) return
+        if (this._disabled) return
+
+        await this.runExclusive(async () => {
+            try {
+                await this.audioManager.ensureAudioChainReady()
+                if (this._disabled) {
+                    this.audioManager.bypass()
+                    return
+                }
+                this.audioManager.muteForTransition()
+                await this.lofi.apply(settings)
+                this.audioManager.unmuteAfterTransition()
+            } catch (error) {
+                console.error('Error updating lofi effects:', error)
+                this.audioManager.unmuteAfterTransition()
+            }
+        })
+    }
+
+    /** Pause and play, for the rack's crackle loop. */
+    setPlaying(playing: boolean): void {
+        this.lofi?.setPlaying(playing)
+    }
+
+    private runExclusive(task: () => Promise<void>): Promise<void> {
+        const run = this._effectQueue.then(task, task)
+        this._effectQueue = run.catch(() => {})
+        return run
     }
 
     async updateMSParams(params: MSParams): Promise<void> {

@@ -4,16 +4,19 @@ import type { Rate } from '$lib/stores/playback'
 import Equalizer from '$lib/audio-effects/equalizer'
 import MSProcessor from '$lib/audio-effects/ms-processor'
 import AudioManager from '$lib/audio-effects/audio-manager'
+import Lofi from '$lib/audio-effects/lofi-rack'
 
 export default class MediaElement {
     private source: HTMLMediaElement
+    private _lofi: Lofi | null = null
     private _reverb: Reverb | null = null
     public mediaOverride?: MediaOverride
     private _equalizer: Equalizer | null = null
     private _msProcessor: MSProcessor | null = null
     private _audioManager: AudioManager | null = null
     private _disabled: boolean = false
-    public pendingVolume: { value: number; muted: boolean; type: 'linear' | 'logarithmic' } | null = null
+    public pendingVolume: { value: number; muted: boolean; type: 'linear' | 'logarithmic' } | null =
+        null
 
     constructor(source: HTMLMediaElement) {
         this.source = source
@@ -29,9 +32,11 @@ export default class MediaElement {
         this._reverb = new Reverb(this._audioManager)
         this._equalizer = new Equalizer(this._audioManager)
         this._msProcessor = new MSProcessor(this._audioManager)
+        this._lofi = new Lofi(this._audioManager)
 
         this.mediaOverride = new MediaOverride({
             source: this.source,
+            lofi: this._lofi!,
             reverb: this._reverb!,
             equalizer: this._equalizer!,
             msProcessor: this._msProcessor!,
@@ -48,8 +53,15 @@ export default class MediaElement {
             )
         })
 
+        // The lofi rack's crackle is a looping sample: it follows play / pause so
+        // a paused Spotify stays silent.
+        this.source.addEventListener('pause', () => this.mediaOverride?.setPlaying(false))
+
         this.source.addEventListener('play', () => {
-            if (this.mediaOverride) return
+            if (this.mediaOverride) {
+                this.mediaOverride.setPlaying(true)
+                return
+            }
             // Don't build the Chorus audio chain while the extension is disabled
             if (this._disabled) return
 
@@ -118,6 +130,10 @@ export default class MediaElement {
                             equalizer: data?.equalizer ? String(data.equalizer) : undefined,
                             msProcessor: data?.msProcessor ? String(data.msProcessor) : undefined
                         })
+                        break
+
+                    case 'FROM_LOFI_LISTENER':
+                        this.mediaOverride.updateLofi(data)
                         break
 
                     case 'FROM_MS_PARAMS_LISTENER':
