@@ -70,6 +70,7 @@
     ]
 
     const VIEW_ITEMS = [
+        { key: 'presets', label: 'Presets' },
         { key: 'snip', label: 'Snip' },
         { key: 'speed', label: 'Speed' },
         { key: 'fx', label: 'Reverb' },

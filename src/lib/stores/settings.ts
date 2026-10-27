@@ -37,6 +37,7 @@ export type SettingsState = {
         progress: boolean
     }
     views: {
+        presets: boolean
         snip: boolean
         seek: boolean
         speed: boolean
@@ -71,6 +72,7 @@ const defaultSettingsState: SettingsState = {
         playlist: false
     },
     views: {
+        presets: true,
         speed: true,
         snip: true,
         seek: true,
