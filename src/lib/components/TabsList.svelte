@@ -23,7 +23,7 @@
     import Seek from '$lib/components/views/Seek.svelte'
     import Speed from '$lib/components/views/Speed.svelte'
     import PopUp from '$lib/components/views/PopUp.svelte'
-    import MS from '$lib/components/views/MS.svelte'
+    import MSView from '$lib/components/views/MSView.svelte'
     import Presets from '$lib/components/views/Presets.svelte'
     import Logo from '$lib/components/Logo.svelte'
     import SettingsInfo from '$lib/components/views/SettingsInfo.svelte'
@@ -81,7 +81,7 @@
         snip: Snip,
         fx: ReverbView,
         eq: EQView,
-        ms: MS,
+        ms: MSView,
         seek: Seek,
         speed: Speed,
         settings: SettingsInfo,

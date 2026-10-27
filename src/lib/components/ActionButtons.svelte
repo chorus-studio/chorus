@@ -7,7 +7,8 @@
     import { lofiStore } from '$lib/stores/lofi'
     import { reverbParamsStore } from '$lib/stores/reverb-params'
     import { eqBandsStore } from '$lib/stores/eq-bands'
-    import { eqSubView, fxSubView, presetsSubView } from '$lib/stores/effects-ui'
+    import { msParamsStore } from '$lib/stores/ms-params'
+    import { eqSubView, fxSubView, msSubView, presetsSubView } from '$lib/stores/effects-ui'
     import { nowPlaying } from '$lib/stores/now-playing'
     import { playbackStore, defaultPlayback } from '$lib/stores/playback'
     import {
@@ -158,8 +159,8 @@
             return applyNormal()
         }
 
-        // fx/eq share effectsStore but each tab must reset ONLY its own effect —
-        // effectsStore.reset() would wipe both reverb and the equalizer at once.
+        // fx/eq/ms share effectsStore but each tab must reset ONLY its own effect —
+        // effectsStore.reset() would wipe all three at once.
         // Reset is context-sensitive: in the config sub-view it returns the sliders
         // to their "from:" starting point (keeping the effect on); in the presets
         // sub-view it turns the effect off + flattens the sliders (silently — a
@@ -173,6 +174,11 @@
             if (get(eqSubView) === 'config') return eqBandsStore.resetToSeed()
             await effectsStore.updateEffect({ key: 'equalizer', value: 'none' })
             return eqBandsStore.resetSilent()
+        }
+        if (tab === 'ms') {
+            if (get(msSubView) === 'config') return msParamsStore.resetToSeed()
+            await effectsStore.updateEffect({ key: 'msProcessor', value: 'none' })
+            return msParamsStore.resetSilent()
         }
 
         const store = getStore()
@@ -212,14 +218,18 @@
                         $playbackStore.track.semitone != 0))
         )
     )
-    const hasActions = $derived(['presets', 'fx', 'eq', 'snip', 'speed', 'seek'].includes(tab))
+    const hasActions = $derived(
+        ['presets', 'fx', 'eq', 'ms', 'snip', 'speed', 'seek'].includes(tab)
+    )
     // Presets: what's playing drifted from the preset it began as. Revert goes
     // back to it; Update, for one of the user's own, writes the drift into it.
     const origin = $derived(tab === 'presets' ? $tweakOrigin : null)
     const revert = () => origin && applyPresetValues(origin.preset, origin.preset.id)
     const update = () => origin?.mine && updatePresetSlot(origin.preset.id, currentValues())
-    // fx/eq: "Turn off" in the presets view, "Reset config" while editing.
-    const effectSub = $derived(tab === 'fx' ? $fxSubView : tab === 'eq' ? $eqSubView : null)
+    // fx/eq/ms: "Turn off" in the presets view, "Reset config" while editing.
+    const effectSub = $derived(
+        tab === 'fx' ? $fxSubView : tab === 'eq' ? $eqSubView : tab === 'ms' ? $msSubView : null
+    )
     const inRack = $derived(tab === 'presets' && $presetsSubView === 'rack')
     const resetLabel = $derived(
         inRack

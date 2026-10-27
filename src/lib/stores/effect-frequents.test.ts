@@ -10,7 +10,7 @@ vi.mock('@wxt-dev/storage', () => ({
     }
 }))
 
-import { EFFECT_FREQUENTS_MAX, withFrequent, type EffectFrequent } from './effect-frequents'
+import { EFFECT_FREQUENTS_MAX, listOf, withFrequent, type EffectFrequent } from './effect-frequents'
 
 const chip = (value: string, pinned = false): EffectFrequent => ({ value, pinned })
 
@@ -35,5 +35,12 @@ describe('withFrequent', () => {
     it('leaves a fully pinned list alone', () => {
         const pinned = Array.from({ length: EFFECT_FREQUENTS_MAX }, (_, i) => chip(`p${i}`, true))
         expect(withFrequent(pinned, 'cave')).toBe(pinned)
+    })
+})
+
+describe('listOf', () => {
+    it('keeps stereo processing presets but not the channel modes', () => {
+        expect(listOf('msProcessor', 'wide')).toBe('ms_processing')
+        expect(listOf('msProcessor', 'mono')).toBeNull()
     })
 })

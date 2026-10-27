@@ -1,5 +1,6 @@
 // Pinned and recently used presets of each picker list (room reverbs, custom
-// reverbs, Spotify EQs, custom EQs), for the chip rows under the pickers: the
+// reverbs, Spotify EQs, custom EQs, stereo processing), for the chip rows under
+// the pickers: the
 // same idea as the Speed tab's frequent values. Whatever becomes the active
 // preset, from the picker, a chip, a quick preset or a keyboard command,
 // lands in its list's row; pinned chips survive new arrivals.
@@ -8,9 +9,15 @@ import { storage } from '@wxt-dev/storage'
 import { effectsStore } from '$lib/stores/effects'
 import { resolveReverbPreset, roomPresets } from '$lib/audio-effects/reverb/presets'
 import { spotifyPresets } from '$lib/audio-effects/equalizer/presets'
+import { advancedPresets } from '$lib/audio-effects/ms-processor/presets'
 
-export type EffectKind = 'reverb' | 'equalizer'
-export type EffectList = 'room_reverb' | 'custom_reverb' | 'spotify_eq' | 'custom_eq'
+export type EffectKind = 'reverb' | 'equalizer' | 'msProcessor'
+export type EffectList =
+    | 'room_reverb'
+    | 'custom_reverb'
+    | 'spotify_eq'
+    | 'custom_eq'
+    | 'ms_processing'
 export type EffectFrequent = { value: string; pinned: boolean }
 export type EffectFrequents = Record<EffectList, EffectFrequent[]>
 
@@ -19,18 +26,24 @@ export const LIST_KIND: Record<EffectList, EffectKind> = {
     room_reverb: 'reverb',
     custom_reverb: 'reverb',
     spotify_eq: 'equalizer',
-    custom_eq: 'equalizer'
+    custom_eq: 'equalizer',
+    ms_processing: 'msProcessor'
 }
 
-/** Which list a preset name lives in. */
-export const listOf = (kind: EffectKind, name: string): EffectList =>
-    kind === 'reverb'
-        ? roomPresets.includes(name)
-            ? 'room_reverb'
-            : 'custom_reverb'
-        : spotifyPresets.includes(name)
-          ? 'spotify_eq'
-          : 'custom_eq'
+/**
+ * Which list a preset name lives in; null for one no list keeps (the stereo
+ * channel modes are a chip row of their own, with nothing to remember).
+ */
+export function listOf(kind: EffectKind, name: string): EffectList | null {
+    switch (kind) {
+        case 'reverb':
+            return roomPresets.includes(name) ? 'room_reverb' : 'custom_reverb'
+        case 'equalizer':
+            return spotifyPresets.includes(name) ? 'spotify_eq' : 'custom_eq'
+        default:
+            return advancedPresets.includes(name) ? 'ms_processing' : null
+    }
+}
 
 const KEY = 'local:chorus_effect_frequents'
 /** Two rows of chips; past this the oldest unpinned one makes room. */
@@ -44,7 +57,10 @@ export const defaultEffectFrequents: EffectFrequents = {
     spotify_eq: ['Bass booster', 'Vocal booster', 'Loudness', 'Rock', 'Pop', 'Acoustic'].map(
         unpinned
     ),
-    custom_eq: ['Club', 'Live', 'Party'].map(unpinned)
+    custom_eq: ['Club', 'Live', 'Party'].map(unpinned),
+    ms_processing: ['narrow', 'wide', 'ultra-wide', 'vocal-focus', 'karaoke', 'bass-focus'].map(
+        unpinned
+    )
 }
 
 /**
@@ -75,6 +91,7 @@ function createEffectFrequentsStore() {
     async function touch(kind: EffectKind, value: string) {
         if (!value || value === 'none') return
         const list = listOf(kind, value)
+        if (!list) return
         const state = get(store)
         const next = withFrequent(state[list], value)
         if (next !== state[list]) await persist({ ...state, [list]: next })
@@ -90,9 +107,10 @@ function createEffectFrequentsStore() {
         if (saved) store.set({ ...defaultEffectFrequents, ...saved })
         // From here on whatever is active counts as used, the effects store's
         // own hydration included: that is the last preset the user had on.
-        effectsStore.subscribe(({ reverb, equalizer }) => {
+        effectsStore.subscribe(({ reverb, equalizer, msProcessor }) => {
             void touch('reverb', resolveReverbPreset(reverb))
             void touch('equalizer', equalizer)
+            void touch('msProcessor', msProcessor)
         })
     })
 

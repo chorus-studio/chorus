@@ -1,135 +1,107 @@
 <script lang="ts">
-    import { msParamsStore } from '$lib/stores/ms-params'
-    import { Label } from '$lib/components/ui/label'
+    // The Stereo tab's Config half: the four things the mid-side engine can do,
+    // each a full-width slider filling from its neutral point. Opens on the
+    // active preset's numbers, so a drag starts from what is playing.
+    import { onMount } from 'svelte'
+    import { get } from 'svelte/store'
+    import { msParamsStore, type MSParams } from '$lib/stores/ms-params'
+    import { effectsStore } from '$lib/stores/effects'
     import { CustomSlider } from '$lib/components/ui/custom-slider'
-    import { CustomSelect } from '$lib/components/ui/custom-select'
+    import { MS_PRESETS } from '$lib/audio-effects/ms-processor/presets'
 
-    let { pip = false }: { pip?: boolean } = $props()
+    type Ctl = {
+        key: keyof MSParams
+        label: string
+        min: number
+        max: number
+        step: number
+        origin: number
+        readout: (v: number) => string
+    }
 
-    const modeOptions = [
-        { label: 'bypass', value: '0' },
-        { label: 'left-only', value: '1' },
-        { label: 'right-only', value: '2' },
-        { label: 'mid-only', value: '3' },
-        { label: 'side-only', value: '4' },
-        { label: 'width', value: '5' },
-        { label: 'swap', value: '6' },
-        { label: 'mono', value: '7' },
-        { label: 'reverse-phase', value: '8' }
+    const signed = (v: number) => `${v > 0 ? '+' : v < 0 ? '−' : ''}${Math.abs(v).toFixed(1)} dB`
+
+    const CONTROLS: Ctl[] = [
+        {
+            key: 'width',
+            label: 'Width',
+            min: 0,
+            max: 200,
+            step: 1,
+            origin: 100,
+            readout: (v) => (v === 0 ? 'mono' : `${v}%`)
+        },
+        {
+            key: 'balance',
+            label: 'Balance',
+            min: -100,
+            max: 100,
+            step: 1,
+            origin: 0,
+            readout: (v) => (v === 0 ? 'centre' : v < 0 ? `L ${-v}` : `R ${v}`)
+        },
+        {
+            key: 'midGain',
+            label: 'Mid gain',
+            min: -12,
+            max: 12,
+            step: 0.5,
+            origin: 0,
+            readout: signed
+        },
+        {
+            key: 'sideGain',
+            label: 'Side gain',
+            min: -12,
+            max: 12,
+            step: 0.5,
+            origin: 0,
+            readout: signed
+        }
     ]
 
-    const isWidthMode = $derived($msParamsStore.mode === 5)
+    // Seed the sliders from the active preset so editing starts where the sound
+    // is (no dispatch — that preset is already applied). Also records the
+    // config-reset starting point.
+    onMount(() => {
+        const effect = get(effectsStore).msProcessor
+        const preset = effect && effect !== 'none' ? MS_PRESETS[effect] : null
+        if (preset) msParamsStore.seed({ ...get(msParamsStore), ...preset })
+    })
 
-    async function handleModeChange(value: string) {
-        await msParamsStore.updateParam({ key: 'mode', value: parseInt(value) })
-    }
-
-    async function handleWidthChange(value: number) {
-        await msParamsStore.updateParam({ key: 'width', value })
-    }
-
-    async function handleMidGainChange(value: number) {
-        await msParamsStore.updateParam({ key: 'midGain', value })
-    }
-
-    async function handleSideGainChange(value: number) {
-        await msParamsStore.updateParam({ key: 'sideGain', value })
-    }
-
-    async function handleBalanceChange(value: number) {
-        await msParamsStore.updateParam({ key: 'balance', value })
-    }
+    const onChange = (key: keyof MSParams, value: number) =>
+        msParamsStore.updateParam({ key, value })
 </script>
 
-<div class="flex w-full flex-col gap-y-3">
-    <!-- Mode Selector -->
-    <div class="flex flex-col gap-y-1">
-        <Label for="mode" class="text-sm text-ink-muted">Processing Mode</Label>
-        <CustomSelect
-            {pip}
-            size="md"
-            key="ms-mode"
-            selected={String($msParamsStore.mode)}
-            options={modeOptions}
-            onValueChange={handleModeChange}
-        />
-    </div>
-
-    <!-- Width Control (only visible in width mode) -->
-    {#if isWidthMode}
-        <div class="flex flex-col gap-y-1">
-            <div class="flex items-center justify-between">
-                <Label for="width" class="text-sm text-ink-muted">Stereo Width</Label>
-                <span class="text-xs text-ink-dim">{$msParamsStore.width}%</span>
+<div class="flex h-full flex-col gap-y-4">
+    {#each CONTROLS as c (c.key)}
+        {@const value = $msParamsStore[c.key]}
+        <div class="flex flex-col gap-y-0.5">
+            <div class="flex h-4 items-center justify-between">
+                <span class="rack-label">{c.label}</span>
+                <span
+                    class="font-mono text-[10px] tabular-nums {value === c.origin
+                        ? 'text-ink-muted'
+                        : 'text-signal-bright'}">{c.readout(value)}</span
+                >
             </div>
-            <CustomSlider
-                type="single"
-                min={0}
-                max={200}
-                step={1}
-                value={$msParamsStore.width}
-                onValueChange={(value) => handleWidthChange(value as number)}
-            />
+            <div class="-my-0.5">
+                <CustomSlider
+                    type="single"
+                    min={c.min}
+                    max={c.max}
+                    step={c.step}
+                    {value}
+                    origin={c.origin}
+                    label={c.label}
+                    onValueChange={(v) => onChange(c.key, v as number)}
+                />
+            </div>
         </div>
-    {/if}
+    {/each}
 
-    <!-- Mid Gain Control -->
-    <div class="flex flex-col gap-y-1">
-        <div class="flex items-center justify-between">
-            <Label for="mid-gain" class="text-sm text-ink-muted">Mid Gain</Label>
-            <span class="text-xs text-ink-dim"
-                >{$msParamsStore.midGain > 0 ? '+' : ''}{$msParamsStore.midGain.toFixed(1)} dB</span
-            >
-        </div>
-        <CustomSlider
-            type="single"
-            min={-12}
-            max={12}
-            step={0.5}
-            value={$msParamsStore.midGain}
-            onValueChange={(value) => handleMidGainChange(value as number)}
-        />
-    </div>
-
-    <!-- Side Gain Control -->
-    <div class="flex flex-col gap-y-1">
-        <div class="flex items-center justify-between">
-            <Label for="side-gain" class="text-sm text-ink-muted">Side Gain</Label>
-            <span class="text-xs text-ink-dim"
-                >{$msParamsStore.sideGain > 0 ? '+' : ''}{$msParamsStore.sideGain.toFixed(1)} dB</span
-            >
-        </div>
-        <CustomSlider
-            type="single"
-            min={-12}
-            max={12}
-            step={0.5}
-            value={$msParamsStore.sideGain}
-            onValueChange={(value) => handleSideGainChange(value as number)}
-        />
-    </div>
-
-    <!-- Balance Control -->
-    <div class="flex flex-col gap-y-1">
-        <div class="flex items-center justify-between">
-            <Label for="balance" class="text-sm text-ink-muted">Balance</Label>
-            <span class="text-xs text-ink-dim">
-                {#if $msParamsStore.balance === 0}
-                    Center
-                {:else if $msParamsStore.balance < 0}
-                    L {Math.abs($msParamsStore.balance)}
-                {:else}
-                    R {$msParamsStore.balance}
-                {/if}
-            </span>
-        </div>
-        <CustomSlider
-            type="single"
-            min={-100}
-            max={100}
-            step={1}
-            value={$msParamsStore.balance}
-            onValueChange={(value) => handleBalanceChange(value as number)}
-        />
-    </div>
+    <p class="mt-auto text-[11px] leading-snug text-ink-muted">
+        Width 0% folds to mono, 200% pushes the sides out. Mid is what sits in the centre (vocals,
+        bass), side what is panned away from it.
+    </p>
 </div>

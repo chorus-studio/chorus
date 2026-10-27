@@ -19,7 +19,7 @@
     // A preset hidden under Settings leaves the row as well.
     const chips = $derived($effectFrequents[list].filter((f) => allowed.includes(f.value)))
     const current = $derived(
-        kind === 'reverb' ? resolveReverbPreset($effectsStore.reverb) : $effectsStore.equalizer
+        kind === 'reverb' ? resolveReverbPreset($effectsStore.reverb) : $effectsStore[kind]
     )
 
     function select(value: string) {

@@ -34,7 +34,7 @@
     import { applyPresetValues } from '$lib/utils/quick-presets'
     import { lofiStore, type LofiEffectKey } from '$lib/stores/lofi'
     import { effectsStore } from '$lib/stores/effects'
-    import { eqSubView, fxSubView, presetsSubView } from '$lib/stores/effects-ui'
+    import { eqSubView, fxSubView, msSubView, presetsSubView } from '$lib/stores/effects-ui'
 
     const params = new URLSearchParams(location.search)
     const scene = params.get('scene') ?? 'tabs'
@@ -87,18 +87,24 @@
         ['Lady Love by Thee Sacred Souls', '#5c4a6b', 0],
         ['Get Sun by Hiatus Kaiyote', '#b3833a', 90 * DAY]
     ] as const
-    let ready = $state(dialog !== 'blocked' && !['presets', 'fx', 'eq'].includes(tab))
+    let ready = $state(dialog !== 'blocked' && !['presets', 'fx', 'eq', 'ms'].includes(tab))
 
-    // ?tab=fx&reverb=hall and ?tab=eq&eq=Rock seed the effect tabs with that
-    // preset on; &view=config opens the Config half instead of Presets.
+    // ?tab=fx&reverb=hall, ?tab=eq&eq=Rock and ?tab=ms&ms=wide seed the effect
+    // tabs with that preset on; &view=config opens the Config half instead of
+    // Presets.
     onMount(async () => {
-        if (tab !== 'fx' && tab !== 'eq') return
+        if (tab !== 'fx' && tab !== 'eq' && tab !== 'ms') return
         await new Promise((resolve) => setTimeout(resolve, 20))
         const reverb = params.get('reverb')
         const eq = params.get('eq')
+        const ms = params.get('ms')
         if (reverb) await effectsStore.updateEffect({ key: 'reverb', value: reverb })
         if (eq) await effectsStore.updateEffect({ key: 'equalizer', value: eq })
-        if (params.get('view') === 'config') (tab === 'fx' ? fxSubView : eqSubView).set('config')
+        if (ms) await effectsStore.updateEffect({ key: 'msProcessor', value: ms })
+        if (params.get('view') === 'config') {
+            const subView = tab === 'fx' ? fxSubView : tab === 'eq' ? eqSubView : msSubView
+            subView.set('config')
+        }
         ready = true
     })
 
