@@ -114,7 +114,9 @@
         commands: {
             getAll: () => [
                 { name: 'audio-preset-1', shortcut: 'Alt+Shift+1' },
-                { name: 'audio-preset-2', shortcut: 'Alt+Shift+2' }
+                { name: 'audio-preset-2', shortcut: 'Alt+Shift+2' },
+                { name: 'seek-rewind', shortcut: 'Alt+Shift+Left' },
+                { name: 'seek-forward', shortcut: 'Alt+Shift+Right' }
             ]
         }
     }
