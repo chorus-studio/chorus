@@ -1,10 +1,11 @@
 <script lang="ts">
-    // The lovelofi rack, knob by knob: twelve cells in a grid that fits the
-    // popover without scrolling. Each cell is a switch (the name), an intensity
-    // slider and a readout; the rack's own five-band EQ shows as a curve, since
-    // the EQ tab is where bands are edited, and slowdown lives in Speed. Every
-    // change writes the lofi store, so the Presets tab's "tweaked from" line
-    // and the saved slots see exactly what is playing.
+    // The lovelofi rack, knob by knob, drilled down to from the Presets tab:
+    // twelve cells in a grid that fits the popover without scrolling. Each cell
+    // is a switch (the name), an intensity slider and a readout; the rack's own
+    // five-band EQ shows as a curve, since the EQ tab is where bands are
+    // edited, and slowdown lives in Speed. Every change writes the lofi store,
+    // so the cards' "tweaked from" line and the saved slots see exactly what is
+    // playing.
     import { onMount } from 'svelte'
 
     import { configStore } from '$lib/stores/config'
@@ -26,13 +27,13 @@
     import { DEFAULT_EQUALIZER_BANDS } from '$lib/audio-effects/lofi/audio/effect-settings'
 
     import Plus from '@lucide/svelte/icons/plus'
+    import ChevronLeft from '@lucide/svelte/icons/chevron-left'
 
     import CustomSlider from '$lib/components/ui/custom-slider/custom-slider.svelte'
     import SegmentedControl from '$lib/components/SegmentedControl.svelte'
     import { cn } from '$lib/utils.js'
 
-    let { pip = false }: { pip?: boolean } = $props()
-    void pip
+    let { onBack }: { onBack: () => void } = $props()
 
     type Knob = { key: LofiEffectKey; label: string; title: string }
     type Cell = Knob | { key: 'equalizer' | 'reverb'; label: string; title: string }
@@ -98,7 +99,7 @@
     const mine = $derived($configStore.audio_presets)
     const active = $derived(matchPreset(current, [...QUICK_PRESETS, ...mine]))
     const normal = $derived(isNormal(current))
-    const statusName = $derived(!on ? 'off' : active ? active.name : 'Custom')
+    const statusName = $derived(!on ? 'Texture off' : active ? active.name : 'Custom texture')
     const tweakedFrom = $derived(on && !active ? $lastApplied : null)
 
     const isKnob = (cell: Cell): cell is Knob => cell.key !== 'equalizer' && cell.key !== 'reverb'
@@ -128,8 +129,8 @@
         if (normal) return
         const name = active?.name ?? `Preset ${mine.length + 1}`
         const slot = await addPresetSlot(current, name)
-        if (slot === null) say('All five slots are used · remove one in Presets → Mine')
-        else say(`Saved as ${name} · slot ${slot} · see Presets → Mine`)
+        if (slot === null) say('All five slots are used · remove one in Mine')
+        else say(`Saved as ${name} · slot ${slot} · see Mine`)
     }
 
     /** Bar height for a band's gain: ±12 dB fills half the 12 px box. */
@@ -151,12 +152,20 @@
 <div class="flex h-full flex-col gap-y-2">
     <div class="flex h-[22px] items-center justify-between gap-x-2">
         <div class="flex min-w-0 items-center gap-x-2 text-xs text-ink-fg-2">
+            <button
+                type="button"
+                onclick={onBack}
+                title="Back to the preset cards"
+                class="chorus-focus -ml-1 inline-flex h-[22px] shrink-0 items-center gap-x-0.5 rounded-md pl-0.5 pr-1.5 text-ink-fg-2 transition-colors hover:bg-surface-2 hover:text-ink-fg"
+            >
+                <ChevronLeft class="size-3.5" />
+                Presets
+            </button>
             <span class="led {on ? '' : 'led-off'}"></span>
             {#if notice}
                 <span class="truncate text-amber">{notice}</span>
             {:else}
                 <span class="truncate">
-                    Texture ·
                     {#if tweakedFrom}
                         tweaked from <span class="font-medium text-ink-fg">{tweakedFrom}</span>
                     {:else}

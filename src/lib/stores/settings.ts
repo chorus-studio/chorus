@@ -38,7 +38,6 @@ export type SettingsState = {
     }
     views: {
         presets: boolean
-        texture: boolean
         snip: boolean
         seek: boolean
         speed: boolean
@@ -74,7 +73,6 @@ const defaultSettingsState: SettingsState = {
     },
     views: {
         presets: true,
-        texture: true,
         speed: true,
         snip: true,
         seek: true,

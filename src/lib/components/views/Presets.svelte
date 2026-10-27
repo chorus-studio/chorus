@@ -18,7 +18,8 @@
         type QuickPreset,
         type QuickPresetGroup
     } from '$lib/audio-effects/quick-presets'
-    import { addPresetSlot, applyNormal, lastApplied, togglePreset } from '$lib/utils/quick-presets'
+    import { addPresetSlot, lastApplied, togglePreset } from '$lib/utils/quick-presets'
+    import { presetsSubView } from '$lib/stores/effects-ui'
     import { boundShortcuts, openShortcutSettings, shortcutKeys } from '$lib/utils/shortcuts'
 
     import Moon from '@lucide/svelte/icons/moon'
@@ -72,9 +73,11 @@
     import Plus from '@lucide/svelte/icons/plus'
     import Trash2 from '@lucide/svelte/icons/trash-2'
     import ExternalLink from '@lucide/svelte/icons/external-link'
+    import SlidersHorizontal from '@lucide/svelte/icons/sliders-horizontal'
 
     import { Button } from '$lib/components/ui/button'
     import SegmentedControl from '$lib/components/SegmentedControl.svelte'
+    import Texture from '$lib/components/views/Texture.svelte'
     import { cn } from '$lib/utils.js'
 
     let { pip = false }: { pip?: boolean } = $props()
@@ -152,7 +155,9 @@
     const mine = $derived($configStore.audio_presets)
     const active = $derived(matchPreset(current, [...QUICK_PRESETS, ...mine]))
     const normal = $derived(isNormal(current))
-    const statusName = $derived(active ? active.name : normal ? 'off' : 'Custom')
+    // The tab is named Presets, so the line needs no prefix: the name playing,
+    // "tweaked from" it, "Custom" for a sound built by hand, or "Off".
+    const statusName = $derived(active ? active.name : normal ? 'Off' : 'Custom')
     const tweakedFrom = $derived(!active && !normal ? $lastApplied : null)
 
     const sections = $derived(group === 'mine' ? [] : sectionsOf(group, builtIns))
@@ -163,6 +168,8 @@
         ...QUICK_PRESET_GROUPS.map((g) => ({ label: g.label, value: g.id })),
         { label: 'Mine', value: 'mine', hint: mine.length ? String(mine.length) : undefined }
     ])
+
+    const openRack = () => presetsSubView.set('rack')
 
     async function setGroup(value: string) {
         group = value as Group
@@ -228,239 +235,280 @@
         boundShortcuts().then((bound) => (shortcuts = bound))
         return () => {
             if (noticeTimer) clearTimeout(noticeTimer)
+            // Leaving the tab leaves the rack too; it opens on the cards next time.
+            presetsSubView.set('cards')
         }
     })
 </script>
 
-<div class="flex h-full flex-col gap-y-2.5">
-    <div class="flex items-center justify-between gap-x-2">
-        <div class="flex min-w-0 items-center gap-x-2 text-xs text-ink-fg-2">
-            <span class="led {active || !normal ? '' : 'led-off'}"></span>
-            {#if notice}
-                <span class="truncate text-amber">{notice}</span>
-            {:else}
-                <span class="truncate">
-                    Preset · <span class="font-medium text-ink-fg">{statusName}</span>
-                    {#if tweakedFrom}
-                        <span class="text-ink-muted">· tweaked from {tweakedFrom}</span>
-                    {/if}
-                </span>
-            {/if}
-        </div>
-        <SegmentedControl
-            size="xs"
-            ariaLabel="Preset group"
-            value={group}
-            onValueChange={setGroup}
-            {options}
-        />
-    </div>
-
-    {#if group !== 'mine'}
-        {#if visibleCount === 0}
-            <p class="py-8 text-center text-xs text-ink-muted">
-                Every preset in this group is hidden. Bring them back under Settings → Hidden
-                presets.
-            </p>
-        {/if}
-        {#each sections as section (section.title ?? '')}
-            <div class="flex flex-col gap-y-1.5">
-                {#if section.title}
-                    <span class="rack-label">{section.title}</span>
+{#if $presetsSubView === 'rack'}
+    <Texture onBack={() => presetsSubView.set('cards')} />
+{:else}
+    <div class="flex h-full flex-col gap-y-2.5">
+        <div class="flex items-center justify-between gap-x-2">
+            <div class="flex min-w-0 items-center gap-x-2 text-xs text-ink-fg-2">
+                <span class="led {active || !normal ? '' : 'led-off'}"></span>
+                {#if notice}
+                    <span class="truncate text-amber">{notice}</span>
+                {:else}
+                    <span class="truncate">
+                        {#if tweakedFrom}
+                            tweaked from <span class="font-medium text-ink-fg">{tweakedFrom}</span>
+                        {:else}
+                            <span class="font-medium text-ink-fg">{statusName}</span>
+                        {/if}
+                    </span>
                 {/if}
-                <div class="grid grid-cols-2 gap-1.5">
-                    {#each section.presets as preset (preset.id)}
-                        {@const on = active?.id === preset.id}
-                        {@const Icon = ICONS[preset.icon] ?? Sparkles}
-                        {@const chips = recipe(preset).join(' · ')}
-                        <div
-                            class={cn(
-                                'group relative flex h-14 flex-col justify-center gap-y-1 rounded-lg border px-2.5 transition-colors',
-                                on
-                                    ? 'border-signal bg-signal/[0.08]'
-                                    : 'border-hairline bg-panel hover:bg-surface-2'
-                            )}
-                        >
+                <button
+                    type="button"
+                    onclick={openRack}
+                    aria-label="Tweak the texture"
+                    title="Tweak the texture: low-pass, tape, reverb and the rest, knob by knob"
+                    class="chorus-focus inline-flex size-6 shrink-0 items-center justify-center rounded-md text-ink-muted transition-colors hover:bg-surface-2 hover:text-ink-fg"
+                >
+                    <SlidersHorizontal class="size-3.5" />
+                </button>
+            </div>
+            <SegmentedControl
+                size="xs"
+                ariaLabel="Preset group"
+                value={group}
+                onValueChange={setGroup}
+                {options}
+            />
+        </div>
+
+        {#if group !== 'mine'}
+            {#if visibleCount === 0}
+                <p class="py-8 text-center text-xs text-ink-muted">
+                    Every preset in this group is hidden. Bring them back under Settings → Hidden
+                    presets.
+                </p>
+            {/if}
+            {#each sections as section (section.title ?? '')}
+                <div class="flex flex-col gap-y-1.5">
+                    {#if section.title}
+                        <span class="rack-label">{section.title}</span>
+                    {/if}
+                    <div class="grid grid-cols-2 gap-1.5">
+                        {#each section.presets as preset (preset.id)}
+                            {@const on = active?.id === preset.id}
+                            {@const Icon = ICONS[preset.icon] ?? Sparkles}
+                            {@const chips = recipe(preset).join(' · ')}
+                            <div
+                                class={cn(
+                                    'group relative flex h-14 flex-col justify-center gap-y-1 rounded-lg border px-2.5 transition-colors',
+                                    on
+                                        ? 'border-signal bg-signal/[0.08]'
+                                        : 'border-hairline bg-panel hover:bg-surface-2'
+                                )}
+                            >
+                                <button
+                                    type="button"
+                                    aria-pressed={on}
+                                    title={on
+                                        ? `${preset.name} · tap to turn off`
+                                        : `${preset.description}\n${chips}`}
+                                    onclick={() => togglePreset(preset)}
+                                    class="chorus-focus absolute inset-0 rounded-lg"
+                                >
+                                    <span class="sr-only">{preset.name}</span>
+                                </button>
+                                <span
+                                    class="pointer-events-none flex items-center gap-x-1.5 text-xs font-medium leading-none text-ink-fg"
+                                >
+                                    <Icon
+                                        class={cn(
+                                            'size-3.5 shrink-0',
+                                            on ? 'text-signal' : 'text-ink-muted'
+                                        )}
+                                    />
+                                    <span class="truncate">{preset.name}</span>
+                                    {#if on}
+                                        <span class="led" aria-label="active"></span>
+                                    {/if}
+                                </span>
+                                <span
+                                    class={cn(
+                                        'pointer-events-none truncate font-mono text-[10px] leading-3 text-ink-muted',
+                                        on ? 'pr-10' : 'pr-5'
+                                    )}>{chips}</span
+                                >
+                                {#if on}
+                                    <button
+                                        type="button"
+                                        aria-label={`Tweak ${preset.name}`}
+                                        title="Tweak the texture"
+                                        onclick={openRack}
+                                        class="chorus-focus absolute bottom-1 right-6 inline-flex size-5 items-center justify-center rounded text-signal transition-colors hover:bg-surface"
+                                    >
+                                        <SlidersHorizontal class="size-3" />
+                                    </button>
+                                {/if}
+                                <button
+                                    type="button"
+                                    aria-label={`Pin ${preset.name} to a shortcut slot`}
+                                    title="Pin to a shortcut slot"
+                                    onclick={() => pinToSlot(preset)}
+                                    class="chorus-focus absolute bottom-1 right-1 inline-flex size-5 items-center justify-center rounded text-ink-muted opacity-0 transition-opacity hover:bg-surface hover:text-ink-fg focus-visible:opacity-100 group-hover:opacity-100"
+                                >
+                                    <Keyboard class="size-3" />
+                                </button>
+                            </div>
+                        {/each}
+                    </div>
+                </div>
+            {/each}
+        {:else}
+            <div class="flex min-h-0 flex-1 flex-col gap-y-1.5">
+                {#each mine as preset, index (preset.id)}
+                    {@const on = active?.id === preset.id}
+                    {@const combo = shortcuts[`audio-preset-${index + 1}`] ?? ''}
+                    {@const editing = editingId === preset.id}
+                    <div
+                        class={cn(
+                            'group relative flex h-9 shrink-0 items-center gap-x-2.5 rounded-lg border pl-3 pr-1 transition-colors',
+                            on
+                                ? 'border-signal bg-signal/[0.08]'
+                                : 'border-hairline bg-panel hover:bg-surface-2'
+                        )}
+                    >
+                        {#if !editing}
                             <button
                                 type="button"
                                 aria-pressed={on}
                                 title={on
                                     ? `${preset.name} · tap to turn off`
-                                    : `${preset.description}\n${chips}`}
+                                    : recipe(preset).join(' · ')}
                                 onclick={() => togglePreset(preset)}
                                 class="chorus-focus absolute inset-0 rounded-lg"
                             >
                                 <span class="sr-only">{preset.name}</span>
                             </button>
+                        {/if}
+                        {#if editing}
+                            <input
+                                type="text"
+                                aria-label="Preset name"
+                                maxlength="24"
+                                bind:value={draftName}
+                                use:focusAndSelect
+                                onblur={commitRename}
+                                onkeydown={(e) => {
+                                    if (e.key === 'Enter') commitRename()
+                                    if (e.key === 'Escape') editingId = null
+                                }}
+                                class="readout relative z-10 h-6 w-32 px-2 text-xs focus-visible:border-signal/60 focus-visible:outline-none"
+                            />
+                        {:else}
                             <span
-                                class="pointer-events-none flex items-center gap-x-1.5 text-xs font-medium leading-none text-ink-fg"
+                                class="pointer-events-none flex shrink-0 items-center gap-x-1.5 text-xs font-medium text-ink-fg"
                             >
-                                <Icon
-                                    class={cn(
-                                        'size-3.5 shrink-0',
-                                        on ? 'text-signal' : 'text-ink-muted'
-                                    )}
-                                />
-                                <span class="truncate">{preset.name}</span>
+                                <span class="max-w-32 truncate">{preset.name}</span>
                                 {#if on}
                                     <span class="led" aria-label="active"></span>
                                 {/if}
                             </span>
-                            <span
-                                class="pointer-events-none truncate pr-5 font-mono text-[10px] leading-3 text-ink-muted"
-                                >{chips}</span
-                            >
-                            <button
-                                type="button"
-                                aria-label={`Pin ${preset.name} to a shortcut slot`}
-                                title="Pin to a shortcut slot"
-                                onclick={() => pinToSlot(preset)}
-                                class="chorus-focus absolute bottom-1 right-1 inline-flex size-5 items-center justify-center rounded text-ink-muted opacity-0 transition-opacity hover:bg-surface hover:text-ink-fg focus-visible:opacity-100 group-hover:opacity-100"
-                            >
-                                <Keyboard class="size-3" />
-                            </button>
-                        </div>
-                    {/each}
-                </div>
-            </div>
-        {/each}
-    {:else}
-        <div class="flex min-h-0 flex-1 flex-col gap-y-1.5">
-            {#each mine as preset, index (preset.id)}
-                {@const on = active?.id === preset.id}
-                {@const combo = shortcuts[`audio-preset-${index + 1}`] ?? ''}
-                {@const editing = editingId === preset.id}
-                <div
-                    class={cn(
-                        'group relative flex h-9 shrink-0 items-center gap-x-2.5 rounded-lg border pl-3 pr-1 transition-colors',
-                        on
-                            ? 'border-signal bg-signal/[0.08]'
-                            : 'border-hairline bg-panel hover:bg-surface-2'
-                    )}
-                >
-                    {#if !editing}
-                        <button
-                            type="button"
-                            aria-pressed={on}
-                            title={on
-                                ? `${preset.name} · tap to turn off`
-                                : recipe(preset).join(' · ')}
-                            onclick={() => togglePreset(preset)}
-                            class="chorus-focus absolute inset-0 rounded-lg"
-                        >
-                            <span class="sr-only">{preset.name}</span>
-                        </button>
-                    {/if}
-                    {#if editing}
-                        <input
-                            type="text"
-                            aria-label="Preset name"
-                            maxlength="24"
-                            bind:value={draftName}
-                            use:focusAndSelect
-                            onblur={commitRename}
-                            onkeydown={(e) => {
-                                if (e.key === 'Enter') commitRename()
-                                if (e.key === 'Escape') editingId = null
-                            }}
-                            class="readout relative z-10 h-6 w-32 px-2 text-xs focus-visible:border-signal/60 focus-visible:outline-none"
-                        />
-                    {:else}
+                        {/if}
                         <span
-                            class="pointer-events-none flex shrink-0 items-center gap-x-1.5 text-xs font-medium text-ink-fg"
+                            class="pointer-events-none flex min-w-0 flex-1 items-center gap-x-1 overflow-hidden [mask-image:linear-gradient(to_right,black_calc(100%-20px),transparent)]"
                         >
-                            <span class="max-w-32 truncate">{preset.name}</span>
-                            {#if on}
-                                <span class="led" aria-label="active"></span>
-                            {/if}
-                        </span>
-                    {/if}
-                    <span
-                        class="pointer-events-none flex min-w-0 flex-1 items-center gap-x-1 overflow-hidden [mask-image:linear-gradient(to_right,black_calc(100%-20px),transparent)]"
-                    >
-                        {#each recipe(preset) as chip (chip)}
-                            <span
-                                class="inline-flex h-[18px] shrink-0 items-center rounded-[4px] border border-hairline bg-surface px-1.5 font-mono text-[10px] text-ink-fg-2"
-                                >{chip}</span
-                            >
-                        {/each}
-                    </span>
-                    {#if combo}
-                        <span
-                            class="pointer-events-none flex shrink-0 items-center gap-x-0.5"
-                            aria-label={`Shortcut ${combo}`}
-                        >
-                            {#each shortcutKeys(combo) as key (key)}
-                                <kbd
-                                    class="rounded border border-hairline-strong bg-surface px-1 py-0.5 font-mono text-[10px] leading-none text-ink-fg-2"
-                                    >{key}</kbd
+                            {#each recipe(preset) as chip (chip)}
+                                <span
+                                    class="inline-flex h-[18px] shrink-0 items-center rounded-[4px] border border-hairline bg-surface px-1.5 font-mono text-[10px] text-ink-fg-2"
+                                    >{chip}</span
                                 >
                             {/each}
                         </span>
-                    {/if}
-                    <span
-                        class="relative z-10 flex shrink-0 items-center opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100"
+                        {#if combo}
+                            <span
+                                class="pointer-events-none flex shrink-0 items-center gap-x-0.5"
+                                aria-label={`Shortcut ${combo}`}
+                            >
+                                {#each shortcutKeys(combo) as key (key)}
+                                    <kbd
+                                        class="rounded border border-hairline-strong bg-surface px-1 py-0.5 font-mono text-[10px] leading-none text-ink-fg-2"
+                                        >{key}</kbd
+                                    >
+                                {/each}
+                            </span>
+                        {/if}
+                        {#if on}
+                            <Button
+                                size="icon-xs"
+                                variant="ghost"
+                                aria-label={`Tweak ${preset.name}`}
+                                title="Tweak the texture"
+                                onclick={openRack}
+                                class="relative z-10 shrink-0 text-signal"
+                            >
+                                <SlidersHorizontal class="size-3" />
+                            </Button>
+                        {/if}
+                        <span
+                            class="relative z-10 flex shrink-0 items-center opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100"
+                        >
+                            <Button
+                                size="icon-xs"
+                                variant="ghost"
+                                aria-label={`Rename ${preset.name}`}
+                                title="Rename"
+                                onclick={() => startRename(preset)}
+                            >
+                                <Pencil class="size-3" />
+                            </Button>
+                            <Button
+                                size="icon-xs"
+                                variant="ghost"
+                                aria-label={`Remove ${preset.name}`}
+                                title="Remove"
+                                onclick={() => remove(preset)}
+                                class="hover:text-alarm"
+                            >
+                                <Trash2 class="size-3" />
+                            </Button>
+                        </span>
+                    </div>
+                {/each}
+
+                {#if slotsLeft > 0}
+                    <button
+                        type="button"
+                        onclick={saveCurrent}
+                        disabled={normal}
+                        title={normal
+                            ? 'Nothing is on. Tap a preset or move a knob first.'
+                            : 'Save the current rate, pitch, key, reverb, EQ, stereo and texture as a slot'}
+                        class="chorus-focus flex h-9 w-full shrink-0 items-center justify-center gap-x-2 rounded-lg border border-dashed border-hairline-strong text-xs text-ink-muted transition-colors enabled:hover:border-signal/50 enabled:hover:text-ink-fg disabled:opacity-50"
                     >
-                        <Button
-                            size="icon-xs"
-                            variant="ghost"
-                            aria-label={`Rename ${preset.name}`}
-                            title="Rename"
-                            onclick={() => startRename(preset)}
+                        <Plus class="size-3.5" />
+                        Save what's playing as Preset {mine.length + 1}
+                        <span class="font-mono text-[10px] text-ink-dim"
+                            >· {slotsLeft} {slotsLeft === 1 ? 'slot' : 'slots'} left</span
                         >
-                            <Pencil class="size-3" />
-                        </Button>
-                        <Button
-                            size="icon-xs"
-                            variant="ghost"
-                            aria-label={`Remove ${preset.name}`}
-                            title="Remove"
-                            onclick={() => remove(preset)}
-                            class="hover:text-alarm"
-                        >
-                            <Trash2 class="size-3" />
-                        </Button>
+                    </button>
+                {/if}
+
+                <div
+                    class="mt-auto flex items-center justify-between gap-x-3 pt-1 text-[11px] text-ink-muted"
+                >
+                    <span>
+                        {#if mine.length === 0}
+                            Tap a preset, tweak it in the other tabs, then save what's playing.
+                        {:else}
+                            Each slot has a keyboard shortcut. Press it again to turn it off.
+                        {/if}
                     </span>
-                </div>
-            {/each}
-
-            {#if slotsLeft > 0}
-                <button
-                    type="button"
-                    onclick={saveCurrent}
-                    disabled={normal}
-                    title={normal
-                        ? 'Nothing is on. Tap a preset or move a knob first.'
-                        : 'Save the current rate, pitch, key, reverb, EQ, stereo and texture as a slot'}
-                    class="chorus-focus flex h-9 w-full shrink-0 items-center justify-center gap-x-2 rounded-lg border border-dashed border-hairline-strong text-xs text-ink-muted transition-colors enabled:hover:border-signal/50 enabled:hover:text-ink-fg disabled:opacity-50"
-                >
-                    <Plus class="size-3.5" />
-                    Save what's playing as Preset {mine.length + 1}
-                    <span class="font-mono text-[10px] text-ink-dim"
-                        >· {slotsLeft} {slotsLeft === 1 ? 'slot' : 'slots'} left</span
+                    <button
+                        type="button"
+                        onclick={openShortcutSettings}
+                        class="chorus-focus inline-flex shrink-0 items-center gap-x-1 rounded-md px-1 text-amber hover:underline"
                     >
-                </button>
-            {/if}
-
-            <div
-                class="mt-auto flex items-center justify-between gap-x-3 pt-1 text-[11px] text-ink-muted"
-            >
-                <span>
-                    {#if mine.length === 0}
-                        Tap a preset, tweak it in the other tabs, then save what's playing.
-                    {:else}
-                        Each slot has a keyboard shortcut. Press it again to turn it off.
-                    {/if}
-                </span>
-                <button
-                    type="button"
-                    onclick={openShortcutSettings}
-                    class="chorus-focus inline-flex shrink-0 items-center gap-x-1 rounded-md px-1 text-amber hover:underline"
-                >
-                    Edit shortcuts
-                    <ExternalLink class="size-3" />
-                </button>
+                        Edit shortcuts
+                        <ExternalLink class="size-3" />
+                    </button>
+                </div>
             </div>
-        </div>
-    {/if}
-</div>
+        {/if}
+    </div>
+{/if}

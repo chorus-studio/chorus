@@ -7,7 +7,7 @@
     import { lofiStore } from '$lib/stores/lofi'
     import { reverbParamsStore } from '$lib/stores/reverb-params'
     import { eqBandsStore } from '$lib/stores/eq-bands'
-    import { eqSubView, fxSubView } from '$lib/stores/effects-ui'
+    import { eqSubView, fxSubView, presetsSubView } from '$lib/stores/effects-ui'
     import { nowPlaying } from '$lib/stores/now-playing'
     import { playbackStore, defaultPlayback } from '$lib/stores/playback'
     import { applyNormal } from '$lib/utils/quick-presets'
@@ -145,10 +145,12 @@
     }
 
     async function handleReset() {
-        // Presets: everything audio back to normal in one go.
-        if (tab === 'presets') return applyNormal()
-        // Texture: every rack effect off; speed and the Chorus slots stay.
-        if (tab === 'texture') return lofiStore.reset()
+        // Presets: everything audio back to normal in one go; in the rack view
+        // only the rack goes off, speed and the Chorus slots stay.
+        if (tab === 'presets') {
+            if (get(presetsSubView) === 'rack') return lofiStore.reset()
+            return applyNormal()
+        }
 
         // fx/eq share effectsStore but each tab must reset ONLY its own effect —
         // effectsStore.reset() would wipe both reverb and the equalizer at once.
@@ -204,16 +206,15 @@
                         $playbackStore.track.semitone != 0))
         )
     )
-    const hasActions = $derived(
-        ['presets', 'texture', 'fx', 'eq', 'snip', 'speed', 'seek'].includes(tab)
-    )
+    const hasActions = $derived(['presets', 'fx', 'eq', 'snip', 'speed', 'seek'].includes(tab))
     // fx/eq: "Turn off" in the presets view, "Reset config" while editing.
     const effectSub = $derived(tab === 'fx' ? $fxSubView : tab === 'eq' ? $eqSubView : null)
+    const inRack = $derived(tab === 'presets' && $presetsSubView === 'rack')
     const resetLabel = $derived(
-        tab === 'presets'
-            ? 'Normal'
-            : tab === 'texture'
-              ? 'Turn off'
+        inRack
+            ? 'Turn off'
+            : tab === 'presets'
+              ? 'Normal'
               : effectSub === null
                 ? 'Reset'
                 : effectSub === 'config'
@@ -221,10 +222,10 @@
                   : 'Turn off'
     )
     const resetTitle = $derived(
-        tab === 'presets'
-            ? 'Rate, pitch, key, reverb, EQ and stereo back to normal'
-            : tab === 'texture'
-              ? 'Switch every texture effect off'
+        inRack
+            ? 'Switch every texture effect off'
+            : tab === 'presets'
+              ? 'Rate, pitch, key, reverb, EQ and stereo back to normal'
               : tab === 'snip'
                 ? 'Reset to the whole track'
                 : tab === 'speed'

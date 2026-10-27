@@ -33,6 +33,7 @@
     import { NORMAL_VALUES, QUICK_PRESETS, quickPresetById } from '$lib/audio-effects/quick-presets'
     import { applyPresetValues } from '$lib/utils/quick-presets'
     import { lofiStore, type LofiEffectKey } from '$lib/stores/lofi'
+    import { presetsSubView } from '$lib/stores/effects-ui'
 
     const params = new URLSearchParams(location.search)
     const scene = params.get('scene') ?? 'tabs'
@@ -85,16 +86,15 @@
         ['Lady Love by Thee Sacred Souls', '#5c4a6b', 0],
         ['Get Sun by Hiatus Kaiyote', '#b3833a', 90 * DAY]
     ] as const
-    const seedsPresets = tab === 'presets' || tab === 'texture'
-    let ready = $state(dialog !== 'blocked' && !seedsPresets)
+    let ready = $state(dialog !== 'blocked' && tab !== 'presets')
 
     // ?tab=presets&preset=nightcore&group=mine&mine=1 seeds the Presets tab: the
     // named built-in applied (so its card is lit), the group to open on, and two
     // saved slots for Mine. The frame mounts once the stores hold all of it.
-    // ?tab=texture&preset=late-night-study&tweak=lowPass:34 does the same for
-    // the Texture tab, with one knob nudged so the status reads "tweaked from".
+    // &view=rack opens the texture rack instead of the cards, and
+    // &tweak=lowPass:50 nudges one knob so the status reads "tweaked from".
     onMount(async () => {
-        if (!seedsPresets) return
+        if (tab !== 'presets') return
         // The stores hydrate from (shim) storage in microtasks after import; a
         // macrotask later they are settled, so the seed below is not overwritten.
         await new Promise((resolve) => setTimeout(resolve, 20))
@@ -106,6 +106,7 @@
         if (knob && amount) {
             await lofiStore.update(knob as LofiEffectKey, { intensity: Number(amount) })
         }
+        if (params.get('view') === 'rack') presetsSubView.set('rack')
         if (params.get('mine') === '1') {
             const lofi = QUICK_PRESETS.find((p) => p.id === 'classic-lofi') ?? QUICK_PRESETS[0]
             await configStore.updateConfig({
