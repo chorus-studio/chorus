@@ -9,9 +9,11 @@ import { defaultAudioEffect, type AudioEffect } from '$lib/stores/effects'
 import { resolveReverbPreset } from '$lib/audio-effects/reverb/presets'
 import {
     DEFAULT_EFFECT_SETTINGS,
+    DEFAULT_EQUALIZER_BANDS,
     normalizeEffectSettings,
     type EffectSettings,
-    type EffectSettingsInput
+    type EffectSettingsInput,
+    type EqualizerSettings
 } from '$lib/audio-effects/lofi/audio/effect-settings'
 import { DEFAULT_REVERB_PROFILE } from '$lib/audio-effects/lofi/audio/effects/reverb'
 import type { Preset as LovelofiPreset } from '$lib/audio-effects/lofi/constants'
@@ -69,6 +71,16 @@ const fx = (effect: Partial<AudioEffect>): AudioEffect => ({ ...defaultAudioEffe
 
 /** lovelofi settings with every effect off except the ones named. */
 const lo = (settings: EffectSettingsInput = {}): EffectSettings => normalizeEffectSettings(settings)
+
+/**
+ * The rack's five-band EQ (90 Hz, 250 Hz, 1 kHz, 3.5 kHz, 9 kHz) from five
+ * gains in dB. It reaches ±12 dB, which is why the Tools use it: the Chorus EQ
+ * presets stay within a couple of dB and are easy to miss.
+ */
+const eq = (gains: [number, number, number, number, number]): EqualizerSettings => ({
+    enabled: true,
+    bands: DEFAULT_EQUALIZER_BANDS.map((band, i) => ({ ...band, gain: gains[i] }))
+})
 
 /**
  * lovelofi's slowdown re-reads a buffer at 1 − intensity/200 (100 = half speed,
@@ -183,14 +195,61 @@ export const QUICK_PRESETS: QuickPreset[] = [
         lofi: lo({ reverb: { enabled: true, intensity: 15, profile: 'studio' } })
     },
     {
+        id: 'sped-up-lofi',
+        name: 'Sped-up lo-fi',
+        description:
+            'Faster and brighter, then softened: a little dull, warm, with some room and dust.',
+        group: 'vibes',
+        icon: 'rabbit',
+        playback: pb({ rate: 1.15, keepPitch: false }),
+        effect: fx({}),
+        lofi: lo({
+            lowPass: { enabled: true, intensity: 30 },
+            tapeSaturation: { enabled: true, intensity: 16 },
+            reverb: { enabled: true, intensity: 16, profile: 'studio' },
+            vinylCrackle: { enabled: true, intensity: 10 }
+        })
+    },
+    {
         id: 'slowed-reverb',
         name: 'Slowed + reverb',
-        description: 'The classic edit: slower, lower, and washed in a hall.',
+        description: 'The classic edit: slower, lower, a little dull, and washed in a hall.',
         group: 'vibes',
         icon: 'rewind',
         playback: pb({ rate: 0.85, keepPitch: false }),
         effect: fx({}),
-        lofi: lo({ reverb: { enabled: true, intensity: 40, profile: 'hall' } })
+        lofi: lo({
+            reverb: { enabled: true, intensity: 40, profile: 'hall' },
+            lowPass: { enabled: true, intensity: 14 },
+            tapeSaturation: { enabled: true, intensity: 10 }
+        })
+    },
+    {
+        id: 'slowed-bass',
+        name: 'Slowed + bass',
+        description: 'A touch slower with the low end pushed up and a little tape warmth.',
+        group: 'vibes',
+        icon: 'audio-waveform',
+        playback: pb({ rate: 0.9, keepPitch: false }),
+        effect: fx({}),
+        lofi: lo({
+            equalizer: eq([6, 3, 0, 0, 0]),
+            tapeSaturation: { enabled: true, intensity: 14 }
+        })
+    },
+    {
+        id: 'chopped-screwed',
+        name: 'Chopped & screwed',
+        description: 'Houston slow: well under tempo, dark, thick and a little dusty.',
+        group: 'vibes',
+        icon: 'hourglass',
+        playback: pb({ rate: 0.72, keepPitch: false }),
+        effect: fx({}),
+        lofi: lo({
+            lowPass: { enabled: true, intensity: 22 },
+            tapeSaturation: { enabled: true, intensity: 22 },
+            vinylCrackle: { enabled: true, intensity: 6 }
+        })
     },
     {
         id: 'daycore',
@@ -221,6 +280,17 @@ export const QUICK_PRESETS: QuickPreset[] = [
         playback: pb({ semitone: -7 }),
         effect: fx({}),
         lofi: lo({ reverb: { enabled: true, intensity: 28, profile: 'hall' } })
+    },
+    {
+        id: 'drift',
+        name: 'Drift',
+        description:
+            'The stereo field opened wide and slowly swaying from ear to ear, for headphones.',
+        group: 'vibes',
+        icon: 'orbit',
+        playback: pb({}),
+        effect: fx({ msProcessor: 'ultra-wide' }),
+        lofi: lo({ stereoDrift: { enabled: true, intensity: 90 } })
     },
 
     // Lo-fi: lovelofi's catalogue, section by section, plus one of ours.
@@ -264,22 +334,25 @@ export const QUICK_PRESETS: QuickPreset[] = [
     {
         id: 'bass-boost',
         name: 'Bass boost',
-        description: 'More low end, a little less top.',
+        description: 'Six dB more at 90 Hz, three at 250, a touch off the top.',
         group: 'tools',
         icon: 'audio-lines',
         playback: pb({}),
-        effect: fx({ equalizer: 'Bass booster' }),
-        lofi: lo()
+        effect: fx({}),
+        lofi: lo({ equalizer: eq([6, 3, 0, 0, -1]) })
     },
     {
         id: 'podcast',
         name: 'Podcast',
-        description: '1.5× with the pitch kept and speech brought forward.',
+        description: '1.5× with the pitch kept, rumble cut and speech brought forward.',
         group: 'tools',
         icon: 'podcast',
         playback: pb({ rate: 1.5 }),
-        effect: fx({ equalizer: 'Spoken word' }),
-        lofi: lo()
+        effect: fx({}),
+        lofi: lo({
+            equalizer: eq([-4, 0, 2, 3, -2]),
+            highPass: { enabled: true, intensity: 12 }
+        })
     },
     {
         id: 'karaoke',
@@ -298,8 +371,8 @@ export const QUICK_PRESETS: QuickPreset[] = [
         group: 'tools',
         icon: 'mic',
         playback: pb({}),
-        effect: fx({ equalizer: 'Vocal booster', msProcessor: 'vocal-focus' }),
-        lofi: lo()
+        effect: fx({ msProcessor: 'vocal-focus' }),
+        lofi: lo({ equalizer: eq([-2, 0, 3, 4, 0]) })
     },
     {
         id: 'practice',
@@ -416,6 +489,9 @@ export function matchPreset<T extends PresetValues & { id: string }>(
     return candidates.find((candidate) => sameValues(values, candidate)) ?? null
 }
 
+/** The rack EQ's bands, lowest first, as a listener would name them. */
+const EQ_BAND_NAMES = ['bass', 'low mids', 'mids', 'presence', 'air']
+
 const LOFI_LABELS: Record<(typeof LOFI_KEYS)[number], string> = {
     lowPass: 'low-pass',
     highPass: 'high-pass',
@@ -460,7 +536,17 @@ export function recipe({ playback, effect, lofi }: PresetValues): string[] {
             intensity: rack.reverb.intensity
         })
     }
-    if (rack.equalizer?.enabled) on.push({ label: 'EQ', intensity: 0 })
+    if (rack.equalizer?.enabled) {
+        const bands = rack.equalizer.bands
+        const strongest = bands.reduce((a, b) => (Math.abs(b.gain) > Math.abs(a.gain) ? b : a))
+        if (Math.abs(strongest.gain) >= 0.5) {
+            const index = bands.indexOf(strongest)
+            on.push({
+                label: `${strongest.gain > 0 ? '+' : '−'}${trim(Math.abs(strongest.gain))} dB ${EQ_BAND_NAMES[index] ?? 'EQ'}`,
+                intensity: (Math.abs(strongest.gain) / 12) * 100
+            })
+        } else on.push({ label: 'EQ', intensity: 0 })
+    }
     on.sort((x, y) => y.intensity - x.intensity)
     out.push(...on.map((x) => x.label))
     return out

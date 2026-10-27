@@ -23,13 +23,17 @@
         type QuickPreset,
         type QuickPresetGroup
     } from '$lib/audio-effects/quick-presets'
-    import { applyNormal, lastApplied, togglePreset } from '$lib/utils/quick-presets'
+    import { addPresetSlot, applyNormal, lastApplied, togglePreset } from '$lib/utils/quick-presets'
     import { boundShortcuts, openShortcutSettings, shortcutKeys } from '$lib/utils/shortcuts'
 
     import Moon from '@lucide/svelte/icons/moon'
     import FastForward from '@lucide/svelte/icons/fast-forward'
     import Rewind from '@lucide/svelte/icons/rewind'
     import Sun from '@lucide/svelte/icons/sun'
+    import AudioWaveform from '@lucide/svelte/icons/audio-waveform'
+    import Hourglass from '@lucide/svelte/icons/hourglass'
+    import Rabbit from '@lucide/svelte/icons/rabbit'
+    import Orbit from '@lucide/svelte/icons/orbit'
     import ChevronsUp from '@lucide/svelte/icons/chevrons-up'
     import ChevronsDown from '@lucide/svelte/icons/chevrons-down'
     import Album from '@lucide/svelte/icons/album'
@@ -89,6 +93,10 @@
         'fast-forward': FastForward,
         rewind: Rewind,
         sun: Sun,
+        'audio-waveform': AudioWaveform,
+        hourglass: Hourglass,
+        rabbit: Rabbit,
+        orbit: Orbit,
         'chevrons-up': ChevronsUp,
         'chevrons-down': ChevronsDown,
         album: Album,
