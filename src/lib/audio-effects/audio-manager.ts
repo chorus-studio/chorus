@@ -244,9 +244,26 @@ export default class AudioManager {
         this._gainNode.gain.value = Math.max(0, gainValue)
     }
 
+    /** The gain the volume settings ask for, the number setGain writes. */
+    private targetGain(): number {
+        if (this._currentVolume === 0) return 0
+        const gain =
+            this._volumeType === 'logarithmic'
+                ? this.linearToLogarithmic(this._currentVolume)
+                : this._currentVolume
+        return Math.max(0, gain)
+    }
+
+    /**
+     * Silence the chain while it is rewired. The level to come back to is the
+     * one the volume asks for, not whatever the param reads right now: two
+     * updates back to back (the Chorus slots, then the rack, on every page
+     * load) would otherwise have the second read 0 mid-fade and "restore" it.
+     * A mute inside a mute keeps the first one's bookkeeping.
+     */
     muteForTransition(): void {
         if (!this._gainNode || !this._audioContext) return
-        this._preTransitionGain = this._gainNode.gain.value
+        if (this._preTransitionGain === null) this._preTransitionGain = this.targetGain()
         this._gainNode.gain.cancelScheduledValues(this._audioContext.currentTime)
         this._gainNode.gain.setValueAtTime(0, this._audioContext.currentTime)
     }
@@ -254,6 +271,7 @@ export default class AudioManager {
     unmuteAfterTransition(fadeDuration: number = 0.005): void {
         if (!this._gainNode || !this._audioContext || this._preTransitionGain === null) return
         const now = this._audioContext.currentTime
+        this._gainNode.gain.cancelScheduledValues(now)
         this._gainNode.gain.setValueAtTime(0, now)
         this._gainNode.gain.linearRampToValueAtTime(this._preTransitionGain, now + fadeDuration)
         this._preTransitionGain = null

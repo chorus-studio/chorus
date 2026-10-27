@@ -244,8 +244,15 @@ export default class MediaOverride {
                     this.audioManager.bypass()
                     return
                 }
+                // Loading the rack is the slow part and touches no wiring, so
+                // it happens unmuted; only the rewire is silenced.
+                await this.lofi.prepare(settings)
+                if (this._disabled) {
+                    this.audioManager.bypass()
+                    return
+                }
                 this.audioManager.muteForTransition()
-                await this.lofi.apply(settings)
+                this.lofi.apply(settings)
                 this.audioManager.unmuteAfterTransition()
             } catch (error) {
                 console.error('Error updating lofi effects:', error)

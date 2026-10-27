@@ -234,7 +234,17 @@ export default class Lofi {
         return hasLofiEffects(this.settings)
     }
 
-    async apply(settings: EffectSettings): Promise<void> {
+    /**
+     * Build the rack if these settings will need it: five worklet modules and
+     * the crackle sample, which takes a moment on a fresh page. Nothing in the
+     * chain changes, so this runs with the music still audible; `apply` then
+     * does only the wiring, which is what the caller mutes for.
+     */
+    async prepare(settings: EffectSettings): Promise<void> {
+        if (hasLofiEffects(normalizeEffectSettings(settings))) await this.ensureRack()
+    }
+
+    apply(settings: EffectSettings): void {
         this.settings = normalizeEffectSettings(settings)
 
         if (!this.active) {
@@ -246,12 +256,12 @@ export default class Lofi {
             return
         }
 
-        const rack = await this.ensureRack()
-        if (!rack) return
-        rack.setEffects(this.settings)
+        // Not built: prepare() was skipped or failed (and said so).
+        if (!this.rack?.initialized) return
+        this.rack.setEffects(this.settings)
         if (!this.connected) {
             this.connected = true
-            this._audioManager.connectLofi(rack)
+            this._audioManager.connectLofi(this.rack)
         }
     }
 
