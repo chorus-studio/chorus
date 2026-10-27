@@ -3,6 +3,18 @@ import { storage } from '@wxt-dev/storage'
 import { syncWithType } from '$lib/utils/store-utils'
 
 const REVERB_PARAMS_STORE_KEY = 'local:chorus_reverb_params'
+const REVERB_PARAMS_VERSION_KEY = 'local:chorus_reverb_params_version'
+
+/**
+ * Until 2026-10-27 the digital reverb ran mono-in beside a gain-1.0 stereo
+ * bypass, so a saved config's dry/wet meant "1 + dry" of the track against
+ * "wet" of reverb. The worklet is now the whole path: dry per channel at
+ * `dry`, reverb at `wet`. This keeps a saved config's balance.
+ */
+export const REVERB_MIX_VERSION = 2
+export function migrateReverbMix(params: ReverbParams): ReverbParams {
+    return { ...params, dry: 1, wet: Number((params.wet / (1 + params.dry)).toFixed(3)) }
+}
 
 // The 12 Dattorro reverb worklet parameters (src/public/processor.js). Ranges:
 // preDelay is in samples (0..sampleRate); the rest are 0..1 except the excursion
@@ -33,8 +45,8 @@ export const defaultReverbParams: ReverbParams = {
     damping: 0.005,
     excursionRate: 0.5,
     excursionDepth: 0.7,
-    dry: 0.6,
-    wet: 0.3
+    dry: 1,
+    wet: 0.2
 }
 
 function createReverbParamsStore() {
@@ -131,16 +143,20 @@ function createReverbParamsStore() {
         }
     }
 
-    storage
-        .getItem<ReverbParams>(REVERB_PARAMS_STORE_KEY, { fallback: defaultReverbParams })
-        .then((value) => {
-            if (!value) return
-            const syncedValue = syncWithType(value, defaultReverbParams)
-            set(syncedValue)
-            storage.setItem<ReverbParams>(REVERB_PARAMS_STORE_KEY, syncedValue).catch(() => {
-                isUpdatingStorage = false
-            })
+    Promise.all([
+        storage.getItem<ReverbParams>(REVERB_PARAMS_STORE_KEY),
+        storage.getItem<number>(REVERB_PARAMS_VERSION_KEY)
+    ]).then(async ([stored, version]) => {
+        const outdated = (version ?? 1) < REVERB_MIX_VERSION
+        if (outdated) await storage.setItem(REVERB_PARAMS_VERSION_KEY, REVERB_MIX_VERSION)
+        if (!stored) return
+        let syncedValue = syncWithType(stored, defaultReverbParams)
+        if (outdated) syncedValue = migrateReverbMix(syncedValue)
+        set(syncedValue)
+        storage.setItem<ReverbParams>(REVERB_PARAMS_STORE_KEY, syncedValue).catch(() => {
+            isUpdatingStorage = false
         })
+    })
 
     storage.watch<ReverbParams>(REVERB_PARAMS_STORE_KEY, (value) => {
         if (!value || isUpdatingStorage) return

@@ -1,8 +1,9 @@
 import { writable, get } from 'svelte/store'
 import { storage } from '@wxt-dev/storage'
-import type { ReverbParams } from '$lib/stores/reverb-params'
+import { migrateReverbMix, REVERB_MIX_VERSION, type ReverbParams } from '$lib/stores/reverb-params'
 
 const USER_REVERB_PRESETS_KEY = 'local:chorus_user_reverb_presets'
+const USER_REVERB_PRESETS_VERSION_KEY = 'local:chorus_user_reverb_presets_version'
 
 // User-saved reverb configs: name -> full Dattorro param map. Saved/loaded from
 // the reverb config editor; applying one goes through reverbParamsStore (the live
@@ -38,8 +39,17 @@ function createUserReverbPresetsStore() {
         await persist()
     }
 
-    storage.getItem<UserReverbPresets>(USER_REVERB_PRESETS_KEY, { fallback: {} }).then((value) => {
-        if (value) set(value)
+    Promise.all([
+        storage.getItem<UserReverbPresets>(USER_REVERB_PRESETS_KEY),
+        storage.getItem<number>(USER_REVERB_PRESETS_VERSION_KEY)
+    ]).then(async ([stored, version]) => {
+        const outdated = (version ?? 1) < REVERB_MIX_VERSION
+        if (outdated) await storage.setItem(USER_REVERB_PRESETS_VERSION_KEY, REVERB_MIX_VERSION)
+        if (!stored) return
+        if (!outdated) return set(stored)
+        // Configs saved against the old mix keep their balance (see migrateReverbMix).
+        set(Object.fromEntries(Object.entries(stored).map(([n, p]) => [n, migrateReverbMix(p)])))
+        await persist()
     })
 
     storage.watch<UserReverbPresets>(USER_REVERB_PRESETS_KEY, (value) => {

@@ -13,8 +13,8 @@ class DattorroReverb extends AudioWorkletProcessor {
             ['damping', 0.005, 0, 1, 'k-rate'],
             ['excursionRate', 0.5, 0, 2, 'k-rate'],
             ['excursionDepth', 0.7, 0, 2, 'k-rate'],
-            ['wet', 0.3, 0, 1, 'k-rate'],
-            ['dry', 0.6, 0, 1, 'k-rate']
+            ['wet', 0.2, 0, 1, 'k-rate'],
+            ['dry', 1, 0, 1, 'k-rate']
         ].map(
             (x) =>
                 new Object({

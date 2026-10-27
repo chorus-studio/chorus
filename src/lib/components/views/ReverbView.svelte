@@ -26,7 +26,7 @@
 
     // A quick guide for the ⓘ hover-card beside the status while editing.
     const PARAM_HINTS = [
-        ['Dry', 'volume of the untouched signal'],
+        ['Dry', 'the untouched signal — 100% leaves the track at its level'],
         ['Wet', 'volume of the reverb'],
         ['Pre-delay', 'silence before the reverb starts — longer feels like a bigger space'],
         ['Decay', 'how long the reverb tail rings out'],
