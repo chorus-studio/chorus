@@ -10,15 +10,22 @@
     import {
         QUICK_PRESETS,
         QUICK_PRESET_GROUPS,
+        activePreset,
         isNormal,
-        matchPreset,
         recipe,
+        sameValues,
         sectionsOf,
         type PresetValues,
         type QuickPreset,
         type QuickPresetGroup
     } from '$lib/audio-effects/quick-presets'
-    import { addPresetSlot, lastApplied, togglePreset } from '$lib/utils/quick-presets'
+    import {
+        addPresetSlot,
+        lastApplied,
+        removeMatchingSlot,
+        togglePreset,
+        tweakOrigin
+    } from '$lib/utils/quick-presets'
     import { presetsSubView } from '$lib/stores/effects-ui'
     import { boundShortcuts, openShortcutSettings, shortcutKeys } from '$lib/utils/shortcuts'
 
@@ -68,7 +75,7 @@
     import Mic from '@lucide/svelte/icons/mic'
     import Music from '@lucide/svelte/icons/music'
     import Sparkles from '@lucide/svelte/icons/sparkles'
-    import Keyboard from '@lucide/svelte/icons/keyboard'
+    import Star from '@lucide/svelte/icons/star'
     import Pencil from '@lucide/svelte/icons/pencil'
     import Plus from '@lucide/svelte/icons/plus'
     import Trash2 from '@lucide/svelte/icons/trash-2'
@@ -153,12 +160,19 @@
     const hidden = $derived($configStore.fx_eq_presets.quick_presets ?? [])
     const builtIns = $derived(QUICK_PRESETS.filter((p) => !hidden.includes(p.id)))
     const mine = $derived($configStore.audio_presets)
-    const active = $derived(matchPreset(current, [...QUICK_PRESETS, ...mine]))
+    const active = $derived(activePreset(current, [...QUICK_PRESETS, ...mine], $lastApplied))
     const normal = $derived(isNormal(current))
     // The tab is named Presets, so the line needs no prefix: the name playing,
     // "tweaked from" it, "Custom" for a sound built by hand, or "Off".
     const statusName = $derived(active ? active.name : normal ? 'Off' : 'Custom')
-    const tweakedFrom = $derived(!active && !normal ? $lastApplied : null)
+    const tweakedFrom = $derived($tweakOrigin?.preset.name ?? null)
+    /** A built-in is "in Mine" while one of the slots sounds the same as it. */
+    const kept = (preset: QuickPreset) => mine.some((p) => sameValues(p, preset))
+    /** A toast with the key combo bound to slot N, when there is one. */
+    const withCombo = (text: string, slot: number) => {
+        const combo = shortcuts[`audio-preset-${slot}`] ?? ''
+        return combo ? `${text} · ${combo}` : text
+    }
 
     const sections = $derived(group === 'mine' ? [] : sectionsOf(group, builtIns))
     const visibleCount = $derived(sections.reduce((n, s) => n + s.presets.length, 0))
@@ -194,13 +208,18 @@
         if (normal) return
         const slot = mine.length + 1
         const name = active?.name ?? `Preset ${slot}`
-        if (await addSlot(current, name)) say(`Saved as ${name} · slot ${slot}`)
+        if (await addSlot(current, name)) say(withCombo(`Saved to Mine as ${name}`, slot))
     }
 
-    async function pinToSlot(preset: QuickPreset) {
+    /** The star: a copy of the built-in into Mine, or that copy out again. */
+    async function toggleKept(preset: QuickPreset) {
+        if (kept(preset)) {
+            const removed = await removeMatchingSlot(preset)
+            if (removed) say(`${removed.name} removed from Mine`)
+            return
+        }
         const slot = mine.length + 1
-        if (await addSlot(preset, preset.name))
-            say(`${preset.name} pinned to slot ${slot} · see Mine`)
+        if (await addSlot(preset, preset.name)) say(withCombo(`${preset.name} added to Mine`, slot))
     }
 
     async function remove(preset: AudioPreset) {
@@ -292,9 +311,10 @@
                     {/if}
                     <div class="grid grid-cols-2 gap-1.5">
                         {#each section.presets as preset (preset.id)}
-                            {@const on = active?.id === preset.id}
+                            {@const on = sameValues(current, preset)}
                             {@const Icon = ICONS[preset.icon] ?? Sparkles}
                             {@const chips = recipe(preset).join(' · ')}
+                            {@const inMine = kept(preset)}
                             <div
                                 class={cn(
                                     'group relative flex h-14 flex-col justify-center gap-y-1 rounded-lg border px-2.5 transition-colors',
@@ -347,12 +367,20 @@
                                 {/if}
                                 <button
                                     type="button"
-                                    aria-label={`Pin ${preset.name} to a shortcut slot`}
-                                    title="Pin to a shortcut slot"
-                                    onclick={() => pinToSlot(preset)}
-                                    class="chorus-focus absolute bottom-1 right-1 inline-flex size-5 items-center justify-center rounded text-ink-muted opacity-0 transition-opacity hover:bg-surface hover:text-ink-fg focus-visible:opacity-100 group-hover:opacity-100"
+                                    aria-pressed={inMine}
+                                    aria-label={inMine
+                                        ? `Remove ${preset.name} from Mine`
+                                        : `Add ${preset.name} to Mine`}
+                                    title={inMine ? 'In Mine · tap to remove' : 'Add to Mine'}
+                                    onclick={() => toggleKept(preset)}
+                                    class={cn(
+                                        'chorus-focus absolute bottom-1 right-1 inline-flex size-5 items-center justify-center rounded transition-opacity hover:bg-surface focus-visible:opacity-100 group-hover:opacity-100',
+                                        inMine
+                                            ? 'text-amber'
+                                            : 'text-ink-muted opacity-0 hover:text-ink-fg'
+                                    )}
                                 >
-                                    <Keyboard class="size-3" />
+                                    <Star class={cn('size-3', inMine && 'fill-current')} />
                                 </button>
                             </div>
                         {/each}
@@ -362,7 +390,7 @@
         {:else}
             <div class="flex min-h-0 flex-1 flex-col gap-y-1.5">
                 {#each mine as preset, index (preset.id)}
-                    {@const on = active?.id === preset.id}
+                    {@const on = sameValues(current, preset)}
                     {@const combo = shortcuts[`audio-preset-${index + 1}`] ?? ''}
                     {@const editing = editingId === preset.id}
                     <div
@@ -494,7 +522,8 @@
                 >
                     <span>
                         {#if mine.length === 0}
-                            Tap a preset, tweak it in the other tabs, then save what's playing.
+                            Star a preset, or save what's playing, to keep it here. Each slot also
+                            gets a keyboard shortcut.
                         {:else}
                             Each slot has a keyboard shortcut. Press it again to turn it off.
                         {/if}

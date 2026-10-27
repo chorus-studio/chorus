@@ -10,7 +10,13 @@
     import { eqSubView, fxSubView, presetsSubView } from '$lib/stores/effects-ui'
     import { nowPlaying } from '$lib/stores/now-playing'
     import { playbackStore, defaultPlayback } from '$lib/stores/playback'
-    import { applyNormal } from '$lib/utils/quick-presets'
+    import {
+        applyNormal,
+        applyPresetValues,
+        currentValues,
+        tweakOrigin,
+        updatePresetSlot
+    } from '$lib/utils/quick-presets'
     import {
         defaultSnip,
         firstSegmentStart,
@@ -207,6 +213,11 @@
         )
     )
     const hasActions = $derived(['presets', 'fx', 'eq', 'snip', 'speed', 'seek'].includes(tab))
+    // Presets: what's playing drifted from the preset it began as. Revert goes
+    // back to it; Update, for one of the user's own, writes the drift into it.
+    const origin = $derived(tab === 'presets' ? $tweakOrigin : null)
+    const revert = () => origin && applyPresetValues(origin.preset, origin.preset.id)
+    const update = () => origin?.mine && updatePresetSlot(origin.preset.id, currentValues())
     // fx/eq: "Turn off" in the presets view, "Reset config" while editing.
     const effectSub = $derived(tab === 'fx' ? $fxSubView : tab === 'eq' ? $eqSubView : null)
     const inRack = $derived(tab === 'presets' && $presetsSubView === 'rack')
@@ -249,6 +260,28 @@
                 {/if}
                 {resetLabel}
             </Button>
+        {/if}
+
+        {#if origin}
+            <Button
+                variant="ghost"
+                size="sm"
+                onclick={revert}
+                title={`Back to ${origin.preset.name} as it was`}
+            >
+                <RotateCcw class="size-3.5" />
+                Revert
+            </Button>
+            {#if origin.mine}
+                <Button
+                    size="sm"
+                    onclick={update}
+                    title={`Save what's playing into ${origin.preset.name}`}
+                >
+                    <Check class="size-3.5" />
+                    Update
+                </Button>
+            {/if}
         {/if}
 
         {#if showDelete}

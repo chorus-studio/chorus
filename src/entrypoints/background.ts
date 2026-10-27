@@ -458,8 +458,8 @@ export default defineBackground(() => {
                 const preset = mine[Number(command.split('-').at(-1)) - 1]
                 if (!preset) return
                 message = sameValues(current, preset)
-                    ? { values: NORMAL_VALUES, name: null }
-                    : { values: preset, name: preset.name }
+                    ? { values: NORMAL_VALUES, id: null }
+                    : { values: preset, id: preset.id }
             } else {
                 const hidden = config?.fx_eq_presets?.quick_presets ?? []
                 const ring = [...QUICK_PRESETS.filter((p) => !hidden.includes(p.id)), ...mine]
@@ -469,7 +469,7 @@ export default defineBackground(() => {
                 const next = command.endsWith('-next')
                     ? ring[(index + 1) % ring.length]
                     : ring[(index <= 0 ? ring.length : index) - 1]
-                message = { values: next, name: next.name }
+                message = { values: next, id: next.id }
             }
 
             await executeScript({ type: QUICK_PRESET_EVENT, data: message })

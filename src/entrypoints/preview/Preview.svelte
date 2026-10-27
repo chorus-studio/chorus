@@ -92,7 +92,8 @@
     // named built-in applied (so its card is lit), the group to open on, and two
     // saved slots for Mine. The frame mounts once the stores hold all of it.
     // &view=rack opens the texture rack instead of the cards, and
-    // &tweak=lowPass:50 nudges one knob so the status reads "tweaked from".
+    // &tweak=lowPass:50 nudges one knob so the status reads "tweaked from";
+    // &origin=mine (with mine=1) starts from the first saved slot instead.
     onMount(async () => {
         if (tab !== 'presets') return
         // The stores hydrate from (shim) storage in microtasks after import; a
@@ -100,13 +101,6 @@
         await new Promise((resolve) => setTimeout(resolve, 20))
         const group = params.get('group')
         if (group) await storage.setItem('local:chorus_preset_group', group)
-        const preset = quickPresetById(params.get('preset') ?? '')
-        if (preset) await applyPresetValues(preset, preset.name)
-        const [knob, amount] = (params.get('tweak') ?? '').split(':')
-        if (knob && amount) {
-            await lofiStore.update(knob as LofiEffectKey, { intensity: Number(amount) })
-        }
-        if (params.get('view') === 'rack') presetsSubView.set('rack')
         if (params.get('mine') === '1') {
             const lofi = QUICK_PRESETS.find((p) => p.id === 'classic-lofi') ?? QUICK_PRESETS[0]
             await configStore.updateConfig({
@@ -131,6 +125,15 @@
                 ]
             })
         }
+        const preset = quickPresetById(params.get('preset') ?? '')
+        if (preset) await applyPresetValues(preset, preset.id)
+        const slot = get(configStore).audio_presets[0]
+        if (params.get('origin') === 'mine' && slot) await applyPresetValues(slot, slot.id)
+        const [knob, amount] = (params.get('tweak') ?? '').split(':')
+        if (knob && amount) {
+            await lofiStore.update(knob as LofiEffectKey, { intensity: Number(amount) })
+        }
+        if (params.get('view') === 'rack') presetsSubView.set('rack')
         ready = true
     })
 

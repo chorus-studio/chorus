@@ -16,10 +16,10 @@
     import {
         QUICK_PRESETS,
         isNormal,
-        matchPreset,
+        activePreset,
         type PresetValues
     } from '$lib/audio-effects/quick-presets'
-    import { addPresetSlot, lastApplied } from '$lib/utils/quick-presets'
+    import { addPresetSlot, lastApplied, tweakOrigin } from '$lib/utils/quick-presets'
     import {
         DEFAULT_REVERB_PROFILE,
         type ReverbProfile
@@ -97,10 +97,10 @@
         lofi: rack
     })
     const mine = $derived($configStore.audio_presets)
-    const active = $derived(matchPreset(current, [...QUICK_PRESETS, ...mine]))
+    const active = $derived(activePreset(current, [...QUICK_PRESETS, ...mine], $lastApplied))
     const normal = $derived(isNormal(current))
     const statusName = $derived(!on ? 'Texture off' : active ? active.name : 'Custom texture')
-    const tweakedFrom = $derived(on && !active ? $lastApplied : null)
+    const tweakedFrom = $derived(on ? ($tweakOrigin?.preset.name ?? null) : null)
 
     const isKnob = (cell: Cell): cell is Knob => cell.key !== 'equalizer' && cell.key !== 'reverb'
     const enabled = (cell: Cell) =>
@@ -130,7 +130,7 @@
         const name = active?.name ?? `Preset ${mine.length + 1}`
         const slot = await addPresetSlot(current, name)
         if (slot === null) say('All five slots are used · remove one in Mine')
-        else say(`Saved as ${name} · slot ${slot} · see Mine`)
+        else say(`Saved to Mine as ${name}`)
     }
 
     /** Bar height for a band's gain: ±12 dB fills half the 12 px box. */

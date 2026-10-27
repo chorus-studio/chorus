@@ -29,7 +29,7 @@ export type PresetValues = { playback: Playback; effect: AudioEffect; lofi: Effe
  * commands (next / previous quick preset, preset slot N); the page applies it.
  */
 export const QUICK_PRESET_EVENT = 'FROM_QUICK_PRESET_LISTENER'
-export type QuickPresetMessage = { values: PresetValues; name: string | null }
+export type QuickPresetMessage = { values: PresetValues; id: string | null }
 
 export type QuickPresetGroup = 'vibes' | 'lofi' | 'spaces' | 'tools'
 
@@ -487,6 +487,20 @@ export function matchPreset<T extends PresetValues & { id: string }>(
     candidates: T[]
 ): T | null {
     return candidates.find((candidate) => sameValues(values, candidate)) ?? null
+}
+
+/**
+ * The preset that is playing: the one applied last when it still matches (so a
+ * Mine copy of a built-in answers to its own name), else the first that does.
+ */
+export function activePreset<T extends PresetValues & { id: string }>(
+    values: PresetValues,
+    candidates: T[],
+    preferredId: string | null
+): T | null {
+    const preferred = preferredId ? candidates.find((c) => c.id === preferredId) : undefined
+    if (preferred && sameValues(values, preferred)) return preferred
+    return matchPreset(values, candidates)
 }
 
 /** The rack EQ's bands, lowest first, as a listener would name them. */
