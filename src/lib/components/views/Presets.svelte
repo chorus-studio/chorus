@@ -75,6 +75,21 @@
     import Mic from '@lucide/svelte/icons/mic'
     import Music from '@lucide/svelte/icons/music'
     import Sparkles from '@lucide/svelte/icons/sparkles'
+    import Wind from '@lucide/svelte/icons/wind'
+    import Snail from '@lucide/svelte/icons/snail'
+    import Skull from '@lucide/svelte/icons/skull'
+    import Flame from '@lucide/svelte/icons/flame'
+    import CarFront from '@lucide/svelte/icons/car-front'
+    import Footprints from '@lucide/svelte/icons/footprints'
+    import Droplets from '@lucide/svelte/icons/droplets'
+    import TrainFront from '@lucide/svelte/icons/train-front'
+    import Mountain from '@lucide/svelte/icons/mountain'
+    import SunDim from '@lucide/svelte/icons/sun-dim'
+    import Volume1 from '@lucide/svelte/icons/volume-1'
+    import MoonStar from '@lucide/svelte/icons/moon-star'
+    import NotebookPen from '@lucide/svelte/icons/notebook-pen'
+    import Activity from '@lucide/svelte/icons/activity'
+    import Piano from '@lucide/svelte/icons/piano'
     import Star from '@lucide/svelte/icons/star'
     import Pencil from '@lucide/svelte/icons/pencil'
     import Plus from '@lucide/svelte/icons/plus'
@@ -139,7 +154,22 @@
         'mic-off': MicOff,
         mic: Mic,
         music: Music,
-        sparkles: Sparkles
+        sparkles: Sparkles,
+        wind: Wind,
+        snail: Snail,
+        skull: Skull,
+        flame: Flame,
+        'car-front': CarFront,
+        footprints: Footprints,
+        droplets: Droplets,
+        'train-front': TrainFront,
+        mountain: Mountain,
+        'sun-dim': SunDim,
+        'volume-1': Volume1,
+        'moon-star': MoonStar,
+        'notebook-pen': NotebookPen,
+        activity: Activity,
+        piano: Piano
     }
 
     let group = $state<Group>('lofi')

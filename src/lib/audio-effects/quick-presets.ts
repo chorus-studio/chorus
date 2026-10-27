@@ -185,6 +185,20 @@ export const QUICK_PRESETS: QuickPreset[] = [
         lofi: lo()
     },
     {
+        id: 'hyper',
+        name: 'Hyper',
+        description:
+            'Faster and higher with the edges sharpened: bright, a little crushed, very wide.',
+        group: 'vibes',
+        icon: 'flame',
+        playback: pb({ rate: 1.32, keepPitch: false }),
+        effect: fx({ msProcessor: 'ultra-wide' }),
+        lofi: lo({
+            equalizer: eq([3, 0, 0, 2, 5]),
+            bitcrusher: { enabled: true, intensity: 10 }
+        })
+    },
+    {
         id: 'sped-up',
         name: 'Sped up',
         description: 'A touch faster and brighter, with a little studio air.',
@@ -193,6 +207,19 @@ export const QUICK_PRESETS: QuickPreset[] = [
         playback: pb({ rate: 1.12, keepPitch: false }),
         effect: fx({}),
         lofi: lo({ reverb: { enabled: true, intensity: 15, profile: 'studio' } })
+    },
+    {
+        id: 'sped-up-reverb',
+        name: 'Sped up + reverb',
+        description: 'Faster and higher, washed in a hall.',
+        group: 'vibes',
+        icon: 'wind',
+        playback: pb({ rate: 1.2, keepPitch: false }),
+        effect: fx({}),
+        lofi: lo({
+            reverb: { enabled: true, intensity: 30, profile: 'hall' },
+            lowPass: { enabled: true, intensity: 8 }
+        })
     },
     {
         id: 'sped-up-lofi',
@@ -222,6 +249,20 @@ export const QUICK_PRESETS: QuickPreset[] = [
             reverb: { enabled: true, intensity: 40, profile: 'hall' },
             lowPass: { enabled: true, intensity: 14 },
             tapeSaturation: { enabled: true, intensity: 10 }
+        })
+    },
+    {
+        id: 'super-slowed',
+        name: 'Super slowed',
+        description: 'Well under tempo and deep in a hall: the extra-slowed edit.',
+        group: 'vibes',
+        icon: 'snail',
+        playback: pb({ rate: 0.7, keepPitch: false }),
+        effect: fx({}),
+        lofi: lo({
+            reverb: { enabled: true, intensity: 55, profile: 'hall' },
+            lowPass: { enabled: true, intensity: 32 },
+            tapeSaturation: { enabled: true, intensity: 12 }
         })
     },
     {
@@ -282,10 +323,24 @@ export const QUICK_PRESETS: QuickPreset[] = [
         lofi: lo({ reverb: { enabled: true, intensity: 28, profile: 'hall' } })
     },
     {
+        id: 'phonk',
+        name: 'Phonk',
+        description: 'A touch slower with the bass pushed hard, driven and crushed.',
+        group: 'vibes',
+        icon: 'skull',
+        playback: pb({ rate: 0.95, keepPitch: false }),
+        effect: fx({ msProcessor: 'wide' }),
+        lofi: lo({
+            equalizer: eq([8, 4, 0, -2, -4]),
+            tapeSaturation: { enabled: true, intensity: 45 },
+            bitcrusher: { enabled: true, intensity: 16 }
+        })
+    },
+    {
         id: 'drift',
         name: 'Drift',
         description:
-            'The stereo field opened wide and slowly swaying from ear to ear, for headphones.',
+            'The 8D edit: the stereo field opened wide and slowly swaying from ear to ear, for headphones.',
         group: 'vibes',
         icon: 'orbit',
         playback: pb({}),
@@ -312,7 +367,7 @@ export const QUICK_PRESETS: QuickPreset[] = [
         })
     },
 
-    // Spaces: lovelofi's rooms, plus a stage.
+    // Spaces: lovelofi's rooms, then a stage and a few more places.
     ...lovelofiGroup('spaces'),
     {
         id: 'live-show',
@@ -329,23 +384,133 @@ export const QUICK_PRESETS: QuickPreset[] = [
             stereoDrift: { enabled: true, intensity: 8 }
         })
     },
+    {
+        id: 'car-stereo',
+        name: 'Car stereo',
+        description:
+            'Inside the car with the doors shut: bass up, highs rolled, the field pulled in.',
+        group: 'spaces',
+        icon: 'car-front',
+        playback: pb({}),
+        effect: fx({ msProcessor: 'narrow' }),
+        lofi: lo({
+            equalizer: eq([5, 2, 0, -1, -3]),
+            lowPass: { enabled: true, intensity: 8 },
+            reverb: { enabled: true, intensity: 10, profile: 'studio' }
+        })
+    },
+    {
+        id: 'stairwell',
+        name: 'Stairwell',
+        description: 'Concrete flights: a hard slap and a long climb.',
+        group: 'spaces',
+        icon: 'footprints',
+        playback: pb({}),
+        effect: fx({ reverb: 'stairwell' }),
+        lofi: lo({
+            highPass: { enabled: true, intensity: 10 },
+            tapeSaturation: { enabled: true, intensity: 8 },
+            stereoDrift: { enabled: true, intensity: 10 }
+        })
+    },
+    {
+        id: 'swimming-pool',
+        name: 'Swimming pool',
+        description: 'Indoor pool: tile and water, a bright splash over a boomy room.',
+        group: 'spaces',
+        icon: 'droplets',
+        playback: pb({}),
+        effect: fx({ reverb: 'pool' }),
+        lofi: lo({
+            reverb: { enabled: true, intensity: 20, profile: 'spring' },
+            lowPass: { enabled: true, intensity: 14 },
+            chorus: { enabled: true, intensity: 10 }
+        })
+    },
+    {
+        id: 'subway-platform',
+        name: 'Subway platform',
+        description: 'Tiled tunnel: metallic, mid-forward, a long rumble behind.',
+        group: 'spaces',
+        icon: 'train-front',
+        playback: pb({}),
+        effect: fx({ reverb: 'subway' }),
+        lofi: lo({
+            equalizer: eq([-2, 0, 2, 1, -3]),
+            highPass: { enabled: true, intensity: 14 },
+            lowPass: { enabled: true, intensity: 10 },
+            tapeSaturation: { enabled: true, intensity: 14 }
+        })
+    },
+    {
+        id: 'open-air',
+        name: 'Open air',
+        description: 'A rooftop or a field: no walls to bounce off, just air and width.',
+        group: 'spaces',
+        icon: 'mountain',
+        playback: pb({}),
+        effect: fx({ msProcessor: 'wide' }),
+        lofi: lo({
+            highPass: { enabled: true, intensity: 8 },
+            equalizer: eq([-1, 0, 0, 1, 2]),
+            stereoDrift: { enabled: true, intensity: 6 }
+        })
+    },
 
-    // Tools: listening and practice helpers.
+    // Tools: listening helpers, then practice ones.
     {
         id: 'bass-boost',
         name: 'Bass boost',
         description: 'Six dB more at 90 Hz, three at 250, a touch off the top.',
         group: 'tools',
+        section: 'Listening',
         icon: 'audio-lines',
         playback: pb({}),
         effect: fx({}),
         lofi: lo({ equalizer: eq([6, 3, 0, 0, -1]) })
     },
     {
+        id: 'treble-boost',
+        name: 'Treble boost',
+        description: 'Four dB more presence and six of air, a touch off the bass.',
+        group: 'tools',
+        section: 'Listening',
+        icon: 'sun-dim',
+        playback: pb({}),
+        effect: fx({}),
+        lofi: lo({ equalizer: eq([-1, 0, 0, 4, 6]) })
+    },
+    {
+        id: 'low-volume',
+        name: 'Low volume',
+        description: 'The loudness curve: bass and air back when the volume is low.',
+        group: 'tools',
+        section: 'Listening',
+        icon: 'volume-1',
+        playback: pb({}),
+        effect: fx({}),
+        lofi: lo({ equalizer: eq([5, 2, 0, 1, 4]) })
+    },
+    {
+        id: 'quiet-hours',
+        name: 'Quiet hours',
+        description: 'The thump that goes through walls taken out, for late nights.',
+        group: 'tools',
+        section: 'Listening',
+        icon: 'moon-star',
+        playback: pb({}),
+        effect: fx({}),
+        lofi: lo({
+            equalizer: eq([-8, -4, 0, 0, -2]),
+            highPass: { enabled: true, intensity: 10 }
+        })
+    },
+    {
         id: 'podcast',
         name: 'Podcast',
         description: '1.5× with the pitch kept, rumble cut and speech brought forward.',
         group: 'tools',
+        section: 'Listening',
         icon: 'podcast',
         playback: pb({ rate: 1.5 }),
         effect: fx({}),
@@ -355,10 +520,22 @@ export const QUICK_PRESETS: QuickPreset[] = [
         })
     },
     {
+        id: 'mono',
+        name: 'Mono',
+        description: 'Both channels summed, for one earbud or a single speaker.',
+        group: 'tools',
+        section: 'Listening',
+        icon: 'headphones',
+        playback: pb({}),
+        effect: fx({ msProcessor: 'mono' }),
+        lofi: lo()
+    },
+    {
         id: 'karaoke',
         name: 'Karaoke',
         description: 'Centre vocals cut; bass and cymbals stay where they are.',
         group: 'tools',
+        section: 'Practice',
         icon: 'mic-off',
         playback: pb({}),
         effect: fx({}),
@@ -369,6 +546,7 @@ export const QUICK_PRESETS: QuickPreset[] = [
         name: 'Sing-along',
         description: 'Vocals lifted and centred so the words are easy to follow.',
         group: 'tools',
+        section: 'Practice',
         icon: 'mic',
         playback: pb({}),
         effect: fx({ msProcessor: 'vocal-focus' }),
@@ -379,20 +557,47 @@ export const QUICK_PRESETS: QuickPreset[] = [
         name: 'Practice',
         description: '0.75× with the pitch kept, for learning a part.',
         group: 'tools',
+        section: 'Practice',
         icon: 'music',
         playback: pb({ rate: 0.75 }),
         effect: fx({}),
         lofi: lo()
     },
     {
-        id: 'mono',
-        name: 'Mono',
-        description: 'Both channels summed, for one earbud or a single speaker.',
+        id: 'transcribe',
+        name: 'Transcribe',
+        description: 'Half speed with the pitch kept, in mono, for writing a part down.',
         group: 'tools',
-        icon: 'headphones',
-        playback: pb({}),
+        section: 'Practice',
+        icon: 'notebook-pen',
+        playback: pb({ rate: 0.5 }),
         effect: fx({ msProcessor: 'mono' }),
         lofi: lo()
+    },
+    {
+        id: 'bass-line',
+        name: 'Bass line',
+        description: 'Hear the bass part: centre-focused, everything above it tucked away.',
+        group: 'tools',
+        section: 'Practice',
+        icon: 'activity',
+        playback: pb({}),
+        effect: fx({ msProcessor: 'bass-focus' }),
+        lofi: lo({
+            equalizer: eq([6, 4, -2, -5, -8]),
+            lowPass: { enabled: true, intensity: 36 }
+        })
+    },
+    {
+        id: 'instruments',
+        name: 'Instruments',
+        description: 'Centre vocals and bass pulled back; guitars and keys brought forward.',
+        group: 'tools',
+        section: 'Practice',
+        icon: 'piano',
+        playback: pb({}),
+        effect: fx({ msProcessor: 'instrument-isolation' }),
+        lofi: lo({ equalizer: eq([-3, 0, 0, 2, 1]) })
     }
 ]
 
