@@ -1,34 +1,25 @@
 import { get, writable } from 'svelte/store'
 import { storage } from '@wxt-dev/storage'
 import { syncWithType } from '$lib/utils/store-utils'
-import { RESUME_OFF, type ResumeRewind } from '$lib/utils/resume-rewind'
 
 type Seek = {
     rewind: number
     forward: number
 }
 
-export type SeekScope = 'default' | 'long_form'
-
 type SeekData = {
     default: Seek
     long_form: Seek
-    /** Jump back on resume, for podcasts & audiobooks only. */
-    resume: ResumeRewind
-    /** What is playing, from the track's context: music or long-form. */
-    media_type: SeekScope
+    is_long_form: boolean
+    media_type: 'default' | 'long_form'
 }
 
 const defaultSeekData: SeekData = {
+    is_long_form: false,
     media_type: 'default',
     default: { rewind: 10, forward: 10 },
-    long_form: { rewind: 30, forward: 30 },
-    resume: { seconds: 5, after: 1 }
+    long_form: { rewind: 30, forward: 30 }
 }
-
-/** The jump back the media layer should make on the next resume, given what is playing. */
-export const resumeFor = (data: SeekData): ResumeRewind =>
-    data.media_type === 'long_form' ? data.resume : RESUME_OFF
 
 const SEEK_STORE_KEY = 'local:chorus_seek'
 
@@ -37,15 +28,7 @@ function createSeekStore() {
     const { subscribe, set, update } = store
     let isUpdatingStorage = false
 
-    // The media layer (MAIN world) keeps the resume rule itself: it is the one
-    // that sees the element pause and play.
-    if (typeof window !== 'undefined') {
-        subscribe((data) => {
-            window.postMessage({ type: 'FROM_SEEK_LISTENER', data: resumeFor(data) }, '*')
-        })
-    }
-
-    async function updateMediaType(type: SeekScope) {
+    async function updateMediaType(type: 'default' | 'long_form') {
         update((prev: SeekData) => ({
             ...prev,
             media_type: type
@@ -104,6 +87,22 @@ function createSeekStore() {
         set(syncedData)
     })
 
+    async function toggleLongForm() {
+        update((prev: SeekData) => ({
+            ...prev,
+            is_long_form: !prev.is_long_form
+        }))
+        const newState = get(store)
+        isUpdatingStorage = true
+        try {
+            await storage.setItem<SeekData>(SEEK_STORE_KEY, newState)
+        } catch (error) {
+            console.error('Error toggling long form in storage:', error)
+        } finally {
+            isUpdatingStorage = false
+        }
+    }
+
     async function reset() {
         set(defaultSeekData)
         isUpdatingStorage = true
@@ -120,6 +119,7 @@ function createSeekStore() {
         reset,
         subscribe,
         updateSeek,
+        toggleLongForm,
         updateMediaType
     }
 }

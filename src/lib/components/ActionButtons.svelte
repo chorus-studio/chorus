@@ -252,7 +252,7 @@
                 : tab === 'speed'
                   ? 'Reset rate, pitch and key to normal'
                   : tab === 'seek'
-                    ? 'Back to 10 s for music, 30 s and a 5 s jump back for podcasts'
+                    ? 'Back to 10 s / 30 s'
                     : effectSub === 'config'
                       ? 'Return the sliders to where you started'
                       : 'Switch the effect off'

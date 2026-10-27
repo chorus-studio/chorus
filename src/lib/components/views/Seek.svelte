@@ -1,12 +1,21 @@
 <script lang="ts">
     import { onMount } from 'svelte'
+    import { seekStore } from '$lib/stores/seek'
     import ExternalLink from '@lucide/svelte/icons/external-link'
     import Keyboard from '@lucide/svelte/icons/keyboard'
+    import Keycaps from '$lib/components/Keycaps.svelte'
     import SeekInput from '$lib/components/SeekInput.svelte'
+    import SegmentedControl from '$lib/components/SegmentedControl.svelte'
     import { boundShortcuts, openShortcutSettings } from '$lib/utils/shortcuts'
 
     let { pip = false }: { pip?: boolean } = $props()
     void pip
+
+    async function handleValueChange(value: string) {
+        await seekStore.updateSeek({ is_long_form: value === 'long_form' })
+    }
+
+    const scope = $derived($seekStore.is_long_form ? 'long_form' : 'default')
 
     // The seek commands' bound keys, for the footer.
     let shortcuts = $state<Record<string, string>>({})
@@ -22,15 +31,24 @@
 </script>
 
 <div class="flex h-full flex-col gap-y-2.5">
-    <SeekInput scope="default" title="Music" hint="What the player bar's seek buttons jump" />
-    <SeekInput
-        scope="long_form"
-        title="Podcasts & audiobooks"
-        hint="Resume steps back after a break"
-        resume
+    <SegmentedControl
+        grow
+        size="sm"
+        ariaLabel="Applies to"
+        value={scope}
+        onValueChange={handleValueChange}
+        options={[
+            { label: 'Music', value: 'default' },
+            { label: 'Podcasts & audiobooks', value: 'long_form' }
+        ]}
     />
 
-    <div class="mt-auto flex items-center justify-between gap-x-3 text-[11px] text-ink-muted">
+    <div class="grid min-h-0 flex-1 grid-cols-2 gap-x-2.5">
+        <SeekInput type="rewind" />
+        <SeekInput type="forward" />
+    </div>
+
+    <div class="flex items-center justify-between gap-x-3 text-[11px] text-ink-muted">
         <span class="flex min-w-0 items-center gap-x-1.5">
             <Keyboard class="size-3 shrink-0" />
             {#if keys.length}
@@ -38,14 +56,11 @@
                     {#if i > 0}<span aria-hidden="true">·</span>{/if}
                     <span class="flex items-center gap-x-1">
                         {name}
-                        <kbd
-                            class="rounded border border-hairline-strong bg-surface px-1 py-0.5 font-mono text-[9px] leading-none text-ink-fg-2"
-                            >{combo}</kbd
-                        >
+                        <Keycaps {combo} />
                     </span>
                 {/each}
             {:else}
-                <span>Rewind and forward have no keys bound yet.</span>
+                <span>Separate values for each; 1–60 s. No keys bound for seeking yet.</span>
             {/if}
         </span>
         <button

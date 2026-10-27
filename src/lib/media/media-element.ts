@@ -5,13 +5,6 @@ import Equalizer from '$lib/audio-effects/equalizer'
 import MSProcessor from '$lib/audio-effects/ms-processor'
 import AudioManager from '$lib/audio-effects/audio-manager'
 import Lofi from '$lib/audio-effects/lofi-rack'
-import { RESUME_OFF, resumeRewindTarget, type ResumeRewind } from '$lib/utils/resume-rewind'
-
-// Jump back on resume (Seek tab). Module state, not instance state: Spotify
-// swaps media elements, and a pause on the old one still counts when the new
-// one plays.
-let resumeRewind: ResumeRewind = RESUME_OFF
-let pausedAt: number | null = null
 
 export default class MediaElement {
     private source: HTMLMediaElement
@@ -62,13 +55,9 @@ export default class MediaElement {
 
         // The lofi rack's crackle is a looping sample: it follows play / pause so
         // a paused Spotify stays silent.
-        this.source.addEventListener('pause', () => {
-            pausedAt = Date.now()
-            this.mediaOverride?.setPlaying(false)
-        })
+        this.source.addEventListener('pause', () => this.mediaOverride?.setPlaying(false))
 
         this.source.addEventListener('play', () => {
-            this.rewindOnResume()
             if (this.mediaOverride) {
                 this.mediaOverride.setPlaying(true)
                 return
@@ -94,16 +83,6 @@ export default class MediaElement {
 
             try {
                 const { type, data } = event.data
-
-                // The Seek tab's resume rule: kept here, where pause and play are
-                // seen, whatever the chain's state.
-                if (type === 'FROM_SEEK_LISTENER') {
-                    resumeRewind = {
-                        seconds: Number(data?.seconds) || 0,
-                        after: Number(data?.after) || 0
-                    }
-                    return
-                }
 
                 // Master on/off: handled even before the audio chain exists so the
                 // disabled flag can gate chain-building on the next play.
@@ -189,17 +168,6 @@ export default class MediaElement {
                 console.warn('Error handling message:', error)
             }
         })
-    }
-
-    // After a longer pause, a podcast picks up a few seconds earlier so the
-    // thread is easy to catch (the Seek tab sets how much and after how long;
-    // off for music). A Chorus feature, so it rests with the master switch.
-    private rewindOnResume(): void {
-        const pausedFor = pausedAt === null ? 0 : Date.now() - pausedAt
-        pausedAt = null
-        if (this._disabled) return
-        const target = resumeRewindTarget(this.source.currentTime, pausedFor, resumeRewind)
-        if (target !== null) this.source.currentTime = target
     }
 
     get audioManager(): AudioManager | null {
