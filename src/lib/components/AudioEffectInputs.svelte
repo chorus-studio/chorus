@@ -51,11 +51,14 @@
     options: Selection[],
     recent: EffectList | undefined
 )}
-    <div class="flex flex-col gap-y-1 rounded-lg border border-hairline bg-panel px-2.5 py-1">
+    <div
+        data-card
+        class="flex flex-col gap-y-1 rounded-lg border border-hairline bg-panel px-2.5 py-1"
+    >
         <div class="flex h-4 items-center justify-between gap-x-3">
-            <span class="rack-label shrink-0">{label}</span>
+            <span class="rack-label shrink-0" title={hint || undefined}>{label}</span>
             {#if hint}
-                <span class="truncate text-[11px] text-ink-muted">{hint}</span>
+                <span data-hint class="truncate text-[11px] text-ink-muted">{hint}</span>
             {/if}
         </div>
         <CustomSelect
@@ -73,7 +76,7 @@
     </div>
 {/snippet}
 
-<div class="flex h-full flex-col gap-y-3">
+<div data-cards class="flex h-full flex-col gap-y-3">
     {@render card(
         topLabel,
         topHint,
