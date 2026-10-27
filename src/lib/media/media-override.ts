@@ -254,6 +254,16 @@ export default class MediaOverride {
         })
     }
 
+    /**
+     * An intensity from a slider being dragged. Straight onto the rack when
+     * only intensities changed; otherwise the ordinary queued, muted update.
+     */
+    tweakLofi(settings: EffectSettings): void {
+        if (!this.audioManager || !this.audioManager.isReady || !this.lofi) return
+        if (this._disabled) return
+        if (!this.lofi.tweak(settings)) void this.updateLofi(settings)
+    }
+
     /** Pause and play, for the rack's crackle loop. */
     setPlaying(playing: boolean): void {
         this.lofi?.setPlaying(playing)

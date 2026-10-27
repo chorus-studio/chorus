@@ -33,6 +33,25 @@ export function hasLofiEffects(settings: EffectSettings): boolean {
     return Object.values(nodes).some((effect) => effect.enabled) || Boolean(equalizer?.enabled)
 }
 
+/**
+ * Whether two settings differ only in intensities and EQ gains: the same
+ * effects on, the same reverb space. Anything else means nodes join or leave
+ * the chain, or an impulse response is regenerated, which wants the muted path.
+ */
+export function sameLofiShape(a: EffectSettings, b: EffectSettings): boolean {
+    const { equalizer: eqA, ...nodesA } = a
+    const { equalizer: eqB, ...nodesB } = b
+    for (const key of Object.keys(nodesA) as (keyof typeof nodesA)[]) {
+        if (nodesA[key].enabled !== nodesB[key].enabled) return false
+    }
+    if (
+        (a.reverb.profile ?? DEFAULT_REVERB_PROFILE) !==
+        (b.reverb.profile ?? DEFAULT_REVERB_PROFILE)
+    )
+        return false
+    return Boolean(eqA?.enabled) === Boolean(eqB?.enabled)
+}
+
 type Nodes = {
     lowPass: LowPassEffect
     highPass: HighPassEffect
@@ -234,6 +253,21 @@ export default class Lofi {
             this.connected = true
             this._audioManager.connectLofi(rack)
         }
+    }
+
+    /**
+     * A slider mid-drag: new intensities for effects that are already on, set
+     * straight on the live rack with no mute and no chain rebuild. False when
+     * the change needs the full path (an effect switched, a new reverb space,
+     * or a rack that is still being built).
+     */
+    tweak(settings: EffectSettings): boolean {
+        const next = normalizeEffectSettings(settings)
+        if (!this.rack?.initialized || !this.connected || !sameLofiShape(this.settings, next))
+            return false
+        this.settings = next
+        this.rack.setEffects(next)
+        return true
     }
 
     /** audioManager.disconnect() drops every effect; put the rack back if it should be on. */

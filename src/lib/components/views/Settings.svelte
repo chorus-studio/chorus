@@ -71,6 +71,7 @@
 
     const VIEW_ITEMS = [
         { key: 'presets', label: 'Presets' },
+        { key: 'texture', label: 'Texture' },
         { key: 'snip', label: 'Snip' },
         { key: 'speed', label: 'Speed' },
         { key: 'fx', label: 'Reverb' },

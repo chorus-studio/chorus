@@ -3,12 +3,7 @@
     import type { Component } from 'svelte'
     import { storage } from '@wxt-dev/storage'
 
-    import {
-        configStore,
-        createAudioPreset,
-        MAX_AUDIO_PRESETS,
-        type AudioPreset
-    } from '$lib/stores/config'
+    import { configStore, MAX_AUDIO_PRESETS, type AudioPreset } from '$lib/stores/config'
     import { playbackStore, effectivePlayback } from '$lib/stores/playback'
     import { effectsStore } from '$lib/stores/effects'
     import { lofiStore } from '$lib/stores/lofi'
@@ -181,13 +176,10 @@
     }
 
     async function addSlot(values: PresetValues, name: string) {
-        if (mine.length >= MAX_AUDIO_PRESETS) {
+        if ((await addPresetSlot(values, name)) === null) {
             say('All five slots are used · remove one in Mine first')
             return false
         }
-        await configStore.updateConfig({
-            audio_presets: [...mine, createAudioPreset(values, name)]
-        })
         return true
     }
 

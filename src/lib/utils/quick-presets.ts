@@ -7,6 +7,7 @@ import { get, writable } from 'svelte/store'
 import { playbackStore, effectivePlayback } from '$lib/stores/playback'
 import { effectsStore } from '$lib/stores/effects'
 import { lofiStore } from '$lib/stores/lofi'
+import { configStore, createAudioPreset, MAX_AUDIO_PRESETS } from '$lib/stores/config'
 import {
     NORMAL_VALUES,
     QUICK_PRESET_EVENT,
@@ -42,6 +43,14 @@ export const applyNormal = () => applyPresetValues(NORMAL_VALUES, null)
 export async function togglePreset(preset: PresetValues & { name: string }) {
     if (sameValues(currentValues(), preset)) return applyNormal()
     return applyPresetValues(preset, preset.name)
+}
+
+/** Save values as the next Mine slot and return its number, or null when all five are used. */
+export async function addPresetSlot(values: PresetValues, name: string): Promise<number | null> {
+    const mine = get(configStore).audio_presets
+    if (mine.length >= MAX_AUDIO_PRESETS) return null
+    await configStore.updateConfig({ audio_presets: [...mine, createAudioPreset(values, name)] })
+    return mine.length + 1
 }
 
 /**

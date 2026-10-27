@@ -4,6 +4,7 @@
     import { snipStore } from '$lib/stores/snip'
     import { dataStore } from '$lib/stores/data'
     import { effectsStore } from '$lib/stores/effects'
+    import { lofiStore } from '$lib/stores/lofi'
     import { reverbParamsStore } from '$lib/stores/reverb-params'
     import { eqBandsStore } from '$lib/stores/eq-bands'
     import { eqSubView, fxSubView } from '$lib/stores/effects-ui'
@@ -146,6 +147,8 @@
     async function handleReset() {
         // Presets: everything audio back to normal in one go.
         if (tab === 'presets') return applyNormal()
+        // Texture: every rack effect off; speed and the Chorus slots stay.
+        if (tab === 'texture') return lofiStore.reset()
 
         // fx/eq share effectsStore but each tab must reset ONLY its own effect —
         // effectsStore.reset() would wipe both reverb and the equalizer at once.
@@ -201,30 +204,36 @@
                         $playbackStore.track.semitone != 0))
         )
     )
-    const hasActions = $derived(['presets', 'fx', 'eq', 'snip', 'speed', 'seek'].includes(tab))
+    const hasActions = $derived(
+        ['presets', 'texture', 'fx', 'eq', 'snip', 'speed', 'seek'].includes(tab)
+    )
     // fx/eq: "Turn off" in the presets view, "Reset config" while editing.
     const effectSub = $derived(tab === 'fx' ? $fxSubView : tab === 'eq' ? $eqSubView : null)
     const resetLabel = $derived(
         tab === 'presets'
             ? 'Normal'
-            : effectSub === null
-              ? 'Reset'
-              : effectSub === 'config'
-                ? 'Reset config'
-                : 'Turn off'
+            : tab === 'texture'
+              ? 'Turn off'
+              : effectSub === null
+                ? 'Reset'
+                : effectSub === 'config'
+                  ? 'Reset config'
+                  : 'Turn off'
     )
     const resetTitle = $derived(
         tab === 'presets'
             ? 'Rate, pitch, key, reverb, EQ and stereo back to normal'
-            : tab === 'snip'
-              ? 'Reset to the whole track'
-              : tab === 'speed'
-                ? 'Reset rate, pitch and key to normal'
-                : tab === 'seek'
-                  ? 'Back to 10 s / 30 s'
-                  : effectSub === 'config'
-                    ? 'Return the sliders to where you started'
-                    : 'Switch the effect off'
+            : tab === 'texture'
+              ? 'Switch every texture effect off'
+              : tab === 'snip'
+                ? 'Reset to the whole track'
+                : tab === 'speed'
+                  ? 'Reset rate, pitch and key to normal'
+                  : tab === 'seek'
+                    ? 'Back to 10 s / 30 s'
+                    : effectSub === 'config'
+                      ? 'Return the sliders to where you started'
+                      : 'Switch the effect off'
     )
 </script>
 

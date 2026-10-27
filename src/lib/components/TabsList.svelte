@@ -13,6 +13,7 @@
     import Scissors from '@lucide/svelte/icons/scissors'
     import Settings from '@lucide/svelte/icons/settings'
     import Sparkles from '@lucide/svelte/icons/sparkles'
+    import CassetteTape from '@lucide/svelte/icons/cassette-tape'
     import FastForward from '@lucide/svelte/icons/fast-forward'
     import MoveHorizontal from '@lucide/svelte/icons/move-horizontal'
     import SlidersHorizontal from '@lucide/svelte/icons/sliders-horizontal'
@@ -25,6 +26,7 @@
     import PopUp from '$lib/components/views/PopUp.svelte'
     import MS from '$lib/components/views/MS.svelte'
     import Presets from '$lib/components/views/Presets.svelte'
+    import Texture from '$lib/components/views/Texture.svelte'
     import Logo from '$lib/components/Logo.svelte'
     import SettingsInfo from '$lib/components/views/SettingsInfo.svelte'
     import ActionButtons from '$lib/components/ActionButtons.svelte'
@@ -39,6 +41,7 @@
     import { playbackStore, effectivePlayback } from '$lib/stores/playback'
     import { settingsStore } from '$lib/stores/settings'
     import { QUICK_PRESETS, matchPreset } from '$lib/audio-effects/quick-presets'
+    import { hasLofiEffects } from '$lib/audio-effects/lofi-rack'
     import { volumeStore, type VolumeType } from '$lib/stores/volume'
     import { getVersion } from '$lib/utils/version'
     import { cn } from '$lib/utils.js'
@@ -52,6 +55,7 @@
     const TAB_META: TabMeta[] = [
         { id: 'player', label: 'Player', icon: Play },
         { id: 'presets', label: 'Presets', icon: Sparkles },
+        { id: 'texture', label: 'Texture', icon: CassetteTape },
         { id: 'snip', label: 'Snip', icon: Scissors },
         { id: 'speed', label: 'Speed', icon: Gauge },
         { id: 'fx', label: 'Reverb', icon: Waves },
@@ -77,6 +81,7 @@
 
     const components: Record<string, Component> = {
         presets: Presets,
+        texture: Texture,
         snip: Snip,
         fx: ReverbView,
         eq: EQView,
@@ -99,6 +104,7 @@
                 [...QUICK_PRESETS, ...$configStore.audio_presets]
             )
         ),
+        texture: hasLofiEffects($lofiStore),
         snip: Boolean($nowPlaying?.snip),
         speed: Boolean($nowPlaying?.playback),
         fx: $effectsStore.reverb !== 'none',

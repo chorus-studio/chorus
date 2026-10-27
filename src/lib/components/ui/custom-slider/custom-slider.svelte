@@ -6,7 +6,9 @@
         max = 100,
         step = 1,
         label = 'slider',
-        onValueChange
+        disabled = false,
+        onValueChange,
+        onValueCommit
     }: {
         type: 'single' | 'multiple'
         value: number | number[]
@@ -14,7 +16,11 @@
         max: number
         step: number
         label?: string
+        /** Greys the slider out and ignores input; the fill keeps showing the value. */
+        disabled?: boolean
         onValueChange: (value: number | number[]) => void
+        /** Fired once a drag ends (or after a key press), for work too costly per input event. */
+        onValueCommit?: (value: number | number[]) => void
     } = $props()
 
     let sliderElement: HTMLElement
@@ -62,6 +68,14 @@
         }
     })
 
+    // What the last input event settled on, so a commit reports the same value.
+    let lastValue: number | number[] | undefined
+
+    function handleCommit() {
+        if (lastValue !== undefined) onValueCommit?.(lastValue)
+        lastValue = undefined
+    }
+
     function handleValueChange(e: Event) {
         const target = e.target as HTMLInputElement
         const newValue = +target.value
@@ -78,7 +92,8 @@
                 target.value = next[1].toString()
             }
         }
-        onValueChange(next ?? newValue)
+        lastValue = next ?? newValue
+        onValueChange(lastValue)
 
         const range = max - min || 1
         const slider = target.closest('.slider') as HTMLElement
@@ -95,6 +110,7 @@
 
 <div
     class="slider relative flex w-full items-center"
+    class:disabled
     bind:this={sliderElement}
     onpointermove={pickTrackOwner}
 >
@@ -102,12 +118,14 @@
         {max}
         {min}
         {step}
+        {disabled}
         type="range"
         data-index="0"
         aria-label={type === 'multiple' ? `${label} start` : label}
         class:owns-track={trackOwner === 0}
         bind:this={leftInput}
         oninput={handleValueChange}
+        onchange={handleCommit}
         value={Array.isArray(value) ? value[0] : value}
     />
     {#if type === 'multiple'}
@@ -115,12 +133,14 @@
             {max}
             {min}
             {step}
+            {disabled}
             type="range"
             data-index="1"
             aria-label={`${label} end`}
             class:owns-track={trackOwner === 1}
             bind:this={rightInput}
             oninput={handleValueChange}
+            onchange={handleCommit}
             value={Array.isArray(value) ? value[1] : value}
         />
     {/if}
@@ -168,6 +188,30 @@
     .slider input.owns-track {
         pointer-events: auto;
         z-index: 1;
+    }
+
+    /* Off: the fill goes grey and the thumb hollow, but the value stays readable. */
+    .slider.disabled::before {
+        background: linear-gradient(
+            to right,
+            hsl(var(--ink-fg) / 0.1) var(--start),
+            hsl(var(--ink-fg) / 0.28) var(--start),
+            hsl(var(--ink-fg) / 0.28) var(--stop),
+            hsl(var(--ink-fg) / 0.1) var(--stop)
+        );
+    }
+    .slider input:disabled {
+        pointer-events: none;
+    }
+    .slider input:disabled::-webkit-slider-thumb {
+        cursor: default;
+        border-color: hsl(var(--ink-fg) / 0.4);
+        background: hsl(var(--ink));
+    }
+    .slider input:disabled::-moz-range-thumb {
+        cursor: default;
+        border-color: hsl(var(--ink-fg) / 0.4);
+        background: hsl(var(--ink));
     }
 
     .slider input::-moz-range-track {

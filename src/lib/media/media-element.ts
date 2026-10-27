@@ -136,6 +136,10 @@ export default class MediaElement {
                         this.mediaOverride.updateLofi(data)
                         break
 
+                    case 'FROM_LOFI_TWEAK_LISTENER':
+                        this.mediaOverride.tweakLofi(data)
+                        break
+
                     case 'FROM_MS_PARAMS_LISTENER':
                         this.mediaOverride.updateMSParams(data)
                         break
