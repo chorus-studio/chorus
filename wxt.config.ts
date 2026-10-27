@@ -165,7 +165,6 @@ export default defineConfig({
                 description: 'Add track to block list'
             },
             'show-track': {
-                suggested_key: { default: 'Alt+Shift+T' },
                 description: 'Show current track as a notification'
             },
             'toggle-new-releases': {
