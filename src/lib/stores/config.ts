@@ -3,6 +3,7 @@ import { writable, get } from 'svelte/store'
 import { syncWithType } from '$lib/utils/store-utils'
 import type { Playback } from '$lib/stores/playback'
 import type { AudioEffect } from '$lib/stores/effects'
+import { isNormal, type PresetValues } from '$lib/audio-effects/quick-presets'
 
 export const CONFIG_STORE_KEY = 'local:chorus_config'
 
@@ -30,36 +31,37 @@ export type ConfigState = {
         room_reverb_presets: string[]
         custom_reverb_presets: string[]
         ms_processor_presets: string[]
+        quick_presets: string[]
     }
 }
 
+/**
+ * A user's own preset: the "Mine" group of the Presets tab. Slot N (by position)
+ * is what the `audio-preset-N` keyboard command toggles.
+ */
 export type AudioPreset = {
     id: string
-    active: boolean
+    name: string
     playback: Playback
     effect: AudioEffect
 }
 
-export const defaultAudioPreset: Omit<AudioPreset, 'id'> = {
-    active: false,
-    playback: {
-        pitch: 1,
-        semitone: 0,
-        rate: {
-            value: 1,
-            preserves_pitch: true
-        }
-    },
-    effect: { equalizer: 'none', reverb: 'none', msProcessor: 'none' }
-}
+/** Five slots, matching the five `audio-preset-N` commands in the manifest. */
+export const MAX_AUDIO_PRESETS = 5
 
-export const createAudioPreset = (): AudioPreset => ({
-    ...defaultAudioPreset,
-    id: crypto.randomUUID()
+export const createAudioPreset = (values: PresetValues, name: string): AudioPreset => ({
+    id: crypto.randomUUID(),
+    name,
+    playback: {
+        pitch: values.playback.pitch,
+        semitone: values.playback.semitone,
+        rate: { ...values.playback.rate }
+    },
+    effect: { ...values.effect }
 })
 
 export const defaultConfig: ConfigState = {
-    audio_presets: [createAudioPreset()],
+    audio_presets: [],
     auto_skip: {
         enabled: false,
         title_keywords: [],
@@ -73,8 +75,29 @@ export const defaultConfig: ConfigState = {
         spotify_eq_presets: [],
         room_reverb_presets: [],
         custom_reverb_presets: [],
-        ms_processor_presets: []
+        ms_processor_presets: [],
+        quick_presets: []
     }
+}
+
+/**
+ * Bring a stored config up to date. syncWithType keeps `fx_eq_presets` as-is
+ * because it is an object of arrays, so a list added later (quick_presets) has
+ * to be filled in here. Preset slots from the old settings-dialog editor carried
+ * an `active` flag and could sit at their blank defaults; a blank slot is just a
+ * second "Normal", so it is dropped, and every slot gets a name.
+ */
+function migrate(config: ConfigState): ConfigState {
+    const fx_eq_presets = { ...defaultConfig.fx_eq_presets, ...(config.fx_eq_presets ?? {}) }
+    const audio_presets = (config.audio_presets ?? [])
+        .filter((preset) => preset?.playback && preset?.effect && !isNormal(preset))
+        .map((preset, index) => ({
+            id: preset.id ?? crypto.randomUUID(),
+            name: preset.name || `Preset ${index + 1}`,
+            playback: preset.playback,
+            effect: preset.effect
+        }))
+    return { ...config, fx_eq_presets, audio_presets }
 }
 
 function createConfigStore() {
@@ -129,42 +152,11 @@ function createConfigStore() {
         }
     }
 
-    function updateAudioPreset({
-        preset,
-        type
-    }: {
-        preset: AudioPreset
-        type: 'effect' | 'playback'
-    }) {
-        if (!preset.active) return
-
-        const effect = {
-            equalizer: preset.effect.equalizer,
-            reverb: preset.effect.reverb,
-            msProcessor: preset.effect.msProcessor
-        }
-        const playback = {
-            pitch: preset.playback.pitch,
-            semitone: preset.playback.semitone,
-            rate: {
-                value: preset.playback.rate.value,
-                preserves_pitch: preset.playback.rate.preserves_pitch
-            }
-        }
-
-        const message = {
-            type: type === 'effect' ? 'FROM_EFFECTS_LISTENER' : 'FROM_PLAYBACK_LISTENER',
-            data: type === 'effect' ? effect : playback
-        }
-
-        window?.postMessage(message, '*')
-    }
-
     storage.getItem<ConfigState>(CONFIG_STORE_KEY).then((config) => {
         if (!config) return
 
         // Sync the stored settings with the current type definition
-        const syncedConfig = syncWithType(config, defaultConfig)
+        const syncedConfig = migrate(syncWithType(config, defaultConfig))
         set(syncedConfig)
 
         // Update storage with synced settings
@@ -183,14 +175,13 @@ function createConfigStore() {
     storage.watch<ConfigState>(CONFIG_STORE_KEY, (config) => {
         if (!config || isUpdatingStorage) return
 
-        const syncedConfig = syncWithType(config, defaultConfig)
+        const syncedConfig = migrate(syncWithType(config, defaultConfig))
         set(syncedConfig)
     })
 
     return {
         subscribe,
         updateConfig,
-        updateAudioPreset,
         checkIfTrackShouldBeSkipped
     }
 }

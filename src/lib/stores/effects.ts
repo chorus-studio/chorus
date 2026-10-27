@@ -42,6 +42,21 @@ function createAudioEffectsStore() {
         dispatchEffect()
     }
 
+    /** Swap every effect at once (a quick preset): one write, one dispatch. */
+    async function replace(effect: AudioEffect) {
+        const next = { ...defaultAudioEffect, ...effect }
+        set(next)
+        isUpdatingStorage = true
+        try {
+            await storage.setItem<AudioEffect>(AUDIO_EFFECTS_STORE_KEY, next)
+        } catch (error) {
+            console.error('Error replacing effects in storage:', error)
+        } finally {
+            isUpdatingStorage = false
+        }
+        dispatchEffect()
+    }
+
     function isDefault() {
         return get(store) === defaultAudioEffect
     }
@@ -86,6 +101,7 @@ function createAudioEffectsStore() {
     return {
         set,
         reset,
+        replace,
         isDefault,
         subscribe,
         updateEffect,

@@ -1,7 +1,6 @@
 import { get } from 'svelte/store'
 import { loopStore } from '$lib/stores/loop'
 import { mediaStore } from '$lib/stores/media'
-import { configStore } from '$lib/stores/config'
 import { effectsStore } from '$lib/stores/effects'
 import { nowPlaying } from '$lib/stores/now-playing'
 import { snipStore } from '$lib/stores/snip'
@@ -56,7 +55,7 @@ export class TrackObserver {
 
     private async processMediaPlayInit() {
         await this.trackStateManager.updateTrackType()
-        await this.trackStateManager.setPlayback(this.audioPreset)
+        await this.trackStateManager.setPlayback()
         this.setEffect()
     }
 
@@ -73,17 +72,10 @@ export class TrackObserver {
         return get(loopStore)
     }
 
-    get config() {
-        return get(configStore)
-    }
-
-    get audioPreset() {
-        return this.config.audio_presets.find((p) => p.active)
-    }
-
+    // Re-send the saved effects to the media layer for the new track. A quick
+    // preset lives in this same store, so nothing else needs re-applying.
     setEffect() {
-        if (!this.audioPreset) return effectsStore.dispatchEffect()
-        configStore.updateAudioPreset({ preset: this.audioPreset, type: 'effect' })
+        effectsStore.dispatchEffect()
     }
 
     private async updateTrackType(): Promise<void> {
