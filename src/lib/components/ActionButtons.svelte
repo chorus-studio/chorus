@@ -4,11 +4,20 @@
     import { snipStore } from '$lib/stores/snip'
     import { dataStore } from '$lib/stores/data'
     import { effectsStore } from '$lib/stores/effects'
+    import { lofiStore } from '$lib/stores/lofi'
     import { reverbParamsStore } from '$lib/stores/reverb-params'
     import { eqBandsStore } from '$lib/stores/eq-bands'
-    import { eqSubView, fxSubView } from '$lib/stores/effects-ui'
+    import { msParamsStore } from '$lib/stores/ms-params'
+    import { eqSubView, fxSubView, msSubView, presetsSubView } from '$lib/stores/effects-ui'
     import { nowPlaying } from '$lib/stores/now-playing'
     import { playbackStore, defaultPlayback } from '$lib/stores/playback'
+    import {
+        applyNormal,
+        applyPresetValues,
+        currentValues,
+        tweakOrigin,
+        updatePresetSlot
+    } from '$lib/utils/quick-presets'
     import {
         defaultSnip,
         firstSegmentStart,
@@ -143,8 +152,15 @@
     }
 
     async function handleReset() {
-        // fx/eq share effectsStore but each tab must reset ONLY its own effect —
-        // effectsStore.reset() would wipe both reverb and the equalizer at once.
+        // Presets: everything audio back to normal in one go; in the rack view
+        // only the rack goes off, speed and the Chorus slots stay.
+        if (tab === 'presets') {
+            if (get(presetsSubView) === 'rack') return lofiStore.reset()
+            return applyNormal()
+        }
+
+        // fx/eq/ms share effectsStore but each tab must reset ONLY its own effect —
+        // effectsStore.reset() would wipe all three at once.
         // Reset is context-sensitive: in the config sub-view it returns the sliders
         // to their "from:" starting point (keeping the effect on); in the presets
         // sub-view it turns the effect off + flattens the sliders (silently — a
@@ -158,6 +174,11 @@
             if (get(eqSubView) === 'config') return eqBandsStore.resetToSeed()
             await effectsStore.updateEffect({ key: 'equalizer', value: 'none' })
             return eqBandsStore.resetSilent()
+        }
+        if (tab === 'ms') {
+            if (get(msSubView) === 'config') return msParamsStore.resetToSeed()
+            await effectsStore.updateEffect({ key: 'msProcessor', value: 'none' })
+            return msParamsStore.resetSilent()
         }
 
         const store = getStore()
@@ -197,22 +218,44 @@
                         $playbackStore.track.semitone != 0))
         )
     )
-    const hasActions = $derived(['fx', 'eq', 'snip', 'speed', 'seek'].includes(tab))
-    // fx/eq: "Turn off" in the presets view, "Reset config" while editing.
-    const effectSub = $derived(tab === 'fx' ? $fxSubView : tab === 'eq' ? $eqSubView : null)
+    const hasActions = $derived(
+        ['presets', 'fx', 'eq', 'ms', 'snip', 'speed', 'seek'].includes(tab)
+    )
+    // Presets: what's playing drifted from the preset it began as. Revert goes
+    // back to it; Update, for one of the user's own, writes the drift into it.
+    const origin = $derived(tab === 'presets' ? $tweakOrigin : null)
+    const revert = () => origin && applyPresetValues(origin.preset, origin.preset.id)
+    const update = () => origin?.mine && updatePresetSlot(origin.preset.id, currentValues())
+    // fx/eq/ms: "Turn off" in the presets view, "Reset config" while editing.
+    const effectSub = $derived(
+        tab === 'fx' ? $fxSubView : tab === 'eq' ? $eqSubView : tab === 'ms' ? $msSubView : null
+    )
+    const inRack = $derived(tab === 'presets' && $presetsSubView === 'rack')
     const resetLabel = $derived(
-        effectSub === null ? 'Reset' : effectSub === 'config' ? 'Reset config' : 'Turn off'
+        inRack
+            ? 'Turn off'
+            : tab === 'presets'
+              ? 'Normal'
+              : effectSub === null
+                ? 'Reset'
+                : effectSub === 'config'
+                  ? 'Reset config'
+                  : 'Turn off'
     )
     const resetTitle = $derived(
-        tab === 'snip'
-            ? 'Reset to the whole track'
-            : tab === 'speed'
-              ? 'Reset rate, pitch and key to normal'
-              : tab === 'seek'
-                ? 'Back to 10 s / 30 s'
-                : effectSub === 'config'
-                  ? 'Return the sliders to where you started'
-                  : 'Switch the effect off'
+        inRack
+            ? 'Switch every texture effect off'
+            : tab === 'presets'
+              ? 'Rate, pitch, key, reverb, EQ and stereo back to normal'
+              : tab === 'snip'
+                ? 'Reset to the whole track'
+                : tab === 'speed'
+                  ? 'Reset rate, pitch and key to normal'
+                  : tab === 'seek'
+                    ? 'Back to 10 s / 30 s'
+                    : effectSub === 'config'
+                      ? 'Return the sliders to where you started'
+                      : 'Switch the effect off'
     )
 </script>
 
@@ -220,13 +263,35 @@
     <div class="flex items-center gap-1">
         {#if !showDelete}
             <Button variant="ghost" size="sm" onclick={handleReset} title={resetTitle}>
-                {#if resetLabel === 'Turn off'}
+                {#if resetLabel === 'Turn off' || resetLabel === 'Normal'}
                     <Power class="size-3.5" />
                 {:else}
                     <RotateCcw class="size-3.5" />
                 {/if}
                 {resetLabel}
             </Button>
+        {/if}
+
+        {#if origin}
+            <Button
+                variant="ghost"
+                size="sm"
+                onclick={revert}
+                title={`Back to ${origin.preset.name} as it was`}
+            >
+                <RotateCcw class="size-3.5" />
+                Revert
+            </Button>
+            {#if origin.mine}
+                <Button
+                    size="sm"
+                    onclick={update}
+                    title={`Save what's playing into ${origin.preset.name}`}
+                >
+                    <Check class="size-3.5" />
+                    Update
+                </Button>
+            {/if}
         {/if}
 
         {#if showDelete}

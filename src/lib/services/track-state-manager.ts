@@ -2,7 +2,6 @@ import { get } from 'svelte/store'
 import { seekStore } from '$lib/stores/seek'
 import { playbackStore, defaultPlayback } from '$lib/stores/playback'
 import { nowPlaying } from '$lib/stores/now-playing'
-import { configStore, type AudioPreset } from '$lib/stores/config'
 
 /**
  * Manages track state and playback settings
@@ -23,15 +22,14 @@ export class TrackStateManager {
         }
     }
 
-    async setPlayback(audioPreset?: AudioPreset): Promise<void> {
-        if (!audioPreset) {
-            const currentSong = get(nowPlaying)
-            // Mirror the Speed page logic exactly: update store state before dispatching
-            const track = currentSong?.playback ?? defaultPlayback
-            await playbackStore.updatePlayback({ track, is_default: !currentSong?.playback })
-            return
-        }
-
-        configStore.updateAudioPreset({ preset: audioPreset, type: 'playback' })
+    /**
+     * Point playback at the new track: its own saved speed when it has one,
+     * otherwise the all-tracks default (which is where a quick preset lives).
+     * Mirrors the Speed page: update store state before dispatching.
+     */
+    async setPlayback(): Promise<void> {
+        const currentSong = get(nowPlaying)
+        const track = currentSong?.playback ?? defaultPlayback
+        await playbackStore.updatePlayback({ track, is_default: !currentSong?.playback })
     }
 }

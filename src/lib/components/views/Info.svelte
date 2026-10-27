@@ -2,6 +2,7 @@
     import { onMount } from 'svelte'
     import type { Component } from 'svelte'
     import Logo from '$lib/components/Logo.svelte'
+    import Keycaps from '$lib/components/Keycaps.svelte'
     import { getVersion } from '$lib/utils/version'
     import { getCommandService } from '$lib/utils/command'
 
@@ -72,12 +73,6 @@
         await getCommandService().openShortcutSettings(url)
     }
 
-    const keys = (combo: string) =>
-        combo
-            .split('+')
-            .map((k) => k.trim())
-            .filter(Boolean)
-
     onMount(loadShortcuts)
 </script>
 
@@ -121,12 +116,7 @@
                     {@const combo = shortcuts[cmd.name]}
                     <span class="flex items-center gap-x-1 text-[11px] text-ink-muted">
                         {#if combo}
-                            {#each keys(combo) as key (key)}
-                                <kbd
-                                    class="rounded border border-hairline-strong bg-surface px-1 py-0.5 font-mono text-[10px] text-ink-fg-2"
-                                    >{key}</kbd
-                                >
-                            {/each}
+                            <Keycaps {combo} />
                         {:else}
                             <span class="font-mono text-[10px] text-amber">not set</span>
                         {/if}

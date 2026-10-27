@@ -26,7 +26,7 @@
     })
 </script>
 
-<div class="flex flex-col gap-y-1.5">
+<div class="flex flex-col gap-y-1">
     <div class="flex items-center justify-between gap-x-3">
         <SegmentedControl
             size="xs"
@@ -47,7 +47,9 @@
         </span>
     </div>
 
-    <PlaybackInput key="rate" list={$playbackStore.frequents.rate} />
-    <PlaybackInput key="pitch" list={$playbackStore.frequents.pitch} />
-    <PlaybackInput key="semitone" list={$playbackStore.frequents.semitone} />
+    <div class="flex flex-col gap-2">
+        <PlaybackInput key="rate" list={$playbackStore.frequents.rate} />
+        <PlaybackInput key="pitch" list={$playbackStore.frequents.pitch} />
+        <PlaybackInput key="semitone" list={$playbackStore.frequents.semitone} />
+    </div>
 </div>

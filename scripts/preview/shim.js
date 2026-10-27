@@ -91,7 +91,15 @@
             id: 'preview',
             lastError: undefined,
             getURL: (p) => new URL(String(p).replace(/^\//, ''), location.origin + '/').href,
-            sendMessage: () => Promise.resolve(),
+            // Proxy services (@webext-core) reach the background this way; answer the
+            // command lookup so Mine cards show their keycaps, ignore the rest.
+            sendMessage: (message) =>
+                Promise.resolve(
+                    message?.type === 'proxy-service.CommandService' &&
+                        message.data?.path === 'getCommands'
+                        ? { res: chrome.commands.getAll() }
+                        : undefined
+                ),
             connect: port,
             onMessage: evt(),
             onConnect: evt(),
@@ -103,7 +111,16 @@
             update: () => Promise.resolve({}),
             sendMessage: () => Promise.resolve()
         },
-        commands: { getAll: () => Promise.resolve([]) }
+        commands: {
+            getAll: () => [
+                // As Chrome on macOS prints them: a run of glyphs, no "+".
+                { name: 'audio-preset-1', shortcut: '⌥⇧1' },
+                { name: 'audio-preset-2', shortcut: '⌥⇧2' },
+                { name: 'play/pause', shortcut: '⇧⌘P' },
+                { name: 'seek-rewind', shortcut: '⌥⇧←' },
+                { name: 'seek-forward', shortcut: '⌥⇧→' }
+            ]
+        }
     }
     globalThis.chrome = chrome
     globalThis.browser = chrome

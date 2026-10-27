@@ -15,10 +15,21 @@
         impulsePresets,
         customPresets as reverbPresets
     } from '$lib/audio-effects/reverb/presets'
+    import {
+        QUICK_PRESETS,
+        QUICK_PRESET_GROUPS,
+        sectionsOf
+    } from '$lib/audio-effects/quick-presets'
 
     type HiddenKey = keyof typeof $configStore.fx_eq_presets
     type Section = { title?: string; presets: string[] }
-    type Group = { key: HiddenKey; title: string; sections: Section[] }
+    // `labels` maps a stored id to its display name where the two differ (quick presets).
+    type Group = {
+        key: HiddenKey
+        title: string
+        sections: Section[]
+        labels?: Record<string, string>
+    }
 
     // One checklist per picker, alphabetical so a name is quick to find.
     const alphabetical = (list: string[]) =>
@@ -47,6 +58,17 @@
                 { title: 'Impulse responses', presets: alphabetical(impulsePresets) },
                 { title: 'Algorithmic', presets: alphabetical(reverbPresets) }
             ]
+        },
+        {
+            key: 'quick_presets',
+            title: 'Quick presets',
+            labels: Object.fromEntries(QUICK_PRESETS.map((p) => [p.id, p.name])),
+            sections: QUICK_PRESET_GROUPS.flatMap((g) =>
+                sectionsOf(g.id).map((s) => ({
+                    title: s.title ? `${g.label} · ${s.title}` : g.label,
+                    presets: s.presets.map((p) => p.id)
+                }))
+            )
         }
     ]
 
@@ -66,13 +88,15 @@
     const hiddenCount = $derived(hiddenIn(group))
     const hiddenEverywhere = $derived(GROUPS.reduce((n, g) => n + hiddenIn(g), 0))
 
+    const labelOf = (preset: string) => group.labels?.[preset] ?? preset
+
     const needle = $derived(query.trim().toLowerCase())
     const sections = $derived(
         group.sections
             .map((s) => ({
                 ...s,
                 presets: needle
-                    ? s.presets.filter((p) => p.toLowerCase().includes(needle))
+                    ? s.presets.filter((p) => labelOf(p).toLowerCase().includes(needle))
                     : s.presets
             }))
             .filter((s) => s.presets.length > 0)
@@ -122,8 +146,8 @@
         <div class="flex flex-col gap-y-0.5">
             <span class="text-[13px] font-medium text-ink-fg">Trim the preset pickers</span>
             <span class="text-xs text-ink-muted">
-                Untick a preset to hide it from the Reverb and EQ pickers. Nothing is deleted; bring
-                it back any time.
+                Untick a preset to hide it from the Reverb and EQ pickers or the Presets tab.
+                Nothing is deleted; bring it back any time.
             </span>
         </div>
         <label class="relative w-48 shrink-0">
@@ -211,7 +235,7 @@
                                 <Check class="size-2.5" strokeWidth={3.5} />
                             {/if}
                         </span>
-                        <span class="truncate">{preset}</span>
+                        <span class="truncate">{labelOf(preset)}</span>
                     </label>
                 {/each}
             </div>

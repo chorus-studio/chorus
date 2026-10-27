@@ -43,8 +43,9 @@
     topOptions={roomOptions}
     topLabel="Room"
     topHint="Spaces from a small room to a cathedral"
+    topRecent="room_reverb"
     bottomLabel="Custom & impulse"
-    bottomHint="Character presets; impulse responses can't be tuned"
+    bottomHint="Character presets; impulses aren't tunable"
+    bottomRecent="custom_reverb"
     bottomOptions={customOptions}
-    note="Picking from one list clears the other. Tune the sound in Config."
 />

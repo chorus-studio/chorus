@@ -68,7 +68,7 @@
                 <path d="M3 3v5h5" />
             </svg>
             <span
-                class="pointer-events-none absolute inset-x-0 -bottom-1 text-center font-mono text-xs font-bold leading-none"
+                class="pointer-events-none absolute inset-x-0 -bottom-1.5 text-center font-mono text-xs font-bold leading-none"
             >
                 {seekValue}
             </span>

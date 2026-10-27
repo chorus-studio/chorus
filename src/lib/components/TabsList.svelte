@@ -12,6 +12,7 @@
     import Waves from '@lucide/svelte/icons/waves'
     import Scissors from '@lucide/svelte/icons/scissors'
     import Settings from '@lucide/svelte/icons/settings'
+    import Sparkles from '@lucide/svelte/icons/sparkles'
     import FastForward from '@lucide/svelte/icons/fast-forward'
     import MoveHorizontal from '@lucide/svelte/icons/move-horizontal'
     import SlidersHorizontal from '@lucide/svelte/icons/sliders-horizontal'
@@ -22,7 +23,8 @@
     import Seek from '$lib/components/views/Seek.svelte'
     import Speed from '$lib/components/views/Speed.svelte'
     import PopUp from '$lib/components/views/PopUp.svelte'
-    import MS from '$lib/components/views/MS.svelte'
+    import MSView from '$lib/components/views/MSView.svelte'
+    import Presets from '$lib/components/views/Presets.svelte'
     import Logo from '$lib/components/Logo.svelte'
     import SettingsInfo from '$lib/components/views/SettingsInfo.svelte'
     import ActionButtons from '$lib/components/ActionButtons.svelte'
@@ -30,10 +32,14 @@
 
     import { dataStore } from '$lib/stores/data'
     import { snipStore } from '$lib/stores/snip'
+    import { configStore } from '$lib/stores/config'
     import { effectsStore } from '$lib/stores/effects'
+    import { lofiStore } from '$lib/stores/lofi'
     import { nowPlaying } from '$lib/stores/now-playing'
-    import { playbackStore } from '$lib/stores/playback'
+    import { playbackStore, effectivePlayback } from '$lib/stores/playback'
     import { settingsStore } from '$lib/stores/settings'
+    import { QUICK_PRESETS, matchPreset } from '$lib/audio-effects/quick-presets'
+    import { hasLofiEffects } from '$lib/audio-effects/lofi-rack'
     import { volumeStore, type VolumeType } from '$lib/stores/volume'
     import { getVersion } from '$lib/utils/version'
     import { cn } from '$lib/utils.js'
@@ -46,6 +52,7 @@
     type TabMeta = { id: string; label: string; icon: Component }
     const TAB_META: TabMeta[] = [
         { id: 'player', label: 'Player', icon: Play },
+        { id: 'presets', label: 'Presets', icon: Sparkles },
         { id: 'snip', label: 'Snip', icon: Scissors },
         { id: 'speed', label: 'Speed', icon: Gauge },
         { id: 'fx', label: 'Reverb', icon: Waves },
@@ -70,18 +77,32 @@
     let defaultView = $state<string>('snip')
 
     const components: Record<string, Component> = {
+        presets: Presets,
         snip: Snip,
         fx: ReverbView,
         eq: EQView,
-        ms: MS,
+        ms: MSView,
         seek: Seek,
         speed: Speed,
         settings: SettingsInfo,
         player: PopUp
     }
 
-    // Which features currently carry state — shown as an LED on the tab.
+    // Which features currently carry state — shown as an LED on the tab. The
+    // texture rack has no tab of its own (it is edited from Presets), so a rack
+    // that is on lights Presets even when no card matches.
     const engaged = $derived<Record<string, boolean>>({
+        presets:
+            Boolean(
+                matchPreset(
+                    {
+                        playback: effectivePlayback($playbackStore),
+                        effect: $effectsStore,
+                        lofi: $lofiStore
+                    },
+                    [...QUICK_PRESETS, ...$configStore.audio_presets]
+                )
+            ) || hasLofiEffects($lofiStore),
         snip: Boolean($nowPlaying?.snip),
         speed: Boolean($nowPlaying?.playback),
         fx: $effectsStore.reverb !== 'none',

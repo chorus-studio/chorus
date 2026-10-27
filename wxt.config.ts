@@ -106,6 +106,7 @@ export default defineConfig({
                     '/processor.js',
                     '/ms-processor.js',
                     '/soundtouch.js',
+                    '/worklets/*',
                     '/content-scripts/*.css',
                     // Vocal-model assets are Chrome-only (offscreen pipeline); omit on Firefox.
                     ...(browser === 'firefox' ? [] : ['/models/*', '/ort/*'])
@@ -164,7 +165,6 @@ export default defineConfig({
                 description: 'Add track to block list'
             },
             'show-track': {
-                suggested_key: { default: 'Alt+Shift+T' },
                 description: 'Show current track as a notification'
             },
             'toggle-new-releases': {
@@ -173,20 +173,26 @@ export default defineConfig({
             'toggle-config': {
                 description: 'Toggle Chorus Config UI'
             },
+            'quick-preset-next': {
+                description: 'Next quick preset'
+            },
+            'quick-preset-previous': {
+                description: 'Previous quick preset'
+            },
             'audio-preset-1': {
-                description: 'Audio Preset 1'
+                description: 'Preset slot 1'
             },
             'audio-preset-2': {
-                description: 'Audio Preset 2'
+                description: 'Preset slot 2'
             },
             'audio-preset-3': {
-                description: 'Audio Preset 3'
+                description: 'Preset slot 3'
             },
             'audio-preset-4': {
-                description: 'Audio Preset 4'
+                description: 'Preset slot 4'
             },
             'audio-preset-5': {
-                description: 'Audio Preset 5'
+                description: 'Preset slot 5'
             },
             'cycle-theme-next': {
                 description: 'Cycle Theme Next'

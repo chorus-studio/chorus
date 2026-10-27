@@ -20,8 +20,9 @@ export default class AudioManager {
     private _preTransitionGain: number | null = null
 
     // Track active effect nodes for multi-effect chaining
-    // Some effects (like equalizer) have separate input/output nodes
+    // Some effects (like equalizer and the lofi rack) have separate input/output nodes
     private _activeEffects: {
+        lofi?: { input: AudioNode; output: AudioNode }
         equalizer?: { input: AudioNode; output: AudioNode } | AudioNode
         msProcessor?: AudioWorkletNode
         reverb?: AudioNode
@@ -243,9 +244,26 @@ export default class AudioManager {
         this._gainNode.gain.value = Math.max(0, gainValue)
     }
 
+    /** The gain the volume settings ask for, the number setGain writes. */
+    private targetGain(): number {
+        if (this._currentVolume === 0) return 0
+        const gain =
+            this._volumeType === 'logarithmic'
+                ? this.linearToLogarithmic(this._currentVolume)
+                : this._currentVolume
+        return Math.max(0, gain)
+    }
+
+    /**
+     * Silence the chain while it is rewired. The level to come back to is the
+     * one the volume asks for, not whatever the param reads right now: two
+     * updates back to back (the Chorus slots, then the rack, on every page
+     * load) would otherwise have the second read 0 mid-fade and "restore" it.
+     * A mute inside a mute keeps the first one's bookkeeping.
+     */
     muteForTransition(): void {
         if (!this._gainNode || !this._audioContext) return
-        this._preTransitionGain = this._gainNode.gain.value
+        if (this._preTransitionGain === null) this._preTransitionGain = this.targetGain()
         this._gainNode.gain.cancelScheduledValues(this._audioContext.currentTime)
         this._gainNode.gain.setValueAtTime(0, this._audioContext.currentTime)
     }
@@ -253,6 +271,7 @@ export default class AudioManager {
     unmuteAfterTransition(fadeDuration: number = 0.005): void {
         if (!this._gainNode || !this._audioContext || this._preTransitionGain === null) return
         const now = this._audioContext.currentTime
+        this._gainNode.gain.cancelScheduledValues(now)
         this._gainNode.gain.setValueAtTime(0, now)
         this._gainNode.gain.linearRampToValueAtTime(this._preTransitionGain, now + fadeDuration)
         this._preTransitionGain = null
@@ -302,8 +321,13 @@ export default class AudioManager {
         // Reconnect source to gain node after cleanup
         this.source!.connect(this._gainNode!)
 
-        // Chain through active effects (EQ, MS processor) before the dry/wet split
+        // Chain through active effects (lofi rack, EQ, MS processor) before the dry/wet split
         let currentNode: AudioNode = this._gainNode!
+
+        if (this._activeEffects.lofi) {
+            currentNode.connect(this._activeEffects.lofi.input)
+            currentNode = this._activeEffects.lofi.output
+        }
 
         if (this._activeEffects.equalizer) {
             if (
@@ -364,6 +388,14 @@ export default class AudioManager {
         this.rebuildEffectChain()
     }
 
+    /** The lovelofi rack sits first in the chain, straight after the gain node. */
+    connectLofi(rack: { input: AudioNode; output: AudioNode }) {
+        if (!this.isConnectable) return
+
+        this._activeEffects.lofi = rack
+        this.rebuildEffectChain()
+    }
+
     private cleanupEffectChain() {
         if (!this._gainNode || !this._soundTouchNode) return
 
@@ -383,11 +415,19 @@ export default class AudioManager {
             this._soundTouchNode.disconnect()
 
             // Disconnect active effects
-            // NOTE: For equalizer with separate input/output nodes, we only disconnect
-            // the OUTPUT node to break its downstream connection. We must NOT disconnect
-            // the input node — AudioNode.disconnect() removes ALL outputs, which would
-            // sever the internal filter[0] → filter[1] chain. The input's incoming
-            // connection (gain → filter[0]) is already broken by gainNode.disconnect().
+            // NOTE: For effects with separate input/output nodes (equalizer, lofi rack),
+            // we only disconnect the OUTPUT node to break its downstream connection. We
+            // must NOT disconnect the input node — AudioNode.disconnect() removes ALL
+            // outputs, which would sever the internal chain (filter[0] → filter[1], or
+            // the rack's input → its first effect). The input's incoming connection
+            // (gain → input) is already broken by gainNode.disconnect().
+            if (this._activeEffects.lofi) {
+                try {
+                    this._activeEffects.lofi.output.disconnect()
+                } catch (e) {
+                    // Ignore disconnect errors during cleanup
+                }
+            }
             if (this._activeEffects.equalizer) {
                 if (
                     typeof this._activeEffects.equalizer === 'object' &&
@@ -440,7 +480,12 @@ export default class AudioManager {
             // Build dynamic chain: gain → [effects] → soundTouch → destination
             let currentNode: AudioNode = this._gainNode
 
-            // Chain effects in order: equalizer → MS processor → reverb
+            // Chain effects in order: lofi rack → equalizer → MS processor → reverb
+            if (this._activeEffects.lofi) {
+                currentNode.connect(this._activeEffects.lofi.input)
+                currentNode = this._activeEffects.lofi.output
+            }
+
             if (this._activeEffects.equalizer) {
                 // Handle effects with separate input/output nodes (like equalizer with filter chain)
                 if (
@@ -512,7 +557,7 @@ export default class AudioManager {
         }
     }
 
-    removeEffect(effectType: 'equalizer' | 'msProcessor' | 'reverb') {
+    removeEffect(effectType: 'lofi' | 'equalizer' | 'msProcessor' | 'reverb') {
         // Remove specific effect and rebuild chain
         delete this._activeEffects[effectType]
         this.rebuildEffectChain()

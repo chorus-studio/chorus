@@ -16,7 +16,7 @@ export type Playback = {
 export type SoundTouchData = Omit<Playback, 'rate'>
 export type Frequent = { value: number; pinned: boolean }
 
-type PlaybackSettings = {
+export type PlaybackSettings = {
     default: Playback
     track: Playback
     frequents: {
@@ -26,6 +26,10 @@ type PlaybackSettings = {
     }
     is_default: boolean
 }
+
+/** What is actually being heard: the track's own speed when it has one, else the default. */
+export const effectivePlayback = (settings: PlaybackSettings): Playback =>
+    settings.is_default ? settings.default : settings.track
 
 export const defaultPlayback: Playback = {
     rate: { value: 1, preserves_pitch: true },

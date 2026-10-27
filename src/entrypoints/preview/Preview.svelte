@@ -29,6 +29,12 @@
     } from '$lib/utils/theming'
     import { invertPalette } from '$lib/utils/theme-surfaces'
     import { DEFAULT_GLASS, settingsStore } from '$lib/stores/settings'
+    import { configStore, createAudioPreset } from '$lib/stores/config'
+    import { NORMAL_VALUES, QUICK_PRESETS, quickPresetById } from '$lib/audio-effects/quick-presets'
+    import { applyPresetValues } from '$lib/utils/quick-presets'
+    import { lofiStore, type LofiEffectKey } from '$lib/stores/lofi'
+    import { effectsStore } from '$lib/stores/effects'
+    import { eqSubView, fxSubView, msSubView, presetsSubView } from '$lib/stores/effects-ui'
 
     const params = new URLSearchParams(location.search)
     const scene = params.get('scene') ?? 'tabs'
@@ -81,7 +87,75 @@
         ['Lady Love by Thee Sacred Souls', '#5c4a6b', 0],
         ['Get Sun by Hiatus Kaiyote', '#b3833a', 90 * DAY]
     ] as const
-    let ready = $state(dialog !== 'blocked')
+    let ready = $state(dialog !== 'blocked' && !['presets', 'fx', 'eq', 'ms'].includes(tab))
+
+    // ?tab=fx&reverb=hall, ?tab=eq&eq=Rock and ?tab=ms&ms=wide seed the effect
+    // tabs with that preset on; &view=config opens the Config half instead of
+    // Presets.
+    onMount(async () => {
+        if (tab !== 'fx' && tab !== 'eq' && tab !== 'ms') return
+        await new Promise((resolve) => setTimeout(resolve, 20))
+        const reverb = params.get('reverb')
+        const eq = params.get('eq')
+        const ms = params.get('ms')
+        if (reverb) await effectsStore.updateEffect({ key: 'reverb', value: reverb })
+        if (eq) await effectsStore.updateEffect({ key: 'equalizer', value: eq })
+        if (ms) await effectsStore.updateEffect({ key: 'msProcessor', value: ms })
+        if (params.get('view') === 'config') {
+            const subView = tab === 'fx' ? fxSubView : tab === 'eq' ? eqSubView : msSubView
+            subView.set('config')
+        }
+        ready = true
+    })
+
+    // ?tab=presets&preset=nightcore&group=mine&mine=1 seeds the Presets tab: the
+    // named built-in applied (so its card is lit), the group to open on, and two
+    // saved slots for Mine. The frame mounts once the stores hold all of it.
+    // &view=rack opens the texture rack instead of the cards, and
+    // &tweak=lowPass:50 nudges one knob so the status reads "tweaked from";
+    // &origin=mine (with mine=1) starts from the first saved slot instead.
+    onMount(async () => {
+        if (tab !== 'presets') return
+        // The stores hydrate from (shim) storage in microtasks after import; a
+        // macrotask later they are settled, so the seed below is not overwritten.
+        await new Promise((resolve) => setTimeout(resolve, 20))
+        const group = params.get('group')
+        if (group) await storage.setItem('local:chorus_preset_group', group)
+        if (params.get('mine') === '1') {
+            const lofi = QUICK_PRESETS.find((p) => p.id === 'classic-lofi') ?? QUICK_PRESETS[0]
+            await configStore.updateConfig({
+                audio_presets: [
+                    createAudioPreset(lofi, 'Late night'),
+                    createAudioPreset(
+                        {
+                            playback: {
+                                rate: { value: 1.2, preserves_pitch: true },
+                                pitch: 1,
+                                semitone: -2
+                            },
+                            effect: {
+                                equalizer: 'Bass booster',
+                                reverb: 'none',
+                                msProcessor: 'none'
+                            },
+                            lofi: NORMAL_VALUES.lofi
+                        },
+                        'Gym'
+                    )
+                ]
+            })
+        }
+        const preset = quickPresetById(params.get('preset') ?? '')
+        if (preset) await applyPresetValues(preset, preset.id)
+        const slot = get(configStore).audio_presets[0]
+        if (params.get('origin') === 'mine' && slot) await applyPresetValues(slot, slot.id)
+        const [knob, amount] = (params.get('tweak') ?? '').split(':')
+        if (knob && amount) {
+            await lofiStore.update(knob as LofiEffectKey, { intensity: Number(amount) })
+        }
+        if (params.get('view') === 'rack') presetsSubView.set('rack')
+        ready = true
+    })
 
     onMount(async () => {
         if (dialog !== 'blocked') return
@@ -122,7 +196,7 @@
             id="frame"
             class="chorus-float relative h-[360px] w-[440px] overflow-hidden rounded-xl border border-hairline-strong bg-ink shadow-float"
         >
-            <TabsList initialTab={tab} />
+            {#if ready}<TabsList initialTab={tab} />{/if}
         </div>
     {:else if scene === 'pip'}
         <div

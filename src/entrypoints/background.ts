@@ -1,8 +1,21 @@
 import { storage } from '@wxt-dev/storage'
 import { activeOpenTab, getActiveTab } from '$lib/utils/messaging'
 import type { ConfigState } from '$lib/stores/config'
-import { defaultPlayback } from '$lib/stores/playback'
-import { defaultAudioEffect } from '$lib/stores/effects'
+import { defaultPlayback, effectivePlayback, type PlaybackSettings } from '$lib/stores/playback'
+import { defaultAudioEffect, type AudioEffect } from '$lib/stores/effects'
+import {
+    normalizeEffectSettings,
+    type EffectSettings
+} from '$lib/audio-effects/lofi/audio/effect-settings'
+import {
+    NORMAL_VALUES,
+    QUICK_PRESETS,
+    QUICK_PRESET_EVENT,
+    matchPreset,
+    sameValues,
+    type PresetValues,
+    type QuickPresetMessage
+} from '$lib/audio-effects/quick-presets'
 import type { NowPlaying } from '$lib/stores/now-playing'
 import type { SettingsState } from '$lib/stores/settings'
 import { THEME_NAMES } from '$lib/utils/theming'
@@ -48,7 +61,10 @@ export default defineBackground(() => {
         DEVICE_ID: 'local:chorus_device_id' as const,
         AUTH_TOKEN: 'local:chorus_auth_token' as const,
         NOW_PLAYING: 'local:chorus_now_playing' as const,
-        CONNECTION_ID: 'local:chorus_connection_id' as const
+        CONNECTION_ID: 'local:chorus_connection_id' as const,
+        PLAYBACK: 'local:chorus_playback' as const,
+        EFFECTS: 'local:chorus_audio_effects' as const,
+        LOFI: 'local:chorus_lofi' as const
     }
 
     const CUSTOM_EVENTS = {
@@ -76,15 +92,23 @@ export default defineBackground(() => {
                     )
                 } else if (data.type == 'init_media') {
                     document.dispatchEvent(new CustomEvent('FROM_MEDIA_PLAY_INIT'))
-                } else if (data.type == 'audio_preset') {
-                    const { playback, effect } = data?.value
-                    window.postMessage({ type: 'FROM_EFFECTS_LISTENER', data: effect }, '*')
-                    window.postMessage({ type: 'FROM_PLAYBACK_LISTENER', data: playback }, '*')
                 } else {
                     window.postMessage({ type: data.type, data: data?.value }, '*')
                 }
             }
         })
+    }
+
+    /** What the page is hearing now, read from the same storage its stores persist to. */
+    async function currentPresetValues(): Promise<PresetValues> {
+        const playback = await storage.getItem<PlaybackSettings>(STORE_KEYS.PLAYBACK)
+        const effect = await storage.getItem<AudioEffect>(STORE_KEYS.EFFECTS)
+        const lofi = await storage.getItem<EffectSettings>(STORE_KEYS.LOFI)
+        return {
+            playback: playback?.default ? effectivePlayback(playback) : defaultPlayback,
+            effect: { ...defaultAudioEffect, ...(effect ?? {}) },
+            lofi: normalizeEffectSettings(lofi)
+        }
     }
 
     browser.runtime.onConnect.addListener(async (port) => {
@@ -385,6 +409,7 @@ export default defineBackground(() => {
         if (
             !command.startsWith('cycle-theme-') &&
             !command.startsWith('audio-preset-') &&
+            !command.startsWith('quick-preset-') &&
             !['show-track', 'toggle-new-releases', 'toggle-config'].includes(command)
         ) {
             return await executeButtonClick({ command, isShortCutKey: true })
@@ -420,24 +445,34 @@ export default defineBackground(() => {
             })
         }
 
-        if (command.startsWith('audio-preset-')) {
-            const index = Number(command.split('-').at(-1)) - 1
+        // Preset slot N toggles the user's Nth preset; next/previous walk the
+        // built-ins (minus hidden ones) and then the user's own. The page applies
+        // whatever is sent by writing its stores, so the UI stays in step.
+        if (command.startsWith('audio-preset-') || command.startsWith('quick-preset-')) {
             const config = await storage.getItem<ConfigState>(STORE_KEYS.CONFIG)
-            const preset = config?.audio_presets[index]
-            if (!preset) return
+            const mine = config?.audio_presets ?? []
+            const current = await currentPresetValues()
 
-            const data = preset?.active
-                ? { effect: defaultAudioEffect, playback: defaultPlayback }
-                : preset
+            let message: QuickPresetMessage | null = null
+            if (command.startsWith('audio-preset-')) {
+                const preset = mine[Number(command.split('-').at(-1)) - 1]
+                if (!preset) return
+                message = sameValues(current, preset)
+                    ? { values: NORMAL_VALUES, id: null }
+                    : { values: preset, id: preset.id }
+            } else {
+                const hidden = config?.fx_eq_presets?.quick_presets ?? []
+                const ring = [...QUICK_PRESETS.filter((p) => !hidden.includes(p.id)), ...mine]
+                if (ring.length === 0) return
+                const playing = matchPreset(current, ring)
+                const index = playing ? ring.indexOf(playing) : -1
+                const next = command.endsWith('-next')
+                    ? ring[(index + 1) % ring.length]
+                    : ring[(index <= 0 ? ring.length : index) - 1]
+                message = { values: next, id: next.id }
+            }
 
-            await executeScript({ type: 'audio_preset', data })
-            await storage.setItem(STORE_KEYS.CONFIG, {
-                ...config,
-                audio_presets: config.audio_presets.map((p) => {
-                    const target = p.id == preset.id
-                    return { ...p, active: target ? !preset.active : false }
-                })
-            })
+            await executeScript({ type: QUICK_PRESET_EVENT, data: message })
         }
 
         if (['toggle-new-releases', 'toggle-config'].includes(command)) {

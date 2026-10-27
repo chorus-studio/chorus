@@ -9,6 +9,7 @@
     import { get } from 'svelte/store'
     import { applyLook, watchSystemMode } from '$lib/utils/theming'
     import { settingsStore } from '$lib/stores/settings'
+    import { listenForQuickPresetCommands } from '$lib/utils/quick-presets'
 
     // Import stores to ensure they're initialized and set up their listeners
     import '$lib/stores/effects'
@@ -27,6 +28,7 @@
     let themeChangeListener: (e: Event) => void
     let unsubscribeLook: (() => void) | undefined
     let unwatchSystem: (() => void) | undefined
+    let unlistenQuickPresets: (() => void) | undefined
 
     async function init() {
         setMode('dark')
@@ -50,6 +52,10 @@
         document.addEventListener('FROM_THEME_CHANGE', themeChangeListener)
         unsubscribeLook = settingsStore.subscribe((s) => void applyLook(s))
         unwatchSystem = watchSystemMode(() => void applyLook(get(settingsStore)))
+        // Preset keyboard commands (next / previous / slot N) arrive from the
+        // background as window messages; applying them here keeps the stores,
+        // and so every tab of the popover, in step with what is playing.
+        unlistenQuickPresets = listenForQuickPresetCommands()
     }
 
     function removeListener() {
@@ -60,6 +66,8 @@
         unsubscribeLook = undefined
         unwatchSystem?.()
         unwatchSystem = undefined
+        unlistenQuickPresets?.()
+        unlistenQuickPresets = undefined
     }
 
     onMount(() => {

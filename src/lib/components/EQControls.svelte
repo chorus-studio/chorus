@@ -80,10 +80,10 @@
 </script>
 
 <div class="flex h-full flex-col gap-y-2">
-    <div class="grid grid-cols-2 gap-x-4 gap-y-1">
+    <div class="grid grid-cols-2 gap-x-6 gap-y-2.5">
         {#each ordered as { band, i } (band.freq)}
             {@const gain = $eqBandsStore[i] ?? 0}
-            <div class="flex h-[22px] items-center gap-x-2">
+            <div class="flex h-7 items-center gap-x-2">
                 <span class="w-7 shrink-0 text-right font-mono text-[10px] text-ink-muted"
                     >{fmtFreq(band.freq)}</span
                 >
@@ -93,6 +93,7 @@
                     max={12}
                     step={0.5}
                     value={gain}
+                    origin={0}
                     label={`${fmtFreq(band.freq)} Hz gain`}
                     onValueChange={(v) => onChange(i, v as number)}
                 />

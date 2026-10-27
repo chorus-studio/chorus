@@ -8,7 +8,7 @@
 
     import ChorusConfigFXEQ from './ChorusConfigFXEQ.svelte'
     import ChorusConfigTheming from './ChorusConfigTheming.svelte'
-    import ChorusConfigPresets from './ChorusConfigPresets.svelte'
+    import ChorusConfigShortcuts from './ChorusConfigShortcuts.svelte'
     import ChorusConfigAutoSkip from './ChorusConfigAutoSkip.svelte'
 
     let { open = false, initialTab = 'auto-skip' }: { open?: boolean; initialTab?: string } =
@@ -17,7 +17,7 @@
 
     const TABS = [
         { id: 'auto-skip', label: 'Auto-skip' },
-        { id: 'presets', label: 'Audio presets' },
+        { id: 'shortcuts', label: 'Shortcuts' },
         { id: 'fx-eq', label: 'Hidden presets' },
         { id: 'theming', label: 'Theme' }
     ]
@@ -58,7 +58,7 @@
                         >Chorus settings</Dialog.Title
                     >
                     <Dialog.Description class="text-xs text-ink-muted">
-                        Auto-skip rules, audio presets, preset lists and the Spotify theme
+                        Auto-skip rules, keyboard shortcuts, preset lists and the Spotify theme
                     </Dialog.Description>
                 </div>
             </div>
@@ -80,7 +80,8 @@
 
             <div class="chorus-scroll min-h-0 flex-1 overflow-y-auto px-6 py-5">
                 <Tabs.Content value="auto-skip" class="mt-0"><ChorusConfigAutoSkip /></Tabs.Content>
-                <Tabs.Content value="presets" class="mt-0"><ChorusConfigPresets /></Tabs.Content>
+                <Tabs.Content value="shortcuts" class="mt-0"><ChorusConfigShortcuts /></Tabs.Content
+                >
                 <Tabs.Content value="fx-eq" class="mt-0"><ChorusConfigFXEQ /></Tabs.Content>
                 <Tabs.Content value="theming" class="mt-0"><ChorusConfigTheming /></Tabs.Content>
             </div>

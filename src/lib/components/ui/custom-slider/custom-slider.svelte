@@ -6,7 +6,10 @@
         max = 100,
         step = 1,
         label = 'slider',
-        onValueChange
+        disabled = false,
+        origin,
+        onValueChange,
+        onValueCommit
     }: {
         type: 'single' | 'multiple'
         value: number | number[]
@@ -14,7 +17,13 @@
         max: number
         step: number
         label?: string
+        /** Where a single slider's fill starts; `min` unless given. A bipolar control (gain, key) fills from 0. */
+        origin?: number
+        /** Greys the slider out and ignores input; the fill keeps showing the value. */
+        disabled?: boolean
         onValueChange: (value: number | number[]) => void
+        /** Fired once a drag ends (or after a key press), for work too costly per input event. */
+        onValueCommit?: (value: number | number[]) => void
     } = $props()
 
     let sliderElement: HTMLElement
@@ -40,15 +49,22 @@
         trackOwner = dLo < dHi ? 0 : dHi < dLo ? 1 : at <= lo ? 0 : 1
     }
 
+    /** The fill of a single slider: from the origin to the value, whichever way round. */
+    function fillSingle(slider: HTMLElement, currentValue: number) {
+        const range = max - min || 1
+        const from = (((origin ?? min) - min) / range) * 100
+        const to = ((currentValue - min) / range) * 100
+        slider.style.setProperty('--start', `${Math.min(from, to)}%`)
+        slider.style.setProperty('--stop', `${Math.max(from, to)}%`)
+    }
+
     // Keep the fill (--start/--stop) and the native inputs in sync with `value`.
     $effect(() => {
         const range = max - min || 1
         if (sliderElement && leftInput) {
             if (type === 'single') {
                 const currentValue = value as number
-                const percent = ((currentValue - min) / range) * 100
-                sliderElement.style.setProperty('--start', '0%')
-                sliderElement.style.setProperty('--stop', `${percent}%`)
+                fillSingle(sliderElement, currentValue)
                 leftInput.value = currentValue.toString()
             } else if (type === 'multiple' && rightInput) {
                 const currentValue = value as number[]
@@ -61,6 +77,14 @@
             }
         }
     })
+
+    // What the last input event settled on, so a commit reports the same value.
+    let lastValue: number | number[] | undefined
+
+    function handleCommit() {
+        if (lastValue !== undefined) onValueCommit?.(lastValue)
+        lastValue = undefined
+    }
 
     function handleValueChange(e: Event) {
         const target = e.target as HTMLInputElement
@@ -78,14 +102,14 @@
                 target.value = next[1].toString()
             }
         }
-        onValueChange(next ?? newValue)
+        lastValue = next ?? newValue
+        onValueChange(lastValue)
 
         const range = max - min || 1
         const slider = target.closest('.slider') as HTMLElement
         if (!slider) return
         if (type === 'single') {
-            slider.style.setProperty('--start', '0%')
-            slider.style.setProperty('--stop', `${((newValue - min) / range) * 100}%`)
+            fillSingle(slider, newValue)
         } else if (next) {
             slider.style.setProperty('--start', `${((Math.min(...next) - min) / range) * 100}%`)
             slider.style.setProperty('--stop', `${((Math.max(...next) - min) / range) * 100}%`)
@@ -95,6 +119,7 @@
 
 <div
     class="slider relative flex w-full items-center"
+    class:disabled
     bind:this={sliderElement}
     onpointermove={pickTrackOwner}
 >
@@ -102,12 +127,14 @@
         {max}
         {min}
         {step}
+        {disabled}
         type="range"
         data-index="0"
         aria-label={type === 'multiple' ? `${label} start` : label}
         class:owns-track={trackOwner === 0}
         bind:this={leftInput}
         oninput={handleValueChange}
+        onchange={handleCommit}
         value={Array.isArray(value) ? value[0] : value}
     />
     {#if type === 'multiple'}
@@ -115,12 +142,14 @@
             {max}
             {min}
             {step}
+            {disabled}
             type="range"
             data-index="1"
             aria-label={`${label} end`}
             class:owns-track={trackOwner === 1}
             bind:this={rightInput}
             oninput={handleValueChange}
+            onchange={handleCommit}
             value={Array.isArray(value) ? value[1] : value}
         />
     {/if}
@@ -168,6 +197,30 @@
     .slider input.owns-track {
         pointer-events: auto;
         z-index: 1;
+    }
+
+    /* Off: the fill goes grey and the thumb hollow, but the value stays readable. */
+    .slider.disabled::before {
+        background: linear-gradient(
+            to right,
+            hsl(var(--ink-fg) / 0.1) var(--start),
+            hsl(var(--ink-fg) / 0.28) var(--start),
+            hsl(var(--ink-fg) / 0.28) var(--stop),
+            hsl(var(--ink-fg) / 0.1) var(--stop)
+        );
+    }
+    .slider input:disabled {
+        pointer-events: none;
+    }
+    .slider input:disabled::-webkit-slider-thumb {
+        cursor: default;
+        border-color: hsl(var(--ink-fg) / 0.4);
+        background: hsl(var(--ink));
+    }
+    .slider input:disabled::-moz-range-thumb {
+        cursor: default;
+        border-color: hsl(var(--ink-fg) / 0.4);
+        background: hsl(var(--ink));
     }
 
     .slider input::-moz-range-track {
