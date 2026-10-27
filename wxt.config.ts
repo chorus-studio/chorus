@@ -173,20 +173,26 @@ export default defineConfig({
             'toggle-config': {
                 description: 'Toggle Chorus Config UI'
             },
+            'quick-preset-next': {
+                description: 'Next quick preset'
+            },
+            'quick-preset-previous': {
+                description: 'Previous quick preset'
+            },
             'audio-preset-1': {
-                description: 'Audio Preset 1'
+                description: 'Preset slot 1'
             },
             'audio-preset-2': {
-                description: 'Audio Preset 2'
+                description: 'Preset slot 2'
             },
             'audio-preset-3': {
-                description: 'Audio Preset 3'
+                description: 'Preset slot 3'
             },
             'audio-preset-4': {
-                description: 'Audio Preset 4'
+                description: 'Preset slot 4'
             },
             'audio-preset-5': {
-                description: 'Audio Preset 5'
+                description: 'Preset slot 5'
             },
             'cycle-theme-next': {
                 description: 'Cycle Theme Next'
