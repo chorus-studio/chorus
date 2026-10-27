@@ -29,6 +29,9 @@
     } from '$lib/utils/theming'
     import { invertPalette } from '$lib/utils/theme-surfaces'
     import { DEFAULT_GLASS, settingsStore } from '$lib/stores/settings'
+    import { configStore, createAudioPreset } from '$lib/stores/config'
+    import { QUICK_PRESETS, quickPresetById } from '$lib/audio-effects/quick-presets'
+    import { applyPresetValues } from '$lib/utils/quick-presets'
 
     const params = new URLSearchParams(location.search)
     const scene = params.get('scene') ?? 'tabs'
@@ -81,7 +84,45 @@
         ['Lady Love by Thee Sacred Souls', '#5c4a6b', 0],
         ['Get Sun by Hiatus Kaiyote', '#b3833a', 90 * DAY]
     ] as const
-    let ready = $state(dialog !== 'blocked')
+    let ready = $state(dialog !== 'blocked' && tab !== 'presets')
+
+    // ?tab=presets&preset=nightcore&group=mine&mine=1 seeds the Presets tab: the
+    // named built-in applied (so its card is lit), the group to open on, and two
+    // saved slots for Mine. The frame mounts once the stores hold all of it.
+    onMount(async () => {
+        if (tab !== 'presets') return
+        // The stores hydrate from (shim) storage in microtasks after import; a
+        // macrotask later they are settled, so the seed below is not overwritten.
+        await new Promise((resolve) => setTimeout(resolve, 20))
+        const group = params.get('group')
+        if (group) await storage.setItem('local:chorus_preset_group', group)
+        const preset = quickPresetById(params.get('preset') ?? '')
+        if (preset) await applyPresetValues(preset, preset.name)
+        if (params.get('mine') === '1') {
+            const lofi = QUICK_PRESETS.find((p) => p.id === 'lofi') ?? QUICK_PRESETS[0]
+            await configStore.updateConfig({
+                audio_presets: [
+                    createAudioPreset(lofi, 'Late night'),
+                    createAudioPreset(
+                        {
+                            playback: {
+                                rate: { value: 1.2, preserves_pitch: true },
+                                pitch: 1,
+                                semitone: -2
+                            },
+                            effect: {
+                                equalizer: 'Bass booster',
+                                reverb: 'none',
+                                msProcessor: 'none'
+                            }
+                        },
+                        'Gym'
+                    )
+                ]
+            })
+        }
+        ready = true
+    })
 
     onMount(async () => {
         if (dialog !== 'blocked') return
@@ -122,7 +163,7 @@
             id="frame"
             class="chorus-float relative h-[360px] w-[440px] overflow-hidden rounded-xl border border-hairline-strong bg-ink shadow-float"
         >
-            <TabsList initialTab={tab} />
+            {#if ready}<TabsList initialTab={tab} />{/if}
         </div>
     {:else if scene === 'pip'}
         <div
