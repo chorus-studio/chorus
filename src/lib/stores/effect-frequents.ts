@@ -1,25 +1,50 @@
-// Pinned and recently used reverb / EQ presets, for the chip row under each
-// tab's pickers: the same idea as the Speed tab's frequent values. Whatever
-// becomes the active preset, from the picker, a chip, a quick preset or a
-// keyboard command, lands in the row; pinned chips survive new arrivals.
+// Pinned and recently used presets of each picker list (room reverbs, custom
+// reverbs, Spotify EQs, custom EQs), for the chip rows under the pickers: the
+// same idea as the Speed tab's frequent values. Whatever becomes the active
+// preset, from the picker, a chip, a quick preset or a keyboard command,
+// lands in its list's row; pinned chips survive new arrivals.
 import { get, writable } from 'svelte/store'
 import { storage } from '@wxt-dev/storage'
 import { effectsStore } from '$lib/stores/effects'
-import { resolveReverbPreset } from '$lib/audio-effects/reverb/presets'
+import { resolveReverbPreset, roomPresets } from '$lib/audio-effects/reverb/presets'
+import { spotifyPresets } from '$lib/audio-effects/equalizer/presets'
 
 export type EffectKind = 'reverb' | 'equalizer'
+export type EffectList = 'room_reverb' | 'custom_reverb' | 'spotify_eq' | 'custom_eq'
 export type EffectFrequent = { value: string; pinned: boolean }
-export type EffectFrequents = Record<EffectKind, EffectFrequent[]>
+export type EffectFrequents = Record<EffectList, EffectFrequent[]>
+
+/** The effect a list's presets belong to. */
+export const LIST_KIND: Record<EffectList, EffectKind> = {
+    room_reverb: 'reverb',
+    custom_reverb: 'reverb',
+    spotify_eq: 'equalizer',
+    custom_eq: 'equalizer'
+}
+
+/** Which list a preset name lives in. */
+export const listOf = (kind: EffectKind, name: string): EffectList =>
+    kind === 'reverb'
+        ? roomPresets.includes(name)
+            ? 'room_reverb'
+            : 'custom_reverb'
+        : spotifyPresets.includes(name)
+          ? 'spotify_eq'
+          : 'custom_eq'
 
 const KEY = 'local:chorus_effect_frequents'
-/** Two rows of chips at most; past this the oldest unpinned one makes room. */
-export const EFFECT_FREQUENTS_MAX = 8
+/** Two rows of chips; past this the oldest unpinned one makes room. */
+export const EFFECT_FREQUENTS_MAX = 6
 
 const unpinned = (value: string): EffectFrequent => ({ value, pinned: false })
 
 export const defaultEffectFrequents: EffectFrequents = {
-    reverb: ['studio', 'hall', 'cathedral', 'lofi'].map(unpinned),
-    equalizer: ['Bass booster', 'Vocal booster', 'Loudness', 'Rock'].map(unpinned)
+    room_reverb: ['small', 'studio', 'bathroom', 'hall', 'arena', 'cathedral'].map(unpinned),
+    custom_reverb: ['lofi', 'radio', 'dream', 'chamber', 'echo', 'space'].map(unpinned),
+    spotify_eq: ['Bass booster', 'Vocal booster', 'Loudness', 'Rock', 'Pop', 'Acoustic'].map(
+        unpinned
+    ),
+    custom_eq: ['Club', 'Live', 'Party'].map(unpinned)
 }
 
 /**
@@ -49,15 +74,16 @@ function createEffectFrequentsStore() {
 
     async function touch(kind: EffectKind, value: string) {
         if (!value || value === 'none') return
+        const list = listOf(kind, value)
         const state = get(store)
-        const next = withFrequent(state[kind], value)
-        if (next !== state[kind]) await persist({ ...state, [kind]: next })
+        const next = withFrequent(state[list], value)
+        if (next !== state[list]) await persist({ ...state, [list]: next })
     }
 
-    async function togglePin(kind: EffectKind, value: string) {
+    async function togglePin(list: EffectList, value: string) {
         const state = get(store)
-        const list = state[kind].map((f) => (f.value === value ? { ...f, pinned: !f.pinned } : f))
-        await persist({ ...state, [kind]: list })
+        const next = state[list].map((f) => (f.value === value ? { ...f, pinned: !f.pinned } : f))
+        await persist({ ...state, [list]: next })
     }
 
     storage.getItem<EffectFrequents>(KEY).then((saved) => {

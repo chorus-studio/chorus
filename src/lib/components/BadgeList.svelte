@@ -68,11 +68,11 @@
                 type="button"
                 onclick={() => handleSelect(item.value)}
                 class={cn(
-                    'inline-flex items-center px-1.5 font-mono text-[11px] transition-colors hover:text-ink-fg',
+                    'inline-flex min-w-0 items-center px-1.5 font-mono text-[11px] transition-colors hover:text-ink-fg',
                     focusRing
                 )}
             >
-                {format(item.value)}
+                <span class="max-w-24 truncate">{format(item.value)}</span>
             </button>
         </div>
     {/each}

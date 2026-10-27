@@ -2,7 +2,6 @@
     import { effectsStore } from '$lib/stores/effects'
     import { configStore } from '$lib/stores/config'
     import AudioEffectInputs from '$lib/components/AudioEffectInputs.svelte'
-    import RecentEffects from '$lib/components/RecentEffects.svelte'
 
     import { customPresets, spotifyPresets } from '$lib/audio-effects/equalizer/presets'
 
@@ -35,9 +34,6 @@
     )
 
     const topSelected = $derived(spotifyPresets.includes($effectsStore.equalizer))
-    const allowed = $derived(
-        [...spotifyOptions, ...customOptions].map((o) => o.value).filter((v) => v !== 'none')
-    )
 </script>
 
 <AudioEffectInputs
@@ -47,9 +43,9 @@
     topOptions={spotifyOptions}
     topLabel="Spotify presets"
     topHint="The curves from Spotify's own equalizer"
+    topRecent="spotify_eq"
     bottomLabel="Custom presets"
     bottomHint="Chorus curves and your saved configs"
+    bottomRecent="custom_eq"
     bottomOptions={customOptions}
->
-    <RecentEffects kind="equalizer" {allowed} />
-</AudioEffectInputs>
+/>
