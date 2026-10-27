@@ -1,11 +1,12 @@
 // Applying a quick preset means writing the ordinary stores (the "All tracks"
-// playback default and the three effect slots) and letting them dispatch, so the
-// Speed, Reverb, EQ and Stereo tabs all show what is really playing and the
-// active card is derived from the same values. There is no separate "active
-// preset" state to drift out of step.
+// playback default, the three Chorus effect slots and the lofi rack) and
+// letting them dispatch, so the Speed, Reverb, EQ and Stereo tabs all show what
+// is really playing and the active card is derived from the same values. There
+// is no separate "active preset" state to drift out of step.
 import { get, writable } from 'svelte/store'
 import { playbackStore, effectivePlayback } from '$lib/stores/playback'
 import { effectsStore } from '$lib/stores/effects'
+import { lofiStore } from '$lib/stores/lofi'
 import {
     NORMAL_VALUES,
     QUICK_PRESET_EVENT,
@@ -18,7 +19,11 @@ import {
 export const lastApplied = writable<string | null>(null)
 
 export function currentValues(): PresetValues {
-    return { playback: effectivePlayback(get(playbackStore)), effect: get(effectsStore) }
+    return {
+        playback: effectivePlayback(get(playbackStore)),
+        effect: get(effectsStore),
+        lofi: get(lofiStore)
+    }
 }
 
 export async function applyPresetValues(values: PresetValues, name: string | null = null) {
@@ -27,6 +32,7 @@ export async function applyPresetValues(values: PresetValues, name: string | nul
     // already works; right now the preset is what plays.
     await playbackStore.updatePlayback({ default: values.playback, is_default: true })
     await effectsStore.replace(values.effect)
+    await lofiStore.replace(values.lofi ?? NORMAL_VALUES.lofi)
     lastApplied.set(name)
 }
 

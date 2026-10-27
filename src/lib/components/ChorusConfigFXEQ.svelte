@@ -15,7 +15,11 @@
         impulsePresets,
         customPresets as reverbPresets
     } from '$lib/audio-effects/reverb/presets'
-    import { QUICK_PRESETS, QUICK_PRESET_GROUPS } from '$lib/audio-effects/quick-presets'
+    import {
+        QUICK_PRESETS,
+        QUICK_PRESET_GROUPS,
+        sectionsOf
+    } from '$lib/audio-effects/quick-presets'
 
     type HiddenKey = keyof typeof $configStore.fx_eq_presets
     type Section = { title?: string; presets: string[] }
@@ -59,10 +63,12 @@
             key: 'quick_presets',
             title: 'Quick presets',
             labels: Object.fromEntries(QUICK_PRESETS.map((p) => [p.id, p.name])),
-            sections: QUICK_PRESET_GROUPS.map((g) => ({
-                title: g.label,
-                presets: QUICK_PRESETS.filter((p) => p.group === g.id).map((p) => p.id)
-            }))
+            sections: QUICK_PRESET_GROUPS.flatMap((g) =>
+                sectionsOf(g.id).map((s) => ({
+                    title: s.title ? `${g.label} · ${s.title}` : g.label,
+                    presets: s.presets.map((p) => p.id)
+                }))
+            )
         }
     ]
 

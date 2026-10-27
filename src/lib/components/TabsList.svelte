@@ -34,6 +34,7 @@
     import { snipStore } from '$lib/stores/snip'
     import { configStore } from '$lib/stores/config'
     import { effectsStore } from '$lib/stores/effects'
+    import { lofiStore } from '$lib/stores/lofi'
     import { nowPlaying } from '$lib/stores/now-playing'
     import { playbackStore, effectivePlayback } from '$lib/stores/playback'
     import { settingsStore } from '$lib/stores/settings'
@@ -89,10 +90,14 @@
     // Which features currently carry state — shown as an LED on the tab.
     const engaged = $derived<Record<string, boolean>>({
         presets: Boolean(
-            matchPreset({ playback: effectivePlayback($playbackStore), effect: $effectsStore }, [
-                ...QUICK_PRESETS,
-                ...$configStore.audio_presets
-            ])
+            matchPreset(
+                {
+                    playback: effectivePlayback($playbackStore),
+                    effect: $effectsStore,
+                    lofi: $lofiStore
+                },
+                [...QUICK_PRESETS, ...$configStore.audio_presets]
+            )
         ),
         snip: Boolean($nowPlaying?.snip),
         speed: Boolean($nowPlaying?.playback),

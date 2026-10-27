@@ -4,6 +4,10 @@ import type { ConfigState } from '$lib/stores/config'
 import { defaultPlayback, effectivePlayback, type PlaybackSettings } from '$lib/stores/playback'
 import { defaultAudioEffect, type AudioEffect } from '$lib/stores/effects'
 import {
+    normalizeEffectSettings,
+    type EffectSettings
+} from '$lib/audio-effects/lofi/audio/effect-settings'
+import {
     NORMAL_VALUES,
     QUICK_PRESETS,
     QUICK_PRESET_EVENT,
@@ -59,7 +63,8 @@ export default defineBackground(() => {
         NOW_PLAYING: 'local:chorus_now_playing' as const,
         CONNECTION_ID: 'local:chorus_connection_id' as const,
         PLAYBACK: 'local:chorus_playback' as const,
-        EFFECTS: 'local:chorus_audio_effects' as const
+        EFFECTS: 'local:chorus_audio_effects' as const,
+        LOFI: 'local:chorus_lofi' as const
     }
 
     const CUSTOM_EVENTS = {
@@ -98,9 +103,11 @@ export default defineBackground(() => {
     async function currentPresetValues(): Promise<PresetValues> {
         const playback = await storage.getItem<PlaybackSettings>(STORE_KEYS.PLAYBACK)
         const effect = await storage.getItem<AudioEffect>(STORE_KEYS.EFFECTS)
+        const lofi = await storage.getItem<EffectSettings>(STORE_KEYS.LOFI)
         return {
             playback: playback?.default ? effectivePlayback(playback) : defaultPlayback,
-            effect: { ...defaultAudioEffect, ...(effect ?? {}) }
+            effect: { ...defaultAudioEffect, ...(effect ?? {}) },
+            lofi: normalizeEffectSettings(lofi)
         }
     }
 

@@ -11,14 +11,17 @@
     } from '$lib/stores/config'
     import { playbackStore, effectivePlayback } from '$lib/stores/playback'
     import { effectsStore } from '$lib/stores/effects'
+    import { lofiStore } from '$lib/stores/lofi'
     import {
         QUICK_PRESETS,
         QUICK_PRESET_GROUPS,
         isNormal,
         matchPreset,
         recipe,
+        sectionsOf,
         type PresetValues,
-        type QuickPreset
+        type QuickPreset,
+        type QuickPresetGroup
     } from '$lib/audio-effects/quick-presets'
     import { applyNormal, lastApplied, togglePreset } from '$lib/utils/quick-presets'
     import { boundShortcuts, openShortcutSettings, shortcutKeys } from '$lib/utils/shortcuts'
@@ -29,10 +32,34 @@
     import Sun from '@lucide/svelte/icons/sun'
     import ChevronsUp from '@lucide/svelte/icons/chevrons-up'
     import ChevronsDown from '@lucide/svelte/icons/chevrons-down'
+    import Album from '@lucide/svelte/icons/album'
+    import Disc from '@lucide/svelte/icons/disc'
+    import LampDesk from '@lucide/svelte/icons/lamp-desk'
+    import CloudRain from '@lucide/svelte/icons/cloud-rain'
+    import CloudMoon from '@lucide/svelte/icons/cloud-moon'
     import CassetteTape from '@lucide/svelte/icons/cassette-tape'
+    import Hotel from '@lucide/svelte/icons/hotel'
+    import Ghost from '@lucide/svelte/icons/ghost'
     import Radio from '@lucide/svelte/icons/radio'
+    import Headphones from '@lucide/svelte/icons/headphones'
+    import Music2 from '@lucide/svelte/icons/music-2'
+    import Coffee from '@lucide/svelte/icons/coffee'
+    import Zap from '@lucide/svelte/icons/zap'
+    import Cloud from '@lucide/svelte/icons/cloud'
+    import Sunrise from '@lucide/svelte/icons/sunrise'
     import DoorClosed from '@lucide/svelte/icons/door-closed'
+    import Bed from '@lucide/svelte/icons/bed'
+    import BatteryLow from '@lucide/svelte/icons/battery-low'
+    import Tv from '@lucide/svelte/icons/tv'
+    import CloudFog from '@lucide/svelte/icons/cloud-fog'
+    import House from '@lucide/svelte/icons/house'
+    import Guitar from '@lucide/svelte/icons/guitar'
+    import Car from '@lucide/svelte/icons/car'
+    import Bath from '@lucide/svelte/icons/bath'
+    import Church from '@lucide/svelte/icons/church'
+    import PartyPopper from '@lucide/svelte/icons/party-popper'
     import Waves from '@lucide/svelte/icons/waves'
+    import Gamepad2 from '@lucide/svelte/icons/gamepad-2'
     import Phone from '@lucide/svelte/icons/phone'
     import Speaker from '@lucide/svelte/icons/speaker'
     import AudioLines from '@lucide/svelte/icons/audio-lines'
@@ -40,7 +67,7 @@
     import MicOff from '@lucide/svelte/icons/mic-off'
     import Mic from '@lucide/svelte/icons/mic'
     import Music from '@lucide/svelte/icons/music'
-    import Headphones from '@lucide/svelte/icons/headphones'
+    import Sparkles from '@lucide/svelte/icons/sparkles'
     import Keyboard from '@lucide/svelte/icons/keyboard'
     import Pencil from '@lucide/svelte/icons/pencil'
     import Plus from '@lucide/svelte/icons/plus'
@@ -54,7 +81,7 @@
     let { pip = false }: { pip?: boolean } = $props()
     void pip
 
-    type Group = QuickPreset['group'] | 'mine'
+    type Group = QuickPresetGroup | 'mine'
     const GROUP_KEY = 'local:chorus_preset_group'
 
     const ICONS: Record<string, Component> = {
@@ -64,10 +91,34 @@
         sun: Sun,
         'chevrons-up': ChevronsUp,
         'chevrons-down': ChevronsDown,
+        album: Album,
+        disc: Disc,
+        'lamp-desk': LampDesk,
+        'cloud-rain': CloudRain,
+        'cloud-moon': CloudMoon,
         'cassette-tape': CassetteTape,
+        hotel: Hotel,
+        ghost: Ghost,
         radio: Radio,
+        headphones: Headphones,
+        'music-2': Music2,
+        coffee: Coffee,
+        zap: Zap,
+        cloud: Cloud,
+        sunrise: Sunrise,
         'door-closed': DoorClosed,
+        bed: Bed,
+        'battery-low': BatteryLow,
+        tv: Tv,
+        'cloud-fog': CloudFog,
+        house: House,
+        guitar: Guitar,
+        car: Car,
+        bath: Bath,
+        church: Church,
+        'party-popper': PartyPopper,
         waves: Waves,
+        'gamepad-2': Gamepad2,
         phone: Phone,
         speaker: Speaker,
         'audio-lines': AudioLines,
@@ -75,10 +126,10 @@
         'mic-off': MicOff,
         mic: Mic,
         music: Music,
-        headphones: Headphones
+        sparkles: Sparkles
     }
 
-    let group = $state<Group>('vibes')
+    let group = $state<Group>('lofi')
     let shortcuts = $state<Record<string, string>>({})
     // One-line confirmation shown in place of the status for a moment.
     let notice = $state('')
@@ -90,7 +141,8 @@
     // so the active card can never disagree with them.
     const current = $derived<PresetValues>({
         playback: effectivePlayback($playbackStore),
-        effect: $effectsStore
+        effect: $effectsStore,
+        lofi: $lofiStore
     })
     const hidden = $derived($configStore.fx_eq_presets.quick_presets ?? [])
     const builtIns = $derived(QUICK_PRESETS.filter((p) => !hidden.includes(p.id)))
@@ -100,7 +152,8 @@
     const statusName = $derived(active ? active.name : normal ? 'off' : 'Custom')
     const tweakedFrom = $derived(!active && !normal ? $lastApplied : null)
 
-    const visible = $derived(group === 'mine' ? [] : builtIns.filter((p) => p.group === group))
+    const sections = $derived(group === 'mine' ? [] : sectionsOf(group, builtIns))
+    const visibleCount = $derived(sections.reduce((n, s) => n + s.presets.length, 0))
     const slotsLeft = $derived(MAX_AUDIO_PRESETS - mine.length)
 
     const options = $derived([
@@ -204,61 +257,73 @@
     </div>
 
     {#if group !== 'mine'}
-        {#if visible.length === 0}
+        {#if visibleCount === 0}
             <p class="py-8 text-center text-xs text-ink-muted">
                 Every preset in this group is hidden. Bring them back under Settings → Hidden
                 presets.
             </p>
         {/if}
-        <div class="grid grid-cols-2 gap-1.5">
-            {#each visible as preset (preset.id)}
-                {@const on = active?.id === preset.id}
-                {@const Icon = ICONS[preset.icon]}
-                {@const chips = recipe(preset).join(' · ')}
-                <div
-                    class={cn(
-                        'group relative flex h-14 flex-col justify-center gap-y-1 rounded-lg border px-2.5 transition-colors',
-                        on
-                            ? 'border-signal bg-signal/[0.08]'
-                            : 'border-hairline bg-panel hover:bg-surface-2'
-                    )}
-                >
-                    <button
-                        type="button"
-                        aria-pressed={on}
-                        title={on ? `${preset.name} · tap to turn off` : chips}
-                        onclick={() => togglePreset(preset)}
-                        class="chorus-focus absolute inset-0 rounded-lg"
-                    >
-                        <span class="sr-only">{preset.name}</span>
-                    </button>
-                    <span
-                        class="pointer-events-none flex items-center gap-x-1.5 text-xs font-medium leading-none text-ink-fg"
-                    >
-                        <Icon
-                            class={cn('size-3.5 shrink-0', on ? 'text-signal' : 'text-ink-muted')}
-                        />
-                        <span class="truncate">{preset.name}</span>
-                        {#if on}
-                            <span class="led" aria-label="active"></span>
-                        {/if}
-                    </span>
-                    <span
-                        class="pointer-events-none truncate pr-5 font-mono text-[10px] leading-3 text-ink-muted"
-                        >{chips}</span
-                    >
-                    <button
-                        type="button"
-                        aria-label={`Pin ${preset.name} to a shortcut slot`}
-                        title="Pin to a shortcut slot"
-                        onclick={() => pinToSlot(preset)}
-                        class="chorus-focus absolute bottom-1 right-1 inline-flex size-5 items-center justify-center rounded text-ink-muted opacity-0 transition-opacity hover:bg-surface hover:text-ink-fg focus-visible:opacity-100 group-hover:opacity-100"
-                    >
-                        <Keyboard class="size-3" />
-                    </button>
+        {#each sections as section (section.title ?? '')}
+            <div class="flex flex-col gap-y-1.5">
+                {#if section.title}
+                    <span class="rack-label">{section.title}</span>
+                {/if}
+                <div class="grid grid-cols-2 gap-1.5">
+                    {#each section.presets as preset (preset.id)}
+                        {@const on = active?.id === preset.id}
+                        {@const Icon = ICONS[preset.icon] ?? Sparkles}
+                        {@const chips = recipe(preset).join(' · ')}
+                        <div
+                            class={cn(
+                                'group relative flex h-14 flex-col justify-center gap-y-1 rounded-lg border px-2.5 transition-colors',
+                                on
+                                    ? 'border-signal bg-signal/[0.08]'
+                                    : 'border-hairline bg-panel hover:bg-surface-2'
+                            )}
+                        >
+                            <button
+                                type="button"
+                                aria-pressed={on}
+                                title={on
+                                    ? `${preset.name} · tap to turn off`
+                                    : `${preset.description}\n${chips}`}
+                                onclick={() => togglePreset(preset)}
+                                class="chorus-focus absolute inset-0 rounded-lg"
+                            >
+                                <span class="sr-only">{preset.name}</span>
+                            </button>
+                            <span
+                                class="pointer-events-none flex items-center gap-x-1.5 text-xs font-medium leading-none text-ink-fg"
+                            >
+                                <Icon
+                                    class={cn(
+                                        'size-3.5 shrink-0',
+                                        on ? 'text-signal' : 'text-ink-muted'
+                                    )}
+                                />
+                                <span class="truncate">{preset.name}</span>
+                                {#if on}
+                                    <span class="led" aria-label="active"></span>
+                                {/if}
+                            </span>
+                            <span
+                                class="pointer-events-none truncate pr-5 font-mono text-[10px] leading-3 text-ink-muted"
+                                >{chips}</span
+                            >
+                            <button
+                                type="button"
+                                aria-label={`Pin ${preset.name} to a shortcut slot`}
+                                title="Pin to a shortcut slot"
+                                onclick={() => pinToSlot(preset)}
+                                class="chorus-focus absolute bottom-1 right-1 inline-flex size-5 items-center justify-center rounded text-ink-muted opacity-0 transition-opacity hover:bg-surface hover:text-ink-fg focus-visible:opacity-100 group-hover:opacity-100"
+                            >
+                                <Keyboard class="size-3" />
+                            </button>
+                        </div>
+                    {/each}
                 </div>
-            {/each}
-        </div>
+            </div>
+        {/each}
     {:else}
         <div class="flex min-h-0 flex-1 flex-col gap-y-1.5">
             {#each mine as preset, index (preset.id)}
@@ -366,7 +431,7 @@
                     disabled={normal}
                     title={normal
                         ? 'Nothing is on. Tap a preset or move a knob first.'
-                        : 'Save the current rate, pitch, key, reverb, EQ and stereo as a slot'}
+                        : 'Save the current rate, pitch, key, reverb, EQ, stereo and texture as a slot'}
                     class="chorus-focus flex h-9 w-full shrink-0 items-center justify-center gap-x-2 rounded-lg border border-dashed border-hairline-strong text-xs text-ink-muted transition-colors enabled:hover:border-signal/50 enabled:hover:text-ink-fg disabled:opacity-50"
                 >
                     <Plus class="size-3.5" />

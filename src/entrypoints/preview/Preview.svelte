@@ -30,7 +30,7 @@
     import { invertPalette } from '$lib/utils/theme-surfaces'
     import { DEFAULT_GLASS, settingsStore } from '$lib/stores/settings'
     import { configStore, createAudioPreset } from '$lib/stores/config'
-    import { QUICK_PRESETS, quickPresetById } from '$lib/audio-effects/quick-presets'
+    import { NORMAL_VALUES, QUICK_PRESETS, quickPresetById } from '$lib/audio-effects/quick-presets'
     import { applyPresetValues } from '$lib/utils/quick-presets'
 
     const params = new URLSearchParams(location.search)
@@ -99,7 +99,7 @@
         const preset = quickPresetById(params.get('preset') ?? '')
         if (preset) await applyPresetValues(preset, preset.name)
         if (params.get('mine') === '1') {
-            const lofi = QUICK_PRESETS.find((p) => p.id === 'lofi') ?? QUICK_PRESETS[0]
+            const lofi = QUICK_PRESETS.find((p) => p.id === 'classic-lofi') ?? QUICK_PRESETS[0]
             await configStore.updateConfig({
                 audio_presets: [
                     createAudioPreset(lofi, 'Late night'),
@@ -114,7 +114,8 @@
                                 equalizer: 'Bass booster',
                                 reverb: 'none',
                                 msProcessor: 'none'
-                            }
+                            },
+                            lofi: NORMAL_VALUES.lofi
                         },
                         'Gym'
                     )

@@ -4,6 +4,10 @@ import { syncWithType } from '$lib/utils/store-utils'
 import type { Playback } from '$lib/stores/playback'
 import type { AudioEffect } from '$lib/stores/effects'
 import { isNormal, type PresetValues } from '$lib/audio-effects/quick-presets'
+import {
+    normalizeEffectSettings,
+    type EffectSettings
+} from '$lib/audio-effects/lofi/audio/effect-settings'
 
 export const CONFIG_STORE_KEY = 'local:chorus_config'
 
@@ -44,6 +48,7 @@ export type AudioPreset = {
     name: string
     playback: Playback
     effect: AudioEffect
+    lofi: EffectSettings
 }
 
 /** Five slots, matching the five `audio-preset-N` commands in the manifest. */
@@ -57,7 +62,8 @@ export const createAudioPreset = (values: PresetValues, name: string): AudioPres
         semitone: values.playback.semitone,
         rate: { ...values.playback.rate }
     },
-    effect: { ...values.effect }
+    effect: { ...values.effect },
+    lofi: normalizeEffectSettings(values.lofi)
 })
 
 export const defaultConfig: ConfigState = {
@@ -85,7 +91,8 @@ export const defaultConfig: ConfigState = {
  * because it is an object of arrays, so a list added later (quick_presets) has
  * to be filled in here. Preset slots from the old settings-dialog editor carried
  * an `active` flag and could sit at their blank defaults; a blank slot is just a
- * second "Normal", so it is dropped, and every slot gets a name.
+ * second "Normal", so it is dropped, and every slot gets a name. A slot saved
+ * before the lofi rack existed gets the rack switched off.
  */
 function migrate(config: ConfigState): ConfigState {
     const fx_eq_presets = { ...defaultConfig.fx_eq_presets, ...(config.fx_eq_presets ?? {}) }
@@ -95,7 +102,8 @@ function migrate(config: ConfigState): ConfigState {
             id: preset.id ?? crypto.randomUUID(),
             name: preset.name || `Preset ${index + 1}`,
             playback: preset.playback,
-            effect: preset.effect
+            effect: preset.effect,
+            lofi: normalizeEffectSettings(preset.lofi)
         }))
     return { ...config, fx_eq_presets, audio_presets }
 }
