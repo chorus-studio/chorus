@@ -26,7 +26,7 @@
     })
 </script>
 
-<div class="flex flex-col gap-y-1.5">
+<div class="flex flex-col gap-y-1">
     <div class="flex items-center justify-between gap-x-3">
         <SegmentedControl
             size="xs"
