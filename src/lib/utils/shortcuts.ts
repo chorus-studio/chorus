@@ -15,13 +15,6 @@ export async function openShortcutSettings() {
     await getCommandService().openShortcutSettings(url)
 }
 
-/** "Alt+Shift+1" → ["Alt", "Shift", "1"], for rendering as keycaps. */
-export const shortcutKeys = (combo: string) =>
-    combo
-        .split('+')
-        .map((k) => k.trim())
-        .filter(Boolean)
-
 /** The bound key combo of every command, by command name ("" when unbound). */
 export async function boundShortcuts(): Promise<Record<string, string>> {
     try {

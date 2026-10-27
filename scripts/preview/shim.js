@@ -113,10 +113,12 @@
         },
         commands: {
             getAll: () => [
-                { name: 'audio-preset-1', shortcut: 'Alt+Shift+1' },
-                { name: 'audio-preset-2', shortcut: 'Alt+Shift+2' },
-                { name: 'seek-rewind', shortcut: 'Alt+Shift+Left' },
-                { name: 'seek-forward', shortcut: 'Alt+Shift+Right' }
+                // As Chrome on macOS prints them: a run of glyphs, no "+".
+                { name: 'audio-preset-1', shortcut: '⌥⇧1' },
+                { name: 'audio-preset-2', shortcut: '⌥⇧2' },
+                { name: 'play/pause', shortcut: '⇧⌘P' },
+                { name: 'seek-rewind', shortcut: '⌥⇧←' },
+                { name: 'seek-forward', shortcut: '⌥⇧→' }
             ]
         }
     }

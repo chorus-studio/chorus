@@ -3,7 +3,8 @@
     import Keyboard from '@lucide/svelte/icons/keyboard'
     import { Button } from '$lib/components/ui/button'
     import { configStore, MAX_AUDIO_PRESETS } from '$lib/stores/config'
-    import { boundShortcuts, openShortcutSettings, shortcutKeys } from '$lib/utils/shortcuts'
+    import Keycaps from '$lib/components/Keycaps.svelte'
+    import { boundShortcuts, openShortcutSettings } from '$lib/utils/shortcuts'
 
     // Every Chorus command, in the order it makes sense to read them. The
     // browser owns the bindings; this page only shows them and links to the
@@ -102,14 +103,7 @@
                     <div class="flex h-6 items-center justify-between gap-x-3 text-xs">
                         <span class="truncate text-ink-fg-2">{row.label}</span>
                         {#if combo}
-                            <span class="flex shrink-0 items-center gap-x-0.5">
-                                {#each shortcutKeys(combo) as key (key)}
-                                    <kbd
-                                        class="rounded border border-hairline-strong bg-surface px-1.5 py-0.5 font-mono text-[10px] leading-none text-ink-fg-2"
-                                        >{key}</kbd
-                                    >
-                                {/each}
-                            </span>
+                            <Keycaps {combo} size="md" />
                         {:else}
                             <span class="shrink-0 font-mono text-[10px] text-ink-dim">not set</span>
                         {/if}

@@ -13,6 +13,7 @@
     import * as Tooltip from '$lib/components/ui/tooltip'
     import { Button, buttonVariants } from '$lib/components/ui/button'
     import SegmentedControl from '$lib/components/SegmentedControl.svelte'
+    import Keycaps from '$lib/components/Keycaps.svelte'
     import { dataStore } from '$lib/stores/data'
     import type { SimpleTrack } from '$lib/stores/data/cache'
     import { cn } from '$lib/utils.js'
@@ -470,12 +471,7 @@
 
             <div class="flex shrink-0 flex-wrap items-center gap-x-1 text-[11px] text-ink-muted">
                 Block the playing track with
-                {#each ['Alt', 'Shift', 'B'] as key (key)}
-                    <kbd
-                        class="rounded border border-hairline-strong bg-surface px-1 py-px font-mono text-[10px] text-ink-fg-2"
-                        >{key}</kbd
-                    >
-                {/each}
+                <Keycaps combo="Alt+Shift+B" />
                 or the ⊘ on any row of a tracklist. Unblocking takes effect right away.
             </div>
         </div>

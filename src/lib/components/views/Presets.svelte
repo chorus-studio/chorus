@@ -98,6 +98,8 @@
     import SlidersHorizontal from '@lucide/svelte/icons/sliders-horizontal'
 
     import SegmentedControl from '$lib/components/SegmentedControl.svelte'
+
+    import Keycaps from '$lib/components/Keycaps.svelte'
     import Texture from '$lib/components/views/Texture.svelte'
     import { cn } from '$lib/utils.js'
 
@@ -475,15 +477,7 @@
                                         <span class="led" aria-label="active"></span>
                                     {/if}
                                     {#if combo}
-                                        <span
-                                            class="ml-auto flex shrink-0 items-center gap-x-0.5"
-                                            aria-label={`Shortcut ${combo}`}
-                                        >
-                                            <kbd
-                                                class="rounded border border-hairline-strong bg-surface px-1 py-0.5 font-mono text-[9px] leading-none text-ink-fg-2"
-                                                >{combo}</kbd
-                                            >
-                                        </span>
+                                        <Keycaps {combo} size="xs" class="ml-auto" />
                                     {/if}
                                 {/if}
                             </span>
