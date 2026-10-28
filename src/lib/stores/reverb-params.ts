@@ -16,9 +16,12 @@ export function migrateReverbMix(params: ReverbParams): ReverbParams {
     return { ...params, dry: 1, wet: Number((params.wet / (1 + params.dry)).toFixed(3)) }
 }
 
-// The 12 Dattorro reverb worklet parameters (src/public/processor.js). Ranges:
-// preDelay is in samples (0..sampleRate); the rest are 0..1 except the excursion
-// pair which is 0..2. Values mirror the worklet's defaultValues.
+// The reverb worklets' parameters: the Dattorro plate's twelve
+// (src/public/processor.js) plus the FDN rooms' `size` and `early`
+// (src/public/fdn-processor.js). Shared names mean the same thing on both;
+// each worklet ignores the ones it has no use for. Ranges: preDelay is in
+// samples (0..sampleRate); the rest are 0..1 except the excursion pair which
+// is 0..2. Values mirror the plate's defaultValues.
 export type ReverbParams = {
     preDelay: number
     bandwidth: number
@@ -28,6 +31,8 @@ export type ReverbParams = {
     decayDiffusion1: number
     decayDiffusion2: number
     damping: number
+    size: number
+    early: number
     excursionRate: number
     excursionDepth: number
     dry: number
@@ -43,6 +48,8 @@ export const defaultReverbParams: ReverbParams = {
     decayDiffusion1: 0.7,
     decayDiffusion2: 0.5,
     damping: 0.005,
+    size: 0.5,
+    early: 0.5,
     excursionRate: 0.5,
     excursionDepth: 0.7,
     dry: 1,

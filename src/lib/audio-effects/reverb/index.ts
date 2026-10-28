@@ -1,10 +1,20 @@
 import AudioManager from '../audio-manager'
 import {
     customPresets,
+    engineFor,
     getParamsListForEffect,
     impulsePresets,
-    resolveReverbPreset
+    resolveReverbPreset,
+    STRUCTURAL_PARAMS,
+    type ReverbEngine
 } from './presets'
+
+// Which worklet module and processor each digital engine lives in. Rooms run
+// on the FDN, custom characters on the Dattorro plate.
+const ENGINES: Record<ReverbEngine, { pathKey: string; processor: string }> = {
+    fdn: { pathKey: 'chorus:fdn_path', processor: 'FDNReverb' },
+    plate: { pathKey: 'chorus:reverb_path', processor: 'DattorroReverb' }
+}
 
 export default class Reverb {
     _internal: boolean
@@ -13,6 +23,8 @@ export default class Reverb {
     _reverbGainNode?: GainNode
     _convolverNode?: ConvolverNode
     _reverbWorkletNode?: AudioWorkletNode
+    // The engine the live worklet node runs (what a config edit from cold builds).
+    _engine: ReverbEngine = 'plate'
 
     constructor(audioManager: AudioManager, internal = false) {
         this._audioManager = audioManager
@@ -43,6 +55,7 @@ export default class Reverb {
         this.cleanup()
 
         if (effect === 'none') {
+            this._engine = 'plate'
             if (this._audioManager.audioContext) {
                 this._audioManager.removeEffect('reverb')
             }
@@ -54,7 +67,7 @@ export default class Reverb {
             if (isImpulse) {
                 await this.createImpulseReverb(effect)
             } else {
-                await this.createDigitalReverb()
+                await this.createDigitalReverb(engineFor(effect))
                 this.connectDigitalReverb()
                 this.applyReverbEffect(effect)
             }
@@ -130,14 +143,15 @@ export default class Reverb {
         this._audioManager.connectDigitalReverb(this._reverbWorkletNode!)
     }
 
-    async createDigitalReverb() {
+    async createDigitalReverb(engine: ReverbEngine) {
         if (!this._audioContext) {
             throw new Error('AudioContext not initialized')
         }
 
-        const modulePath = sessionStorage.getItem('chorus:reverb_path')
+        const { pathKey, processor } = ENGINES[engine]
+        const modulePath = sessionStorage.getItem(pathKey)
         if (!modulePath) {
-            throw new Error('Reverb module path not found in session storage')
+            throw new Error(`Reverb module path (${pathKey}) not found in session storage`)
         }
 
         await this._audioContext.audioWorklet.addModule(modulePath)
@@ -145,13 +159,15 @@ export default class Reverb {
         // Create gain node if it doesn't exist
         this._reverbGainNode = this._reverbGainNode ?? this._audioContext.createGain()
 
-        // Create reverb node if it doesn't exist. Stereo in: the processor keeps
-        // the dry signal per channel (at `dry`, unity in every preset) and sums
-        // the channels itself for the tank, so it is the whole reverb path — no
-        // bypass beside it. Mono in made the dry path a mono copy.
+        // Create the reverb node if it doesn't exist. Stereo in: both processors
+        // keep the dry signal per channel (at `dry`, unity in every preset) and
+        // take both channels into the tank, so the node is the whole reverb
+        // path — no bypass beside it. Mono in made the dry path a mono copy.
+        if (this._reverbWorkletNode && this._engine !== engine) this.cleanup()
+        this._engine = engine
         this._reverbWorkletNode =
             this._reverbWorkletNode ??
-            new AudioWorkletNode(this._audioContext, 'DattorroReverb', {
+            new AudioWorkletNode(this._audioContext, processor, {
                 channelCountMode: 'explicit',
                 channelCount: 2,
                 outputChannelCount: [2]
@@ -174,14 +190,16 @@ export default class Reverb {
 
     // Live editor path: ramp raw param values onto the existing worklet WITHOUT
     // calling setReverbEffect (which tears down + rebuilds the node every call).
-    // Creates + connects the digital reverb on demand so editing works from cold.
+    // Creates + connects the digital reverb on demand so editing works from cold
+    // (on the engine of the active preset; the plate when none is). A param the
+    // running engine does not have is skipped.
     async applyManualParams(params: Record<string, number>) {
         if (!this._audioManager.audioContext) return
         this._audioContext = this._audioManager.audioContext
 
         try {
             if (!this._reverbWorkletNode) {
-                await this.createDigitalReverb()
+                await this.createDigitalReverb(this._engine)
                 this.connectDigitalReverb()
             }
 
@@ -206,7 +224,12 @@ export default class Reverb {
         const paramsList = getParamsListForEffect({ effect, preset })
         paramsList.forEach(({ name, value }: { name: string; value: number }) => {
             const param = this._reverbWorkletNode?.parameters.get(name)
-            if (param && this._audioContext) {
+            if (!param || !this._audioContext) return
+            // The room's shape is set at once (the node is fresh and silent);
+            // everything else ramps in.
+            if (STRUCTURAL_PARAMS.includes(name)) {
+                param.setValueAtTime(value, this._audioContext.currentTime)
+            } else {
                 param.linearRampToValueAtTime(value, this._audioContext.currentTime + 0.195)
             }
         })

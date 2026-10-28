@@ -5,7 +5,8 @@ import { migrateReverbMix, REVERB_MIX_VERSION, type ReverbParams } from '$lib/st
 const USER_REVERB_PRESETS_KEY = 'local:chorus_user_reverb_presets'
 const USER_REVERB_PRESETS_VERSION_KEY = 'local:chorus_user_reverb_presets_version'
 
-// User-saved reverb configs: name -> full Dattorro param map. Saved/loaded from
+// User-saved reverb configs: name -> full reverb param map (both worklets'
+// names; see ReverbParams). Saved/loaded from
 // the reverb config editor; applying one goes through reverbParamsStore (the live
 // value channel), never the engine's name-keyed preset lookup — so user names can
 // never collide with or crash the built-in preset resolution.

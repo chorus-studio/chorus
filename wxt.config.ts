@@ -104,6 +104,7 @@ export default defineConfig({
                     '/icon/*',
                     '/sounds/*',
                     '/processor.js',
+                    '/fdn-processor.js',
                     '/ms-processor.js',
                     '/soundtouch.js',
                     '/worklets/*',
