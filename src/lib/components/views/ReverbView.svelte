@@ -10,7 +10,6 @@
     import { effectsStore } from '$lib/stores/effects'
     import { fxSubView } from '$lib/stores/effects-ui'
     import { resolveReverbPreset } from '$lib/audio-effects/reverb/presets'
-    import { REVERB_LEVEL_NOTE } from './reverb-level-note'
 
     let { pip = false }: { pip?: boolean } = $props()
 
@@ -72,9 +71,6 @@
                                 <span class="text-ink-muted"> — {hint}</span>
                             </p>
                         {/each}
-                        <p class="mt-1 border-t border-hairline pt-1.5 leading-snug text-ink-muted">
-                            {REVERB_LEVEL_NOTE}
-                        </p>
                     </HoverCard.Content>
                 </HoverCard.Root>
             {/if}

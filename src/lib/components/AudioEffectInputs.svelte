@@ -6,7 +6,6 @@
     import Info from '@lucide/svelte/icons/info'
     import { CustomSelect } from '$lib/components/ui/custom-select'
     import RecentChips from '$lib/components/RecentChips.svelte'
-    import { cn } from '$lib/utils'
 
     let {
         pip = false,
@@ -54,10 +53,7 @@
 )}
     <div
         data-card
-        class={cn(
-            'flex flex-col gap-y-1 rounded-lg border border-hairline bg-panel px-2.5',
-            note ? 'py-0.5' : 'py-1'
-        )}
+        class="flex flex-col gap-y-1 rounded-lg border border-hairline bg-panel px-2.5 py-1"
     >
         <div class="flex h-4 items-center justify-between gap-x-3">
             <span class="rack-label shrink-0" title={hint || undefined}>{label}</span>
@@ -80,9 +76,7 @@
     </div>
 {/snippet}
 
-<!-- The two cards fill the frame; a note under them only fits with the cards
-     and the gap between them pulled in by a few pixels. -->
-<div data-cards class={cn('flex h-full flex-col', note ? 'gap-y-2' : 'gap-y-3')}>
+<div data-cards class="flex h-full flex-col gap-y-3">
     {@render card(
         topLabel,
         topHint,
