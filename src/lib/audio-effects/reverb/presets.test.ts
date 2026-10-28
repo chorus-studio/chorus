@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { customPresets, getParamsListForEffect, roomPresets } from './presets'
+import {
+    customPresets,
+    getParamsListForEffect,
+    impulsePresets,
+    PRESET_ALIASES,
+    resolveReverbPreset,
+    roomPresets
+} from './presets'
 
 // Every preset leaves the track at its level and adds the tail on top: the
 // worklet is the whole reverb path, with nothing bypassing it.
@@ -16,5 +23,18 @@ describe('reverb presets', () => {
         expect(params.dry).toBe(1)
         expect(params.wet).toBeGreaterThan(0)
         expect(params.wet).toBeLessThanOrEqual(1)
+    })
+})
+
+describe('reverb aliases', () => {
+    const kept = [...roomPresets, ...customPresets, ...impulsePresets]
+
+    it('every removed name resolves to a kept preset in one step', () => {
+        for (const [from, to] of Object.entries(PRESET_ALIASES)) {
+            expect(kept).not.toContain(from)
+            expect(kept, `${from} → ${to}`).toContain(to)
+        }
+        expect(resolveReverbPreset('classroom')).toBe('studio')
+        expect(resolveReverbPreset('kick')).toBe('kick_ir')
     })
 })

@@ -1,6 +1,8 @@
 import { writable, get } from 'svelte/store'
 import { storage } from '@wxt-dev/storage'
 import { syncWithType } from '$lib/utils/store-utils'
+import { resolveReverbPreset } from '$lib/audio-effects/reverb/presets'
+import { resolveEQPreset } from '$lib/audio-effects/equalizer/presets'
 
 const AUDIO_EFFECTS_STORE_KEY = 'local:chorus_audio_effects'
 
@@ -28,8 +30,16 @@ function createAudioEffectsStore() {
         }
     }
 
+    // A removed preset's name (from storage, a saved slot, an old config) becomes
+    // its kept twin here, so the pickers and the engine only ever see current names.
+    const normalize = (effect: AudioEffect): AudioEffect => ({
+        ...effect,
+        reverb: resolveReverbPreset(effect.reverb),
+        equalizer: resolveEQPreset(effect.equalizer)
+    })
+
     async function updateEffect({ key, value }: { key: keyof AudioEffect; value: string }) {
-        update((state) => ({ ...state, [key]: value }))
+        update((state) => normalize({ ...state, [key]: value }))
         const newState = get(store)
         isUpdatingStorage = true
         try {
@@ -44,7 +54,7 @@ function createAudioEffectsStore() {
 
     /** Swap every effect at once (a quick preset): one write, one dispatch. */
     async function replace(effect: AudioEffect) {
-        const next = { ...defaultAudioEffect, ...effect }
+        const next = normalize({ ...defaultAudioEffect, ...effect })
         set(next)
         isUpdatingStorage = true
         try {
@@ -82,7 +92,7 @@ function createAudioEffectsStore() {
             if (!value) return
 
             // Sync the stored effects with the current type definition
-            const syncedValue = syncWithType(value, defaultAudioEffect)
+            const syncedValue = normalize(syncWithType(value, defaultAudioEffect))
             set(syncedValue)
 
             // Update storage with synced value
@@ -94,7 +104,7 @@ function createAudioEffectsStore() {
     storage.watch<AudioEffect>(AUDIO_EFFECTS_STORE_KEY, (value) => {
         if (!value || isUpdatingStorage) return
 
-        const syncedValue = syncWithType(value, defaultAudioEffect)
+        const syncedValue = normalize(syncWithType(value, defaultAudioEffect))
         set(syncedValue)
     })
 

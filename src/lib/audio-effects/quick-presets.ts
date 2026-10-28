@@ -7,6 +7,7 @@
 import { defaultPlayback, type Playback } from '$lib/stores/playback'
 import { defaultAudioEffect, type AudioEffect } from '$lib/stores/effects'
 import { resolveReverbPreset } from '$lib/audio-effects/reverb/presets'
+import { resolveEQPreset } from '$lib/audio-effects/equalizer/presets'
 import {
     DEFAULT_EFFECT_SETTINGS,
     DEFAULT_EQUALIZER_BANDS,
@@ -679,7 +680,7 @@ export function sameValues(a: PresetValues, b: PresetValues): boolean {
     if (!close(a.playback.pitch, b.playback.pitch)) return false
     if (a.playback.semitone !== b.playback.semitone) return false
     if (resolveReverbPreset(a.effect.reverb) !== resolveReverbPreset(b.effect.reverb)) return false
-    if (a.effect.equalizer !== b.effect.equalizer) return false
+    if (resolveEQPreset(a.effect.equalizer) !== resolveEQPreset(b.effect.equalizer)) return false
     if (a.effect.msProcessor !== b.effect.msProcessor) return false
     return sameLofi(normalizeEffectSettings(a.lofi), normalizeEffectSettings(b.lofi))
 }
@@ -742,7 +743,8 @@ export function recipe({ playback, effect, lofi }: PresetValues): string[] {
     if (semitone !== 0) out.push(`${semitone > 0 ? '+' : ''}${semitone} st`)
     const reverb = resolveReverbPreset(effect.reverb)
     if (reverb && reverb !== 'none') out.push(reverb.replace(/_ir$/, ' IR'))
-    if (effect.equalizer && effect.equalizer !== 'none') out.push(`${effect.equalizer} EQ`)
+    const equalizer = resolveEQPreset(effect.equalizer)
+    if (equalizer && equalizer !== 'none') out.push(`${equalizer} EQ`)
     if (effect.msProcessor && effect.msProcessor !== 'none') out.push(effect.msProcessor)
 
     const rack = normalizeEffectSettings(lofi)
