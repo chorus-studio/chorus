@@ -1,5 +1,5 @@
 import AudioManager from '../audio-manager'
-import { EQ_PRESETS, EQ_FILTERS } from './presets'
+import { EQ_PRESETS, EQ_FILTERS, resolveEQPreset } from './presets'
 
 export default class Equalizer {
     _filters: BiquadFilterNode[]
@@ -18,6 +18,8 @@ export default class Equalizer {
         }
 
         this._audioContext = this._audioManager.audioContext
+        // A removed preset's name resolves to its kept twin.
+        effect = resolveEQPreset(effect)
         if (effect === 'none') {
             return this.disconnect()
         }
@@ -44,7 +46,8 @@ export default class Equalizer {
             throw new Error('AudioContext not initialized')
         }
 
-        const effectGain = EQ_PRESETS[effect][index]
+        // Unknown name (a stale saved preset): flat instead of crashing the engine.
+        const effectGain = EQ_PRESETS[effect]?.[index] ?? 0
         const filter = this._audioContext.createBiquadFilter()
 
         filter.type = setting.type as BiquadFilterType

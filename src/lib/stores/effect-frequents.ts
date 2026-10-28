@@ -8,7 +8,7 @@ import { get, writable } from 'svelte/store'
 import { storage } from '@wxt-dev/storage'
 import { effectsStore } from '$lib/stores/effects'
 import { resolveReverbPreset, roomPresets } from '$lib/audio-effects/reverb/presets'
-import { spotifyPresets } from '$lib/audio-effects/equalizer/presets'
+import { resolveEQPreset, spotifyPresets } from '$lib/audio-effects/equalizer/presets'
 import { advancedPresets } from '$lib/audio-effects/ms-processor/presets'
 
 export type EffectKind = 'reverb' | 'equalizer' | 'msProcessor'
@@ -53,7 +53,7 @@ const unpinned = (value: string): EffectFrequent => ({ value, pinned: false })
 
 export const defaultEffectFrequents: EffectFrequents = {
     room_reverb: ['small', 'studio', 'bathroom', 'hall', 'arena', 'cathedral'].map(unpinned),
-    custom_reverb: ['lofi', 'radio', 'dream', 'chamber', 'echo', 'space'].map(unpinned),
+    custom_reverb: ['lofi', 'radio', 'dream', 'crystal', 'echo', 'space'].map(unpinned),
     spotify_eq: ['Bass booster', 'Vocal booster', 'Loudness', 'Rock', 'Pop', 'Acoustic'].map(
         unpinned
     ),
@@ -109,7 +109,7 @@ function createEffectFrequentsStore() {
         // own hydration included: that is the last preset the user had on.
         effectsStore.subscribe(({ reverb, equalizer, msProcessor }) => {
             void touch('reverb', resolveReverbPreset(reverb))
-            void touch('equalizer', equalizer)
+            void touch('equalizer', resolveEQPreset(equalizer))
             void touch('msProcessor', msProcessor)
         })
     })
