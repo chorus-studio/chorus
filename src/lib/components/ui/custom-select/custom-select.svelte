@@ -35,6 +35,32 @@
     let isOpen = $state(false)
     let activeIndex = $state(-1)
     let listRef = $state<HTMLUListElement | null>(null)
+    let triggerRef = $state<HTMLButtonElement | null>(null)
+
+    // The list is absolutely positioned inside whatever scrolls (the tab
+    // content, a dialog), which clips it. So it opens on the side of the
+    // trigger with room, and no taller than that room: a long list scrolls
+    // instead of running off the edge.
+    const LIST_MAX = 176 // max-h-44
+    const ROW = 28 // h-7 per option
+    const EDGE = 8 // list margin + breathing room at the clipping edge
+    let side = $state<'below' | 'above'>('below')
+    let maxHeight = $state(LIST_MAX)
+
+    function place() {
+        const trigger = triggerRef
+        if (!trigger) return
+        const clip = trigger.closest('.chorus-scroll, [data-clips-overflow]')
+        const bounds = clip
+            ? clip.getBoundingClientRect()
+            : new DOMRect(0, 0, window.innerWidth, window.innerHeight)
+        const rect = trigger.getBoundingClientRect()
+        const below = bounds.bottom - rect.bottom - EDGE
+        const above = rect.top - bounds.top - EDGE
+        const needed = Math.min(LIST_MAX, options.length * ROW + 8)
+        side = below >= needed || below >= above ? 'below' : 'above'
+        maxHeight = Math.max(ROW * 2 + 8, Math.min(LIST_MAX, side === 'below' ? below : above))
+    }
     const fallbackId = Math.random().toString(36).slice(2, 8)
     const listId = $derived(`chorus-select-${key || fallbackId}`)
 
@@ -43,6 +69,7 @@
     )
 
     async function open() {
+        place()
         isOpen = true
         activeIndex = Math.max(
             0,
@@ -127,6 +154,7 @@
 
 <div use:clickOutside={close} class={cn('relative', compact ? 'min-w-28' : 'min-w-40', className)}>
     <button
+        bind:this={triggerRef}
         onkeydown={onKeydown}
         id={key || undefined}
         type="button"
@@ -166,7 +194,11 @@
             tabindex={-1}
             onkeydown={onKeydown}
             aria-activedescendant={options[activeIndex] ? `${listId}-${activeIndex}` : undefined}
-            class="chorus-scroll absolute left-0 top-full z-[1000] mt-1 max-h-44 w-full min-w-full overflow-y-auto rounded-md border border-hairline-strong bg-surface p-1 shadow-float animate-in fade-in-0 zoom-in-95"
+            style={`max-height: ${maxHeight}px`}
+            class={cn(
+                'chorus-scroll absolute left-0 z-[1000] w-full min-w-full overflow-y-auto rounded-md border border-hairline-strong bg-surface p-1 shadow-float animate-in fade-in-0 zoom-in-95',
+                side === 'below' ? 'top-full mt-1' : 'bottom-full mb-1'
+            )}
         >
             {#each options as option, i (option.value)}
                 {@const isSelected = option.value === selected}

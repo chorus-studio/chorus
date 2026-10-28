@@ -157,6 +157,26 @@
         ready = true
     })
 
+    // ?open=reverb-bottom clicks that select's trigger once the tab is up, so a
+    // shot can show its list; ?css=… adds a stylesheet, for trying a layout
+    // before building it.
+    onMount(() => {
+        const css = params.get('css')
+        if (css)
+            document.head.appendChild(
+                Object.assign(document.createElement('style'), { textContent: css })
+            )
+        const open = params.get('open')
+        if (!open) return
+        const tick = setInterval(() => {
+            const trigger = document.getElementById(open)
+            if (!trigger) return
+            clearInterval(tick)
+            trigger.click()
+        }, 50)
+        return () => clearInterval(tick)
+    })
+
     onMount(async () => {
         if (dialog !== 'blocked') return
         const view = params.get('view')
