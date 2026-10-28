@@ -1,19 +1,27 @@
-// The output limiter: a DynamicsCompressorNode set up as a limiter at −1 dBFS
-// (ratio 20, hard knee, instant attack, 250 ms release), last in the chain
-// before the destination. Effects add level — dry at unity plus a reverb
-// tail, EQ boosts, the lofi rack — and the destination hard-clips anything
-// past full scale into crackle; this trims those peaks instead. Normalised
-// Spotify masters peak at or under −1 dBFS, so without effects it is inert.
-// Measured (headless Chrome, OfflineAudioContext, 2026-10-28): a cathedral on
-// a sustained chord peaked at 1.45× full scale and came out at 0.96× for
-// 0.6 dB of level; the plate rooms never crossed the threshold.
-export const LIMITER = { threshold: -1, knee: 0, ratio: 20, attack: 0, release: 0.25 }
+// The output limiter: a DynamicsCompressorNode set up as a limiter at full
+// scale (ratio 20, hard knee, instant attack, 100 ms release), last in the
+// chain before the destination. Effects add level — dry at unity plus a
+// reverb tail, EQ boosts, the lofi rack — and the destination hard-clips
+// anything past full scale into crackle; this trims those peaks instead.
+//
+// The ceiling sits at 0 dBFS, not below it, and the release is short: a
+// ceiling at −1 dBFS with a 250 ms release ducked the whole mix on every peak
+// in the band that never clipped, and a listening test called that "less
+// powerful". At 0 dBFS the node acts on true overs only and lets go between
+// beats; the most extreme peaks still land a hair over (1.05× measured on a
+// cathedral that reached 1.67× raw), which is inaudible next to the 578
+// clipped samples a second it replaces. Measured in headless Chrome with an
+// OfflineAudioContext on a chord-and-kicks signal at full volume: the plate
+// rooms and the FDN hall lose nothing, the FDN cathedral loses 0.5 dB.
+export const LIMITER = { threshold: 0, knee: 0, ratio: 20, attack: 0, release: 0.1 }
 
 // Blink's compressor (DynamicsCompressorKernel::SetParams, which Firefox and
 // WebKit share) applies an automatic makeup gain to everything, quiet signals
-// included: (1 / static gain at 0 dBFS)^0.6. With these settings that is
-// +0.57 dB; the trim gain after the node cancels it exactly, so material
-// under the threshold passes bit-exact (measured: max error 0).
+// included: (1 / static gain at 0 dBFS)^0.6. The trim gain after the node
+// cancels it, so material under the threshold passes bit-exact (measured
+// at a −1 dBFS ceiling, where it is +0.57 dB: max error 0). With the ceiling
+// at 0 dBFS the makeup is unity and the trim is inert; it stays so the
+// ceiling can move without the level moving with it.
 export function limiterMakeupGain({
     threshold,
     ratio
