@@ -223,7 +223,7 @@
             id="frame"
             class="h-[360px] w-[440px] overflow-hidden rounded-lg border border-hairline-strong bg-ink"
         >
-            <TabsList pip initialTab={tab} />
+            {#if ready}<TabsList pip initialTab={tab} />{/if}
         </div>
     {:else if scene === 'popup'}
         <div id="frame" class="w-[320px] overflow-hidden rounded-lg border border-hairline-strong">
