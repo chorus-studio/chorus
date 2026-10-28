@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
     customPresets,
+    EQ_BAND_Q,
+    EQ_FILTERS,
     EQ_PRESET_ALIASES,
     EQ_PRESETS,
     eqPresetLabels,
@@ -44,5 +46,45 @@ describe('EQ presets', () => {
     it('does nothing at least 0.8 dB rms, so every preset is audible', () => {
         for (const name of eqPresetLabels)
             expect(rms(EQ_PRESETS[name]), name).toBeGreaterThanOrEqual(0.8)
+    })
+})
+
+// The Web Audio peaking biquad (RBJ cookbook), so the band design can be
+// checked here the way it was measured: the composite response of a preset
+// should sit close to its slider values at every band centre.
+const FS = 44100
+function peakDb(f0: number, gainDb: number, q: number, f: number) {
+    const A = 10 ** (gainDb / 40)
+    const w0 = (2 * Math.PI * f0) / FS
+    const alpha = Math.sin(w0) / (2 * q)
+    const b = [1 + alpha * A, -2 * Math.cos(w0), 1 - alpha * A]
+    const a = [1 + alpha / A, -2 * Math.cos(w0), 1 - alpha / A]
+    const w = (2 * Math.PI * f) / FS
+    const re = (c: number[]) => c[0] + c[1] * Math.cos(w) + c[2] * Math.cos(2 * w)
+    const im = (c: number[]) => -c[1] * Math.sin(w) - c[2] * Math.sin(2 * w)
+    return 20 * Math.log10(Math.hypot(re(b), im(b)) / Math.hypot(re(a), im(a)))
+}
+const composite = (gains: number[], f: number) =>
+    EQ_FILTERS.reduce(
+        (sum, band, i) => sum + (gains[i] ? peakDb(band.freq, gains[i], EQ_BAND_Q, f) : 0),
+        0
+    )
+
+describe('EQ band design', () => {
+    it('is ten octave-wide peaks', () => {
+        expect(EQ_FILTERS.every((f) => f.type === 'peaking')).toBe(true)
+        expect(EQ_BAND_Q).toBeCloseTo(Math.SQRT2, 6)
+    })
+
+    it('lands within 1 dB of every preset slider at its own band centre', () => {
+        for (const name of eqPresetLabels) {
+            const gains = EQ_PRESETS[name]
+            EQ_FILTERS.forEach((band, i) => {
+                expect(
+                    Math.abs(composite(gains, band.freq) - gains[i]),
+                    `${name} @ ${band.freq}`
+                ).toBeLessThan(1)
+            })
+        }
     })
 })

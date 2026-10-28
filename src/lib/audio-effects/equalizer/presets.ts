@@ -7,8 +7,17 @@
 // (the removed names resolve to their twin below). The two reducers used to be
 // the boosters' tilts in reverse; they now only cut their own end, Treble reducer
 // a degree harder than Classical's gentle roll-off.
+//
+// Band design (2026-10-28, measured with the cookbook formulas the Web Audio
+// biquads use): every band is a peak one octave wide, Q = √2. At Q 1 the
+// bands overlapped so three neighbours at +2 dB summed to about +4 dB between
+// them; the end bands were shelves, whose frequency is the middle of their
+// slope, so the 32 Hz and 16 kHz sliders delivered half their gain at their
+// own frequency. With this design the composite response sits within 1 dB of
+// the slider values at every band centre, for every preset.
+export const EQ_BAND_Q = Math.SQRT2
 export const EQ_FILTERS: { freq: number; gain: number; type: string }[] = [
-    { freq: 32, gain: 0, type: 'lowshelf' },
+    { freq: 32, gain: 0, type: 'peaking' },
     { freq: 64, gain: 0, type: 'peaking' },
     { freq: 125, gain: 0, type: 'peaking' },
     { freq: 250, gain: 0, type: 'peaking' },
@@ -17,7 +26,7 @@ export const EQ_FILTERS: { freq: number; gain: number; type: string }[] = [
     { freq: 2000, gain: 0, type: 'peaking' },
     { freq: 4000, gain: 0, type: 'peaking' },
     { freq: 8000, gain: 0, type: 'peaking' },
-    { freq: 16_000, gain: 0, type: 'highshelf' }
+    { freq: 16_000, gain: 0, type: 'peaking' }
 ]
 
 const SPOTIFY_PRESETS: Record<string, number[]> = {

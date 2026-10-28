@@ -1,5 +1,5 @@
 import AudioManager from '../audio-manager'
-import { EQ_PRESETS, EQ_FILTERS, resolveEQPreset } from './presets'
+import { EQ_BAND_Q, EQ_FILTERS, EQ_PRESETS, resolveEQPreset } from './presets'
 
 export default class Equalizer {
     _filters: BiquadFilterNode[]
@@ -53,7 +53,7 @@ export default class Equalizer {
         filter.type = setting.type as BiquadFilterType
         filter.frequency.value = setting.freq || 0
         filter.gain.value = effectGain || 0
-        filter.Q.value = 1
+        filter.Q.value = EQ_BAND_Q
 
         return filter
     }
@@ -112,7 +112,7 @@ export default class Equalizer {
                 filter.type = setting.type as BiquadFilterType
                 filter.frequency.value = setting.freq || 0
                 filter.gain.value = 0
-                filter.Q.value = 1
+                filter.Q.value = EQ_BAND_Q
                 return filter
             })
 
