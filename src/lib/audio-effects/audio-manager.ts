@@ -28,7 +28,7 @@ export default class AudioManager {
         reverb?: AudioNode
     } = {}
 
-    // Track reverb dry/wet gain nodes for proper cleanup (used by both digital and impulse reverb)
+    // Track the impulse reverb's dry/wet split for proper cleanup
     private _reverbGainNodes: { dry?: GainNode; wet?: GainNode } = {}
 
     constructor(element: HTMLVideoElement | HTMLAudioElement) {
@@ -445,7 +445,7 @@ export default class AudioManager {
             if (this._activeEffects.msProcessor) this._activeEffects.msProcessor.disconnect()
             if (this._activeEffects.reverb) this._activeEffects.reverb.disconnect()
 
-            // Clean up reverb dry/wet gain nodes (digital bypass + impulse split)
+            // Clean up the impulse reverb's dry/wet split
             if (this._reverbGainNodes.dry) {
                 try {
                     this._reverbGainNodes.dry.disconnect()
@@ -505,27 +505,11 @@ export default class AudioManager {
                 currentNode = this._activeEffects.msProcessor
             }
 
+            // Digital reverb: the worklet is stereo in and carries the dry signal
+            // itself (unity in every preset), so it sits in series like the rest.
+            // A gain-1.0 bypass used to run beside a mono-in worklet; that doubled
+            // the dry signal and left the config's Dry slider nearly inert.
             if (this._activeEffects.reverb) {
-                if (this._activeEffects.reverb instanceof AudioWorkletNode) {
-                    // Digital reverb: parallel dry bypass + reverb path.
-                    // This restores the v2.7.1 topology where a dry signal path
-                    // existed alongside the reverb, keeping the dry:wet ratio
-                    // that all digital reverb presets were tuned for.
-                    const dryBypass = this._audioContext!.createGain()
-                    dryBypass.gain.value = 1.0
-
-                    currentNode.connect(dryBypass)
-                    currentNode.connect(this._activeEffects.reverb)
-
-                    dryBypass.connect(this._soundTouchNode)
-                    this._activeEffects.reverb.connect(this._soundTouchNode)
-
-                    this._reverbGainNodes = { dry: dryBypass }
-
-                    this._soundTouchNode.connect(this.destination)
-                    return
-                }
-
                 currentNode.connect(this._activeEffects.reverb)
                 currentNode = this._activeEffects.reverb
             }

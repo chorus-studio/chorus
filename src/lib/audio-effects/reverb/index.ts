@@ -145,12 +145,15 @@ export default class Reverb {
         // Create gain node if it doesn't exist
         this._reverbGainNode = this._reverbGainNode ?? this._audioContext.createGain()
 
-        // Create reverb node if it doesn't exist
+        // Create reverb node if it doesn't exist. Stereo in: the processor keeps
+        // the dry signal per channel (at `dry`, unity in every preset) and sums
+        // the channels itself for the tank, so it is the whole reverb path — no
+        // bypass beside it. Mono in made the dry path a mono copy.
         this._reverbWorkletNode =
             this._reverbWorkletNode ??
             new AudioWorkletNode(this._audioContext, 'DattorroReverb', {
                 channelCountMode: 'explicit',
-                channelCount: 1,
+                channelCount: 2,
                 outputChannelCount: [2]
             })
     }
