@@ -296,7 +296,7 @@ export default class MediaOverride {
     /**
      * The output limiter's A/B switch. Bypassed (extension off) or before the
      * chain exists, the flag just waits for the next build; on a live chain the
-     * last hop is re-routed under a short mute, since the limiter's 6 ms of
+     * last hop is re-routed under a short mute, since the limiter's 5 ms of
      * lookahead joining or leaving the path would otherwise click.
      */
     async setLimiter(enabled: boolean): Promise<void> {

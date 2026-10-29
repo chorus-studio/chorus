@@ -105,6 +105,7 @@ export default defineConfig({
                     '/sounds/*',
                     '/processor.js',
                     '/fdn-processor.js',
+                    '/limiter-processor.js',
                     '/ms-processor.js',
                     '/soundtouch.js',
                     '/worklets/*',
