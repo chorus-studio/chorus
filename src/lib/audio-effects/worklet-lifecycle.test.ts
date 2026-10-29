@@ -39,7 +39,7 @@ function load(file: string): ProcessorClass {
     return registered
 }
 
-const WORKLETS = ['processor.js', 'fdn-processor.js', 'ms-processor.js']
+const WORKLETS = ['processor.js', 'fdn-processor.js', 'ms-processor.js', 'limiter-processor.js']
 
 describe.each(WORKLETS)('%s lifecycle', (file) => {
     const Proc = load(file)

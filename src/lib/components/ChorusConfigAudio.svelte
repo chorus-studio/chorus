@@ -21,8 +21,8 @@
             {$configStore.output_limiter ? 'On' : 'Off'}
         </label>
         <span class={HINT}>
-            Catches peaks that would clip when effects add level, for 6 ms of delay. Switch it off
-            to compare; nothing else in the chain changes.
+            Holds the output under full scale when the volume boost or the effects would clip it,
+            for 5 ms of delay. Switch it off to compare; nothing else in the chain changes.
         </span>
     </div>
 </div>

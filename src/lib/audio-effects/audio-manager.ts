@@ -1,15 +1,17 @@
 import SoundTouch from './soundtouch'
 import { createLimiter } from './limiter'
+import { disposeWorklet } from './worklet'
 import { SoundTouchData } from '$lib/stores/playback'
 
 export default class AudioManager {
     private _gainNode?: GainNode
     private _soundTouchNode?: AudioNode
-    // Output limiter (see ./limiter.ts): the chain ends soundTouch → limiter →
-    // trim → destination whenever Chorus is processing. The bypass (extension
-    // off) goes straight to the destination, as vanilla Spotify does.
-    private _limiterNode?: DynamicsCompressorNode
-    private _limiterTrimNode?: GainNode
+    // Output limiter (see ./limiter.ts): every processed chain ends
+    // soundTouch → gain → limiter → destination. The volume gain sits after
+    // the effects, not before them, so a boost past 100% does not drive the
+    // saturating effects harder; the limiter then holds the boosted sum under
+    // full scale. The bypass (extension off) goes straight to the destination.
+    private _limiterNode?: AudioWorkletNode
     private _limiterEnabled = true
     // The node feeding the output hop right now, so the limiter can be switched
     // in or out of a live chain without rebuilding it.
@@ -157,18 +159,23 @@ export default class AudioManager {
             if (!this._soundTouchNode) await this.loadSoundTouch()
 
             if (!this._limiterNode) {
-                const { limiter, trim } = createLimiter(this._audioContext)
-                this._limiterNode = limiter
-                this._limiterTrimNode = trim
+                const modulePath = sessionStorage.getItem('chorus:limiter_path')
+                if (modulePath) {
+                    this._limiterNode = await createLimiter(this._audioContext, modulePath)
+                } else {
+                    console.warn(
+                        'Limiter module path not found in session storage; running without'
+                    )
+                }
             }
 
             this._destination = this._audioContext.destination
 
-            // Set up default audio chain with gain node
+            // Set up the default chain: source → soundTouch → gain → limiter → destination
             if (this.isConnectable) {
-                this.source!.connect(this._gainNode!)
-                this._gainNode!.connect(this._soundTouchNode!)
-                this.connectToOutput(this._soundTouchNode!)
+                this.source!.connect(this._soundTouchNode!)
+                this._soundTouchNode!.connect(this._gainNode!)
+                this.connectToOutput(this._gainNode!)
                 this.setGain(this._currentVolume, this._volumeType)
             } else {
                 throw new Error('Failed to create audio chain nodes')
@@ -305,19 +312,18 @@ export default class AudioManager {
         return Boolean(this.source && this.destination && this._gainNode && this._soundTouchNode)
     }
 
-    // The last hop of every processed chain: through the limiter and its trim
-    // to the destination. (Each connect is idempotent, so calling this on every
+    // The last hop of every processed chain: through the limiter to the
+    // destination. (Each connect is idempotent, so calling this on every
     // rebuild is fine.)
     private connectToOutput(node: AudioNode) {
         if (!this.destination) return
         this._outputSource = node
-        if (!this._limiterEnabled || !this._limiterNode || !this._limiterTrimNode) {
+        if (!this._limiterEnabled || !this._limiterNode) {
             node.connect(this.destination)
             return
         }
         node.connect(this._limiterNode)
-        this._limiterNode.connect(this._limiterTrimNode)
-        this._limiterTrimNode.connect(this.destination)
+        this._limiterNode.connect(this.destination)
     }
 
     get limiterEnabled() {
@@ -325,7 +331,7 @@ export default class AudioManager {
     }
 
     // The limiter's A/B switch: re-routes the last hop of a live chain in place
-    // (the limiter's 6 ms of lookahead joins or leaves the path, so the caller
+    // (the limiter's 5 ms of lookahead joins or leaves the path, so the caller
     // mutes around this). With no chain built, the flag waits for the build.
     setLimiterEnabled(enabled: boolean) {
         this._limiterEnabled = enabled
@@ -370,11 +376,8 @@ export default class AudioManager {
 
         this.cleanupEffectChain()
 
-        // Reconnect source to gain node after cleanup
-        this.source!.connect(this._gainNode!)
-
         // Chain through active effects (lofi rack, EQ, MS processor) before the dry/wet split
-        let currentNode: AudioNode = this._gainNode!
+        let currentNode: AudioNode = this.source!
 
         if (this._activeEffects.lofi) {
             currentNode.connect(this._activeEffects.lofi.input)
@@ -415,7 +418,8 @@ export default class AudioManager {
         dryGainNode.connect(this._soundTouchNode!)
         wetGainNode.connect(this._soundTouchNode!)
 
-        this.connectToOutput(this._soundTouchNode!)
+        this._soundTouchNode!.connect(this._gainNode!)
+        this.connectToOutput(this._gainNode!)
 
         // Mark that reverb is active (using impulse routing)
         this._activeEffects.reverb = convolverNode
@@ -466,7 +470,6 @@ export default class AudioManager {
             this._gainNode.disconnect()
             this._soundTouchNode.disconnect()
             this._limiterNode?.disconnect()
-            this._limiterTrimNode?.disconnect()
             this._outputSource = undefined
 
             // Disconnect active effects
@@ -529,11 +532,8 @@ export default class AudioManager {
         try {
             this.cleanupEffectChain()
 
-            // CRITICAL: Reconnect source to gain node
-            this.source.connect(this._gainNode)
-
-            // Build dynamic chain: gain → [effects] → soundTouch → destination
-            let currentNode: AudioNode = this._gainNode
+            // Build the chain: source → [effects] → soundTouch → gain → limiter → destination
+            let currentNode: AudioNode = this.source
 
             // Chain effects in order: lofi rack → equalizer → MS processor → reverb
             if (this._activeEffects.lofi) {
@@ -569,9 +569,11 @@ export default class AudioManager {
                 currentNode = this._activeEffects.reverb
             }
 
-            // Connect final node to soundTouch, then out through the limiter
+            // Connect final node to soundTouch, then the volume gain, then out
+            // through the limiter
             currentNode.connect(this._soundTouchNode)
-            this.connectToOutput(this._soundTouchNode)
+            this._soundTouchNode.connect(this._gainNode)
+            this.connectToOutput(this._gainNode)
         } catch (error) {
             console.error('Error rebuilding effect chain:', error)
             throw error
@@ -588,11 +590,11 @@ export default class AudioManager {
         // Now clear all active effects
         this._activeEffects = {}
 
-        // Reconnect the basic chain: source → gain → soundTouch → limiter → destination
+        // Reconnect the basic chain: source → soundTouch → gain → limiter → destination
         if (this.source && this._gainNode && this._soundTouchNode && this.destination) {
-            this.source.connect(this._gainNode)
-            this._gainNode.connect(this._soundTouchNode)
-            this.connectToOutput(this._soundTouchNode)
+            this.source.connect(this._soundTouchNode)
+            this._soundTouchNode.connect(this._gainNode)
+            this.connectToOutput(this._gainNode)
         }
     }
 
@@ -631,7 +633,7 @@ export default class AudioManager {
     }
 
     /**
-     * Rebuild the basic chain (source → gain → soundTouch → limiter → destination) after a
+     * Rebuild the basic chain (source → soundTouch → gain → limiter → destination) after a
      * bypass(), restoring the last known volume. Effects/presets re-apply on top
      * via the normal store dispatch once the UI re-mounts.
      */
@@ -643,9 +645,9 @@ export default class AudioManager {
             // otherwise the gain node would feed both destination and soundTouch.
             this.cleanupEffectChain()
             this._activeEffects = {}
-            this.source.connect(this._gainNode!)
-            this._gainNode!.connect(this._soundTouchNode!)
-            this.connectToOutput(this._soundTouchNode!)
+            this.source.connect(this._soundTouchNode!)
+            this._soundTouchNode!.connect(this._gainNode!)
+            this.connectToOutput(this._gainNode!)
             this.setGain(this._currentVolume, this._volumeType)
         } catch (error) {
             console.warn('Error restoring audio chain:', error)
@@ -677,12 +679,8 @@ export default class AudioManager {
                 this._soundTouchNode = undefined
             }
             if (this._limiterNode) {
-                this._limiterNode.disconnect()
+                disposeWorklet(this._limiterNode)
                 this._limiterNode = undefined
-            }
-            if (this._limiterTrimNode) {
-                this._limiterTrimNode.disconnect()
-                this._limiterTrimNode = undefined
             }
             if (this.destination) {
                 this._destination = undefined
