@@ -293,6 +293,33 @@ export default class MediaOverride {
         }
     }
 
+    /**
+     * The output limiter's A/B switch. Bypassed (extension off) or before the
+     * chain exists, the flag just waits for the next build; on a live chain the
+     * last hop is re-routed under a short mute, since the limiter's 6 ms of
+     * lookahead joining or leaving the path would otherwise click.
+     */
+    async setLimiter(enabled: boolean): Promise<void> {
+        if (!this.audioManager) return
+        if (this._disabled || !this.audioManager.isReady) {
+            this.audioManager.setLimiterEnabled(enabled)
+            return
+        }
+
+        await this.runExclusive(async () => {
+            try {
+                await this.audioManager.ensureAudioChainReady()
+                this.audioManager.muteForTransition()
+                this.audioManager.setLimiterEnabled(enabled)
+                await new Promise((resolve) => setTimeout(resolve, 30))
+                this.audioManager.unmuteAfterTransition()
+            } catch (error) {
+                console.error('Error switching the output limiter:', error)
+                this.audioManager.unmuteAfterTransition()
+            }
+        })
+    }
+
     async updateReverbParams(params: ReverbParams): Promise<void> {
         if (!this.reverb || !this.audioManager.isReady) return
 

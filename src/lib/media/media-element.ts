@@ -17,6 +17,8 @@ export default class MediaElement {
     private _disabled: boolean = false
     public pendingVolume: { value: number; muted: boolean; type: 'linear' | 'logarithmic' } | null =
         null
+    // A limiter switch that arrived before the chain existed.
+    private pendingLimiter: boolean | null = null
 
     constructor(source: HTMLMediaElement) {
         this.source = source
@@ -73,6 +75,10 @@ export default class MediaElement {
                 override.updateVolume(this.pendingVolume)
                 this.pendingVolume = null
             }
+            if (this.pendingLimiter !== null && override) {
+                override.setLimiter(this.pendingLimiter)
+                this.pendingLimiter = null
+            }
 
             document.dispatchEvent(new CustomEvent('FROM_MEDIA_PLAY_INIT'))
         })
@@ -107,6 +113,9 @@ export default class MediaElement {
                             muted: Boolean(data?.muted),
                             type: String(data?.type) as 'linear' | 'logarithmic'
                         }
+                    }
+                    if (type === 'FROM_LIMITER_LISTENER') {
+                        this.pendingLimiter = data?.enabled !== false
                     }
                     return
                 }
@@ -146,6 +155,10 @@ export default class MediaElement {
 
                     case 'FROM_REVERB_PARAMS_LISTENER':
                         this.mediaOverride.updateReverbParams(data)
+                        break
+
+                    case 'FROM_LIMITER_LISTENER':
+                        this.mediaOverride.setLimiter(data?.enabled !== false)
                         break
 
                     case 'FROM_EQ_PARAMS_LISTENER':

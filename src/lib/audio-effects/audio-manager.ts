@@ -10,6 +10,10 @@ export default class AudioManager {
     // off) goes straight to the destination, as vanilla Spotify does.
     private _limiterNode?: DynamicsCompressorNode
     private _limiterTrimNode?: GainNode
+    private _limiterEnabled = true
+    // The node feeding the output hop right now, so the limiter can be switched
+    // in or out of a live chain without rebuilding it.
+    private _outputSource?: AudioNode
     private _audioContext?: AudioContext
     private _soundTouchManager?: SoundTouch | null
     private _destination?: AudioDestinationNode
@@ -306,13 +310,35 @@ export default class AudioManager {
     // rebuild is fine.)
     private connectToOutput(node: AudioNode) {
         if (!this.destination) return
-        if (!this._limiterNode || !this._limiterTrimNode) {
+        this._outputSource = node
+        if (!this._limiterEnabled || !this._limiterNode || !this._limiterTrimNode) {
             node.connect(this.destination)
             return
         }
         node.connect(this._limiterNode)
         this._limiterNode.connect(this._limiterTrimNode)
         this._limiterTrimNode.connect(this.destination)
+    }
+
+    get limiterEnabled() {
+        return this._limiterEnabled
+    }
+
+    // The limiter's A/B switch: re-routes the last hop of a live chain in place
+    // (the limiter's 6 ms of lookahead joins or leaves the path, so the caller
+    // mutes around this). With no chain built, the flag waits for the build.
+    setLimiterEnabled(enabled: boolean) {
+        this._limiterEnabled = enabled
+        const node = this._outputSource
+        if (!node || !this.destination) return
+        for (const target of [this._limiterNode, this.destination]) {
+            try {
+                if (target) node.disconnect(target)
+            } catch (e) {
+                // Not connected to that one; fine.
+            }
+        }
+        this.connectToOutput(node)
     }
 
     getGainPairing(effect: string) {
@@ -441,6 +467,7 @@ export default class AudioManager {
             this._soundTouchNode.disconnect()
             this._limiterNode?.disconnect()
             this._limiterTrimNode?.disconnect()
+            this._outputSource = undefined
 
             // Disconnect active effects
             // NOTE: For effects with separate input/output nodes (equalizer, lofi rack),
