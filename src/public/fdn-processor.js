@@ -126,6 +126,14 @@ class FDNReverb extends AudioWorkletProcessor {
 
     constructor(options) {
         super(options)
+        // A worklet whose process() returns true is an active source: the node
+        // keeps running after it is disconnected and dropped. The owner posts
+        // 'dispose' when it lets a node go, and process() returns false from
+        // then on, so the node can stop and be collected.
+        this._disposed = false
+        this.port.onmessage = (e) => {
+            if (e.data === 'dispose') this._disposed = true
+        }
         const fs = sampleRate
         this._pre = [new Line(fs + 0.08 * fs), new Line(fs + 0.08 * fs)]
         this._inLp = [0, 0]
@@ -174,6 +182,8 @@ class FDNReverb extends AudioWorkletProcessor {
     }
 
     process(inputs, outputs, parameters) {
+        if (this._disposed) return false
+
         const p = parameters
         const pd = ~~p.preDelay[0]
         const bw = p.bandwidth[0]

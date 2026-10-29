@@ -25,7 +25,10 @@ function loadWorklet(): ProcessorClass {
     let registered: ProcessorClass | undefined
     const scope = {
         sampleRate: SR,
-        AudioWorkletProcessor: class {},
+        // The processor wires a 'dispose' handler onto its port in the constructor.
+        AudioWorkletProcessor: class {
+            port = { onmessage: null, postMessage: () => {} }
+        },
         registerProcessor: (_name: string, cls: ProcessorClass) => (registered = cls)
     }
     const source = readFileSync(

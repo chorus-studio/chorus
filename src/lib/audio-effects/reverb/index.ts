@@ -1,4 +1,5 @@
 import AudioManager from '../audio-manager'
+import { disposeWorklet } from '../worklet'
 import {
     customPresets,
     engineFor,
@@ -110,11 +111,9 @@ export default class Reverb {
 
     private cleanup() {
         if (this._reverbWorkletNode) {
-            try {
-                this._reverbWorkletNode.disconnect()
-            } catch (e) {
-                // Ignore disconnect errors during cleanup
-            }
+            // Stops the processor too: a dropped worklet otherwise keeps
+            // rendering, and every preset switch drops one.
+            disposeWorklet(this._reverbWorkletNode)
             this._reverbWorkletNode = undefined
         }
         if (this._reverbGainNode) {
