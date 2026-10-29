@@ -4,7 +4,6 @@
     import AudioEffectInputs from '$lib/components/AudioEffectInputs.svelte'
 
     import { roomPresets, customPresets, impulsePresets } from '$lib/audio-effects/reverb/presets'
-    import { REVERB_LEVEL_NOTE } from './reverb-level-note'
 
     let { pip = false }: { pip?: boolean } = $props()
 
@@ -49,5 +48,4 @@
     bottomHint="Character presets; impulses aren't tunable"
     bottomRecent="custom_reverb"
     bottomOptions={customOptions}
-    note={REVERB_LEVEL_NOTE}
 />

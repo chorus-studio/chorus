@@ -29,6 +29,8 @@ export type AutoSkip = {
 export type ConfigState = {
     auto_skip: AutoSkip
     audio_presets: AudioPreset[]
+    /** The output limiter at the end of the chain (src/lib/audio-effects/limiter.ts). */
+    output_limiter: boolean
     fx_eq_presets: {
         custom_eq_presets: string[]
         spotify_eq_presets: string[]
@@ -68,6 +70,7 @@ export const createAudioPreset = (values: PresetValues, name: string): AudioPres
 
 export const defaultConfig: ConfigState = {
     audio_presets: [],
+    output_limiter: true,
     auto_skip: {
         enabled: false,
         title_keywords: [],
@@ -147,6 +150,15 @@ function createConfigStore() {
         return titleMatch || artistMatch
     }
 
+    // The media layer (MAIN world) learns the limiter switch by message, like
+    // the other audio settings: on every change, and once when the chain is
+    // built (see FROM_MEDIA_PLAY_INIT).
+    function dispatchLimiter() {
+        if (typeof window === 'undefined') return
+        const enabled = get(store).output_limiter
+        window.postMessage({ type: 'FROM_LIMITER_LISTENER', data: { enabled } }, '*')
+    }
+
     async function updateConfig(config: Partial<ConfigState>) {
         const currentConfig = get(store)
         const updatedConfig = { ...currentConfig, ...config }
@@ -158,6 +170,7 @@ function createConfigStore() {
         } finally {
             isUpdatingStorage = false
         }
+        if ('output_limiter' in config) dispatchLimiter()
     }
 
     storage.getItem<ConfigState>(CONFIG_STORE_KEY).then((config) => {
@@ -183,13 +196,17 @@ function createConfigStore() {
     storage.watch<ConfigState>(CONFIG_STORE_KEY, (config) => {
         if (!config || isUpdatingStorage) return
 
+        const before = get(store).output_limiter
         const syncedConfig = migrate(syncWithType(config, defaultConfig))
         set(syncedConfig)
+        // Switched from another surface (the popup's dialog vs the page's).
+        if (syncedConfig.output_limiter !== before) dispatchLimiter()
     })
 
     return {
         subscribe,
         updateConfig,
+        dispatchLimiter,
         checkIfTrackShouldBeSkipped
     }
 }
