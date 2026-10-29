@@ -1,4 +1,5 @@
 import AudioManager from '../audio-manager'
+import { disposeWorklet } from '../worklet'
 import { MS_PRESETS } from './presets'
 import type { MSParams } from '$lib/stores/ms-params'
 
@@ -139,11 +140,8 @@ export default class MSProcessor {
 
     cleanup() {
         if (this._msWorkletNode) {
-            try {
-                this._msWorkletNode.disconnect()
-            } catch (e) {
-                // Ignore disconnect errors during cleanup
-            }
+            // Stops the processor too (see disposeWorklet).
+            disposeWorklet(this._msWorkletNode)
             this._msWorkletNode = undefined
         }
     }

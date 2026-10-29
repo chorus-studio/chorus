@@ -30,6 +30,15 @@ class DattorroReverb extends AudioWorkletProcessor {
     constructor(options) {
         super(options)
 
+        // A worklet whose process() returns true is an active source: the node
+        // keeps running after it is disconnected and dropped. The owner posts
+        // 'dispose' when it lets a node go, and process() returns false from
+        // then on, so the node can stop and be collected.
+        this._disposed = false
+        this.port.onmessage = (e) => {
+            if (e.data === 'dispose') this._disposed = true
+        }
+
         this._Delays = []
         this._pDLength = sampleRate + (128 - (sampleRate % 128)) // Pre-delay is always one-second long, rounded to the nearest 128-chunk
         this._preDelay = new Float32Array(this._pDLength)
@@ -96,6 +105,8 @@ class DattorroReverb extends AudioWorkletProcessor {
     // First input will be downmixed to mono if number of channels is not 2
     // Outputs Stereo.
     process(inputs, outputs, parameters) {
+        if (this._disposed) return false
+
         const pd = ~~parameters.preDelay[0],
             bw = parameters.bandwidth[0],
             fi = parameters.inputDiffusion1[0],

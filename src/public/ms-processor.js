@@ -23,6 +23,14 @@ class MSProcessor extends AudioWorkletProcessor {
 
     constructor() {
         super()
+        // A worklet whose process() returns true is an active source: the node
+        // keeps running after it is disconnected and dropped. The owner posts
+        // 'dispose' when it lets a node go, and process() returns false from
+        // then on, so the node can stop and be collected.
+        this._disposed = false
+        this.port.onmessage = (e) => {
+            if (e.data === 'dispose') this._disposed = true
+        }
     }
 
     // Convert dB to linear gain
@@ -31,6 +39,8 @@ class MSProcessor extends AudioWorkletProcessor {
     }
 
     process(inputs, outputs, parameters) {
+        if (this._disposed) return false
+
         const input = inputs[0]
         const output = outputs[0]
 
