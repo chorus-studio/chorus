@@ -243,6 +243,13 @@
         inset 0 1px 0 color-mix(in srgb, var(--text) 30%, transparent),
         0 0 0 1px color-mix(in srgb, var(--text) 10%, transparent);
 }
+/* PiP player: the transport rides on a card whether or not glass is on. */
+.chorus-pip-card {
+    background: color-mix(in srgb, var(--text) 6%, transparent);
+    box-shadow:
+        inset 0 1px 0 color-mix(in srgb, var(--text) 26%, transparent),
+        0 0 0 1px color-mix(in srgb, var(--text) 10%, transparent);
+}
 /* A light popup over a dark cover needs more of its own colour in the wash
    for the dark text to read. */
 [data-mode='light'] .chorus-glass-tint {

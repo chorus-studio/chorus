@@ -23,6 +23,8 @@ export type PopupPalette = {
     text2: string
     /** Active states (snip ranges, loop), at least 3:1 on `bg`. */
     accent: string
+    /** Glyphs on an `accent` fill (the play disc): white or near-black, whichever reads better, so at least 4.5:1. */
+    accentFg: string
 }
 
 type Rgb = [number, number, number]
@@ -190,5 +192,10 @@ export function derivePopupPalette(swatches: Swatch[], mode: Mode): PopupPalette
     )
     if (contrastRatio(bg, accent) < ACCENT_CONTRAST) accent = text
 
-    return { bg, text, text2, accent }
+    // Pure black, not the near-black used for text: with #121212 the better of
+    // the two bottoms out at 4.35:1 on mid-tone accents, with #000 at 4.58:1.
+    const accentFg =
+        contrastRatio(accent, '#ffffff') >= contrastRatio(accent, '#000000') ? '#ffffff' : '#000000'
+
+    return { bg, text, text2, accent, accentFg }
 }

@@ -38,30 +38,12 @@ function syncLook(pipWindow: Window) {
 }
 
 export async function applyStyles(pipWindow: Window) {
-    // Copy all stylesheets from the main window
-    ;[...document.styleSheets].forEach((styleSheet) => {
-        try {
-            const cssRules = [...styleSheet.cssRules].map((rule) => rule.cssText).join('')
-            if (!cssRules) return
-
-            const style = pipWindow.document.createElement('style')
-            style.textContent = cssRules
-            pipWindow.document.head.appendChild(style)
-        } catch (e) {
-            const link = document.createElement('link')
-            link.rel = 'stylesheet'
-            link.type = styleSheet.type || 'text/css'
-            link.media = styleSheet.media?.mediaText || 'all'
-            if (styleSheet.href) {
-                link.href = styleSheet.href
-                pipWindow.document.head.appendChild(link)
-            }
-        }
-    })
-
+    // Only Chorus's own stylesheet goes in. The page's sheets used to be copied
+    // too (Spotify's, and the theme's rewritten overrides, whose colours all
+    // carry !important), and under a page theme they recoloured the PiP's
+    // buttons with the page accent over the player's own palette.
     syncLook(pipWindow)
 
-    // Add the chorus stylesheet
     const style = chrome.runtime.getURL('content-scripts/chorus.css')
     const link = pipWindow.document.createElement('link')
     link.href = style

@@ -15,8 +15,9 @@
     import SkipForward from '@lucide/svelte/icons/skip-forward'
 
     // Transport button for the popup / PiP. Colours come from the album palette:
-    // --text for idle, --accent (adaptive green) for "on" states, and the play
-    // button inverts --text / --bg.
+    // --text for idle, --album-accent for "on" states and the play disc (the
+    // theme's accent, or the cover's), whose glyph is --album-accent-fg: white
+    // or near-black, chosen for contrast with the accent.
     let {
         icon,
         pip = false,
@@ -92,10 +93,10 @@
         handleClick(role)
     }
 
-    // 28 px buttons sit edge to edge in the 296 px popup row (3 + 6 + the play
-    // disc); the glyphs carry the size.
-    const size = 'size-7'
-    const iconSize = $derived(pip ? 'size-4' : 'size-[18px]')
+    // Buttons sit edge to edge (3 + 6 + the play disc): 28 px in the 296 px
+    // popup row, 36 px in the 408 px PiP row; the glyphs carry the size.
+    const size = $derived(pip ? 'size-9' : 'size-7')
+    const iconSize = $derived(pip ? 'size-5' : 'size-[18px]')
 </script>
 
 <button
@@ -111,11 +112,11 @@
         'relative inline-flex shrink-0 items-center justify-center rounded-full transition-[opacity,transform,background-color] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--album-accent)]',
         isPlayPause
             ? cn(
-                  pip ? 'size-[34px]' : 'size-8',
-                  'bg-[color:var(--text)] text-[color:var(--bg)] hover:scale-105'
+                  pip ? 'size-11' : 'size-8',
+                  'bg-[color:var(--album-accent)] text-[color:var(--album-accent-fg)] hover:scale-105'
               )
             : icon === 'dj'
-              ? cn(size, 'bg-[color:var(--album-accent)] text-[color:var(--bg)]')
+              ? cn(size, 'bg-[color:var(--album-accent)] text-[color:var(--album-accent-fg)]')
               : cn(
                     size,
                     'hover:bg-[color:color-mix(in_srgb,var(--text)_12%,transparent)] hover:opacity-100',
@@ -154,7 +155,7 @@
             stroke-width="2.5"
             stroke-linecap="round"
             stroke-linejoin="round"
-            class={cn(pip ? 'size-[18px]' : 'size-5', icon === 'seek-forward' && '-scale-x-100')}
+            class={cn(pip ? 'size-[22px]' : 'size-5', icon === 'seek-forward' && '-scale-x-100')}
             aria-hidden="true"
         >
             <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
@@ -178,7 +179,9 @@
 
     {#if badge}
         <span
-            class="pointer-events-none absolute inset-x-0 -bottom-1 text-center font-mono text-[8px] font-bold leading-none"
+            class="pointer-events-none absolute inset-x-0 text-center font-mono font-bold leading-none {pip
+                ? '-bottom-1.5 text-[11px]'
+                : '-bottom-1 text-[8px]'}"
         >
             {badge}
         </span>

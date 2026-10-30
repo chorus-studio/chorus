@@ -1,7 +1,7 @@
 <script lang="ts">
     import { onMount } from 'svelte'
     import { storage } from '@wxt-dev/storage'
-    import OctagonX from '@lucide/svelte/icons/octagon-x'
+    import ListX from '@lucide/svelte/icons/list-x'
     import Check from '@lucide/svelte/icons/check'
     import LayoutGrid from '@lucide/svelte/icons/layout-grid'
     import List from '@lucide/svelte/icons/list'
@@ -219,7 +219,7 @@
                             class: 'relative [&_svg]:size-[18px]'
                         })}
                     >
-                        <OctagonX />
+                        <ListX />
                         {#if blockedCount > 0}
                             <span
                                 class="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-signal px-1 font-mono text-[9px] font-bold text-ink"
@@ -243,7 +243,7 @@
                 <span
                     class="inline-flex size-8 items-center justify-center rounded-lg bg-surface text-ink-fg"
                 >
-                    <OctagonX class="size-4" />
+                    <ListX class="size-4" />
                 </span>
                 <div class="flex flex-col gap-y-0.5">
                     <Dialog.Title class="text-base font-semibold tracking-tight text-ink-fg"
@@ -283,7 +283,7 @@
                 <div
                     class="flex min-h-0 flex-1 flex-col items-center justify-center gap-y-2 rounded-lg border border-hairline bg-panel p-10 text-center"
                 >
-                    <OctagonX class="size-8 text-ink-dim" />
+                    <ListX class="size-8 text-ink-dim" />
                     {#if searchQuery}
                         <p class="text-[13px] text-ink-fg-2">
                             No blocked tracks match “{searchQuery}”

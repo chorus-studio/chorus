@@ -1,6 +1,6 @@
 <script lang="ts">
     import Ban from '@lucide/svelte/icons/ban'
-    import OctagonX from '@lucide/svelte/icons/octagon-x'
+    import Undo2 from '@lucide/svelte/icons/undo-2'
     import * as Tooltip from '$lib/components/ui/tooltip'
     import { buttonVariants } from '$lib/components/ui/button'
 
@@ -92,9 +92,10 @@
         >
             <!-- Two glyphs, not one glyph in two colours: several palettes paint the
                  muted and the signal state in the same hue. Circle-slash is the
-                 action (block), the stop sign is the state (blocked). -->
+                 action (block); the undo arrow is the state (blocked) and what a
+                 click does (restore). A second prohibition sign read as "block" too. -->
             {#if isBlocked}
-                <OctagonX role="block" />
+                <Undo2 role="block" />
             {:else}
                 <Ban role="block" />
             {/if}

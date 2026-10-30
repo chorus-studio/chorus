@@ -810,6 +810,9 @@ export function applyThemePopupPalette(root: HTMLElement): void {
     root.style.setProperty('--text', 'hsl(var(--ink-fg))')
     root.style.setProperty('--text-2', 'hsl(var(--ink-fg-2))')
     root.style.setProperty('--album-accent', 'hsl(var(--signal))')
+    root.style.setProperty('--album-accent-hsl', 'var(--signal)')
+    // The rack's own pairing (bg-signal text-ink): the derivation keeps it at 4.5:1.
+    root.style.setProperty('--album-accent-fg', 'hsl(var(--ink))')
 }
 
 type ReplacementRule = {

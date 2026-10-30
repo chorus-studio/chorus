@@ -34,9 +34,9 @@
         aria-label={label}
         title={pip ? label : undefined}
         class={buttonVariants({
-            variant: pip ? 'ghost' : 'bar',
+            variant: 'bar',
             size: 'icon',
-            class: 'relative [&_svg]:size-4'
+            class: pip ? 'relative [&_svg]:size-[18px]' : 'relative [&_svg]:size-4'
         })}
     >
         <UndoDot />
