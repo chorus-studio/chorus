@@ -7,14 +7,14 @@
 //
 // Runs off the Spotify page thread, so inference never freezes the page.
 import { warmup, runChunk, lastTimings, runtimeInfo } from '$lib/audio-effects/vocal-model/engine'
+import { clampMix, DEFAULT_MIX, type StemMix } from '$lib/audio-effects/vocal-model/mix'
 
 console.log('[chorus] offscreen script loaded')
 
 let ctx: AudioContext | null = null
 let stream: MediaStream | null = null
 let node: AudioWorkletNode | null = null
-let mode: 'remove' | 'isolate' = 'remove'
-let depth = 1 // 1 = full effect, 0 = original mix
+let mix: StemMix = { ...DEFAULT_MIX } // how loud the vocals and the instruments play
 
 // Bumped on every start/stop. Captured locally by async work so a stop→start
 // race can't post a stale, cross-session block into the new stream.
@@ -55,15 +55,14 @@ chrome.runtime.onMessage.addListener((msg: any, _sender, sendResponse) => {
     if (msg.cmd === 'getState') {
         // Source of truth for the popup, which otherwise can't know a prior capture
         // is still running after it was closed and reopened.
-        sendResponse({ capturing: stream != null, mode, depth })
+        sendResponse({ capturing: stream != null, mix })
         return false
     }
 
     if (msg.cmd === 'start') {
-        // Params ride along with start so they can't be lost when the offscreen doc
-        // didn't exist yet for an earlier setMode/setDepth relay.
-        if (msg.mode === 'remove' || msg.mode === 'isolate') mode = msg.mode
-        if (typeof msg.depth === 'number') depth = Math.max(0, Math.min(1, msg.depth))
+        // The mix rides along with start so it can't be lost when the offscreen doc
+        // didn't exist yet for an earlier setMix relay.
+        if (msg.mix) mix = clampMix(msg.mix)
         startCapture(msg.streamId)
             .then(() => sendResponse({ ok: true }))
             .catch((e) => {
@@ -77,13 +76,8 @@ chrome.runtime.onMessage.addListener((msg: any, _sender, sendResponse) => {
         sendResponse({ ok: true })
         return false
     }
-    if (msg.cmd === 'setMode') {
-        mode = msg.mode === 'isolate' ? 'isolate' : 'remove'
-        sendResponse({ ok: true })
-        return false
-    }
-    if (msg.cmd === 'setDepth') {
-        depth = Math.max(0, Math.min(1, Number(msg.depth) || 0))
+    if (msg.cmd === 'setMix') {
+        mix = clampMix(msg.mix)
         sendResponse({ ok: true })
         return false
     }
@@ -124,7 +118,9 @@ async function startCapture(streamId: string) {
     // captured stream (often 48kHz) into this context for us.
     ctx = new AudioContext({ sampleRate: 44100 })
     if (ctx.sampleRate !== 44100) {
-        throw new Error(`AudioContext is ${ctx.sampleRate}Hz, need 44100 — model framing would be wrong`)
+        throw new Error(
+            `AudioContext is ${ctx.sampleRate}Hz, need 44100 — model framing would be wrong`
+        )
     }
     if (ctx.state === 'suspended') await ctx.resume()
     console.log('[chorus] startCapture: ctx', ctx.sampleRate, 'Hz, loading worklet…')
@@ -171,7 +167,7 @@ async function pump(gen: number, theNode: AudioWorkletNode) {
             const right = new Float32Array(blk.right)
             try {
                 const t0 = performance.now()
-                const r = await runChunk(left, right, mode, depth)
+                const r = await runChunk(left, right, mix)
                 _recent.push(performance.now() - t0)
                 if (_recent.length > 8) _recent.shift()
                 blocksDone = ++_procCount

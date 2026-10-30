@@ -174,7 +174,7 @@ export default defineBackground(() => {
         }
     }
 
-    async function startVocalCapture(tabId: number, mode?: string, depth?: number) {
+    async function startVocalCapture(tabId: number, mix?: unknown) {
         // Release any capture still held by the offscreen doc first. getMediaStreamId
         // rejects with "Cannot capture a tab with an active stream" if one is live —
         // which happens when the popup was reopened while a prior capture kept running.
@@ -205,8 +205,7 @@ export default defineBackground(() => {
                 target: 'offscreen',
                 cmd: 'start',
                 streamId,
-                mode,
-                depth
+                mix
             }),
             new Promise((_, reject) =>
                 setTimeout(
@@ -242,7 +241,7 @@ export default defineBackground(() => {
                         return
                     }
                     try {
-                        await startVocalCapture(tab.id, msg.mode, msg.depth)
+                        await startVocalCapture(tab.id, msg.mix)
                     } catch (e: any) {
                         safePost(port, {
                             type: 'status',
@@ -268,23 +267,21 @@ export default defineBackground(() => {
                         .catch(() => {})
                     safePost(port, { type: 'status', text: 'off' })
                 })
-            } else if (msg?.cmd === 'setMode') {
+            } else if (msg?.cmd === 'setMix') {
                 chrome.runtime
-                    .sendMessage({ target: 'offscreen', cmd: 'setMode', mode: msg.mode })
-                    .catch(() => {})
-            } else if (msg?.cmd === 'setDepth') {
-                chrome.runtime
-                    .sendMessage({ target: 'offscreen', cmd: 'setDepth', depth: msg.depth })
+                    .sendMessage({ target: 'offscreen', cmd: 'setMix', mix: msg.mix })
                     .catch(() => {})
             } else if (msg?.cmd === 'getState') {
                 // Reflect the real capture state back to the popup so it doesn't try to
                 // start a capture that's already running. Don't spin up an offscreen doc
                 // just to answer — no doc means nothing is capturing.
                 ;(async () => {
-                    let state: { capturing: boolean; mode: string; depth: number } = {
+                    let state: {
+                        capturing: boolean
+                        mix: { vocals: number; instruments: number }
+                    } = {
                         capturing: false,
-                        mode: 'remove',
-                        depth: 1
+                        mix: { vocals: 0, instruments: 1 }
                     }
                     try {
                         if (chrome.offscreen && (await chrome.offscreen.hasDocument())) {
