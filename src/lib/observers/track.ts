@@ -6,6 +6,7 @@ import { lofiStore } from '$lib/stores/lofi'
 import { nowPlaying } from '$lib/stores/now-playing'
 import { snipStore } from '$lib/stores/snip'
 import { featureOn } from '$lib/utils/features'
+import { announceSkip, noteTrackStarted } from '$lib/utils/skip-notice'
 import { playback } from '$lib/utils/playback'
 import { currentSongInfo } from '$lib/utils/song'
 import { playbackObserver } from '$lib/observers/playback'
@@ -120,8 +121,10 @@ export class TrackObserver {
     async processSongTransition() {
         this._skipping = false
         const songInfo = this.currentSong
+        noteTrackStarted(songInfo?.track_id)
 
         if (this.playbackController.isBlocked(songInfo)) {
+            announceSkip(songInfo)
             return this.nextTrack()
         }
 
@@ -190,6 +193,7 @@ export class TrackObserver {
         const currentTimeMS = positionSeconds * 1000
 
         if (this.playbackController.isBlocked(currentSong)) {
+            announceSkip(currentSong)
             this._skipping = true
             return this.nextTrack()
         }

@@ -22,6 +22,8 @@ export type NewReleases = {
     group_by: GroupBy
     music_count: number
     shows_count: number
+    /** The total when the New Releases view was last opened; the toolbar badge shows what came since. */
+    seen_count: number
     release_type: ReleaseType
     library: ReleaseFilter[]
     dismissed: ReleaseFilter[]
@@ -46,6 +48,7 @@ const defaultNewReleases: NewReleases = {
     shows_data: [],
     music_count: 0,
     shows_count: 0,
+    seen_count: 0,
     range: 'week',
     dismissed: [],
     group_by: 'date',
@@ -232,6 +235,12 @@ function createNewReleasesStore() {
         })
     }
 
+    /** The view is open: everything listed now counts as seen, so the toolbar badge clears. */
+    async function markSeen() {
+        const { music_count, shows_count } = get(store)
+        await updateState({ seen_count: music_count + shows_count })
+    }
+
     async function updateState(state: Partial<NewReleases>) {
         const currentState = get(store)
         const updatedState = { ...currentState, ...state }
@@ -355,6 +364,7 @@ function createNewReleasesStore() {
     })
 
     return {
+        markSeen,
         reset,
         search,
         subscribe,

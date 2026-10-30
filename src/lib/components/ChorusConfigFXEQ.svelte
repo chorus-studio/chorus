@@ -4,6 +4,8 @@
     import { configStore } from '$lib/stores/config'
     import { Button } from '$lib/components/ui/button'
     import SegmentedControl from '$lib/components/SegmentedControl.svelte'
+    import X from '@lucide/svelte/icons/x'
+    import { presetBindingsStore } from '$lib/stores/preset-bindings'
     import { cn } from '$lib/utils.js'
 
     import {
@@ -254,5 +256,40 @@
         >
             Show everything
         </Button>
+    </div>
+
+    <div class="flex flex-col gap-y-2">
+        <span class="rack-label">Presets by artist</span>
+        <div class="rounded-lg border border-hairline bg-panel">
+            {#if $presetBindingsStore.bindings.length}
+                {#each $presetBindingsStore.bindings as binding (binding.key)}
+                    <div
+                        class="flex items-center justify-between gap-x-4 border-t border-hairline px-4 py-2.5 first:border-t-0"
+                    >
+                        <span class="flex min-w-0 flex-col gap-y-0.5">
+                            <span class="truncate text-[13px] font-medium text-ink-fg"
+                                >{binding.name}</span
+                            >
+                            <span class="truncate text-xs text-ink-muted"
+                                >plays with {binding.preset_name}</span
+                            >
+                        </span>
+                        <button
+                            type="button"
+                            aria-label={`Stop ${binding.preset_name} following ${binding.name}`}
+                            onclick={() => presetBindingsStore.unbind(binding.key)}
+                            class="inline-flex size-6 shrink-0 items-center justify-center rounded-md text-ink-muted hover:bg-surface-2 hover:text-ink-fg"
+                        >
+                            <X class="size-3.5" />
+                        </button>
+                    </div>
+                {/each}
+            {:else}
+                <p class="px-4 py-3 text-xs text-ink-muted">
+                    None yet. Pin the playing preset to an artist with the pin in the Presets tab;
+                    their tracks then switch to it by themselves.
+                </p>
+            {/if}
+        </div>
     </div>
 </div>

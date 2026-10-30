@@ -27,6 +27,10 @@
         tweakOrigin
     } from '$lib/utils/quick-presets'
     import { presetsSubView } from '$lib/stores/effects-ui'
+    import { nowPlaying } from '$lib/stores/now-playing'
+    import { presetBindingsStore } from '$lib/stores/preset-bindings'
+    import { artistsFromBar } from '$lib/utils/preset-bindings'
+    import Pin from '@lucide/svelte/icons/pin'
     import { boundShortcuts, openShortcutSettings } from '$lib/utils/shortcuts'
 
     import Moon from '@lucide/svelte/icons/moon'
@@ -216,6 +220,46 @@
 
     const openRack = () => presetsSubView.set('rack')
 
+    // Pin the playing preset to the track's first artist: while their tracks
+    // play it comes on by itself, and what played before comes back after.
+    const barArtist = $derived.by(() => {
+        void $nowPlaying.track_id
+        return artistsFromBar()[0] ?? null
+    })
+    const artistBinding = $derived(
+        barArtist
+            ? ($presetBindingsStore.bindings.find((b) => b.key === barArtist.key) ?? null)
+            : null
+    )
+    const pinTitle = $derived(
+        artistBinding
+            ? `${artistBinding.preset_name} follows ${artistBinding.name} · click to stop`
+            : barArtist
+              ? active
+                  ? `Use ${active.name} whenever ${barArtist.name} plays`
+                  : `Pick a preset, then pin it to ${barArtist.name}`
+              : 'Pin a preset to the playing artist'
+    )
+    async function togglePin() {
+        if (!barArtist) return
+        if (artistBinding) {
+            await presetBindingsStore.unbind(artistBinding.key)
+            say(`${artistBinding.name} no longer changes the preset`)
+            return
+        }
+        if (!active) {
+            say('Pick a preset first')
+            return
+        }
+        await presetBindingsStore.bind({
+            key: barArtist.key,
+            name: barArtist.name,
+            preset_id: active.id,
+            preset_name: active.name
+        })
+        say(`${active.name} now follows ${barArtist.name}`)
+    }
+
     async function setGroup(value: string) {
         group = value as Group
         await storage.setItem(GROUP_KEY, group)
@@ -318,6 +362,21 @@
                 >
                     <SlidersHorizontal class="size-3.5" />
                 </button>
+                {#if barArtist}
+                    <button
+                        type="button"
+                        onclick={togglePin}
+                        aria-pressed={Boolean(artistBinding)}
+                        aria-label={pinTitle}
+                        title={pinTitle}
+                        class={cn(
+                            'chorus-focus inline-flex size-6 shrink-0 items-center justify-center rounded-md transition-colors hover:bg-surface-2',
+                            artistBinding ? 'text-signal' : 'text-ink-muted hover:text-ink-fg'
+                        )}
+                    >
+                        <Pin class="size-3.5" />
+                    </button>
+                {/if}
             </div>
             <SegmentedControl
                 size="xs"

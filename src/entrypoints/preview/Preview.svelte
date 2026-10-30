@@ -8,6 +8,8 @@
     import VocalRemovalToggle from '$lib/components/VocalRemovalToggle.svelte'
     import PopupSubview from '$lib/components/PopupSubview.svelte'
     import ChorusConfigDialog from '$lib/components/ChorusConfigDialog.svelte'
+    import Alert from '$lib/components/Alert.svelte'
+    import { announceSkip } from '$lib/utils/skip-notice'
     import BlockedTracksDialog from '$lib/components/BlockedTracksDialog.svelte'
     import SnipsDialog from '$lib/components/SnipsDialog.svelte'
     import { storage } from '@wxt-dev/storage'
@@ -38,6 +40,7 @@
     import { NORMAL_VALUES, QUICK_PRESETS, quickPresetById } from '$lib/audio-effects/quick-presets'
     import { applyPresetValues } from '$lib/utils/quick-presets'
     import { lofiStore, type LofiEffectKey } from '$lib/stores/lofi'
+    import { seekStore } from '$lib/stores/seek'
     import { effectsStore } from '$lib/stores/effects'
     import {
         eqSubView,
@@ -47,6 +50,7 @@
         snipSubView
     } from '$lib/stores/effects-ui'
     import { lyricsStore } from '$lib/stores/lyrics'
+    import { presetBindingsStore } from '$lib/stores/preset-bindings'
 
     const params = new URLSearchParams(location.search)
     const scene = params.get('scene') ?? 'tabs'
@@ -198,7 +202,32 @@
             await lofiStore.update(knob as LofiEffectKey, { intensity: Number(amount) })
         }
         if (params.get('view') === 'rack') presetsSubView.set('rack')
+        // &bound=1 pins the applied preset to the stand-in artist link below.
+        if (params.get('bound') === '1' && preset) {
+            await presetBindingsStore.bind({
+                key: 'artist:previewM83',
+                name: 'M83',
+                preset_id: preset.id,
+                preset_name: preset.name
+            })
+        }
         ready = true
+    })
+
+    // ?scene=toast shows the "Skipped …" notice; &blocked=1 the blocked-track variant.
+    onMount(() => {
+        if (scene !== 'toast') return
+        const blocked = params.get('blocked') === '1'
+        setTimeout(
+            () =>
+                announceSkip({
+                    track_id: 'sample',
+                    title: blocked ? 'Easier Said Than Done' : 'Red Room (Live at Wembley)',
+                    artist: blocked ? 'Thee Sacred Souls' : 'Hiatus Kaiyote',
+                    blocked
+                }),
+            50
+        )
     })
 
     // ?open=reverb-bottom clicks that select's trigger once the tab is up, so a
@@ -219,6 +248,18 @@
             trigger.click()
         }, 50)
         return () => clearInterval(tick)
+    })
+
+    // ?tab=seek&scope=long_form&smart=1&saved=754000 shows the podcasts scope with
+    // smart speed on and a saved-time total.
+    onMount(async () => {
+        if (tab !== 'seek') return
+        await new Promise((resolve) => setTimeout(resolve, 20))
+        await seekStore.updateSeek({
+            is_long_form: params.get('scope') === 'long_form',
+            smart_speed: params.get('smart') === '1',
+            smart_speed_saved_ms: Number(params.get('saved')) || 0
+        })
     })
 
     // ?tab=snip&view=lyrics opens the lyrics picker over made-up timed lines;
@@ -393,6 +434,10 @@
         </div>
     {/if}
     {#if scene === 'tabs'}
+        <!-- A stand-in for the now-playing bar's artist link, for the Presets pin. -->
+        <div data-testid="now-playing-widget-v2" class="hidden">
+            <a href="/artist/previewM83">M83</a>
+        </div>
         <div
             id="frame"
             class="chorus-float relative h-[360px] w-[440px] overflow-hidden rounded-xl border border-hairline-strong bg-ink shadow-float"
@@ -420,6 +465,8 @@
                 <VocalRemovalToggle />
             </PopupSubview>
         </div>
+    {:else if scene === 'toast'}
+        <div id="frame" class="relative h-[200px] w-[460px]"><Alert /></div>
     {:else if scene === 'bar'}
         <div
             id="frame"

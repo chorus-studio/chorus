@@ -9,6 +9,7 @@ import { configStore } from '$lib/stores/config'
 import { currentSongInfo } from '$lib/utils/song'
 import { trackObserver } from '$lib/observers/track'
 import { featureOn } from '$lib/utils/features'
+import { announceSkip, isAllowedOnce } from '$lib/utils/skip-notice'
 import type { SimpleTrack } from '$lib/stores/data/cache'
 
 export const NOW_PLAYING_STORE_KEY = 'local:chorus_now_playing'
@@ -91,15 +92,13 @@ function createNowPlayingStore() {
             ? dataStore.collectionObject[songInfo.track_id]
             : (dataStore.collection.find((x) => x.song_id == id) ?? ({} as SimpleTrack))
 
+        const facts = { title: title ?? '', artist: artist ?? '', duration }
         if (
             featureOn('blocks') &&
-            (trackInfo?.blocked ||
-                configStore.checkIfTrackShouldBeSkipped({
-                    title: title ?? '',
-                    artist: artist ?? '',
-                    duration
-                }))
+            !isAllowedOnce(songInfo?.track_id) &&
+            (trackInfo?.blocked || configStore.checkIfTrackShouldBeSkipped(facts))
         ) {
+            announceSkip({ ...facts, track_id: songInfo?.track_id, blocked: trackInfo?.blocked })
             trackObserver?.nextTrack()
         }
 
