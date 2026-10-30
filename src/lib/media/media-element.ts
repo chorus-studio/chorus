@@ -19,6 +19,8 @@ export default class MediaElement {
         null
     /** A track volume offset that arrived before the chain existed. */
     public pendingTrackGain: number | null = null
+    /** A smart-speed state that arrived before the chain existed. */
+    public pendingSmartSpeed: { enabled: boolean; factor: number } | null = null
 
     constructor(source: HTMLMediaElement) {
         this.source = source
@@ -79,6 +81,10 @@ export default class MediaElement {
                 override.updateTrackVolume(this.pendingTrackGain)
                 this.pendingTrackGain = null
             }
+            if (this.pendingSmartSpeed && override) {
+                override.updateSmartSpeed(this.pendingSmartSpeed)
+                this.pendingSmartSpeed = null
+            }
 
             document.dispatchEvent(new CustomEvent('FROM_MEDIA_PLAY_INIT'))
         })
@@ -116,6 +122,12 @@ export default class MediaElement {
                     }
                     if (type === 'FROM_TRACK_VOLUME_LISTENER') {
                         this.pendingTrackGain = Number(data?.factor) || 1
+                    }
+                    if (type === 'FROM_SMART_SPEED_LISTENER') {
+                        this.pendingSmartSpeed = {
+                            enabled: Boolean(data?.enabled),
+                            factor: Number(data?.factor) || 2.5
+                        }
                     }
                     return
                 }
@@ -175,6 +187,13 @@ export default class MediaElement {
 
                     case 'FROM_TRACK_VOLUME_LISTENER':
                         this.mediaOverride.updateTrackVolume(Number(data?.factor) || 1)
+                        break
+
+                    case 'FROM_SMART_SPEED_LISTENER':
+                        this.mediaOverride.updateSmartSpeed({
+                            enabled: Boolean(data?.enabled),
+                            factor: Number(data?.factor) || 2.5
+                        })
                         break
 
                     case 'FROM_SLEEP_LISTENER':

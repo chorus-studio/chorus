@@ -6,6 +6,8 @@
     import Keycaps from '$lib/components/Keycaps.svelte'
     import SeekInput from '$lib/components/SeekInput.svelte'
     import SegmentedControl from '$lib/components/SegmentedControl.svelte'
+    import { Switch } from '$lib/components/ui/switch'
+    import { formatSaved } from '$lib/utils/smart-speed'
     import { boundShortcuts, openShortcutSettings } from '$lib/utils/shortcuts'
 
     let { pip = false }: { pip?: boolean } = $props()
@@ -16,6 +18,7 @@
     }
 
     const scope = $derived($seekStore.is_long_form ? 'long_form' : 'default')
+    const saved = $derived(formatSaved($seekStore.smart_speed_saved_ms ?? 0))
 
     // The seek commands' bound keys, for the footer.
     let shortcuts = $state<Record<string, string>>({})
@@ -47,6 +50,25 @@
         <SeekInput type="rewind" />
         <SeekInput type="forward" />
     </div>
+
+    {#if $seekStore.is_long_form}
+        <!-- Smart speed: silences in podcasts and audiobooks play faster. -->
+        <label
+            class="flex h-11 shrink-0 cursor-pointer items-center justify-between gap-x-3 rounded-lg border border-hairline bg-panel px-3"
+        >
+            <span class="flex min-w-0 flex-col gap-y-0.5">
+                <span class="text-xs font-medium text-ink-fg">Skip silences</span>
+                <span class="truncate text-[11px] text-ink-muted">
+                    Silences play 2.5× faster{saved ? ` · ${saved} saved so far` : ''}
+                </span>
+            </span>
+            <Switch
+                aria-label="Skip silences"
+                checked={$seekStore.smart_speed}
+                onCheckedChange={(checked) => seekStore.setSmartSpeed(checked)}
+            />
+        </label>
+    {/if}
 
     <div class="flex items-center justify-between gap-x-3 text-[11px] text-ink-muted">
         <span class="flex min-w-0 items-center gap-x-1.5">

@@ -1,7 +1,11 @@
 import SoundTouch from './soundtouch'
+import { DEFAULT_SILENCE_GATE, SilenceGate, rmsOf } from './silence-gate'
 import { createLimiter } from './limiter'
 import { disposeWorklet } from './worklet'
 import { SoundTouchData } from '$lib/stores/playback'
+
+/** How often smart speed samples the signal (ms). */
+const SILENCE_TICK_MS = 50
 
 export default class AudioManager {
     private _gainNode?: GainNode
@@ -175,6 +179,7 @@ export default class AudioManager {
                 this._soundTouchNode!.connect(this._gainNode!)
                 this.connectToOutput(this._gainNode!)
                 this.setGain(this._currentVolume, this._volumeType)
+                this.startSilenceSkip()
             } else {
                 throw new Error('Failed to create audio chain nodes')
             }
@@ -269,6 +274,67 @@ export default class AudioManager {
     setTrackGain(factor: number): void {
         this._trackGain = Number.isFinite(factor) && factor > 0 ? factor : 1
         this.setGain(this._currentVolume, this._volumeType)
+    }
+
+    // Smart speed: an analyser taps the source and a gate decides when the
+    // signal has been quiet long enough to speed through, and when it is back.
+    // The owner of the element's rate (MediaOverride) acts on the flips.
+    private _analyser?: AnalyserNode
+    private _silenceLoop: ReturnType<typeof setInterval> | null = null
+    private _silenceGate: SilenceGate | null = null
+    private _silenceBuffer?: Float32Array
+    private _onSilence: ((open: boolean) => void) | null = null
+
+    setSilenceSkip(enabled: boolean, onSilence?: (open: boolean) => void): void {
+        this.stopSilenceSkip()
+        this._onSilence = enabled ? (onSilence ?? null) : null
+        if (enabled) this.startSilenceSkip()
+    }
+
+    /** Begin watching; a no-op until the chain exists (setupAudioChain calls again). */
+    private startSilenceSkip(): void {
+        if (!this._onSilence || this._silenceLoop) return
+        if (!this._audioContext || !this._source) return
+        if (!this._analyser) {
+            this._analyser = this._audioContext.createAnalyser()
+            this._analyser.fftSize = 1024
+            this._analyser.smoothingTimeConstant = 0
+        }
+        try {
+            this._source.connect(this._analyser)
+        } catch {
+            // already connected
+        }
+        this._silenceGate = new SilenceGate(DEFAULT_SILENCE_GATE)
+        this._silenceBuffer = new Float32Array(this._analyser.fftSize)
+        this._silenceLoop = setInterval(() => this.tickSilence(), SILENCE_TICK_MS)
+    }
+
+    private tickSilence(): void {
+        if (!this._analyser || !this._silenceGate || !this._silenceBuffer) return
+        if (this._element instanceof HTMLMediaElement && this._element.paused) {
+            // Paused reads as silence; never speed through it, and start afresh after.
+            if (this._silenceGate.open) this._onSilence?.(false)
+            this._silenceGate.reset()
+            return
+        }
+        this._analyser.getFloatTimeDomainData(this._silenceBuffer)
+        const change = this._silenceGate.feed(rmsOf(this._silenceBuffer), performance.now())
+        if (change === 'open') this._onSilence?.(true)
+        else if (change === 'close') this._onSilence?.(false)
+    }
+
+    /** Stop watching and put the rate back if it was raised. The handler stays for a rebuild. */
+    private stopSilenceSkip(): void {
+        if (this._silenceLoop) clearInterval(this._silenceLoop)
+        this._silenceLoop = null
+        if (this._silenceGate?.open) this._onSilence?.(false)
+        this._silenceGate = null
+        try {
+            this._analyser?.disconnect()
+        } catch {
+            // not connected
+        }
     }
 
     /** Ramp the output to silence over `seconds` (the sleep timer's last moments). */
@@ -666,6 +732,8 @@ export default class AudioManager {
 
     cleanup() {
         try {
+            this.stopSilenceSkip()
+            this._analyser = undefined
             if (this._source) {
                 this._source.disconnect()
             }

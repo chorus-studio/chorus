@@ -11,6 +11,7 @@
     import { settingsStore } from '$lib/stores/settings'
     import { listenForQuickPresetCommands } from '$lib/utils/quick-presets'
     import { watchSleepTimer } from '$lib/utils/sleep-timer'
+    import { watchSmartSpeed } from '$lib/utils/smart-speed'
 
     // Import stores to ensure they're initialized and set up their listeners
     import '$lib/stores/effects'
@@ -32,6 +33,7 @@
     let unwatchSystem: (() => void) | undefined
     let unlistenQuickPresets: (() => void) | undefined
     let unwatchSleep: (() => void) | undefined
+    let unwatchSmartSpeed: (() => void) | undefined
 
     async function init() {
         setMode('dark')
@@ -61,6 +63,8 @@
         unlistenQuickPresets = listenForQuickPresetCommands()
         // The sleep timer set in the popup fades and pauses here, where the audio is.
         unwatchSleep = watchSleepTimer()
+        // Smart speed's switch and the podcast/music distinction live in the seek store.
+        unwatchSmartSpeed = watchSmartSpeed()
     }
 
     function removeListener() {
@@ -75,6 +79,8 @@
         unlistenQuickPresets = undefined
         unwatchSleep?.()
         unwatchSleep = undefined
+        unwatchSmartSpeed?.()
+        unwatchSmartSpeed = undefined
     }
 
     onMount(() => {

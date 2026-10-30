@@ -38,6 +38,7 @@
     import { NORMAL_VALUES, QUICK_PRESETS, quickPresetById } from '$lib/audio-effects/quick-presets'
     import { applyPresetValues } from '$lib/utils/quick-presets'
     import { lofiStore, type LofiEffectKey } from '$lib/stores/lofi'
+    import { seekStore } from '$lib/stores/seek'
     import { effectsStore } from '$lib/stores/effects'
     import {
         eqSubView,
@@ -212,6 +213,18 @@
             trigger.click()
         }, 50)
         return () => clearInterval(tick)
+    })
+
+    // ?tab=seek&scope=long_form&smart=1&saved=754000 shows the podcasts scope with
+    // smart speed on and a saved-time total.
+    onMount(async () => {
+        if (tab !== 'seek') return
+        await new Promise((resolve) => setTimeout(resolve, 20))
+        await seekStore.updateSeek({
+            is_long_form: params.get('scope') === 'long_form',
+            smart_speed: params.get('smart') === '1',
+            smart_speed_saved_ms: Number(params.get('saved')) || 0
+        })
     })
 
     // ?tab=snip&view=lyrics opens the lyrics picker over made-up timed lines;
