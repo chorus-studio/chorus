@@ -18,6 +18,7 @@
     import type { SimpleTrack } from '$lib/stores/data/cache'
     import { cn } from '$lib/utils.js'
     import { timeAgo } from '$lib/utils/time-ago'
+    import { parseSongId } from '$lib/utils/snip-library'
 
     type View = 'list' | 'grid'
     const VIEW_KEY = 'local:chorus_blocked_view'
@@ -104,14 +105,6 @@
 
     const unblockTrack = (trackId: string) => unblock([trackId])
     const unblockSelected = () => unblock(Array.from(selectedTracks))
-
-    function parseSongId(songId: string): { title: string; artists: string } {
-        const parts = songId.split(' by ')
-        return {
-            title: parts[0] || '',
-            artists: parts.slice(1).join(', ') || ''
-        }
-    }
 
     const blockedOn = (at?: number | null) => (at ? new Date(at).toLocaleString() : undefined)
 

@@ -18,6 +18,7 @@ import SeekButton from '$lib/components/SeekButton.svelte'
 // import NewReleasesIcon from '$lib/components/NewReleasesIcon.svelte'
 import ChorusConfigDialog from '$lib/components/ChorusConfigDialog.svelte'
 import BlockedTracksDialog from '$lib/components/BlockedTracksDialog.svelte'
+import SnipsDialog from '$lib/components/SnipsDialog.svelte'
 
 // Stable Spotify anchors. The footer `now-playing-bar` persists for the lifetime
 // of the page (only its descendants swap), so it is a reliable observation root.
@@ -138,8 +139,8 @@ function injectControlButtons() {
     }
 }
 
-// Idempotently mount the body-level Alert toaster and the top-bar config / blocked
-// dialogs. Re-runnable because the App can be re-mounted on a widget swap and we
+// Idempotently mount the body-level Alert toaster and the top-bar config / snips /
+// blocked dialogs. Re-runnable because the App can be re-mounted on a widget swap and we
 // must not stack duplicates.
 function injectExtras() {
     mountedExtras = pruneDetached(mountedExtras)
@@ -170,6 +171,14 @@ function injectExtras() {
             mountedExtras.push({
                 instance: mount(ChorusConfigDialog, { target: configDialog }),
                 container: configDialog
+            })
+        }
+        if (!document.getElementById('snips-dialog-trigger')) {
+            const snipsDialog = document.createElement('div')
+            parent.insertBefore(snipsDialog, newFeedButton)
+            mountedExtras.push({
+                instance: mount(SnipsDialog, { target: snipsDialog }),
+                container: snipsDialog
             })
         }
         if (!document.getElementById('blocked-tracks-dialog-trigger')) {
