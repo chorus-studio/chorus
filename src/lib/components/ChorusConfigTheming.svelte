@@ -7,7 +7,7 @@
         type PopupColours,
         type GlassSettings
     } from '$lib/stores/settings'
-    import { applyGlass, THEME_NAMES, STATIC_THEMES } from '$lib/utils/theming'
+    import { applyGlass, GLASS_BLUR_MIN, THEME_NAMES, STATIC_THEMES } from '$lib/utils/theming'
 
     import Check from '@lucide/svelte/icons/check'
     import { Switch } from '$lib/components/ui/switch'
@@ -218,7 +218,7 @@
                 </div>
                 <CustomSlider
                     type="single"
-                    min={8}
+                    min={GLASS_BLUR_MIN}
                     max={64}
                     step={4}
                     value={glass.blur}
