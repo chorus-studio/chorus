@@ -80,6 +80,7 @@ const config: Config = {
                     DEFAULT: 'hsl(var(--signal) / <alpha-value>)',
                     bright: 'hsl(var(--signal-bright) / <alpha-value>)',
                     dark: 'hsl(var(--signal-dark) / <alpha-value>)',
+                    fg: 'hsl(var(--signal-fg) / <alpha-value>)',
                     bar: 'hsl(var(--bar-signal) / <alpha-value>)'
                 },
                 amber: 'hsl(var(--amber) / <alpha-value>)',

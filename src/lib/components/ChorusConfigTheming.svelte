@@ -383,7 +383,7 @@
                     ></span>
                     {#if selected}
                         <span
-                            class="absolute right-1.5 top-1.5 inline-flex size-4 items-center justify-center rounded-full bg-signal text-ink"
+                            class="absolute right-1.5 top-1.5 inline-flex size-4 items-center justify-center rounded-full bg-signal text-signal-fg"
                         >
                             <Check class="size-2.5" strokeWidth={3} />
                         </span>
