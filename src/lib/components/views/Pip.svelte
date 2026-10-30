@@ -24,7 +24,9 @@
 
 <ModeWatcher defaultMode="dark" defaultTheme="dark" track={false} />
 
-<div class="dark flex h-[320px] w-[440px] flex-col bg-ink text-ink-fg">
+<!-- Fills the PiP window (440 × 360, the popover's size) instead of a fixed
+     320 px box that left bands above and below. -->
+<div class="dark flex h-full w-full flex-col bg-ink text-ink-fg">
     {#if loading}
         <div class="flex flex-1 items-center justify-center">
             <Logo size={36} class="animate-led-pulse" />
