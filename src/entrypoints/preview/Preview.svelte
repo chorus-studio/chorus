@@ -10,6 +10,8 @@
     import ChorusConfigDialog from '$lib/components/ChorusConfigDialog.svelte'
     import BlockedTracksDialog from '$lib/components/BlockedTracksDialog.svelte'
     import SnipsDialog from '$lib/components/SnipsDialog.svelte'
+    import DiscographyDialog from '$lib/components/DiscographyDialog.svelte'
+    import { discographyStore } from '$lib/stores/discography'
     import { storage } from '@wxt-dev/storage'
     import { dataStore } from '$lib/stores/data'
     import type { SimpleTrack } from '$lib/stores/data/cache'
@@ -122,7 +124,7 @@
         ['Get Sun by Hiatus Kaiyote', '#b3833a', 90 * DAY]
     ] as const
     let ready = $state(
-        !['blocked', 'backup', 'snips'].includes(dialog) &&
+        !['blocked', 'backup', 'snips', 'discography'].includes(dialog) &&
             !['presets', 'fx', 'eq', 'ms'].includes(tab)
     )
 
@@ -191,6 +193,77 @@
             await lofiStore.update(knob as LofiEffectKey, { intensity: Number(amount) })
         }
         if (params.get('view') === 'rack') presetsSubView.set('rack')
+        ready = true
+    })
+
+    // ?dialog=discography seeds two artists: one half-way through three albums,
+    // one with a single album finished.
+    onMount(async () => {
+        if (dialog !== 'discography') return
+        const tracks = (prefix: string, n: number) =>
+            Array.from({ length: n }, (_, i) => ({
+                id: `${prefix}${i + 1}`,
+                name: `Track ${i + 1}`
+            }))
+        const plays = [
+            [
+                'hk',
+                'Hiatus Kaiyote',
+                'mood',
+                'Mood Valiant',
+                '2021',
+                '#6b5a3e',
+                12,
+                ['mood1', 'mood2', 'mood3', 'mood4', 'mood5']
+            ],
+            [
+                'hk',
+                'Hiatus Kaiyote',
+                'choose',
+                'Choose Your Weapon',
+                '2015',
+                '#2b2b2b',
+                18,
+                ['choose1']
+            ],
+            [
+                'hk',
+                'Hiatus Kaiyote',
+                'tawk',
+                'Tawk Tomahawk',
+                '2012',
+                '#7a4a52',
+                9,
+                tracks('tawk', 9).map((t) => t.id)
+            ],
+            [
+                'tss',
+                'Thee Sacred Souls',
+                'tss1',
+                'Thee Sacred Souls',
+                '2022',
+                '#3f5b73',
+                12,
+                tracks('tss1', 12).map((t) => t.id)
+            ]
+        ] as const
+        let at = Date.now() - 40 * DAY
+        for (const [artist_id, artist, album_id, name, year, hex, total, heard] of plays) {
+            for (const track_id of heard) {
+                at += 3 * 60 * 1000
+                await discographyStore.record({
+                    artist: { id: artist_id, name: artist },
+                    album: {
+                        id: album_id,
+                        name,
+                        year,
+                        cover: swatch(hex),
+                        tracks: tracks(album_id, total)
+                    },
+                    track: { id: track_id, name: `Track ${track_id.replace(album_id, '')}` }
+                })
+            }
+        }
         ready = true
     })
 
@@ -451,6 +524,8 @@
                 {#if ready}<ChorusConfigDialog open initialTab="backup" />{/if}
             {:else if dialog === 'snips'}
                 {#if ready}<SnipsDialog open />{/if}
+            {:else if dialog === 'discography'}
+                {#if ready}<DiscographyDialog open />{/if}
             {:else}
                 <ChorusConfigDialog open initialTab={dialog || 'auto-skip'} />
             {/if}
