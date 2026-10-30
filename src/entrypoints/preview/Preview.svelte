@@ -243,6 +243,8 @@
                 : { synced: true, lines: SAMPLE_LYRICS.map(([start, text]) => ({ start, text })) }
         )
         snipSubView.set('lyrics')
+    })
+
     // ?dialog=auto-skip&artists=M83,Drake&min=60 seeds blocked artists and a length limit.
     onMount(async () => {
         if (dialog !== 'auto-skip') return
