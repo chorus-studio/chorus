@@ -102,7 +102,9 @@
         ['Lady Love by Thee Sacred Souls', '#5c4a6b', 0],
         ['Get Sun by Hiatus Kaiyote', '#b3833a', 90 * DAY]
     ] as const
-    let ready = $state(dialog !== 'blocked' && !['presets', 'fx', 'eq', 'ms'].includes(tab))
+    let ready = $state(
+        !['blocked', 'backup'].includes(dialog) && !['presets', 'fx', 'eq', 'ms'].includes(tab)
+    )
 
     // ?tab=fx&reverb=hall, ?tab=eq&eq=Rock and ?tab=ms&ms=wide seed the effect
     // tabs with that preset on; &view=config opens the Config half instead of
@@ -192,8 +194,11 @@
         return () => clearInterval(tick)
     })
 
+    // ?dialog=backup seeds the same blocked tracks plus two snips, saved presets
+    // and a Mine slot so the Backup tab's counts read; &backup=done adds a
+    // backup made three days ago.
     onMount(async () => {
-        if (dialog !== 'blocked') return
+        if (dialog !== 'blocked' && dialog !== 'backup') return
         const view = params.get('view')
         if (view === 'grid' || view === 'list')
             await storage.setItem('local:chorus_blocked_view', view)
@@ -209,6 +214,23 @@
                     blocked_at: age ? Date.now() - age : null
                 }
             })
+        }
+        if (dialog === 'backup') {
+            const snip = { mode: 'play' as const, ranges: [{ start: 42, end: 71 }] }
+            for (const track_id of ['nakamarra-by-hiatus-kaiyote', 'molasses-by-hiatus-kaiyote']) {
+                await dataStore.updateTrack({
+                    track_id,
+                    value: { track_id, song_id: track_id, snip, blocked: null }
+                })
+            }
+            await storage.setItem('local:chorus_user_eq_presets', { Warm: [], Bright: [] })
+            await storage.setItem('local:chorus_user_reverb_presets', { Attic: {} })
+            const lofi = QUICK_PRESETS.find((p) => p.id === 'classic-lofi') ?? QUICK_PRESETS[0]
+            await configStore.updateConfig({
+                audio_presets: [createAudioPreset(lofi, 'Late night')]
+            })
+            if (params.get('backup') === 'done')
+                await storage.setItem('local:chorus_backup_at', Date.now() - 3 * DAY)
         }
         ready = true
     })
@@ -288,6 +310,8 @@
         <div id="frame" class="flex items-center gap-x-4 rounded-lg bg-ink p-4">
             {#if dialog === 'blocked'}
                 {#if ready}<BlockedTracksDialog open />{/if}
+            {:else if dialog === 'backup'}
+                {#if ready}<ChorusConfigDialog open initialTab="backup" />{/if}
             {:else}
                 <ChorusConfigDialog open initialTab={dialog || 'auto-skip'} />
             {/if}

@@ -17,6 +17,7 @@
     import { dataStore } from '$lib/stores/data'
     import type { SimpleTrack } from '$lib/stores/data/cache'
     import { cn } from '$lib/utils.js'
+    import { timeAgo } from '$lib/utils/time-ago'
 
     type View = 'list' | 'grid'
     const VIEW_KEY = 'local:chorus_blocked_view'
@@ -110,26 +111,6 @@
             title: parts[0] || '',
             artists: parts.slice(1).join(', ') || ''
         }
-    }
-
-    const MINUTE = 60_000
-    const HOUR = 60 * MINUTE
-    const DAY = 24 * HOUR
-    const WEEK = 7 * DAY
-    const MONTH = 30 * DAY
-    const YEAR = 365 * DAY
-
-    /** "3d ago"-style age of a block; null when the entry predates the timestamp. */
-    function blockedAgo(at?: number | null): string | null {
-        if (!at) return null
-        const elapsed = Date.now() - at
-        if (elapsed < MINUTE) return 'just now'
-        if (elapsed < HOUR) return `${Math.floor(elapsed / MINUTE)}m ago`
-        if (elapsed < DAY) return `${Math.floor(elapsed / HOUR)}h ago`
-        if (elapsed < WEEK) return `${Math.floor(elapsed / DAY)}d ago`
-        if (elapsed < MONTH) return `${Math.floor(elapsed / WEEK)}w ago`
-        if (elapsed < YEAR) return `${Math.floor(elapsed / MONTH)}mo ago`
-        return `${Math.floor(elapsed / YEAR)}y ago`
     }
 
     const blockedOn = (at?: number | null) => (at ? new Date(at).toLocaleString() : undefined)
@@ -307,7 +288,7 @@
                         {#each filteredTracks as track (track.track_id ?? track.song_id)}
                             {@const { title, artists } = parseSongId(track.song_id)}
                             {@const isSelected = selectedTracks.has(track.track_id)}
-                            {@const ago = blockedAgo(track.blocked_at)}
+                            {@const ago = timeAgo(track.blocked_at)}
                             <div
                                 class={cn(
                                     'flex items-center gap-x-2 border-t border-hairline pr-2 transition-colors first:border-t-0',
@@ -391,7 +372,7 @@
                             {#each filteredTracks as track (track.track_id ?? track.song_id)}
                                 {@const { title, artists } = parseSongId(track.song_id)}
                                 {@const isSelected = selectedTracks.has(track.track_id)}
-                                {@const ago = blockedAgo(track.blocked_at)}
+                                {@const ago = timeAgo(track.blocked_at)}
                                 <div class="group flex min-w-0 flex-col gap-y-1">
                                     <div
                                         class={cn(
