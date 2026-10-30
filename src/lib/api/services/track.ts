@@ -3,9 +3,16 @@ import { BaseAPIService, COMMON_QUERIES, type GraphQLQuery } from '../base-servi
 
 const API_URL = 'https://api-partner.spotify.com/pathfinder/v2/query'
 
+export type AlbumTracks = {
+    name: string
+    year: string | null
+    tracks: Array<{ id: string; name: string }>
+}
+
 export interface TrackService {
     checkIfTracksInCollection(ids: string): Promise<boolean[]>
     getAlbum({ albumId, songId }: { albumId: string; songId: string }): Promise<string | null>
+    getAlbumTracks(albumId: string): Promise<AlbumTracks | null>
 
     updateLikedTracks({ ids, action }: { ids: string; action: 'add' | 'remove' }): Promise<void>
 }
@@ -41,6 +48,32 @@ export class TrackService extends BaseAPIService implements TrackService {
         })
 
         return foundTrack?.uri ?? null
+    }
+
+    /** An album's name, year and track list, for discography progress. */
+    async getAlbumTracks(albumId: string): Promise<AlbumTracks | null> {
+        const variables = { uri: `spotify:album:${albumId}`, locale: '', offset: 0, limit: 50 }
+        const response = await this.executeGraphQLQuery<any>(
+            { ...COMMON_QUERIES.GET_ALBUM, cacheKey: `album-tracks-${albumId}` },
+            variables
+        )
+        const album = response?.albumUnion
+        const items = album?.tracksV2?.items
+        if (!album || !Array.isArray(items)) return null
+        const tracks = items
+            .map(({ track }: any) => ({
+                id:
+                    String(track?.uri ?? '')
+                        .split(':')
+                        .at(-1) ?? '',
+                name: String(track?.name ?? '')
+            }))
+            .filter((t: { id: string }) => t.id)
+        return {
+            name: String(album.name ?? ''),
+            year: album.date?.year != null ? String(album.date.year) : null,
+            tracks
+        }
     }
 
     async updateLikedTracks({

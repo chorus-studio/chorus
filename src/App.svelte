@@ -10,6 +10,7 @@
     import { applyLook, watchSystemMode } from '$lib/utils/theming'
     import { settingsStore } from '$lib/stores/settings'
     import { listenForQuickPresetCommands } from '$lib/utils/quick-presets'
+    import { watchDiscography } from '$lib/utils/discography-watch'
     import { watchFeatures } from '$lib/utils/features-watch'
     import { watchPresetBindings } from '$lib/utils/preset-bindings'
     import { watchSleepTimer } from '$lib/utils/sleep-timer'
@@ -34,6 +35,7 @@
     let unsubscribeLook: (() => void) | undefined
     let unwatchSystem: (() => void) | undefined
     let unlistenQuickPresets: (() => void) | undefined
+    let unwatchDiscography: (() => void) | undefined
     let unwatchFeatures: (() => void) | undefined
     let unwatchBindings: (() => void) | undefined
     let unwatchSleep: (() => void) | undefined
@@ -65,6 +67,8 @@
         // background as window messages; applying them here keeps the stores,
         // and so every tab of the popover, in step with what is playing.
         unlistenQuickPresets = listenForQuickPresetCommands()
+        // Every track played is noted against its album and artist.
+        unwatchDiscography = watchDiscography()
         // Pausing the sound effects sends them to the chain as none, and back.
         unwatchFeatures = watchFeatures()
         // Presets pinned to an artist come on with their tracks and go after.
@@ -85,6 +89,8 @@
         unwatchSystem = undefined
         unlistenQuickPresets?.()
         unlistenQuickPresets = undefined
+        unwatchDiscography?.()
+        unwatchDiscography = undefined
         unwatchFeatures?.()
         unwatchFeatures = undefined
         unwatchBindings?.()

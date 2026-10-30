@@ -5,11 +5,12 @@ import { defineProxyService } from '@webext-core/proxy-service'
 const PLAYER_COMMAND_API_URL = 'https://guc3-spclient.spotify.com/connect-state/v1/player/command/'
 
 export interface PlayerService {
-    playRelease(uri: string): Promise<unknown>
+    /** Play a context (album, playlist, track); `skipTo` starts it at that track's uri. */
+    playRelease(uri: string, skipTo?: string): Promise<unknown>
 }
 
 export class PlayerService implements PlayerService {
-    async playRelease(uri: string) {
+    async playRelease(uri: string, skipTo?: string) {
         const body = {
             command: {
                 context: {
@@ -17,7 +18,11 @@ export class PlayerService implements PlayerService {
                     url: `context://${uri}`,
                     metadata: {}
                 },
-                options: { license: 'tft', skip_to: {}, player_options_override: {} },
+                options: {
+                    license: 'tft',
+                    skip_to: skipTo ? { track_uri: skipTo } : {},
+                    player_options_override: {}
+                },
                 endpoint: 'play'
             }
         }

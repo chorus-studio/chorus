@@ -19,6 +19,7 @@ import SeekButton from '$lib/components/SeekButton.svelte'
 import ChorusConfigDialog from '$lib/components/ChorusConfigDialog.svelte'
 import BlockedTracksDialog from '$lib/components/BlockedTracksDialog.svelte'
 import SnipsDialog from '$lib/components/SnipsDialog.svelte'
+import DiscographyDialog from '$lib/components/DiscographyDialog.svelte'
 
 // Stable Spotify anchors. The footer `now-playing-bar` persists for the lifetime
 // of the page (only its descendants swap), so it is a reliable observation root.
@@ -179,6 +180,14 @@ function injectExtras() {
             mountedExtras.push({
                 instance: mount(SnipsDialog, { target: snipsDialog }),
                 container: snipsDialog
+            })
+        }
+        if (!document.getElementById('discography-dialog-trigger')) {
+            const discographyDialog = document.createElement('div')
+            parent.insertBefore(discographyDialog, newFeedButton)
+            mountedExtras.push({
+                instance: mount(DiscographyDialog, { target: discographyDialog }),
+                container: discographyDialog
             })
         }
         if (!document.getElementById('blocked-tracks-dialog-trigger')) {
