@@ -1,394 +1,191 @@
 import { get, writable } from 'svelte/store'
 import { storage } from '@wxt-dev/storage'
-import { syncWithType } from '$lib/utils/store-utils'
-
-import { groupBy } from '$lib/utils/groupings'
-import { TrackMetadata } from '$lib/api/services/new-releases'
 import { getNewReleasesService } from '$lib/api/services/new-releases'
+import {
+    defaultReleasesState,
+    isStale,
+    migrateReleasesState,
+    pruneStamped,
+    scopeCounts,
+    stamp,
+    type Filter,
+    type GroupBy,
+    type Range,
+    type ReleasesState,
+    type Scope
+} from '$lib/utils/releases'
 
-export type Filter = {
-    compilations: boolean
-    singles: boolean
-    albums: boolean
-}
-export type GroupBy = 'artist' | 'date' | 'type'
-export type Range = 'yesterday' | 'week' | 'month' | 'today'
-export type ReleaseType = 'music' | 'shows&podcasts' | 'all'
-export type ReleaseFilter = { created_at: string; uri: string }
-
-export type NewReleases = {
-    range: Range
-    filters: Filter
-    group_by: GroupBy
-    music_count: number
-    shows_count: number
-    /** The total when the New Releases view was last opened; the toolbar badge shows what came since. */
-    seen_count: number
-    release_type: ReleaseType
-    library: ReleaseFilter[]
-    dismissed: ReleaseFilter[]
-    music_data: TrackMetadata[]
-    shows_data: TrackMetadata[]
-    music_updated_at?: string
-    shows_updated_at?: string
-    release_id: string | null
-    music_releases?: Record<string, TrackMetadata[]>
-    shows_releases?: Record<string, TrackMetadata[]>
-}
-
-export const defaultFilters: Filter = {
-    albums: true,
-    singles: true,
-    compilations: true
-}
-
-const defaultNewReleases: NewReleases = {
-    library: [],
-    music_data: [],
-    shows_data: [],
-    music_count: 0,
-    shows_count: 0,
-    seen_count: 0,
-    range: 'week',
-    dismissed: [],
-    group_by: 'date',
-    release_id: null,
-    music_releases: {},
-    shows_releases: {},
-    release_type: 'music',
-    filters: defaultFilters
-}
+export type { Filter, GroupBy, Range, Release, ReleasesState, Scope } from '$lib/utils/releases'
 
 export const NEW_RELEASES_STORE_KEY = 'local:chorus_new_releases'
 
-export const groupByMap = {
-    date: 'time',
-    type: 'type',
-    artist: 'artist.name'
-}
+/** The sync in progress and whether the last one failed; for the dialog, not persisted. */
+export const releasesUI = writable<{ loading: boolean; error: string | null }>({
+    loading: false,
+    error: null
+})
 
-export function sortReleases(tracks: TrackMetadata[], group: GroupBy) {
-    return tracks.sort((a, b) => {
-        if (group === 'date') {
-            return b.time - a.time
-        }
-        if (group === 'type') {
-            return a.type.localeCompare(b.type)
-        }
-        return a.artist.name.localeCompare(b.artist.name, undefined, { sensitivity: 'base' })
-    })
-}
-
+/**
+ * New releases from the artists and shows the person follows: the lists as
+ * last synced (a month's worth; the range and kind filters cut them client-
+ * side), the dialog's settings, dismissals and saves, and the counts the
+ * toolbar badge reads. Shared through storage with the background, which
+ * paints the badge from `music_count + shows_count - seen_count`.
+ */
 function createNewReleasesStore() {
-    const store = writable<NewReleases>(defaultNewReleases)
-    const { subscribe, set, update } = store
+    const store = writable<ReleasesState>(defaultReleasesState)
     let isUpdatingStorage = false
+    let inflight: Promise<void> | null = null
 
-    async function getShowsReleases(force = false) {
-        let { shows_data, shows_count, shows_releases, group_by, dismissed } = get(store)
-        if (!force && shows_data.length) return
+    const recounted = (state: ReleasesState): ReleasesState => ({ ...state, ...scopeCounts(state) })
 
-        try {
-            const response = await getNewReleasesService().getShowsReleases()
-            const grouping = groupByMap[group_by]
-            shows_data = response.filter(
-                (item) => !dismissed.find((filter) => filter.uri === item.uri)
-            )
-            shows_releases = groupBy(sortReleases(shows_data, group_by), grouping)
-            shows_count = shows_data.length
-        } finally {
-            await updateState({
-                shows_data,
-                shows_releases,
-                shows_count,
-                shows_updated_at: new Date().toISOString()
-            })
-        }
-    }
-
-    async function getMusicReleases(force = false) {
-        let { music_data, music_releases, music_count, group_by, dismissed } = get(store)
-        if (!force && music_data.length) return
-
-        try {
-            const response = await getNewReleasesService().getMusicReleases()
-            const grouping = groupByMap[group_by]
-            music_data = response.filter(
-                (item) => !dismissed.find((filter) => filter.uri === item.uri)
-            )
-            music_releases = groupBy(sortReleases(music_data, group_by), grouping)
-            music_count = music_data.length
-        } finally {
-            await updateState({
-                music_data,
-                music_releases,
-                music_count,
-                music_updated_at: new Date().toISOString()
-            })
-        }
-    }
-
-    async function refreshAllReleases(force = false) {
-        const { release_type } = get(store)
-        if (release_type === 'music') await getMusicReleases(force)
-        else if (release_type === 'shows&podcasts') await getShowsReleases(force)
-        else {
-            await Promise.all([getMusicReleases(force), getShowsReleases(force)])
-        }
-    }
-
-    async function undoDismiss() {
-        const {
-            dismissed,
-            group_by,
-            music_data,
-            shows_data,
-            music_releases: musicReleases = {},
-            shows_releases: showsReleases = {}
-        } = get(store)
-        if (dismissed.length === 0) return
-
-        const filter = dismissed.pop()
-        if (!filter) return
-
-        const type = filter.uri.includes('episode') ? 'shows' : 'music'
-        const data = type === 'shows' ? shows_data : music_data
-        const track = data.find((item) => item.uri === filter.uri)
-        if (!track) return
-
-        const releases = type === 'shows' ? showsReleases : musicReleases
-        const groupKey = groupByMap[group_by]
-        const objectKey =
-            groupKey == 'artist.name' ? track.artist.name : track[groupKey as keyof TrackMetadata]
-
-        const newKey = !releases[objectKey as string]?.length
-        if (newKey) releases[objectKey as string] = []
-        releases[objectKey as string].push(track)
-        releases[objectKey as string] = sortReleases(releases[objectKey as string], group_by)
-
-        const sortedReleases = groupBy(
-            sortReleases(Object.values(releases).flat(), group_by),
-            groupByMap[group_by]
-        )
-
-        const stateCountKey = type === 'shows' ? 'shows_count' : 'music_count'
-        const stateReleasesKey = type === 'shows' ? 'shows_releases' : 'music_releases'
-
-        await updateState({
-            dismissed,
-            [stateReleasesKey]: sortedReleases,
-            [stateCountKey]: Object.values(sortedReleases).flat().length
-        })
-    }
-
-    function clearOldFilters(arr: ReleaseFilter[]) {
-        const now = new Date()
-        const oneMonthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
-
-        return arr.filter((item) => {
-            const filterDate = new Date(item.created_at)
-            return filterDate > oneMonthAgo
-        })
-    }
-
-    async function dismissRelease({ uri, key }: { uri: string; key: string }) {
-        const {
-            dismissed,
-            shows_releases: showsReleases = {},
-            music_releases: musicReleases = {}
-        } = get(store)
-        const type = uri.includes('episode') ? 'shows' : 'music'
-        const currentReleases = type === 'shows' ? showsReleases : musicReleases
-        const index = currentReleases[key].findIndex((track) => track.uri === uri)
-        if (index === -1) return
-
-        currentReleases[key].splice(index, 1)
-        if (currentReleases[key].length === 0) delete currentReleases[key]
-
-        const mostRecentDismissed = clearOldFilters([
-            ...new Set([...dismissed, { uri, created_at: new Date().toISOString() }])
-        ])
-
-        const stateKey = type === 'shows' ? 'shows_releases' : 'music_releases'
-        const stateCountKey = type === 'shows' ? 'shows_count' : 'music_count'
-
-        await updateState({
-            [stateKey]: currentReleases,
-            dismissed: mostRecentDismissed,
-            [stateCountKey]: Object.values(currentReleases).flat().length
-        })
-    }
-
-    async function updateGroupBy(group_by: GroupBy) {
-        const { shows_releases: showsReleases = {}, music_releases: musicReleases = {} } =
-            get(store)
-        const tracks = Object.values(musicReleases).flat()
-        const shows = Object.values(showsReleases).flat()
-
-        const groupedMusic = groupBy(sortReleases(tracks, group_by), groupByMap[group_by])
-        const groupedShows = groupBy(sortReleases(shows, group_by), groupByMap[group_by])
-
-        await updateState({
-            group_by,
-            music_releases: groupedMusic,
-            shows_releases: groupedShows
-        })
-    }
-
-    /** The view is open: everything listed now counts as seen, so the toolbar badge clears. */
-    async function markSeen() {
-        const { music_count, shows_count } = get(store)
-        await updateState({ seen_count: music_count + shows_count })
-    }
-
-    async function updateState(state: Partial<NewReleases>) {
-        const currentState = get(store)
-        const updatedState = { ...currentState, ...state }
-        set(updatedState)
+    async function persist(state: ReleasesState) {
+        store.set(state)
         isUpdatingStorage = true
-
         try {
-            await storage.setItem<NewReleases>(NEW_RELEASES_STORE_KEY, updatedState)
+            await storage.setItem<ReleasesState>(NEW_RELEASES_STORE_KEY, state)
         } catch (error) {
-            console.error('Error updating new releases in storage:', error)
+            console.error('Error saving new releases:', error)
         } finally {
             isUpdatingStorage = false
         }
     }
 
-    async function reset() {
-        set(defaultNewReleases)
-        await getMusicReleases(true)
+    const updateState = (patch: Partial<ReleasesState>) =>
+        persist(recounted({ ...get(store), ...patch }))
+
+    /** Sync the scope's lists when missing or stale, or always when forced; one sync at a time. */
+    function refresh(force = false): Promise<void> {
+        if (inflight) return inflight
+        inflight = sync(force).finally(() => {
+            inflight = null
+        })
+        return inflight
     }
 
-    function search(search: string) {
-        const { shows_data, music_data, group_by } = get(store)
-        const filterData = (arr: TrackMetadata[]) =>
-            arr.filter((item) => {
-                return (
-                    item.artist.name.toLowerCase().match(new RegExp(search.toLowerCase(), 'i')) ||
-                    item.title.toLowerCase().match(new RegExp(search.toLowerCase(), 'i'))
-                )
-            })
+    async function sync(force: boolean) {
+        const { scope, music_updated_at, shows_updated_at } = get(store)
+        const now = Date.now()
+        const wantMusic = scope !== 'podcasts' && (force || isStale(music_updated_at, now))
+        const wantShows = scope !== 'music' && (force || isStale(shows_updated_at, now))
+        if (!wantMusic && !wantShows) return
 
-        const music_releases = groupBy(
-            sortReleases(filterData(music_data), group_by),
-            groupByMap[group_by]
-        )
-        const shows_releases = groupBy(
-            sortReleases(filterData(shows_data), group_by),
-            groupByMap[group_by]
-        )
-        update((state) => ({ ...state, music_releases, shows_releases }))
+        releasesUI.set({ loading: true, error: null })
+        let error: string | null = null
+        try {
+            const service = getNewReleasesService()
+            const [music, shows] = await Promise.allSettled([
+                wantMusic ? service.getMusicReleases() : Promise.resolve(null),
+                wantShows ? service.getShowsReleases() : Promise.resolve(null)
+            ])
+            const at = new Date().toISOString()
+            const current = get(store)
+            const patch: Partial<ReleasesState> = {
+                dismissed: pruneStamped(current.dismissed),
+                library: pruneStamped(current.library)
+            }
+            if (music.status === 'fulfilled' && music.value) {
+                patch.music = music.value
+                patch.music_updated_at = at
+            }
+            if (shows.status === 'fulfilled' && shows.value) {
+                patch.shows = shows.value
+                patch.shows_updated_at = at
+            }
+            const failed = [music, shows].filter(
+                (result): result is PromiseRejectedResult => result.status === 'rejected'
+            )
+            failed.forEach((result) => console.error('[chorus] new releases sync:', result.reason))
+            await updateState(patch)
+            // One list failing leaves it stale for the next open; both failing is an error to show.
+            const asked = Number(wantMusic) + Number(wantShows)
+            if (failed.length === asked) error = 'Could not reach Spotify'
+        } catch (caught) {
+            console.error('[chorus] new releases sync:', caught)
+            error = 'Could not reach Spotify'
+        } finally {
+            releasesUI.set({ loading: false, error })
+        }
     }
 
-    function resetSearch() {
-        const { shows_data, dismissed, music_data, group_by } = get(store)
-        const music_releases = groupBy(
-            sortReleases(
-                music_data.filter((item) => !dismissed.find((data) => data.uri == item.uri)),
-                group_by
-            ),
-            groupByMap[group_by]
-        )
-        const shows_releases = groupBy(
-            sortReleases(
-                shows_data.filter((item) => !dismissed.find((data) => data.uri == item.uri)),
-                group_by
-            ),
-            groupByMap[group_by]
-        )
-        update((state) => ({ ...state, music_releases, shows_releases }))
+    async function setScope(scope: Scope) {
+        await updateState({ scope })
+        // The scope's list may never have been fetched.
+        void refresh()
     }
 
-    async function updateLibrary(uri: string) {
-        const { library } = get(store)
-        const remove = !!library.find((item) => item.uri === uri)
+    const setRange = (range: Range) => updateState({ range })
+    const setGroupBy = (group_by: GroupBy) => updateState({ group_by })
+    const setFilter = (key: keyof Filter, on: boolean) =>
+        updateState({ filters: { ...get(store).filters, [key]: on } })
+
+    /** Hide a release for the sync window; it is not removed from Spotify. */
+    const dismiss = (uri: string) =>
+        updateState({
+            dismissed: pruneStamped([
+                ...get(store).dismissed.filter((entry) => entry.uri !== uri),
+                stamp(uri)
+            ])
+        })
+    const undismiss = (uri: string) =>
+        updateState({ dismissed: get(store).dismissed.filter((entry) => entry.uri !== uri) })
+    const restoreDismissed = () => updateState({ dismissed: [] })
+
+    const isSaved = (uri: string) => get(store).library.some((entry) => entry.uri === uri)
+
+    /** Add the release to Your Library, or take it out again; resolves to whether it is saved now. */
+    async function toggleLibrary(uri: string): Promise<boolean> {
+        const remove = isSaved(uri)
         await getNewReleasesService().updateLibrary({ uri, remove })
-        const filteredLibrary = clearOldFilters(
-            remove
-                ? library.filter((item) => item.uri !== uri)
-                : [...library, { uri, created_at: new Date().toISOString() }]
-        )
-        await updateState({
-            library: filteredLibrary
-        })
+        const rest = get(store).library.filter((entry) => entry.uri !== uri)
+        await updateState({ library: pruneStamped(remove ? rest : [...rest, stamp(uri)]) })
+        return !remove
     }
 
-    storage
-        .getItem<NewReleases>(NEW_RELEASES_STORE_KEY, {
-            fallback: defaultNewReleases
-        })
-        .then((newValues) => {
-            if (!newValues) return
+    /** The dialog is open: everything in view counts as seen, so the toolbar badge clears. */
+    async function markSeen() {
+        const { music_count, shows_count, seen_count } = get(store)
+        const total = music_count + shows_count
+        if (seen_count !== total) await updateState({ seen_count: total })
+    }
 
-            // Sync the stored playback settings with the current type definition
-            const syncedValues = syncWithType(newValues, defaultNewReleases)
-            // Preserve the releases if they exist in storage
-            const music_data = newValues.music_data ?? []
-            const music_releases = newValues.music_releases ?? {}
-            const shows_data = newValues.shows_data ?? []
-            const shows_releases = newValues.shows_releases ?? {}
-            set({
-                ...syncedValues,
-                music_data,
-                music_releases,
-                shows_data,
-                shows_releases
-            })
+    storage.getItem<unknown>(NEW_RELEASES_STORE_KEY).then((saved) => {
+        if (!saved) return
+        const migrated = migrateReleasesState(saved)
+        const counted = recounted(migrated)
+        store.set(counted)
+        // Counts drift as days roll over, and an old shape needs writing back
+        // once, so the background's badge reads the same numbers.
+        const legacy = typeof saved === 'object' && !('scope' in (saved as object))
+        if (
+            legacy ||
+            counted.music_count !== migrated.music_count ||
+            counted.shows_count !== migrated.shows_count
+        ) {
+            void persist(counted)
+        }
+    })
 
-            // Update storage with synced values
-            isUpdatingStorage = true
-            storage
-                .setItem<NewReleases>(NEW_RELEASES_STORE_KEY, {
-                    ...syncedValues,
-                    music_data,
-                    music_releases,
-                    shows_data,
-                    shows_releases
-                })
-                .then(() => {
-                    isUpdatingStorage = false
-                })
-                .catch((error) => {
-                    console.error('Error updating storage:', error)
-                    isUpdatingStorage = false
-                })
-        })
-
-    storage.watch<NewReleases>(NEW_RELEASES_STORE_KEY, (newValues) => {
-        if (!newValues || isUpdatingStorage) return
-
-        const syncedValues = syncWithType(newValues, defaultNewReleases)
-        set(syncedValues)
+    storage.watch<unknown>(NEW_RELEASES_STORE_KEY, (saved) => {
+        if (isUpdatingStorage) return
+        store.set(saved ? migrateReleasesState(saved) : defaultReleasesState)
     })
 
     return {
-        markSeen,
-        reset,
-        search,
-        subscribe,
+        subscribe: store.subscribe,
         updateState,
-        undoDismiss,
-        resetSearch,
-        updateLibrary,
-        updateGroupBy,
-        dismissRelease,
-        getShowsReleases,
-        getMusicReleases,
-        refreshAllReleases
+        refresh,
+        setScope,
+        setRange,
+        setGroupBy,
+        setFilter,
+        dismiss,
+        undismiss,
+        restoreDismissed,
+        toggleLibrary,
+        isSaved,
+        markSeen
     }
 }
 
 export const newReleasesStore = createNewReleasesStore()
-
-export const newReleasesUIStore = (() => {
-    const { subscribe, update } = writable({ loading: false, visible: false })
-
-    return {
-        subscribe,
-        setLoading: (loading: boolean) => update((value) => ({ ...value, loading })),
-        toggle: () => update((value) => ({ ...value, visible: !value.visible })),
-        setVisible: (visible: boolean) => update((value) => ({ ...value, visible }))
-    }
-})()

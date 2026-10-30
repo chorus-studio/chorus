@@ -174,7 +174,7 @@ export default defineConfig({
                 description: 'Show current track as a notification'
             },
             'toggle-new-releases': {
-                description: 'Toggle New Releases UI'
+                description: 'Open or close New releases'
             },
             'toggle-config': {
                 description: 'Toggle Chorus Config UI'

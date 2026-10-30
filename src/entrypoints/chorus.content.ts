@@ -15,11 +15,11 @@ import App from '../App.svelte'
 import Alert from '$lib/components/Alert.svelte'
 import LoopButton from '$lib/components/LoopButton.svelte'
 import SeekButton from '$lib/components/SeekButton.svelte'
-// import NewReleasesIcon from '$lib/components/NewReleasesIcon.svelte'
 import ChorusConfigDialog from '$lib/components/ChorusConfigDialog.svelte'
 import BlockedTracksDialog from '$lib/components/BlockedTracksDialog.svelte'
 import SnipsDialog from '$lib/components/SnipsDialog.svelte'
 import DiscographyDialog from '$lib/components/DiscographyDialog.svelte'
+import NewReleasesDialog from '$lib/components/NewReleasesDialog.svelte'
 
 // Stable Spotify anchors. The footer `now-playing-bar` persists for the lifetime
 // of the page (only its descendants swap), so it is a reliable observation root.
@@ -141,7 +141,7 @@ function injectControlButtons() {
 }
 
 // Idempotently mount the body-level Alert toaster and the top-bar config / snips /
-// blocked dialogs. Re-runnable because the App can be re-mounted on a widget swap and we
+// discography / blocked / new-releases dialogs. Re-runnable because the App can be re-mounted on a widget swap and we
 // must not stack duplicates.
 function injectExtras() {
     mountedExtras = pruneDetached(mountedExtras)
@@ -196,6 +196,15 @@ function injectExtras() {
             mountedExtras.push({
                 instance: mount(BlockedTracksDialog, { target: blockedDialog }),
                 container: blockedDialog
+            })
+        }
+        // Beside Spotify's own What's New bell, which covers the same ground.
+        if (!document.getElementById('new-releases-dialog-trigger')) {
+            const releasesDialog = document.createElement('div')
+            parent.insertBefore(releasesDialog, newFeedButton)
+            mountedExtras.push({
+                instance: mount(NewReleasesDialog, { target: releasesDialog }),
+                container: releasesDialog
             })
         }
     }
