@@ -2,14 +2,16 @@
     import Keycaps from '$lib/components/Keycaps.svelte'
     import Logo from '$lib/components/Logo.svelte'
 
-    let { onenable }: { onenable: () => void } = $props()
+    // frameClass: the popup's height class, so the off state is as tall as the player.
+    let { onenable, frameClass = 'h-[176px]' }: { onenable: () => void; frameClass?: string } =
+        $props()
 </script>
 
 <button
     type="button"
     onclick={onenable}
     aria-label="Turn Chorus on"
-    class="group flex h-[196px] w-[320px] cursor-pointer flex-col items-center justify-center gap-y-2 bg-ink text-ink-fg focus-visible:outline-none"
+    class="group flex {frameClass} w-[320px] cursor-pointer flex-col items-center justify-center gap-y-2 bg-ink text-ink-fg focus-visible:outline-none"
 >
     <Logo
         size={30}

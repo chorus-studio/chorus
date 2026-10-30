@@ -176,7 +176,7 @@
         </span>
     {/if}
 
-    <div class="flex w-full {isChorus ? 'items-center gap-x-2' : 'flex-col gap-y-1.5'}">
+    <div class="flex w-full {isChorus ? 'items-center gap-x-2' : 'flex-col gap-y-1'}">
         {#if isChorus}
             <span class="min-w-8 text-right font-mono text-[11px] {timeClass} tabular-nums"
                 >{current}</span
@@ -237,7 +237,7 @@
             <span class="min-w-8 font-mono text-[11px] {timeClass} tabular-nums">{total}</span>
         {:else}
             <div
-                class="flex w-full items-center justify-between font-mono text-[10px] {timeClass} tabular-nums"
+                class="flex w-full items-center justify-between font-mono text-[10px] leading-none {timeClass} tabular-nums"
             >
                 <span>{current}</span>
                 <span>{total}</span>

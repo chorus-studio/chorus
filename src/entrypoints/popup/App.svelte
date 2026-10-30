@@ -13,8 +13,9 @@
     import PopUp from '$lib/components/views/PopUp.svelte'
     import PowerOffOverlay from '$lib/components/PowerOffOverlay.svelte'
     import VocalRemovalToggle from '$lib/components/VocalRemovalToggle.svelte'
+    import PopupSubview from '$lib/components/PopupSubview.svelte'
     import { checkVocalSupport } from '$lib/audio-effects/vocal-model/support'
-    import ChevronLeft from '@lucide/svelte/icons/chevron-left'
+    import { syncNotificationPermission } from '$lib/utils/notification-permission'
 
     let loading = $state(false)
     // undefined until the persisted flag resolves, so we never flash the on-state
@@ -25,6 +26,9 @@
     let view = $state<'player' | 'voice'>('player')
     // Only expose vocal separation if this device can actually run it (WebGPU etc).
     let vocalSupported = $state(false)
+    // The frames shown before and instead of the player match its height (the
+    // glass card adds 8 px of padding), so the popup never resizes.
+    const frameHeight = $derived($settingsStore.ui.glass ? 'h-[184px]' : 'h-[176px]')
 
     // First paint before the player mounts, so the loading frame already wears
     // the cover's colour (or the rack tokens for "Popup: Theme"); PopUp keeps
@@ -41,6 +45,8 @@
 
     onMount(() => {
         init()
+        // Chrome's permission prompt closes the popup, so a grant is read back here.
+        syncNotificationPermission()
         getEnabled().then((value) => (enabled = value))
         checkVocalSupport().then((s) => {
             vocalSupported = s.supported
@@ -62,30 +68,23 @@
 </script>
 
 {#if enabled === undefined}
-    <div class="h-[196px] w-[320px] bg-[color:var(--bg)]"></div>
+    <div class="{frameHeight} w-[320px] bg-[color:var(--bg)]"></div>
 {:else if !enabled}
-    <PowerOffOverlay onenable={() => setEnabled(true)} />
+    <PowerOffOverlay frameClass={frameHeight} onenable={() => setEnabled(true)} />
 {:else if loading}
     <div
-        class="flex h-[196px] w-[320px] items-center justify-center bg-[color:var(--bg)] text-[color:var(--text)]"
+        class="flex {frameHeight} w-[320px] items-center justify-center bg-[color:var(--bg)] text-[color:var(--text)]"
     >
         <Logo size={28} tone="current" class="animate-led-pulse" />
     </div>
 {:else if view === 'voice' && vocalSupported}
-    <div class="flex h-[196px] w-[320px] flex-col gap-y-2.5 bg-ink px-3 pb-3 pt-2 text-ink-fg">
-        <div class="flex h-[26px] items-center justify-between">
-            <button
-                type="button"
-                onclick={() => (view = 'player')}
-                class="chorus-focus inline-flex h-6 items-center gap-x-1 rounded-md pl-0.5 pr-1.5 text-xs text-ink-fg-2 hover:bg-surface-2 hover:text-ink-fg"
-            >
-                <ChevronLeft class="size-3.5" />
-                Player
-            </button>
-            <span class="rack-label">Chrome only · on-device</span>
-        </div>
+    <PopupSubview
+        frameClass={frameHeight}
+        label="Chrome only · on-device"
+        onback={() => (view = 'player')}
+    >
         <VocalRemovalToggle />
-    </div>
+    </PopupSubview>
 {:else}
     <PopUp onVoice={vocalSupported ? () => (view = 'voice') : undefined} />
 {/if}

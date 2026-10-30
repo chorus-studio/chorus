@@ -76,9 +76,12 @@ export async function togglePictureInPicture() {
     }
 
     try {
+        // The popover's size; Chrome would otherwise reopen at whatever size the
+        // window was last dragged to.
         const pipWindow = await window.documentPictureInPicture.requestWindow({
             width: 440,
-            height: 360
+            height: 360,
+            preferInitialWindowPlacement: true
         })
 
         // Create a container for the PipView
