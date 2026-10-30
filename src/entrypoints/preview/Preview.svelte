@@ -15,6 +15,8 @@
     import DiscographyDialog from '$lib/components/DiscographyDialog.svelte'
     import NewReleasesDialog from '$lib/components/NewReleasesDialog.svelte'
     import NewReleasesPage from '$lib/components/NewReleasesPage.svelte'
+    import Search from '@lucide/svelte/icons/search'
+    import Bell from '@lucide/svelte/icons/bell'
     import { newReleasesStore, releasesUI } from '$lib/stores/new-releases'
     import { stamp, startOfDay, type Release, type ReleaseType } from '$lib/utils/releases'
     import { discographyPrefs, discographyStore } from '$lib/stores/discography'
@@ -142,6 +144,7 @@
     let ready = $state(
         !['blocked', 'backup', 'snips', 'discography', 'releases'].includes(dialog) &&
             scene !== 'releases-page' &&
+            scene !== 'topbar' &&
             !['presets', 'fx', 'eq', 'ms'].includes(tab)
     )
 
@@ -250,11 +253,11 @@
             id,
             name,
             kind,
-            type: (kind === 'single' && total <= 2 ? 'SINGLE' : kind === 'single' ? 'EP' : kind.toUpperCase()) as
-                | 'ALBUM'
-                | 'SINGLE'
-                | 'EP'
-                | 'COMPILATION',
+            type: (kind === 'single' && total <= 2
+                ? 'SINGLE'
+                : kind === 'single'
+                  ? 'EP'
+                  : kind.toUpperCase()) as 'ALBUM' | 'SINGLE' | 'EP' | 'COMPILATION',
             total,
             year,
             cover: swatch(hex)
@@ -286,9 +289,27 @@
         }
 
         const hk = { id: 'hk', name: 'Hiatus Kaiyote' }
-        const mood: Seed = { id: 'mood', name: 'Mood Valiant', year: '2021', hex: '#6b5a3e', total: 12 }
-        const choose: Seed = { id: 'choose', name: 'Choose Your Weapon', year: '2015', hex: '#2b2b2b', total: 18 }
-        const tawk: Seed = { id: 'tawk', name: 'Tawk Tomahawk', year: '2012', hex: '#7a4a52', total: 9 }
+        const mood: Seed = {
+            id: 'mood',
+            name: 'Mood Valiant',
+            year: '2021',
+            hex: '#6b5a3e',
+            total: 12
+        }
+        const choose: Seed = {
+            id: 'choose',
+            name: 'Choose Your Weapon',
+            year: '2015',
+            hex: '#2b2b2b',
+            total: 18
+        }
+        const tawk: Seed = {
+            id: 'tawk',
+            name: 'Tawk Tomahawk',
+            year: '2012',
+            hex: '#7a4a52',
+            total: 9
+        }
         await discographyStore.trackArtist(
             hk,
             [
@@ -301,7 +322,12 @@
             ],
             now - 30 * DAY
         )
-        await hear(hk, tawk, tracks('tawk', 9).map((t) => t.id), now - 25 * DAY)
+        await hear(
+            hk,
+            tawk,
+            tracks('tawk', 9).map((t) => t.id),
+            now - 25 * DAY
+        )
         await hear(hk, choose, ['choose1'], now - 20 * DAY)
         await hear(hk, mood, ['mood1', 'mood2', 'mood3', 'mood4', 'mood5'], now - 2 * HOUR)
 
@@ -316,26 +342,63 @@
         )
 
         const tss = { id: 'tss', name: 'Thee Sacred Souls' }
-        const tss1: Seed = { id: 'tss1', name: 'Thee Sacred Souls', year: '2022', hex: '#3f5b73', total: 12 }
+        const tss1: Seed = {
+            id: 'tss1',
+            name: 'Thee Sacred Souls',
+            year: '2022',
+            hex: '#3f5b73',
+            total: 12
+        }
         await discographyStore.trackAlbum(
             tss,
-            { id: 'tss1', name: tss1.name, year: tss1.year, cover: swatch(tss1.hex), total: 12, tracks: tracks('tss1', 12) },
+            {
+                id: 'tss1',
+                name: tss1.name,
+                year: tss1.year,
+                cover: swatch(tss1.hex),
+                total: 12,
+                tracks: tracks('tss1', 12)
+            },
             now - 10 * DAY
         )
-        await hear(tss, tss1, tracks('tss1', 12).map((t) => t.id), now - 9 * DAY)
+        await hear(
+            tss,
+            tss1,
+            tracks('tss1', 12).map((t) => t.id),
+            now - 9 * DAY
+        )
 
         const cs = { id: 'cs', name: 'Cleo Sol' }
-        const mother: Seed = { id: 'mother', name: 'Mother', year: '2021', hex: '#c9a24a', total: 12 }
+        const mother: Seed = {
+            id: 'mother',
+            name: 'Mother',
+            year: '2021',
+            hex: '#c9a24a',
+            total: 12
+        }
         await discographyStore.trackAlbum(
             cs,
-            { id: 'mother', name: mother.name, year: mother.year, cover: swatch(mother.hex), total: 12, tracks: tracks('mother', 12) },
+            {
+                id: 'mother',
+                name: mother.name,
+                year: mother.year,
+                cover: swatch(mother.hex),
+                total: 12,
+                tracks: tracks('mother', 12)
+            },
             now - 3 * DAY
         )
         await hear(cs, mother, ['mother1', 'mother2', 'mother3', 'mother4', 'mother5'], now - DAY)
 
         await hear(
             { id: 'sg', name: 'Santigold' },
-            { id: 'master', name: 'Master of My Make-Believe', year: '2012', hex: '#2f4f4f', total: 11 },
+            {
+                id: 'master',
+                name: 'Master of My Make-Believe',
+                year: '2012',
+                hex: '#2f4f4f',
+                total: 11
+            },
             ['master1', 'master2', 'master3', 'master4'],
             now - 5 * DAY
         )
@@ -593,7 +656,7 @@
         ['M83 on Midnight City', 'Song Exploder', 'EPISODE', '#b3833a', 4, 27]
     ]
     onMount(async () => {
-        if (dialog !== 'releases' && scene !== 'releases-page') return
+        if (dialog !== 'releases' && scene !== 'releases-page' && scene !== 'topbar') return
         const releasesView = params.get('view')
         if (releasesView === 'grid' || releasesView === 'list')
             await storage.setItem('local:chorus_releases_view', releasesView)
@@ -703,7 +766,10 @@
                         class="text-[11px] text-ink-muted">M83</span
                     >
                 </div>
-                <div id="chorus-ui" class="dark flex items-center gap-x-0.5">
+                <div
+                    id="chorus-ui"
+                    class="chorus-tray chorus-tray--player dark flex items-center gap-x-0.5"
+                >
                     <HeartButton />
                     <SettingsPopover />
                     <SkipButton />
@@ -719,6 +785,35 @@
                 <div class="w-full"><TimeProgress id="chorus-time-progress" port={null} /></div>
             </div>
             <div class="flex w-[300px] justify-end"><VolumeSlider port={null} /></div>
+        </div>
+    {:else if scene === 'topbar'}
+        <!-- Spotify's global nav bar, roughly: the search pill, the Chorus tray, the What's New bell, the avatar. -->
+        <div
+            id="frame"
+            class="flex h-[72px] w-[1180px] items-center justify-end gap-x-2 rounded-lg px-5"
+            style="background: {chrome}; color: {themeConfig?.text ??
+                '#ffffff'}; --chorus-card: {themeConfig?.card ?? '#2a2a2a'}"
+        >
+            <div
+                class="mr-auto flex h-12 w-[420px] items-center gap-x-3 rounded-full px-4"
+                style="background: {themeConfig?.card ?? '#2a2a2a'}"
+            >
+                <Search class="size-5 opacity-80" />
+                <span class="text-[15px] opacity-70">What do you want to play?</span>
+            </div>
+            {#if ready}
+                <div class="chorus-tray chorus-tray--bar">
+                    <ChorusConfigDialog />
+                    <SnipsDialog />
+                    <DiscographyDialog />
+                    <BlockedTracksDialog />
+                    <NewReleasesDialog />
+                </div>
+            {/if}
+            <div class="inline-flex size-12 items-center justify-center rounded-full">
+                <Bell class="size-5 opacity-80" />
+            </div>
+            <div class="size-12 rounded-full bg-current opacity-30"></div>
         </div>
     {:else if scene === 'releases-page'}
         <!-- Spotify's main view, roughly: the page overlays it and takes its background. -->

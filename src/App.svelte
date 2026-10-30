@@ -125,7 +125,7 @@
 
 <ModeWatcher defaultMode="dark" track={false} />
 
-<div id="chorus-ui" class="dark flex items-center gap-x-0.5">
+<div id="chorus-ui" class="chorus-tray chorus-tray--player dark flex items-center gap-x-0.5">
     <HeartButton />
     <SettingsPopover />
     <SkipButton />
