@@ -17,7 +17,7 @@ export const chorusKeys = {
     'seek-rewind': '#seek-player-rw-button',
     'seek-forward': '#seek-player-ff-button',
     'toggle-config': '#chorus-config-dialog-trigger',
-    'toggle-new-releases': '#chorus-new-releases-icon',
+    'toggle-new-releases': '#new-releases-dialog-trigger',
     settings: '[data-testid="now-playing-widget-v2"] div#chorus-ui #chorus-settings',
     'save/unsave': '[data-testid="now-playing-widget-v2"] div#chorus-ui #chorus-heart',
     'block-track': '[data-testid="now-playing-widget-v2"] div#chorus-ui #chorus-block',

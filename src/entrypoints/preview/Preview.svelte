@@ -13,6 +13,10 @@
     import BlockedTracksDialog from '$lib/components/BlockedTracksDialog.svelte'
     import SnipsDialog from '$lib/components/SnipsDialog.svelte'
     import DiscographyDialog from '$lib/components/DiscographyDialog.svelte'
+    import NewReleasesDialog from '$lib/components/NewReleasesDialog.svelte'
+    import NewReleasesPage from '$lib/components/NewReleasesPage.svelte'
+    import { newReleasesStore, releasesUI } from '$lib/stores/new-releases'
+    import { stamp, startOfDay, type Release, type ReleaseType } from '$lib/utils/releases'
     import { discographyPrefs, discographyStore } from '$lib/stores/discography'
     import { storage } from '@wxt-dev/storage'
     import { dataStore } from '$lib/stores/data'
@@ -136,7 +140,8 @@
         ['Get Sun by Hiatus Kaiyote', '#b3833a', 90 * DAY]
     ] as const
     let ready = $state(
-        !['blocked', 'backup', 'snips', 'discography'].includes(dialog) &&
+        !['blocked', 'backup', 'snips', 'discography', 'releases'].includes(dialog) &&
+            scene !== 'releases-page' &&
             !['presets', 'fx', 'eq', 'ms'].includes(tab)
     )
 
@@ -566,6 +571,77 @@
         }
         ready = true
     })
+    // ?dialog=releases (or ?scene=releases-page, the same list across a mock
+    // main view) seeds a fortnight of releases from followed artists and
+    // three podcast episodes (solid-colour covers), synced two hours ago so the
+    // dialog leaves Spotify alone. &scope=all|podcasts, &range=month,
+    // &group=artist|type and &view=grid set the controls; &dismissed=1 hides
+    // one release, &saved=1 marks two as in the library; &empty=1 leaves the
+    // list bare, &loading=1 shows the first sync and &error=1 a failed one.
+    type SampleRelease = [string, string, ReleaseType, string, number, number]
+    const SAMPLE_RELEASES: SampleRelease[] = [
+        // title, artist or show, type, cover, days ago, tracks (minutes for an episode)
+        ['Love Heart Cheat Code', 'Hiatus Kaiyote', 'ALBUM', '#b3833a', 0, 11],
+        ['Live for Me', 'Thee Sacred Souls', 'SINGLE', '#7a4a52', 0, 1],
+        ['Fantasy', 'M83', 'EP', '#2b2b2b', 1, 5],
+        ['Ambient Transmissions Vol. 2', 'Marconi Union', 'COMPILATION', '#3f5b73', 1, 8],
+        ['Voir Dire', 'Earl Sweatshirt', 'ALBUM', '#5a3d2b', 3, 13],
+        ['rwm', 'the booyah! kids', 'SINGLE', '#8fb36b', 6, 2],
+        ['Oblivion', 'M83', 'ALBUM', '#6b5a3e', 12, 10],
+        ['Hiatus Kaiyote on Red Room', 'Song Exploder', 'EPISODE', '#5c4a6b', 0, 24],
+        ['Why every pop song has a drop now', 'Switched on Pop', 'EPISODE', '#3f5b73', 1, 41],
+        ['M83 on Midnight City', 'Song Exploder', 'EPISODE', '#b3833a', 4, 27]
+    ]
+    onMount(async () => {
+        if (dialog !== 'releases' && scene !== 'releases-page') return
+        const releasesView = params.get('view')
+        if (releasesView === 'grid' || releasesView === 'list')
+            await storage.setItem('local:chorus_releases_view', releasesView)
+        const slug = (text: string) => text.toLowerCase().replace(/[^a-z0-9]+/g, '-')
+        const today = startOfDay(Date.now())
+        const releases: Release[] = SAMPLE_RELEASES.map(([title, by, type, hex, age, size]) => {
+            const episode = type === 'EPISODE'
+            return {
+                uri: `spotify:${episode ? 'episode' : 'album'}:${slug(title)}`,
+                id: slug(title),
+                type,
+                title,
+                artist: { uri: `spotify:${episode ? 'show' : 'artist'}:${slug(by)}`, name: by },
+                cover: swatch(hex),
+                time: episode ? Date.now() - age * DAY - 3 * 60 * 60 * 1000 : today - age * DAY,
+                ...(episode ? { durationMs: size * 60_000 } : { trackCount: size })
+            }
+        })
+        const bare = ['empty', 'loading', 'error'].some((flag) => params.get(flag) === '1')
+        const syncedAt = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString()
+        const scopeParam = params.get('scope')
+        const rangeParam = params.get('range')
+        const groupParam = params.get('group')
+        await newReleasesStore.updateState({
+            scope: scopeParam === 'all' || scopeParam === 'podcasts' ? scopeParam : 'music',
+            range:
+                rangeParam === 'today' || rangeParam === 'yesterday' || rangeParam === 'month'
+                    ? rangeParam
+                    : 'week',
+            group_by: groupParam === 'artist' || groupParam === 'type' ? groupParam : 'date',
+            music: bare ? [] : releases.filter((release) => release.type !== 'EPISODE'),
+            shows: bare ? [] : releases.filter((release) => release.type === 'EPISODE'),
+            music_updated_at: syncedAt,
+            shows_updated_at: syncedAt,
+            dismissed: params.get('dismissed') === '1' ? [stamp('spotify:album:rwm')] : [],
+            library:
+                params.get('saved') === '1'
+                    ? [
+                          stamp('spotify:album:love-heart-cheat-code'),
+                          stamp('spotify:episode:m83-on-midnight-city')
+                      ]
+                    : []
+        })
+        if (params.get('loading') === '1') releasesUI.set({ loading: true, error: null })
+        if (params.get('error') === '1')
+            releasesUI.set({ loading: false, error: 'Could not reach Spotify' })
+        ready = true
+    })
 </script>
 
 <div class="dark relative min-h-screen p-6 text-ink-fg" style="background: {backdrop}">
@@ -644,6 +720,15 @@
             </div>
             <div class="flex w-[300px] justify-end"><VolumeSlider port={null} /></div>
         </div>
+    {:else if scene === 'releases-page'}
+        <!-- Spotify's main view, roughly: the page overlays it and takes its background. -->
+        <div
+            id="frame"
+            class="relative h-[760px] w-[1180px] overflow-hidden rounded-lg"
+            style="--background-base: {themeConfig?.main ?? '#121212'}"
+        >
+            {#if ready}<NewReleasesPage /><Alert />{/if}
+        </div>
     {:else if scene === 'dialog'}
         <div id="frame" class="flex items-center gap-x-4 rounded-lg bg-ink p-4">
             {#if dialog === 'blocked'}
@@ -661,6 +746,9 @@
                         <a href="/album/quiet">Quiet Music for Young People</a>
                     </div>
                 {/if}
+            {:else if dialog === 'releases'}
+                <!-- The toaster too: Dismiss answers with an Undo toast. -->
+                {#if ready}<NewReleasesDialog open /><Alert />{/if}
             {:else}
                 <ChorusConfigDialog open initialTab={dialog || 'auto-skip'} />
             {/if}
