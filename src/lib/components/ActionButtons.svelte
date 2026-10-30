@@ -18,14 +18,8 @@
         tweakOrigin,
         updatePresetSlot
     } from '$lib/utils/quick-presets'
-    import {
-        defaultSnip,
-        firstSegmentStart,
-        normalizeRanges,
-        snipsEqual,
-        toSegments,
-        type Snip
-    } from '$lib/utils/snip-ranges'
+    import { saveSnipDraft } from '$lib/utils/snip-save'
+    import { defaultSnip, snipsEqual, type Snip } from '$lib/utils/snip-ranges'
 
     import Check from '@lucide/svelte/icons/check'
     import Power from '@lucide/svelte/icons/power'
@@ -108,37 +102,7 @@
         })
     }
 
-    async function saveSnip() {
-        const track = getTrack()
-        if (!track) return
-
-        if (!$snipStore) return
-
-        // Persist a clean snip: sorted, clamped to the track, overlapping or
-        // touching sections merged, and nothing shorter than a second (a
-        // zero-length section seeded from an unknown duration would otherwise
-        // insta-skip the track on every play). Play mode over the whole track
-        // is "no snip", so there is nothing to save.
-        const duration = $nowPlaying.duration ?? 0
-        const ranges = normalizeRanges($snipStore.ranges, duration)
-        if (ranges.length === 0) return
-        const snip: Snip = { mode: $snipStore.mode, ranges }
-        if (snipsEqual(snip, defaultSnip(duration))) return
-
-        // The Snips dialog lists by this stamp and shows the cover.
-        await dataStore.updateTrack({
-            track_id: track.track_id!,
-            value: {
-                snip,
-                snipped_at: Date.now(),
-                ...($nowPlaying.cover ? { cover: $nowPlaying.cover } : {})
-            }
-        })
-
-        await nowPlaying.updateState({ snip })
-
-        nowPlaying.setCurrentTime(firstSegmentStart(toSegments(snip, duration)))
-    }
+    const saveSnip = () => saveSnipDraft()
 
     async function handleSave() {
         if (tab === 'snip') {
