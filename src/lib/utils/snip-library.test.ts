@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { describeRanges, parseSongId, rangesLength, sortSnipped } from './snip-library'
+import {
+    describeRanges,
+    parseSongId,
+    rangesLength,
+    snippedTracks,
+    sortSnipped
+} from './snip-library'
 import type { SimpleTrack } from '$lib/stores/data/cache'
 
 const track = (song_id: string, snipped_at?: number | null): SimpleTrack => ({
@@ -20,10 +26,37 @@ describe('sortSnipped', () => {
         expect(sorted.map((t) => t.song_id)).toEqual(['new', 'old', 'a undated', 'b undated'])
     })
 
+    it('survives an entry without its title string', () => {
+        const nameless = { ...track('x'), song_id: undefined as unknown as string }
+        const sorted = sortSnipped([track('b'), nameless, track('a')])
+        expect(sorted.map((t) => t.song_id)).toEqual([undefined, 'a', 'b'])
+    })
+
     it('does not touch the input', () => {
         const input = [track('b', 1), track('a', 2)]
         sortSnipped(input)
         expect(input.map((t) => t.song_id)).toEqual(['b', 'a'])
+    })
+})
+
+describe('snippedTracks', () => {
+    it('keeps usable snips, brings old shapes up to date and drops the rest', () => {
+        const legacy = {
+            song_id: 'Old by Someone',
+            track_id: 'old',
+            snip: { start_time: 10, end_time: 20 } as unknown as SimpleTrack['snip']
+        }
+        const empty = { ...track('e'), snip: { mode: 'play', ranges: [] } as SimpleTrack['snip'] }
+        const plain = { song_id: 'Plain by Someone', track_id: 'p' }
+        const kept = snippedTracks([
+            track('a', 5),
+            legacy,
+            empty,
+            plain,
+            null as unknown as SimpleTrack
+        ])
+        expect(kept.map((t) => t.track_id)).toEqual(['a', 'old'])
+        expect(kept[1].snip).toEqual({ mode: 'play', ranges: [{ start: 10, end: 20 }] })
     })
 })
 
@@ -62,6 +95,11 @@ describe('rangesLength', () => {
 })
 
 describe('parseSongId', () => {
+    it('gives blanks for a missing string', () => {
+        expect(parseSongId(undefined)).toEqual({ title: '', artists: '' })
+        expect(parseSongId(null)).toEqual({ title: '', artists: '' })
+    })
+
     it('splits title and artists on the first " by "', () => {
         expect(parseSongId('Stand by Me by Ben E. King')).toEqual({
             title: 'Stand',
