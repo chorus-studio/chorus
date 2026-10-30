@@ -31,6 +31,7 @@
     } from '$lib/utils/theming'
     import { invertPalette } from '$lib/utils/theme-surfaces'
     import { DEFAULT_GLASS, settingsStore } from '$lib/stores/settings'
+    import { nowPlaying } from '$lib/stores/now-playing'
     import { sleepStore } from '$lib/stores/sleep'
     import { configStore, createAudioPreset } from '$lib/stores/config'
     import { NORMAL_VALUES, QUICK_PRESETS, quickPresetById } from '$lib/audio-effects/quick-presets'
@@ -88,6 +89,9 @@
             }
         })
         applyGlass(get(settingsStore))
+        // ?volume=120 gives the playing track a saved volume offset.
+        const volume = Number(params.get('volume'))
+        if (volume > 0) await nowPlaying.updateState({ volume })
         // ?sleep=23 sets a sleep timer 23 minutes out; ?sleep=track, at the track's end.
         const sleep = params.get('sleep')
         if (sleep === 'track') await sleepStore.start('track')
