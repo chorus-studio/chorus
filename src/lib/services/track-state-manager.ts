@@ -2,6 +2,7 @@ import { get } from 'svelte/store'
 import { seekStore } from '$lib/stores/seek'
 import { playbackStore, defaultPlayback } from '$lib/stores/playback'
 import { nowPlaying } from '$lib/stores/now-playing'
+import { dispatchTrackVolume } from '$lib/utils/track-volume'
 
 /**
  * Manages track state and playback settings
@@ -31,5 +32,7 @@ export class TrackStateManager {
         const currentSong = get(nowPlaying)
         const track = currentSong?.playback ?? defaultPlayback
         await playbackStore.updatePlayback({ track, is_default: !currentSong?.playback })
+        // Its volume offset rides along; a track without one plays at 1×.
+        dispatchTrackVolume(currentSong?.volume)
     }
 }

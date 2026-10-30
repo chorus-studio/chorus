@@ -140,6 +140,20 @@ export default class MediaOverride {
         }
     }
 
+    /** The sleep timer's fade (seconds) and the restore once paused. */
+    sleepFade(seconds: number): void {
+        this.audioManager?.fadeOut(seconds)
+    }
+
+    sleepRestore(): void {
+        this.audioManager?.restoreGain()
+    }
+
+    /** The playing track's volume offset, as a factor on the volume. */
+    updateTrackVolume(factor: number): void {
+        this.audioManager?.setTrackGain(factor)
+    }
+
     updateCurrentTime(data: number): void {
         this.source.currentTime = data
     }

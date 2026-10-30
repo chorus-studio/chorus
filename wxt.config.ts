@@ -166,6 +166,10 @@ export default defineConfig({
                 suggested_key: { default: 'Alt+Shift+B' },
                 description: 'Add track to block list'
             },
+            'snip-mark': {
+                suggested_key: { default: 'Alt+Shift+M' },
+                description: 'Mark a snip: press at the start, again at the end'
+            },
             'show-track': {
                 description: 'Show current track as a notification'
             },
