@@ -202,6 +202,21 @@
         return () => clearInterval(tick)
     })
 
+    // ?dialog=auto-skip&artists=M83,Drake&min=60 seeds blocked artists and a length limit.
+    onMount(async () => {
+        if (dialog !== 'auto-skip') return
+        const artists = (params.get('artists') ?? '')
+            .split(',')
+            .map((a) => a.trim())
+            .filter(Boolean)
+        const min = Number(params.get('min')) || 0
+        if (!artists.length && !min) return
+        await new Promise((resolve) => setTimeout(resolve, 20))
+        await configStore.updateConfig({
+            auto_skip: { ...get(configStore).auto_skip, enabled: true, artists, min_seconds: min }
+        })
+    })
+
     // ?dialog=backup seeds the same blocked tracks plus two snips, saved presets
     // and a Mine slot so the Backup tab's counts read; &backup=done adds a
     // backup made three days ago.
