@@ -819,6 +819,12 @@ a[data-encore-id='box'] {
     position: relative;
     isolation: isolate;
     background-color: transparent !important;
+    /* Room inside the panel: the panel starts one gap in (the bleed), so the
+       controls get a gap above and below and two at the sides. The bar grows
+       by two gaps; its negative margin keeps the grid row at the same height
+       as before plus those two gaps. */
+    height: calc(48px + var(--panel-gap, 8px) * 4) !important;
+    padding: calc(var(--panel-gap, 8px) * 2) calc(var(--panel-gap, 8px) * 3) !important;
 }
 
 #global-nav-bar::before,
@@ -832,6 +838,10 @@ a[data-encore-id='box'] {
 }
 
 [data-testid='now-playing-bar'] {
+    box-sizing: border-box;
     border-radius: var(--br-2);
     background-color: var(--chorus-main) !important;
+    /* The controls already sit a gap and a half from the top and bottom; the
+       sides get two gaps to match the top bar. */
+    padding-inline: calc(var(--panel-gap, 8px) * 2);
 }
