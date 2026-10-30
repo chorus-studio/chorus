@@ -7,6 +7,8 @@
     import SnipPlayback from '$lib/components/SnipPlayback.svelte'
     import SnipSections from '$lib/components/SnipSections.svelte'
     import SnipTimeline from '$lib/components/SnipTimeline.svelte'
+    import SnipLyrics from '$lib/components/SnipLyrics.svelte'
+    import { snipSubView } from '$lib/stores/effects-ui'
 
     let { pip = false }: { pip?: boolean } = $props()
     void pip
@@ -20,6 +22,8 @@
     }
 
     onMount(seed)
+    // Leaving the tab leaves the lyrics picker too; it opens on the editor next time.
+    onMount(() => () => snipSubView.set('editor'))
 
     // Re-seed when the track changes (or its duration first becomes known) and
     // when the saved snip changes (save/delete here or from the popup window),
@@ -42,10 +46,15 @@
 </script>
 
 <!-- Four rows spread evenly over the tab: what the sections do and which one
-     is selected, the timeline, the selected section's bounds, and playback. -->
-<div class="flex h-full flex-col justify-between gap-y-2">
-    <SnipSections />
-    <SnipTimeline />
-    <SnipInputs />
-    <SnipPlayback />
-</div>
+     is selected, the timeline, the selected section's bounds, and playback.
+     The sections row drills down into the lyrics picker. -->
+{#if $snipSubView === 'lyrics'}
+    <SnipLyrics onBack={() => snipSubView.set('editor')} />
+{:else}
+    <div class="flex h-full flex-col justify-between gap-y-2">
+        <SnipSections />
+        <SnipTimeline />
+        <SnipInputs />
+        <SnipPlayback />
+    </div>
+{/if}
