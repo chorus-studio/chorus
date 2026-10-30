@@ -3,7 +3,6 @@ import { mount, unmount } from 'svelte'
 import { MatchPattern } from 'wxt/sandbox'
 import { applyLook, removeTheme } from '$lib/utils/theming'
 import { type VolumeState } from '$lib/stores/volume'
-import { CONFIG_STORE_KEY, type ConfigState } from '$lib/stores/config'
 import { closePictureInPicture } from '$lib/utils/pip'
 import { playbackObserver } from '$lib/observers/playback'
 import { tracklistObserver } from '$lib/observers/tracklist'
@@ -70,12 +69,6 @@ async function handleMediaPlayInit() {
     const volume = await storage.getItem<VolumeState>('local:chorus_volume')
     if (volume) {
         window.postMessage({ type: 'FROM_VOLUME_LISTENER', data: volume }, '*')
-    }
-    // The output limiter is on unless the settings say otherwise; the chain
-    // just built needs to hear about an "off" (the Audio tab's A/B switch).
-    const config = await storage.getItem<ConfigState>(CONFIG_STORE_KEY)
-    if (config?.output_limiter === false) {
-        window.postMessage({ type: 'FROM_LIMITER_LISTENER', data: { enabled: false } }, '*')
     }
 }
 
