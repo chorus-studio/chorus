@@ -12,6 +12,7 @@
     import SnipsDialog from '$lib/components/SnipsDialog.svelte'
     import { storage } from '@wxt-dev/storage'
     import { dataStore } from '$lib/stores/data'
+    import type { SimpleTrack } from '$lib/stores/data/cache'
     import TimeProgress from '$lib/components/TimeProgress.svelte'
     import VolumeSlider from '$lib/components/VolumeSlider.svelte'
     import LoopButton from '$lib/components/LoopButton.svelte'
@@ -299,6 +300,18 @@
                         cover: hex ? swatch(hex) : null,
                         snip: { mode, ranges: ranges.map(([start, end]) => ({ start, end })) },
                         snipped_at: age ? Date.now() - age : null
+                    }
+                })
+            }
+            // &bad=1 adds the kind of entry an old install can hold: no "title by
+            // artist" string and a snip in the pre-2.10 shape.
+            if (params.get('bad') === '1') {
+                await dataStore.updateTrack({
+                    track_id: 'legacy-entry',
+                    value: {
+                        track_id: 'legacy-entry',
+                        song_id: undefined as unknown as string,
+                        snip: { start_time: 10, end_time: 20 } as unknown as SimpleTrack['snip']
                     }
                 })
             }
