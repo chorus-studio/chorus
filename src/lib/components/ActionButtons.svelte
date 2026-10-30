@@ -79,7 +79,7 @@
 
         await dataStore.updateTrack({
             track_id: track.track_id!,
-            value: { snip: null }
+            value: { snip: null, snipped_at: null }
         })
 
         delete $nowPlaying.snip
@@ -125,9 +125,14 @@
         const snip: Snip = { mode: $snipStore.mode, ranges }
         if (snipsEqual(snip, defaultSnip(duration))) return
 
+        // The Snips dialog lists by this stamp and shows the cover.
         await dataStore.updateTrack({
             track_id: track.track_id!,
-            value: { snip }
+            value: {
+                snip,
+                snipped_at: Date.now(),
+                ...($nowPlaying.cover ? { cover: $nowPlaying.cover } : {})
+            }
         })
 
         await nowPlaying.updateState({ snip })

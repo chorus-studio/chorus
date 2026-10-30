@@ -9,6 +9,7 @@
     import PopupSubview from '$lib/components/PopupSubview.svelte'
     import ChorusConfigDialog from '$lib/components/ChorusConfigDialog.svelte'
     import BlockedTracksDialog from '$lib/components/BlockedTracksDialog.svelte'
+    import SnipsDialog from '$lib/components/SnipsDialog.svelte'
     import { storage } from '@wxt-dev/storage'
     import { dataStore } from '$lib/stores/data'
     import TimeProgress from '$lib/components/TimeProgress.svelte'
@@ -103,7 +104,8 @@
         ['Get Sun by Hiatus Kaiyote', '#b3833a', 90 * DAY]
     ] as const
     let ready = $state(
-        !['blocked', 'backup'].includes(dialog) && !['presets', 'fx', 'eq', 'ms'].includes(tab)
+        !['blocked', 'backup', 'snips'].includes(dialog) &&
+            !['presets', 'fx', 'eq', 'ms'].includes(tab)
     )
 
     // ?tab=fx&reverb=hall, ?tab=eq&eq=Rock and ?tab=ms&ms=wide seed the effect
@@ -234,6 +236,65 @@
         }
         ready = true
     })
+
+    // ?dialog=snips seeds six snipped tracks (both modes, one to four sections,
+    // mixed ages, one without a cover); &empty=1 leaves the list bare.
+    const SAMPLE_SNIPS: Array<[string, string | null, number, 'play' | 'skip', number[][]]> = [
+        ['Red Room by Hiatus Kaiyote', '#2b2b2b', 2 * 60 * 60 * 1000, 'play', [[42, 71]]],
+        ['Caliphate (feat. Vince Staples) by Earl Sweatshirt', '#5a3d2b', DAY, 'skip', [[0, 18]]],
+        [
+            'Weightless by Marconi Union',
+            '#3f5b73',
+            4 * DAY,
+            'play',
+            [
+                [95, 140],
+                [210, 262]
+            ]
+        ],
+        [
+            'Molasses by Hiatus Kaiyote',
+            '#b3833a',
+            9 * DAY,
+            'play',
+            [
+                [30, 62],
+                [118, 150],
+                [201, 240],
+                [300, 330]
+            ]
+        ],
+        [
+            'rwm by the booyah! kids',
+            null,
+            30 * DAY,
+            'skip',
+            [
+                [0, 12],
+                [150, 171]
+            ]
+        ],
+        ['Get Sun by Hiatus Kaiyote', '#8fb36b', 0, 'play', [[64, 125]]]
+    ]
+    onMount(async () => {
+        if (dialog !== 'snips') return
+        if (params.get('empty') !== '1') {
+            for (const [song_id, hex, age, mode, ranges] of SAMPLE_SNIPS) {
+                const track_id = song_id.toLowerCase().replace(/[^a-z0-9]+/g, '-')
+                await dataStore.updateTrack({
+                    track_id,
+                    value: {
+                        track_id,
+                        song_id,
+                        cover: hex ? swatch(hex) : null,
+                        snip: { mode, ranges: ranges.map(([start, end]) => ({ start, end })) },
+                        snipped_at: age ? Date.now() - age : null
+                    }
+                })
+            }
+        }
+        ready = true
+    })
 </script>
 
 <div class="dark relative min-h-screen p-6 text-ink-fg" style="background: {backdrop}">
@@ -312,6 +373,8 @@
                 {#if ready}<BlockedTracksDialog open />{/if}
             {:else if dialog === 'backup'}
                 {#if ready}<ChorusConfigDialog open initialTab="backup" />{/if}
+            {:else if dialog === 'snips'}
+                {#if ready}<SnipsDialog open />{/if}
             {:else}
                 <ChorusConfigDialog open initialTab={dialog || 'auto-skip'} />
             {/if}
