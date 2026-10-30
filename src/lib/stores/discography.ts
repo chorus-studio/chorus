@@ -40,15 +40,15 @@ function createDiscographyStore() {
         }
     }
 
-    const record = (play: Play) => persist(recordPlay(get(store), play))
+    const record = (play: Play, now?: number) => persist(recordPlay(get(store), play, now))
 
-    const trackArtist = (artist: { id: string; name: string }, listed: Listed[]) =>
-        persist(trackArtistIn(get(store), artist, listed))
+    const trackArtist = (artist: { id: string; name: string }, listed: Listed[], now?: number) =>
+        persist(trackArtistIn(get(store), artist, listed, now))
 
     const untrackArtist = (artist_id: string) => persist(untrackArtistIn(get(store), artist_id))
 
-    const trackAlbum = (artist: { id: string; name: string }, album: AlbumToTrack) =>
-        persist(trackAlbumIn(get(store), artist, album))
+    const trackAlbum = (artist: { id: string; name: string }, album: AlbumToTrack, now?: number) =>
+        persist(trackAlbumIn(get(store), artist, album, now))
 
     const untrackAlbum = (artist_id: string, album_id: string) =>
         persist(untrackAlbumIn(get(store), artist_id, album_id))

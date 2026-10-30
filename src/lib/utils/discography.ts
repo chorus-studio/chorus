@@ -12,6 +12,8 @@
  *    played (or from before tracking was opt-in).
  */
 export type ReleaseKind = 'album' | 'single' | 'compilation'
+/** Spotify's own release types, kept for labels; `kind` folds them for counting. */
+export type ReleaseType = 'ALBUM' | 'SINGLE' | 'EP' | 'COMPILATION'
 export type AlbumTrack = { id: string; name: string }
 
 export type AlbumProgress = {
@@ -21,6 +23,7 @@ export type AlbumProgress = {
     cover?: string | null
     /** How Spotify lists it; entries learnt from the bar have none and count as albums. */
     kind?: ReleaseKind
+    type?: ReleaseType
     /** Track count from the listing, the denominator until the track list is fetched. */
     total?: number
     tracks: AlbumTrack[]
@@ -79,6 +82,7 @@ export type Listed = {
     year: string | null
     cover: string | null
     kind: ReleaseKind
+    type?: ReleaseType
     total: number
 }
 
@@ -90,6 +94,7 @@ export type Play = {
         year?: string | null
         cover?: string | null
         kind?: ReleaseKind
+        type?: ReleaseType
         total?: number
         tracks: AlbumTrack[]
     }
@@ -97,6 +102,28 @@ export type Play = {
 }
 
 /** Spotify's release types folded into the three kinds that are counted; EPs count as singles. */
+export function releaseTypeOf(type: string | null | undefined): ReleaseType | undefined {
+    const upper = String(type ?? '').toUpperCase()
+    return upper === 'ALBUM' || upper === 'SINGLE' || upper === 'EP' || upper === 'COMPILATION'
+        ? upper
+        : undefined
+}
+
+/** "Album", "Single", "EP" or "Compilation", from the type when known, else the kind. */
+export function releaseLabel(album: Pick<AlbumProgress, 'kind' | 'type'>): string {
+    switch (album.type) {
+        case 'EP':
+            return 'EP'
+        case 'SINGLE':
+            return 'Single'
+        case 'COMPILATION':
+            return 'Compilation'
+        case 'ALBUM':
+            return 'Album'
+    }
+    return album.kind === 'single' ? 'Single' : album.kind === 'compilation' ? 'Compilation' : 'Album'
+}
+
 export function kindOf(type: string | null | undefined): ReleaseKind {
     switch (String(type ?? '').toUpperCase()) {
         case 'SINGLE':
@@ -177,6 +204,7 @@ export function recordPlay(
         year: play.album.year ?? null,
         cover: play.album.cover ?? null,
         ...(play.album.kind && { kind: play.album.kind }),
+        ...(play.album.type && { type: play.album.type }),
         ...(play.album.total && { total: play.album.total }),
         tracks: play.album.tracks,
         heard: [],
@@ -240,6 +268,7 @@ export function trackArtist(
             year: release.year ?? old?.year ?? null,
             cover: release.cover ?? old?.cover ?? null,
             kind: release.kind,
+            ...((release.type ?? old?.type) && { type: release.type ?? old?.type }),
             total: release.total,
             tracks: old?.tracks ?? [],
             heard: old?.heard ?? [],
@@ -299,6 +328,7 @@ export function trackAlbum(
                     year: album.year ?? old?.year ?? null,
                     cover: album.cover ?? old?.cover ?? null,
                     ...((album.kind ?? old?.kind) && { kind: album.kind ?? old?.kind }),
+                    ...((album.type ?? old?.type) && { type: album.type ?? old?.type }),
                     ...((album.total ?? old?.total) && { total: album.total ?? old?.total }),
                     tracks: album.tracks?.length ? album.tracks : (old?.tracks ?? []),
                     heard: old?.heard ?? [],

@@ -11,6 +11,8 @@ import {
     migratePrefs,
     nextUnheard,
     recordPlay,
+    releaseLabel,
+    releaseTypeOf,
     resumeTarget,
     scopeOf,
     shouldRecord,
@@ -85,6 +87,16 @@ describe('recordPlay', () => {
 })
 
 describe('kinds and variants', () => {
+    it('labels a release by its Spotify type, else by its kind', () => {
+        expect(releaseLabel({ kind: 'single', type: 'EP' })).toBe('EP')
+        expect(releaseLabel({ kind: 'single', type: 'SINGLE' })).toBe('Single')
+        expect(releaseLabel({ kind: 'single' })).toBe('Single')
+        expect(releaseLabel({ kind: 'compilation' })).toBe('Compilation')
+        expect(releaseLabel({})).toBe('Album')
+        expect(releaseTypeOf('ep')).toBe('EP')
+        expect(releaseTypeOf('mixtape')).toBeUndefined()
+    })
+
     it('folds Spotify release types into album, single and compilation', () => {
         expect(kindOf('ALBUM')).toBe('album')
         expect(kindOf('SINGLE')).toBe('single')

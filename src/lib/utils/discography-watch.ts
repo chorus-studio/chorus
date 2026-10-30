@@ -45,6 +45,7 @@ export function watchDiscography(): () => void {
                   year: known.year,
                   cover: known.cover,
                   kind: known.kind,
+                  type: known.type,
                   total: known.total,
                   tracks: known.tracks
               }
@@ -59,6 +60,7 @@ export function watchDiscography(): () => void {
                 year: fetched?.year ?? album?.year ?? null,
                 cover: album?.cover ?? fetched?.cover ?? cover ?? null,
                 kind: album?.kind ?? fetched?.kind,
+                type: album?.type ?? fetched?.type,
                 total: album?.total,
                 tracks: fetched?.tracks ?? album?.tracks ?? []
             }

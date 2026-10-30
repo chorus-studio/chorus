@@ -13,7 +13,7 @@
     import BlockedTracksDialog from '$lib/components/BlockedTracksDialog.svelte'
     import SnipsDialog from '$lib/components/SnipsDialog.svelte'
     import DiscographyDialog from '$lib/components/DiscographyDialog.svelte'
-    import { discographyStore } from '$lib/stores/discography'
+    import { discographyPrefs, discographyStore } from '$lib/stores/discography'
     import { storage } from '@wxt-dev/storage'
     import { dataStore } from '$lib/stores/data'
     import type { SimpleTrack } from '$lib/stores/data/cache'
@@ -217,74 +217,143 @@
         ready = true
     })
 
-    // ?dialog=discography seeds two artists: one half-way through three albums,
-    // one with a single album finished.
+    // ?dialog=discography seeds one artist per kind of tracking: a listed
+    // discography part-way through (with a single, an EP and a deluxe edition
+    // for the counting chips), a listed discography not started, two albums
+    // tracked on their own (one finished) and an artist merely heard.
+    // &view=list|grid, &open=<artist id> drills the grid into one artist,
+    // &now=1 fakes a playing track by an untracked artist for the Now playing
+    // strip, &filters=singles,compilations,variants and &auto=1 preset the
+    // preferences.
     onMount(async () => {
         if (dialog !== 'discography') return
+        const now = Date.now()
+        const HOUR = 60 * 60 * 1000
         const tracks = (prefix: string, n: number) =>
             Array.from({ length: n }, (_, i) => ({
                 id: `${prefix}${i + 1}`,
                 name: `Track ${i + 1}`
             }))
-        const plays = [
-            [
-                'hk',
-                'Hiatus Kaiyote',
-                'mood',
-                'Mood Valiant',
-                '2021',
-                '#6b5a3e',
-                12,
-                ['mood1', 'mood2', 'mood3', 'mood4', 'mood5']
-            ],
-            [
-                'hk',
-                'Hiatus Kaiyote',
-                'choose',
-                'Choose Your Weapon',
-                '2015',
-                '#2b2b2b',
-                18,
-                ['choose1']
-            ],
-            [
-                'hk',
-                'Hiatus Kaiyote',
-                'tawk',
-                'Tawk Tomahawk',
-                '2012',
-                '#7a4a52',
-                9,
-                tracks('tawk', 9).map((t) => t.id)
-            ],
-            [
-                'tss',
-                'Thee Sacred Souls',
-                'tss1',
-                'Thee Sacred Souls',
-                '2022',
-                '#3f5b73',
-                12,
-                tracks('tss1', 12).map((t) => t.id)
-            ]
-        ] as const
-        let at = Date.now() - 40 * DAY
-        for (const [artist_id, artist, album_id, name, year, hex, total, heard] of plays) {
-            for (const track_id of heard) {
+        const listed = (
+            id: string,
+            name: string,
+            kind: 'album' | 'single' | 'compilation',
+            total: number,
+            year: string,
+            hex: string
+        ) => ({
+            id,
+            name,
+            kind,
+            type: (kind === 'single' && total <= 2 ? 'SINGLE' : kind === 'single' ? 'EP' : kind.toUpperCase()) as
+                | 'ALBUM'
+                | 'SINGLE'
+                | 'EP'
+                | 'COMPILATION',
+            total,
+            year,
+            cover: swatch(hex)
+        })
+        type Seed = { id: string; name: string; year: string; hex: string; total: number }
+        const hear = async (
+            artist: { id: string; name: string },
+            album: Seed,
+            ids: string[],
+            at: number
+        ) => {
+            for (const track_id of ids) {
                 at += 3 * 60 * 1000
-                await discographyStore.record({
-                    artist: { id: artist_id, name: artist },
-                    album: {
-                        id: album_id,
-                        name,
-                        year,
-                        cover: swatch(hex),
-                        tracks: tracks(album_id, total)
+                await discographyStore.record(
+                    {
+                        artist,
+                        album: {
+                            id: album.id,
+                            name: album.name,
+                            year: album.year,
+                            cover: swatch(album.hex),
+                            tracks: tracks(album.id, album.total)
+                        },
+                        track: { id: track_id, name: `Track ${track_id.replace(album.id, '')}` }
                     },
-                    track: { id: track_id, name: `Track ${track_id.replace(album_id, '')}` }
-                })
+                    at
+                )
             }
         }
+
+        const hk = { id: 'hk', name: 'Hiatus Kaiyote' }
+        const mood: Seed = { id: 'mood', name: 'Mood Valiant', year: '2021', hex: '#6b5a3e', total: 12 }
+        const choose: Seed = { id: 'choose', name: 'Choose Your Weapon', year: '2015', hex: '#2b2b2b', total: 18 }
+        const tawk: Seed = { id: 'tawk', name: 'Tawk Tomahawk', year: '2012', hex: '#7a4a52', total: 9 }
+        await discographyStore.trackArtist(
+            hk,
+            [
+                listed('moodx', 'Mood Valiant (Deluxe)', 'album', 15, '2022', '#7d6a48'),
+                listed('mood', 'Mood Valiant', 'album', 12, '2021', '#6b5a3e'),
+                listed('redroom', 'Red Room', 'single', 2, '2021', '#8a3b3b'),
+                listed('recal', 'Recalibrations Vol. 1', 'single', 4, '2017', '#4a6b5a'),
+                listed('choose', 'Choose Your Weapon', 'album', 18, '2015', '#2b2b2b'),
+                listed('tawk', 'Tawk Tomahawk', 'album', 9, '2012', '#7a4a52')
+            ],
+            now - 30 * DAY
+        )
+        await hear(hk, tawk, tracks('tawk', 9).map((t) => t.id), now - 25 * DAY)
+        await hear(hk, choose, ['choose1'], now - 20 * DAY)
+        await hear(hk, mood, ['mood1', 'mood2', 'mood3', 'mood4', 'mood5'], now - 2 * HOUR)
+
+        await discographyStore.trackArtist(
+            { id: 'ls', name: 'Little Simz' },
+            [
+                listed('lotus', 'Lotus', 'album', 13, '2025', '#3b5b8b'),
+                listed('simbi', 'Sometimes I Might Be Introvert', 'album', 19, '2021', '#b8862b'),
+                listed('grey', 'Grey Area', 'album', 10, '2019', '#8b8b8b')
+            ],
+            now - 40 * 60 * 1000
+        )
+
+        const tss = { id: 'tss', name: 'Thee Sacred Souls' }
+        const tss1: Seed = { id: 'tss1', name: 'Thee Sacred Souls', year: '2022', hex: '#3f5b73', total: 12 }
+        await discographyStore.trackAlbum(
+            tss,
+            { id: 'tss1', name: tss1.name, year: tss1.year, cover: swatch(tss1.hex), total: 12, tracks: tracks('tss1', 12) },
+            now - 10 * DAY
+        )
+        await hear(tss, tss1, tracks('tss1', 12).map((t) => t.id), now - 9 * DAY)
+
+        const cs = { id: 'cs', name: 'Cleo Sol' }
+        const mother: Seed = { id: 'mother', name: 'Mother', year: '2021', hex: '#c9a24a', total: 12 }
+        await discographyStore.trackAlbum(
+            cs,
+            { id: 'mother', name: mother.name, year: mother.year, cover: swatch(mother.hex), total: 12, tracks: tracks('mother', 12) },
+            now - 3 * DAY
+        )
+        await hear(cs, mother, ['mother1', 'mother2', 'mother3', 'mother4', 'mother5'], now - DAY)
+
+        await hear(
+            { id: 'sg', name: 'Santigold' },
+            { id: 'master', name: 'Master of My Make-Believe', year: '2012', hex: '#2f4f4f', total: 11 },
+            ['master1', 'master2', 'master3', 'master4'],
+            now - 5 * DAY
+        )
+
+        const picked = params.get('filters')?.split(',') ?? []
+        await discographyPrefs.setFilters({
+            singles: picked.includes('singles'),
+            compilations: picked.includes('compilations'),
+            hide_variants: picked.includes('variants')
+        })
+        if (params.get('auto') === '1') await discographyPrefs.setAutoTrack(true)
+        const discographyView = params.get('view')
+        if (discographyView === 'grid' || discographyView === 'list')
+            await storage.setItem('local:chorus_discography_view', discographyView)
+        if (params.get('now') === '1')
+            nowPlaying.update((s) => ({
+                ...s,
+                track_id: 'quiet3',
+                title: 'Umi Goes to the Garden',
+                artist: 'Dana and Alden',
+                cover: swatch('#7a4f2a'),
+                album_id: 'quiet'
+            }))
         ready = true
     })
 
@@ -584,7 +653,14 @@
             {:else if dialog === 'snips'}
                 {#if ready}<SnipsDialog open />{/if}
             {:else if dialog === 'discography'}
-                {#if ready}<DiscographyDialog open />{/if}
+                {#if ready}<DiscographyDialog open drillInto={params.get('open')} />{/if}
+                {#if params.get('now') === '1'}
+                    <!-- the bar's links, which the dialog reads the playing artist from -->
+                    <div data-testid="now-playing-widget-v2" hidden>
+                        <a href="/artist/dna">Dana and Alden</a>
+                        <a href="/album/quiet">Quiet Music for Young People</a>
+                    </div>
+                {/if}
             {:else}
                 <ChorusConfigDialog open initialTab={dialog || 'auto-skip'} />
             {/if}

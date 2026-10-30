@@ -37,6 +37,7 @@ export async function trackOneAlbum(
         year: fetched?.year ?? null,
         cover: fetched?.cover ?? album.cover ?? null,
         kind: fetched?.kind,
+        type: fetched?.type,
         total: fetched?.tracks.length || undefined,
         tracks: fetched?.tracks ?? []
     })

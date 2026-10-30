@@ -1,6 +1,6 @@
 import { defineProxyService } from '@webext-core/proxy-service'
 import { BaseAPIService } from '../base-service'
-import { kindOf, type Listed } from '$lib/utils/discography'
+import { kindOf, releaseTypeOf, type Listed } from '$lib/utils/discography'
 
 const API_URL = 'https://api-partner.spotify.com/pathfinder/v2/query'
 
@@ -41,6 +41,7 @@ function toListed(item: any): Listed | null {
         year,
         cover: pickCover(item?.coverArt?.sources),
         kind: kindOf(item?.type),
+        type: releaseTypeOf(item?.type),
         total: Number.isFinite(total) && total > 0 ? total : 0
     }
 }
