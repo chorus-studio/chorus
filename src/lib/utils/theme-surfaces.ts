@@ -117,9 +117,13 @@ const LIGHTNESS_MIN = 0
 /** Lifts aim slightly past the target so the rounded triplet still clears it. */
 const CONTRAST_MARGIN = 0.05
 
-/** Light rack: a near-white base with a pastel hint of the palette's hue. */
-const LIGHT_INK_LIGHTNESS = 96
-const LIGHT_RACK_SATURATION_MAX = 35
+/**
+ * Light rack: a pastel base in the palette's hue, a clear step lighter than
+ * the light page's panels (LIGHT_PAGE.main) so a dialog still floats, but far
+ * enough from white to read as the theme (an earlier 96 / 35 read as white).
+ */
+const LIGHT_INK_LIGHTNESS = 91
+const LIGHT_RACK_SATURATION_MAX = 60
 const LIGHT_INK_FG_LIGHTNESS = 10
 /** Pastel accents darkened at full saturation turn neon; rein them in first. */
 const LIGHT_SIGNAL_SATURATION_MAX = 80
@@ -130,23 +134,28 @@ const DARK_SHADOW_ALPHA = '0.9'
 
 /**
  * Light page palette: lightness of each page surface. The page keeps the
- * palette's saturation (capped) so it reads as a pale version of the theme
- * rather than as white with an accent: the dark palettes sit at 30-40%
- * lightness at full chroma, and this ladder mirrors that from the other end.
+ * palette's saturation (capped) and sits in the low 80s, so it reads as a
+ * pastel of the theme (sky blue for artic, bubblegum for hot_pink) rather
+ * than as white with an accent; an earlier ladder in the mid 90s did read as
+ * white. The dark palettes sit at 10-40% lightness at full chroma, and this
+ * ladder mirrors that from the other end: panels, then the elevated step
+ * below them, then the hover step, with the frame the lightest so the panels
+ * float on it.
  */
 const LIGHT_PAGE = {
     saturationMax: 90,
     textSaturationMax: 70,
     subtextSaturationMax: 50,
-    main: 94,
-    sidebar: 90,
+    main: 84,
+    sidebar: 80,
     /** Spotify's #181818 surfaces; the frame itself is `shadow`, see `frameColor`. */
-    player: 97,
-    card: 86,
-    /** Hover fallback, scrollbar handle and seek-bar track: a clear step below the page. */
-    hover: 80,
+    player: 92,
+    /** Elevated controls (the search field, menus): a clear step below the panels. */
+    card: 74,
+    /** Hover fallback, scrollbar handle and seek-bar track: a step below that. */
+    hover: 68,
     /** Paints the app frame (the lightest step, so the panels and bars float on it) and the text on accent fills. */
-    shadow: 97,
+    shadow: 92,
     text: 13,
     subtext: 36
 }
@@ -431,7 +440,7 @@ export function clearThemeSurfaces(root: HTMLElement): void {
 }
 
 /**
- * The light version of a page palette: page surfaces become pale tints of the
+ * The light version of a page palette: page surfaces become pastels of the
  * palette's hue at the palette's own saturation, text goes near-black in the
  * same hue, and the accent is darkened until it reads as text on the main
  * surface (it is used for text and fills alike). `selected_row` is the accent
