@@ -5,8 +5,8 @@
     import { volumeStore } from '$lib/stores/volume'
     import { nowPlaying } from '$lib/stores/now-playing'
     import { setEnabled } from '$lib/stores/enabled'
-    import { settingsStore, type ThemeVibrancy, type PopupColours } from '$lib/stores/settings'
-    import { applyThemePopupPalette } from '$lib/utils/theming'
+    import { settingsStore } from '$lib/stores/settings'
+    import { watchSystemMode } from '$lib/utils/theming'
 
     import Bell from '@lucide/svelte/icons/bell'
     import BellOff from '@lucide/svelte/icons/bell-off'
@@ -22,10 +22,9 @@
     import VolumeSlider from '$lib/components/VolumeSlider.svelte'
     import TimeProgress from '$lib/components/TimeProgress.svelte'
     import MediaControls from '$lib/components/MediaControls.svelte'
-    import SelectVibrancy from '$lib/components/SelectVibrancy.svelte'
     import { formatRulerTime } from '$lib/utils/snip-time'
 
-    import { getColours, applyPalette } from '$lib/utils/vibrant-colors'
+    import { paintPopup, popupLookKey } from '$lib/utils/vibrant-colors'
     import { getCheckPermissionsService } from '$lib/utils/check-permissions'
     import { cn } from '$lib/utils.js'
 
@@ -45,8 +44,8 @@
     }
 
     let currentCover = $state($nowPlaying.cover)
-    let currentVibrancy = $state<ThemeVibrancy>($settingsStore.theme.vibrancy ?? 'Auto')
-    let currentPopupColours: PopupColours = $settingsStore.theme.popup ?? 'album'
+    // Colour source and appearance: a change to either repaints the popup.
+    let currentLook = popupLookKey($settingsStore)
 
     const glassOn = $derived(Boolean($settingsStore.ui.glass))
     // Quoted so a cover URL (or a data: URI) with spaces, quotes or
@@ -86,24 +85,11 @@
         })
     }
 
-    function getVibrancy(): ThemeVibrancy {
-        return $settingsStore.theme.vibrancy
-    }
-
-    async function loadColours() {
-        // "Popup: Theme" wears the rack tokens instead of the cover's palette.
-        if ($settingsStore.theme.popup === 'theme') {
-            applyThemePopupPalette(document.documentElement)
-            return
-        }
-        if ($nowPlaying.cover) {
-            const vibrancy = getVibrancy()
-            const { bg_colour = '#121212', text_colour = '#ffffff' } = await getColours({
-                url: $nowPlaying.cover,
-                vibrancy
-            })
-            applyPalette(document.documentElement, { bg_colour, text_colour })
-        }
+    // The popup wears the cover's colour in the current appearance, or the rack
+    // tokens when the Theme tab says "Popup: Theme". In PiP the variables land
+    // on the page root and pip.ts mirrors them into the PiP document.
+    function loadColours() {
+        return paintPopup(document.documentElement, $settingsStore, $nowPlaying.cover)
     }
 
     function openSpotify() {
@@ -137,20 +123,20 @@
             }
         })
 
-        const unsubscribeVibrancy = settingsStore.subscribe(async (state) => {
-            if (
-                state.theme.vibrancy !== currentVibrancy ||
-                state.theme.popup !== currentPopupColours
-            ) {
-                currentVibrancy = state.theme.vibrancy
-                currentPopupColours = state.theme.popup
+        const unsubscribeLook = settingsStore.subscribe(async (state) => {
+            const look = popupLookKey(state)
+            if (look !== currentLook) {
+                currentLook = look
                 await loadColours()
             }
         })
+        // "System" appearance follows the OS; repaint when it flips.
+        const unwatchSystem = watchSystemMode(() => loadColours())
 
         return () => {
             unsubscribeCover()
-            unsubscribeVibrancy()
+            unsubscribeLook()
+            unwatchSystem()
         }
     })
 
@@ -209,10 +195,6 @@
                     >
                         <AudioLines />
                     </button>
-                {/if}
-
-                {#if $settingsStore.ui.popup}
-                    <SelectVibrancy />
                 {/if}
 
                 {#if !$settingsStore.notifications.granted}

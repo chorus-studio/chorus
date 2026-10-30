@@ -1,269 +1,108 @@
+/**
+ * Paints the toolbar popup and the PiP player: node-vibrant reads the cover
+ * art, popup-palette.ts turns the swatches into a palette for the current
+ * appearance, and the result lands on the root as --bg / --text / --text-2 /
+ * --album-accent. "Popup: Theme" in the Theme tab points those variables at
+ * the rack tokens instead.
+ */
 import { Vibrant } from 'node-vibrant/browser'
-import { nowPlaying } from '$lib/stores/now-playing'
-import type { ThemeVibrancy } from '$lib/stores/settings'
+import type { SettingsState } from '$lib/stores/settings'
+import type { Mode } from '$lib/utils/theme-surfaces'
+import { applyThemePopupPalette, resolveMode } from '$lib/utils/theming'
+import {
+    derivePopupPalette,
+    neutralPopupPalette,
+    type PopupPalette,
+    type Swatch
+} from '$lib/utils/popup-palette'
 
-let text_colour: string | null = '#1bd954'
-let bg_colour: string | null = '#0a0a0a'
+export * from '$lib/utils/popup-palette'
 
-// Color cache
-const colorCache = new Map<string, { text_colour: string; bg_colour: string; timestamp: number }>()
-const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
-
-function isLight(hex: string): boolean {
-    const [r, g, b] = hexToRgb(hex).map(Number)
-    const brightness = (r * 299 + g * 587 + b * 114) / 1000
-    return brightness > 128
-}
-
-function hexToRgb(hex: string): [number, number, number] {
-    const bigint = parseInt(hex.replace('#', ''), 16)
-    const r = (bigint >> 16) & 255
-    const g = (bigint >> 8) & 255
-    const b = bigint & 255
-    return [r, g, b]
-}
-
-function rgbToHex([r, g, b]: [number, number, number]): string {
-    const rgb = (r << 16) | (g << 8) | (b << 0)
-    return `#${(0x1_00_00_00 + rgb).toString(16).slice(1)}`
-}
-
-function lightenDarkenColor(h: string, p: number): string {
-    return (
-        '#' +
-        [1, 3, 5]
-            .map((s) => parseInt(h.substring(s, s + 2), 16))
-            .map((c) => Math.round((c * (100 + p)) / 100))
-            .map((c) => (c < 255 ? c : 255))
-            .map((c) => c.toString(16).padStart(2, '0'))
-            .join('')
-    )
-}
-
-function rgbToHsl([r, g, b]: [number, number, number]): [number, number, number] {
-    ;(r /= 255), (g /= 255), (b /= 255)
-    const max = Math.max(r, g, b)
-    const min = Math.min(r, g, b)
-    let h = 0
-    let s = 0
-    const l = (max + min) / 2
-    if (max == min) {
-        h = s = 0 // achromatic
-    } else {
-        const d = max - min
-        s = l > 0.5 ? d / (2 - max - min) : d / (max + min)
-        switch (max) {
-            case r:
-                h = (g - b) / d + (g < b ? 6 : 0)
-                break
-            case g:
-                h = (b - r) / d + 2
-                break
-            case b:
-                h = (r - g) / d + 4
-                break
-        }
-        h /= 6
-    }
-    return [h, s, l]
-}
-
-function hslToRgb([h, s, l]: [number, number, number]): [number, number, number] {
-    let r
-    let g
-    let b
-    if (s == 0) {
-        r = g = b = l // achromatic
-    } else {
-        function hue2rgb(p: number, q: number, t: number) {
-            if (t < 0) t++
-            if (t > 1) t--
-            if (t < 1 / 6) return p + (q - p) * 6 * t
-            if (t < 1 / 2) return q
-            if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6
-            return p
-        }
-        const q = l < 0.5 ? l * (1 + s) : l + s - l * s
-        const p = 2 * l - q
-        r = hue2rgb(p, q, h + 1 / 3)
-        g = hue2rgb(p, q, h)
-        b = hue2rgb(p, q, h - 1 / 3)
-    }
-    return [r * 255, g * 255, b * 255]
-}
-
-function setLightness(hex: string, lightness: number) {
-    const hsl = rgbToHsl(hexToRgb(hex))
-    hsl[2] = lightness
-    return rgbToHex(hslToRgb(hsl))
-}
-
-async function getVibrant({
-    image,
-    vibrancy
-}: {
-    image: HTMLImageElement
-    vibrancy: ThemeVibrancy
-}) {
-    try {
-        if (vibrancy == 'Auto') {
-            const variants = isLight(text_colour ?? '#1bd954')
-                ? ['Vibrant', 'DarkVibrant', 'Muted', 'LightVibrant']
-                : ['Vibrant', 'LightVibrant', 'Muted', 'DarkVibrant']
-            const palettes = await new Vibrant(image).getPalettes()
-
-            for (const variant of variants) {
-                if (palettes.default.hasOwnProperty(variant) && palettes.default[variant]) {
-                    text_colour = palettes.default[variant]!.hex
-                    bg_colour = palettes.default[variant]!.bodyTextColor
-                    break
-                }
-            }
-            return { text_colour, bg_colour }
-        }
-
-        const palette = await new Vibrant(image).getPalette()
-        return { text_colour: palette[vibrancy]!.hex, bg_colour: palette[vibrancy]!.bodyTextColor }
-    } catch (err) {
-        console.error(err)
-        return { text_colour, bg_colour }
-    }
-}
+const cache = new Map<string, { palette: PopupPalette; timestamp: number }>()
+const CACHE_DURATION = 5 * 60 * 1000
 
 function loadImage(url: string, element: HTMLImageElement): Promise<void> {
     return new Promise((resolve, reject) => {
         element.onload = () => resolve()
         element.onerror = reject
-        element.src = url
         element.crossOrigin = 'anonymous'
+        element.src = url
     })
 }
 
-async function getColours({ url, vibrancy }: { url: string; vibrancy: ThemeVibrancy }) {
-    // Check cache first
-    const cacheKey = `${url}_${vibrancy}`
-    const cached = colorCache.get(cacheKey)
+async function coverSwatches(url: string): Promise<Swatch[]> {
+    const image = new Image(64, 64)
+    await loadImage(url, image)
+    const palette = await new Vibrant(image).getPalette()
+    return Object.values(palette)
+        .filter((swatch) => swatch != null)
+        .map((swatch) => ({ hex: swatch.hex, population: swatch.population }))
+}
 
-    if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
-        await nowPlaying.updateState({
-            text_colour: cached.text_colour,
-            bg_colour: cached.bg_colour
-        })
-        return { text_colour: cached.text_colour, bg_colour: cached.bg_colour }
-    }
+/** The cover's popup palette for the mode; a cover that cannot be read gets the neutral one, uncached. */
+export async function getColours({
+    url,
+    mode
+}: {
+    url: string
+    mode: Mode
+}): Promise<PopupPalette> {
+    const key = `${mode}|${url}`
+    const cached = cache.get(key)
+    if (cached && Date.now() - cached.timestamp < CACHE_DURATION) return cached.palette
 
-    // Use requestIdleCallback for non-critical color processing
-    return new Promise<{ text_colour: string; bg_colour: string }>((resolve) => {
-        const processColors = async () => {
-            let img: HTMLImageElement | null = new Image(64, 64)
-
+    return new Promise<PopupPalette>((resolve) => {
+        const run = async () => {
             try {
-                await loadImage(url, img)
-                const colors = await getVibrant({ image: img, vibrancy })
-
-                // Cache the result
-                colorCache.set(cacheKey, {
-                    text_colour: colors.text_colour!,
-                    bg_colour: colors.bg_colour!,
-                    timestamp: Date.now()
-                })
-
-                await nowPlaying.updateState({
-                    text_colour: colors.text_colour,
-                    bg_colour: colors.bg_colour
-                })
-                resolve({ text_colour: colors.text_colour!, bg_colour: colors.bg_colour! })
+                const palette = derivePopupPalette(await coverSwatches(url), mode)
+                cache.set(key, { palette, timestamp: Date.now() })
+                resolve(palette)
             } catch (error) {
-                console.error('Color processing error:', error)
-                resolve({ text_colour: text_colour!, bg_colour: bg_colour! })
-            } finally {
-                img = null
+                console.error('[chorus] cover colours:', error)
+                resolve(neutralPopupPalette(mode))
             }
         }
-
-        // Use requestIdleCallback if available, otherwise setTimeout
-        if ('requestIdleCallback' in window) {
-            ;(window as any).requestIdleCallback(processColors, { timeout: 5000 })
-        } else {
-            setTimeout(processColors, 0)
-        }
+        // Colour work waits for an idle moment so a track change in the page
+        // (PiP) is not made jankier by it.
+        if ('requestIdleCallback' in window) window.requestIdleCallback(run, { timeout: 2000 })
+        else setTimeout(run, 0)
     })
 }
 
-// ---- Legibility helpers for the album-coloured popup ----------------------
-
-function channel(c: number) {
-    const v = c / 255
-    return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4)
+/** Push a palette onto the popup/PiP root as CSS variables. */
+export function applyPalette(root: HTMLElement, palette: PopupPalette): PopupPalette {
+    root.style.setProperty('--bg', palette.bg)
+    root.style.setProperty('--text', palette.text)
+    root.style.setProperty('--text-2', palette.text2)
+    root.style.setProperty('--album-accent', palette.accent)
+    return palette
 }
 
-export function relativeLuminance(hex: string): number {
-    const [r, g, b] = hexToRgb(hex)
-    return 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b)
+/** The settings that decide the popup's colours; repaint when it changes. */
+export function popupLookKey(settings: SettingsState): string {
+    return `${settings.theme?.popup}|${settings.theme?.appearance}`
 }
 
-/** WCAG contrast ratio between two hex colours (1..21). */
-export function contrastRatio(a: string, b: string): number {
-    const la = relativeLuminance(a)
-    const lb = relativeLuminance(b)
-    const [hi, lo] = la > lb ? [la, lb] : [lb, la]
-    return (hi + 0.05) / (lo + 0.05)
-}
-
-export const SIGNAL_GREEN = '#1ed760'
+const paints = new WeakMap<HTMLElement, number>()
 
 /**
- * The album palette drives the popup, but legibility can't depend on the
- * cover: if Vibrant's text colour doesn't clear 4.5:1 on the background, fall
- * back to plain white or near-black, whichever reads better.
+ * Paint `root` for the settings: the rack tokens for "Popup: Theme", else the
+ * cover's palette in the current appearance (neutral while nothing plays).
+ * A paint that is overtaken by a newer one for the same root is dropped.
  */
-export function readableText(bg: string, candidate: string | null | undefined): string {
-    if (candidate && contrastRatio(bg, candidate) >= 4.5) return candidate
-    return contrastRatio(bg, '#ffffff') >= contrastRatio(bg, '#121212') ? '#ffffff' : '#121212'
-}
-
-/** Spotify green for active states when it clears 3:1 on the album colour, else the text colour. */
-export function pickAccent(bg: string, text: string): string {
-    return contrastRatio(bg, SIGNAL_GREEN) >= 3 ? SIGNAL_GREEN : text
-}
-
-/** Mix `text` at `alpha` over `bg` for secondary text, as a hex colour. */
-export function mixHex(fg: string, bg: string, alpha: number): string {
-    const f = hexToRgb(fg)
-    const b = hexToRgb(bg)
-    const out = f.map((c, i) => Math.round(c * alpha + b[i] * (1 - alpha))) as [
-        number,
-        number,
-        number
-    ]
-    return rgbToHex(out)
-}
-
-/**
- * Push the palette onto the popup/PiP root as CSS variables:
- *   --bg, --text, --text-2 (secondary text), --accent (adaptive green).
- */
-export function applyPalette(
+export async function paintPopup(
     root: HTMLElement,
-    { bg_colour, text_colour }: { bg_colour: string; text_colour: string | null | undefined }
-) {
-    const bg = bg_colour
-    const text = readableText(bg, text_colour)
-    root.style.setProperty('--bg', bg)
-    root.style.setProperty('--text', text)
-    root.style.setProperty('--text-2', mixHex(text, bg, 0.72))
-    root.style.setProperty('--album-accent', pickAccent(bg, text))
-    return { bg, text }
-}
-
-export {
-    getColours,
-    getVibrant,
-    isLight,
-    setLightness,
-    hexToRgb,
-    rgbToHex,
-    rgbToHsl,
-    hslToRgb,
-    lightenDarkenColor
+    settings: SettingsState,
+    cover: string | null | undefined
+): Promise<void> {
+    const paint = (paints.get(root) ?? 0) + 1
+    paints.set(root, paint)
+    if (settings.theme?.popup === 'theme') {
+        applyThemePopupPalette(root)
+        return
+    }
+    const mode = resolveMode(settings.theme?.appearance)
+    const palette = cover ? await getColours({ url: cover, mode }) : neutralPopupPalette(mode)
+    if (paints.get(root) !== paint) return
+    applyPalette(root, palette)
 }

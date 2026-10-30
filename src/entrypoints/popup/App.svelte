@@ -4,10 +4,10 @@
 
     import { nowPlaying } from '$lib/stores/now-playing'
     import { get } from 'svelte/store'
-    import { getColours, applyPalette } from '$lib/utils/vibrant-colors'
-    import { applyRackLook, applyThemePopupPalette, watchSystemMode } from '$lib/utils/theming'
+    import { paintPopup } from '$lib/utils/vibrant-colors'
+    import { applyRackLook, watchSystemMode } from '$lib/utils/theming'
     import { getEnabled, setEnabled, watchEnabled } from '$lib/stores/enabled'
-    import { settingsStore, type ThemeVibrancy } from '$lib/stores/settings'
+    import { settingsStore } from '$lib/stores/settings'
 
     import Logo from '$lib/components/Logo.svelte'
     import PopUp from '$lib/components/views/PopUp.svelte'
@@ -26,27 +26,11 @@
     // Only expose vocal separation if this device can actually run it (WebGPU etc).
     let vocalSupported = $state(false)
 
-    function getVibrancy(): ThemeVibrancy {
-        return $settingsStore.theme.vibrancy
-    }
-
-    async function loadColours() {
-        // "Popup: Theme" points the palette variables at the rack tokens, which
-        // applyRackLook keeps in step with the chosen palette and appearance.
-        if ($settingsStore.theme.popup === 'theme') {
-            applyThemePopupPalette(document.documentElement)
-            return
-        }
-        if (!$nowPlaying.cover) return
-
-        const vibrancy = getVibrancy()
-        const { bg_colour = '#121212', text_colour = '#ffffff' } = await getColours({
-            url: $nowPlaying.cover,
-            vibrancy
-        })
-
-        const { bg, text } = applyPalette(document.documentElement, { bg_colour, text_colour })
-        await nowPlaying.updateState({ bg_colour: bg, text_colour: text })
+    // First paint before the player mounts, so the loading frame already wears
+    // the cover's colour (or the rack tokens for "Popup: Theme"); PopUp keeps
+    // it current from there.
+    function loadColours() {
+        return paintPopup(document.documentElement, get(settingsStore), $nowPlaying.cover)
     }
 
     async function init() {
@@ -64,16 +48,9 @@
         })
         const unwatch = watchEnabled((value) => (enabled = value))
 
-        // Rack tokens (palette, appearance, glass) and the popup's colour source
-        // follow settings; changes made on the page arrive here through storage.
-        let popupColours = $settingsStore.theme.popup
-        const unsubscribeLook = settingsStore.subscribe((s) => {
-            applyRackLook(s, document)
-            if (s.theme.popup !== popupColours) {
-                popupColours = s.theme.popup
-                loadColours()
-            }
-        })
+        // Rack tokens (palette, appearance, glass) follow settings; changes made
+        // on the page arrive here through storage.
+        const unsubscribeLook = settingsStore.subscribe((s) => applyRackLook(s, document))
         const unwatchSystem = watchSystemMode(() => applyRackLook(get(settingsStore), document))
 
         return () => {

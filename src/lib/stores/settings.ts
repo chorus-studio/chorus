@@ -6,15 +6,6 @@ import { syncWithType } from '$lib/utils/store-utils'
 export const SETTINGS_STORE_KEY = 'local:chorus_settings'
 
 export type SettingsKey = 'ui' | 'views' | 'notifications' | 'theme'
-export type ThemeVibrancy =
-    | 'Vibrant'
-    | 'DarkVibrant'
-    | 'LightVibrant'
-    | 'DarkMuted'
-    | 'LightMuted'
-    | 'Muted'
-    | 'Auto'
-
 /** Dark or light rack (and page, while a theme is applied); `system` follows the OS. */
 export type Appearance = 'dark' | 'light' | 'system'
 /** Where the toolbar popup and PiP player take their colours from. */
@@ -32,7 +23,6 @@ export type SettingsState = {
         theme: boolean
         glass: boolean
         playlist: boolean
-        popup: boolean
         volume: boolean
         progress: boolean
     }
@@ -52,7 +42,6 @@ export type SettingsState = {
     }
     theme: {
         name: ThemeName
-        vibrancy: ThemeVibrancy
         appearance: Appearance
         popup: PopupColours
         glass: GlassSettings
@@ -66,7 +55,6 @@ const defaultSettingsState: SettingsState = {
         pip: false,
         theme: false,
         glass: false,
-        popup: false,
         volume: false,
         progress: true,
         playlist: false
@@ -87,7 +75,6 @@ const defaultSettingsState: SettingsState = {
     },
     theme: {
         name: 'spotify' as ThemeName,
-        vibrancy: 'LightVibrant' as ThemeVibrancy,
         appearance: 'dark',
         popup: 'album',
         glass: DEFAULT_GLASS

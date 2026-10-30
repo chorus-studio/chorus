@@ -38,8 +38,6 @@
             duration: dur,
             current: dur === 244 ? 96 : Math.round(dur * 0.45),
             album_id: null,
-            text_colour: '#ffffff',
-            bg_colour: '#000000',
             snip: snipKey in snips ? snips[snipKey] : snips.play,
             playback: { rate: { value: 1.25, preserves_pitch: true }, pitch: 0, semitone: 0 },
             blocked: false

@@ -221,6 +221,18 @@
         inset 0 1px 0 color-mix(in srgb, var(--text) 30%, transparent),
         0 0 0 1px color-mix(in srgb, var(--text) 10%, transparent);
 }
+/* A light popup over a dark cover needs more of its own colour in the wash
+   for the dark text to read. */
+[data-mode='light'] .chorus-glass-tint {
+    background: linear-gradient(
+        180deg,
+        color-mix(in srgb, var(--bg) 78%, transparent),
+        color-mix(in srgb, var(--bg) 88%, transparent)
+    );
+}
+[data-mode='light'] .chorus-glass-card {
+    background: color-mix(in srgb, var(--bg) 55%, transparent);
+}
 @media (prefers-reduced-transparency: reduce) {
     [data-glass] .chorus-float {
         --surface-alpha: 1;
