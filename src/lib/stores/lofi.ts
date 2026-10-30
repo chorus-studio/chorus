@@ -4,6 +4,7 @@
 // one message apart: `replace`/`update` persist and send it, `tweak` only sends
 // it (throttled, for a slider mid-drag) and `commit` persists on release.
 import { get, writable } from 'svelte/store'
+import { featureOn } from '$lib/utils/features'
 import { storage } from '@wxt-dev/storage'
 import {
     DEFAULT_EFFECT_SETTINGS,
@@ -33,7 +34,9 @@ function createLofiStore() {
 
     function post(type: string) {
         if (typeof window !== 'undefined') {
-            window.postMessage({ type, data: get(store) }, '*')
+            // While sound effects are paused the rack hears every effect off.
+            const data = featureOn('effects') ? get(store) : defaultLofi
+            window.postMessage({ type, data }, '*')
         }
     }
 

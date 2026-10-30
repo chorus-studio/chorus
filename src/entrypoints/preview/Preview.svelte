@@ -82,6 +82,7 @@
         const current = get(settingsStore)
         // ?granted=1&on=1 seeds the header's notification control (Allow / off / on).
         const notificationsOn = params.get('on') === '1'
+        const paused = (params.get('paused') ?? '').split(',')
         await settingsStore.updateSettings({
             ui: { ...current.ui, glass },
             theme: {
@@ -94,6 +95,12 @@
                 granted: params.get('granted') === '1',
                 enabled: notificationsOn,
                 on_track_change: notificationsOn
+            },
+            // ?paused=snips,effects shows those features paused in the Settings footer.
+            features: {
+                snips: !paused.includes('snips'),
+                blocks: !paused.includes('blocks'),
+                effects: !paused.includes('effects')
             }
         })
         applyGlass(get(settingsStore))

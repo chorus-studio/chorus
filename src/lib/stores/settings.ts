@@ -5,7 +5,9 @@ import { syncWithType } from '$lib/utils/store-utils'
 
 export const SETTINGS_STORE_KEY = 'local:chorus_settings'
 
-export type SettingsKey = 'ui' | 'views' | 'notifications' | 'theme'
+export type SettingsKey = 'ui' | 'views' | 'notifications' | 'theme' | 'features'
+/** The pausable features (utils/features): true while active. */
+export type FeatureKey = 'snips' | 'blocks' | 'effects'
 /** Dark or light rack (and page, while a theme is applied); `system` follows the OS. */
 export type Appearance = 'dark' | 'light' | 'system'
 /** Where the toolbar popup takes its colours from (the PiP player always follows the theme). */
@@ -46,6 +48,7 @@ export type SettingsState = {
         popup: PopupColours
         glass: GlassSettings
     }
+    features: Record<FeatureKey, boolean>
 }
 
 export const DEFAULT_GLASS: GlassSettings = { opacity: 0.5, blur: 40, refraction: 22 }
@@ -78,7 +81,8 @@ const defaultSettingsState: SettingsState = {
         appearance: 'dark',
         popup: 'album',
         glass: DEFAULT_GLASS
-    }
+    },
+    features: { snips: true, blocks: true, effects: true }
 }
 
 /** `ui.frosted` became `ui.glass`; carry a saved "on" across so the panels don't go solid on update. */

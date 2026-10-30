@@ -1,4 +1,5 @@
 import { writable, get } from 'svelte/store'
+import { featureOn } from '$lib/utils/features'
 import { storage } from '@wxt-dev/storage'
 import { syncWithType } from '$lib/utils/store-utils'
 import { resolveReverbPreset } from '$lib/audio-effects/reverb/presets'
@@ -24,7 +25,8 @@ function createAudioEffectsStore() {
     let isUpdatingStorage = false
 
     function dispatchEffect() {
-        const effectData = get(effectsStore)
+        // While sound effects are paused the chain hears none; the stores keep the settings.
+        const effectData = featureOn('effects') ? get(effectsStore) : defaultAudioEffect
         if (typeof window !== 'undefined') {
             window.postMessage({ type: 'FROM_EFFECTS_LISTENER', data: effectData }, '*')
         }

@@ -28,6 +28,7 @@
     import Logo from '$lib/components/Logo.svelte'
     import SettingsInfo from '$lib/components/views/SettingsInfo.svelte'
     import ActionButtons from '$lib/components/ActionButtons.svelte'
+    import FeatureToggles from '$lib/components/FeatureToggles.svelte'
     import SegmentedControl from '$lib/components/SegmentedControl.svelte'
 
     import { dataStore } from '$lib/stores/data'
@@ -274,7 +275,9 @@
                 {/if}
             </div>
 
-            {#if activeTab !== 'settings'}
+            {#if activeTab === 'settings'}
+                <FeatureToggles />
+            {:else}
                 <ActionButtons tab={activeTab} />
             {/if}
         </footer>
