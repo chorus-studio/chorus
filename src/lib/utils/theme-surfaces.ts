@@ -23,6 +23,8 @@
 export type ThemeSurfaceSource = {
     main: string
     player: string
+    card: string
+    shadow: string
     text: string
     button: string
 }
@@ -115,9 +117,13 @@ const LIGHTNESS_MIN = 0
 /** Lifts aim slightly past the target so the rounded triplet still clears it. */
 const CONTRAST_MARGIN = 0.05
 
-/** Light rack: a near-white base with a pastel hint of the palette's hue. */
-const LIGHT_INK_LIGHTNESS = 96
-const LIGHT_RACK_SATURATION_MAX = 35
+/**
+ * Light rack: a pastel base in the palette's hue, a clear step lighter than
+ * the light page's panels (LIGHT_PAGE.main) so a dialog still floats, but far
+ * enough from white to read as the theme (an earlier 96 / 35 read as white).
+ */
+const LIGHT_INK_LIGHTNESS = 91
+const LIGHT_RACK_SATURATION_MAX = 60
 const LIGHT_INK_FG_LIGHTNESS = 10
 /** Pastel accents darkened at full saturation turn neon; rein them in first. */
 const LIGHT_SIGNAL_SATURATION_MAX = 80
@@ -128,25 +134,38 @@ const DARK_SHADOW_ALPHA = '0.9'
 
 /**
  * Light page palette: lightness of each page surface. The page keeps the
- * palette's saturation (capped) so it reads as a pale version of the theme
- * rather than as white with an accent: the dark palettes sit at 30-40%
- * lightness at full chroma, and this ladder mirrors that from the other end.
+ * palette's saturation (capped) and sits in the low 80s, so it reads as a
+ * pastel of the theme (sky blue for artic, bubblegum for hot_pink) rather
+ * than as white with an accent; an earlier ladder in the mid 90s did read as
+ * white. The dark palettes sit at 10-40% lightness at full chroma, and this
+ * ladder mirrors that from the other end: panels, then the elevated step
+ * below them, then the hover step, with the frame the lightest so the panels
+ * float on it.
  */
 const LIGHT_PAGE = {
     saturationMax: 90,
     textSaturationMax: 70,
     subtextSaturationMax: 50,
-    main: 94,
-    sidebar: 90,
-    /** Paints Spotify's black app frame and both bars: the lightest step, so the panels float on it. */
-    player: 97,
-    card: 86,
-    /** Hover fallback, scrollbar handle and seek-bar track: a clear step below the page. */
-    hover: 80,
-    shadow: 97,
+    main: 84,
+    sidebar: 80,
+    /** Spotify's #181818 surfaces; the frame itself is `shadow`, see `frameColor`. */
+    player: 92,
+    /** Elevated controls (the search field, menus): a clear step below the panels. */
+    card: 74,
+    /** Hover fallback, scrollbar handle and seek-bar track: a step below that. */
+    hover: 68,
+    /** Paints the app frame (the lightest step, so the panels and bars float on it) and the text on accent fills. */
+    shadow: 92,
     text: 13,
     subtext: 36
 }
+
+/**
+ * The frame keeps at least this many lightness points from `card`, the colour
+ * of the elevated controls that sit on it (the search field, the top bar's
+ * buttons), so they read as insets rather than vanish.
+ */
+const FRAME_CARD_GAP = 5
 
 type Rgb = [number, number, number]
 type Hsl = [number, number, number]
@@ -271,14 +290,32 @@ function fitLightness(hsl: Hsl, against: Rgb, wanted: number, mode: Mode): numbe
 }
 
 /**
+ * Colour of the app frame: the page behind Spotify's panels, seen in the gaps
+ * between them and around the top bar and the player bar (theme.css paints
+ * those two as panels of `main`). It is the palette's `shadow`, the slot that
+ * painted the frame before the rewrite split black into frame and text, so
+ * the page keeps the tint each palette chose for it; where `shadow` coincides
+ * with `card` (most palettes) the frame moves a half step lighter so anything
+ * in the card colour still reads on it. `player` is not used: most palettes
+ * set it equal to `main`, which left frame and panels one colour, and a step
+ * darker than a near-black `main` reads as plain black rather than as the theme.
+ */
+export function frameColor({ card, shadow }: Pick<ThemeSurfaceSource, 'card' | 'shadow'>): string {
+    const [h, s, l] = hexToHsl(shadow)
+    const cardLightness = hexToHsl(card)[2]
+    if (Math.abs(l - cardLightness) >= FRAME_CARD_GAP) return shadow
+    return hslToHex(h, s, cardLightness + FRAME_CARD_GAP)
+}
+
+/**
  * Colour for active states on the themed player bar: the palette's accent,
  * lifted (or, on a light bar, darkened) if it has to be, else the theme's
- * text, else whichever of white / near-black reads best.
+ * text, else whichever of white / near-black reads best. theme.css paints the
+ * bar as a panel of `main`, so that is what the accent is checked against.
  */
-export function barSignal(
-    { player, text, button }: ThemeSurfaceSource,
-    mode: Mode = 'dark'
-): string {
+export function barSignal(theme: ThemeSurfaceSource, mode: Mode = 'dark'): string {
+    const { text, button } = theme
+    const player = theme.main
     const bar = hexToRgb(player)
     const [h, s0, l] = hexToHsl(button)
     const s = mode === 'light' ? Math.min(s0, LIGHT_SIGNAL_SATURATION_MAX) : s0
@@ -403,7 +440,7 @@ export function clearThemeSurfaces(root: HTMLElement): void {
 }
 
 /**
- * The light version of a page palette: page surfaces become pale tints of the
+ * The light version of a page palette: page surfaces become pastels of the
  * palette's hue at the palette's own saturation, text goes near-black in the
  * same hue, and the accent is darkened until it reads as text on the main
  * surface (it is used for text and fills alike). `selected_row` is the accent
@@ -429,6 +466,7 @@ export function invertPalette<T extends PagePalette>(palette: T): T {
         sidebar: hslToHex(hue, s, LIGHT_PAGE.sidebar),
         player: hslToHex(hue, s, LIGHT_PAGE.player),
         card,
+        // The app frame (frameColor) and the text on accent fills.
         shadow: hslToHex(hue, s, LIGHT_PAGE.shadow),
         text: hslToHex(hue, ts, LIGHT_PAGE.text),
         // Secondary text sits on hovered rows too, so it is checked against the hover colour.

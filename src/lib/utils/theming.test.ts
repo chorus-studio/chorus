@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { rewriteSpotifyCss } from './theming'
+import { frameColor } from './theme-surfaces'
 
 const overlay = (alpha: string) =>
     `rgba(var(--chorus-rgb-selected-row), calc(${alpha} * var(--chorus-overlay-gain, 1)))`
@@ -60,13 +61,13 @@ describe('rewriteSpotifyCss', () => {
 
     it('splits black between the app frame and the text on accent fills', () => {
         expect(rewriteSpotifyCss('.a{background-color:#000;color:#000}')).toBe(
-            '.a{background-color:var(--chorus-player) !important;color:var(--chorus-shadow) !important}'
+            '.a{background-color:var(--chorus-frame) !important;color:var(--chorus-shadow) !important}'
         )
         expect(rewriteSpotifyCss('.a{--background-press:#000;--text-base:#000;fill:#000000}')).toBe(
-            '.a{--background-press:var(--chorus-player) !important;--text-base:var(--chorus-shadow) !important;fill:var(--chorus-shadow) !important}'
+            '.a{--background-press:var(--chorus-frame) !important;--text-base:var(--chorus-shadow) !important;fill:var(--chorus-shadow) !important}'
         )
         expect(rewriteSpotifyCss('.a{background:linear-gradient(#000,#121212)}')).toBe(
-            '.a{background:linear-gradient(var(--chorus-player),var(--chorus-main)) !important}'
+            '.a{background:linear-gradient(var(--chorus-frame),var(--chorus-main)) !important}'
         )
     })
 
@@ -97,5 +98,21 @@ describe('rewriteSpotifyCss', () => {
         expect(rewriteSpotifyCss('.a {\n    color: #fff;\n    background: #121212\n}')).toBe(
             '.a {\n    color: var(--chorus-text) !important;\n    background: var(--chorus-main) !important\n}'
         )
+    })
+})
+
+describe('frameColor', () => {
+    it('keeps the palette shadow as the frame when it already clears the card colour', () => {
+        // cherry_blossom: a bright frame the palette chose on purpose
+        expect(frameColor({ card: '#86244e', shadow: '#c94277' })).toBe('#c94277')
+        // Spotify's own: black frame under #121212 panels
+        expect(frameColor({ card: '#282828', shadow: '#000000' })).toBe('#000000')
+    })
+
+    it('lifts the frame a half step above the card colour when the two coincide', () => {
+        // forest_green: a step darker than main would be black, not green
+        expect(frameColor({ card: '#123527', shadow: '#123527' })).toBe('#184835')
+        // hot_pink
+        expect(frameColor({ card: '#d31589', shadow: '#d31589' })).toBe('#e81998')
     })
 })

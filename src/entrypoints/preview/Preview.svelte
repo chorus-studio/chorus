@@ -34,7 +34,7 @@
         type ThemeName,
         type Mode
     } from '$lib/utils/theming'
-    import { invertPalette } from '$lib/utils/theme-surfaces'
+    import { frameColor, invertPalette } from '$lib/utils/theme-surfaces'
     import { DEFAULT_GLASS, settingsStore } from '$lib/stores/settings'
     import { nowPlaying } from '$lib/stores/now-playing'
     import { sleepStore } from '$lib/stores/sleep'
@@ -64,7 +64,8 @@
     const staticTheme = STATIC_THEMES[(params.get('theme') ?? 'spotify') as ThemeName]
     const themeConfig =
         mode === 'light' ? invertPalette(staticTheme ?? SPOTIFY_PALETTE) : staticTheme
-    const chrome = themeConfig?.player ?? '#000000'
+    // The page behind the rack wears the frame colour the theme derives for Spotify's frame.
+    const chrome = themeConfig ? frameColor(themeConfig) : '#000000'
     // ?glass=1 switches the glass surfaces on and paints a busy backdrop (album-like
     // colour fields and text) behind the frame so the blur has something to show.
     // ?popup=theme makes the popup wear the theme instead of the album palette.

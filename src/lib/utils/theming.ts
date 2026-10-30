@@ -19,7 +19,13 @@
 // ; notification-error = Error notification toast.
 // ; misc               = Miscellaneous.
 
-import { applyThemeSurfaces, clearThemeSurfaces, invertPalette, type Mode } from './theme-surfaces'
+import {
+    applyThemeSurfaces,
+    clearThemeSurfaces,
+    frameColor,
+    invertPalette,
+    type Mode
+} from './theme-surfaces'
 import type { Appearance, SettingsState } from '$lib/stores/settings'
 
 export type { Mode }
@@ -565,8 +571,10 @@ export const STATIC_THEMES: Record<ThemeName, null | Record<CSSVariable, string>
     }
 }
 
-const PAGE_VARS: Record<string, CSSVariable | 'highlight' | 'highlight-elevated'> = {
+const PAGE_VARS: Record<string, CSSVariable | 'highlight' | 'highlight-elevated' | 'frame'> = {
     main: 'main',
+    // The app frame around the panels: the palette's shadow, kept clear of card (theme-surfaces.ts frameColor).
+    frame: 'frame',
     card: 'card',
     // Spotify's elevated surfaces (context menus, the top bar's controls, the hover of main-level controls) take the card colour.
     'main-elevated': 'card',
@@ -616,7 +624,9 @@ export function applyPageVariables(
                 ? themeConfig.main
                 : key === 'highlight-elevated'
                   ? themeConfig.button_disabled
-                  : themeConfig[key]
+                  : key === 'frame'
+                    ? frameColor(themeConfig)
+                    : themeConfig[key]
         root.style.setProperty(`--chorus-${name}`, value)
         root.style.setProperty(`--chorus-rgb-${name}`, rgbTriplet(value))
     }
@@ -846,9 +856,12 @@ const HEX_END = '(?![0-9a-f])'
 // Every hex pattern ends in a lookahead, and longer alternatives come first,
 // so `#fff` never eats the start of `#ffffff1a` or `#ffffff`.
 //
-// Spotify's black is two things: the app frame (the gaps between the panels,
-// the top bar and the player bar) and the text on its bright-accent fills.
-// The frame takes the palette's `player` colour, the text its `shadow`.
+// Spotify's black is two things: the app frame (the page behind the panels,
+// the top bar and the player bar; theme.css then paints those two bars as
+// panels of `main`) and the text on its bright-accent fills. The frame takes
+// `--chorus-frame`: the palette's `shadow`, the colour that painted it before
+// this split, pushed a half step above `card` where the two coincide (see
+// theme-surfaces.ts frameColor). The text takes `shadow` itself.
 function replacementRules(): ReplacementRule[] {
     return [
         { target: `#ffffff([0-9a-f]{2})${HEX_END}`, replacement: translucentWhite },
@@ -863,7 +876,7 @@ function replacementRules(): ReplacementRule[] {
         { target: `#2a2a2a${HEX_END}`, replacement: 'var(--chorus-highlight-elevated)' },
         {
             target: `#(000000|000)${HEX_END}`,
-            replacement: 'var(--chorus-player)',
+            replacement: 'var(--chorus-frame)',
             properties: BACKGROUND_PROPERTY
         },
         { target: `#(000000|000)${HEX_END}`, replacement: 'var(--chorus-shadow)' },

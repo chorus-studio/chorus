@@ -202,9 +202,14 @@
         saturate(var(--glass-saturate));
     backdrop-filter: url(#chorus-glass) blur(var(--glass-blur)) saturate(var(--glass-saturate));
 }
-/* The dialog scrim is the dimming layer under the glass: a wash of the rack's
-   own ink (dark on a dark rack, white on a light one), so the page recedes
-   towards the panel's tint instead of towards black, and still shows through. */
+/* The dialog scrim is a wash of the rack's own ink (dark on a dark rack, a
+   pale tint on a light one), so the page recedes towards the theme instead of
+   towards black and still shows through; in light mode a black wash buried
+   the theme behind every dialog. Under glass it is the dimming layer, lighter
+   and without the blur, which the panel provides. */
+.chorus-scrim {
+    background-color: hsl(var(--ink) / 0.7);
+}
 [data-glass] .chorus-scrim {
     background-color: hsl(var(--ink) / 0.5);
     -webkit-backdrop-filter: none;
