@@ -140,6 +140,15 @@ export default class MediaOverride {
         }
     }
 
+    /** The sleep timer's fade (seconds) and the restore once paused. */
+    sleepFade(seconds: number): void {
+        this.audioManager?.fadeOut(seconds)
+    }
+
+    sleepRestore(): void {
+        this.audioManager?.restoreGain()
+    }
+
     updateCurrentTime(data: number): void {
         this.source.currentTime = data
     }

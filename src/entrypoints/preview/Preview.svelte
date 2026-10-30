@@ -31,6 +31,7 @@
     } from '$lib/utils/theming'
     import { invertPalette } from '$lib/utils/theme-surfaces'
     import { DEFAULT_GLASS, settingsStore } from '$lib/stores/settings'
+    import { sleepStore } from '$lib/stores/sleep'
     import { configStore, createAudioPreset } from '$lib/stores/config'
     import { NORMAL_VALUES, QUICK_PRESETS, quickPresetById } from '$lib/audio-effects/quick-presets'
     import { applyPresetValues } from '$lib/utils/quick-presets'
@@ -87,6 +88,11 @@
             }
         })
         applyGlass(get(settingsStore))
+        // ?sleep=23 sets a sleep timer 23 minutes out; ?sleep=track, at the track's end.
+        const sleep = params.get('sleep')
+        if (sleep === 'track') await sleepStore.start('track')
+        else if (sleep && Number(sleep) > 0)
+            await sleepStore.start(15, Date.now() + (Number(sleep) - 15) * 60_000)
     })
 
     // ?dialog=blocked&view=grid seeds a few blocked tracks (solid-colour covers) and
