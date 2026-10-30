@@ -147,10 +147,10 @@
     // The thumb is a hollow ring: the fill colour as a 2 px stroke around a
     // hole painted in the bar's own background, so it reads as a cut-out at
     // the end of the fill whatever colour that fill is. In the player bar the
-    // background is the themed player colour, or Spotify's black footer when
+    // background is the themed frame colour, or Spotify's black footer when
     // no theme is on; in the popup/PiP it's the album colour.
     const thumbRingClass = $derived(isChorus ? 'border-ink-fg' : 'border-[color:var(--text)]')
-    const thumbHole = $derived(isChorus ? 'var(--chorus-player, #000)' : 'var(--bg)')
+    const thumbHole = $derived(isChorus ? 'var(--chorus-frame, #000)' : 'var(--bg)')
     // Where the thumb sits: the displayed position as a share of the bar.
     const thumbPct = $derived(
         $nowPlaying.duration > 0

@@ -102,9 +102,17 @@ describe('rewriteSpotifyCss', () => {
 })
 
 describe('frameColor', () => {
-    it('sits a step darker than a dark page and a step lighter than a light one', () => {
-        // artic: main = sidebar = player, so the frame cannot come from the palette
-        expect(frameColor('#0b2c3a')).toBe('#061820')
-        expect(frameColor('#e5f4fa', 'light')).toBe('#f2f9fc')
+    it('keeps the palette shadow as the frame when it already clears the card colour', () => {
+        // cherry_blossom: a bright frame the palette chose on purpose
+        expect(frameColor({ card: '#86244e', shadow: '#c94277' })).toBe('#c94277')
+        // Spotify's own: black frame under #121212 panels
+        expect(frameColor({ card: '#282828', shadow: '#000000' })).toBe('#000000')
+    })
+
+    it('lifts the frame a half step above the card colour when the two coincide', () => {
+        // forest_green: a step darker than main would be black, not green
+        expect(frameColor({ card: '#123527', shadow: '#123527' })).toBe('#184835')
+        // hot_pink
+        expect(frameColor({ card: '#d31589', shadow: '#d31589' })).toBe('#e81998')
     })
 })

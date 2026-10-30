@@ -23,6 +23,8 @@
 export type ThemeSurfaceSource = {
     main: string
     player: string
+    card: string
+    shadow: string
     text: string
     button: string
 }
@@ -138,23 +140,23 @@ const LIGHT_PAGE = {
     subtextSaturationMax: 50,
     main: 94,
     sidebar: 90,
-    /** The bar slot (Spotify's #181818 surfaces); the frame itself derives from `main`, see `frameColor`. */
+    /** Spotify's #181818 surfaces; the frame itself is `shadow`, see `frameColor`. */
     player: 97,
     card: 86,
     /** Hover fallback, scrollbar handle and seek-bar track: a clear step below the page. */
     hover: 80,
+    /** Paints the app frame and both bars (the lightest step, so the panels float on it) and the text on accent fills. */
     shadow: 97,
     text: 13,
     subtext: 36
 }
 
 /**
- * The app frame (the gaps between Spotify's panels, the top bar and the player
- * bar) sits a step beyond the page so the panels read as panels: darker on a
- * dark page, as Spotify's own black frame does under its #121212 panels, and
- * lighter on a light one. Lightness points from `main`.
+ * The frame keeps at least this many lightness points from `card`, the colour
+ * of the elevated controls that sit on it (the search field, the top bar's
+ * buttons), so they read as insets rather than vanish.
  */
-const FRAME_STEP: Record<Mode, number> = { dark: -6, light: 3 }
+const FRAME_CARD_GAP = 5
 
 type Rgb = [number, number, number]
 type Hsl = [number, number, number]
@@ -279,24 +281,31 @@ function fitLightness(hsl: Hsl, against: Rgb, wanted: number, mode: Mode): numbe
 }
 
 /**
- * Colour of the app frame for a page palette. Derived from `main` rather than
- * read from the palette because most palettes give the page a single tone
- * (main = sidebar = player), which would leave frame and panels one colour.
+ * Colour of the app frame (the gaps between Spotify's panels, the top bar and
+ * the player bar). It is the palette's `shadow`, the slot that painted the
+ * frame before the rewrite split black into frame and text, so the bars keep
+ * the tint each palette chose for them; where `shadow` coincides with `card`
+ * (most palettes) the frame moves a half step lighter so the elevated controls
+ * on it keep reading. `player` is not used: most palettes set it equal to
+ * `main`, which left frame and panels one colour, and a step darker than a
+ * near-black `main` reads as plain black rather than as the theme.
  */
-export function frameColor(main: string, mode: Mode = 'dark'): string {
-    const [h, s, l] = hexToHsl(main)
-    return hslToHex(h, s, l + FRAME_STEP[mode])
+export function frameColor({ card, shadow }: Pick<ThemeSurfaceSource, 'card' | 'shadow'>): string {
+    const [h, s, l] = hexToHsl(shadow)
+    const cardLightness = hexToHsl(card)[2]
+    if (Math.abs(l - cardLightness) >= FRAME_CARD_GAP) return shadow
+    return hslToHex(h, s, cardLightness + FRAME_CARD_GAP)
 }
 
 /**
  * Colour for active states on the themed player bar: the palette's accent,
  * lifted (or, on a light bar, darkened) if it has to be, else the theme's
- * text, else whichever of white / near-black reads best.
+ * text, else whichever of white / near-black reads best. The bar is painted
+ * in the frame colour, so that is what the accent is checked against.
  */
-export function barSignal(
-    { player, text, button }: ThemeSurfaceSource,
-    mode: Mode = 'dark'
-): string {
+export function barSignal(theme: ThemeSurfaceSource, mode: Mode = 'dark'): string {
+    const { text, button } = theme
+    const player = frameColor(theme)
     const bar = hexToRgb(player)
     const [h, s0, l] = hexToHsl(button)
     const s = mode === 'light' ? Math.min(s0, LIGHT_SIGNAL_SATURATION_MAX) : s0
@@ -447,6 +456,7 @@ export function invertPalette<T extends PagePalette>(palette: T): T {
         sidebar: hslToHex(hue, s, LIGHT_PAGE.sidebar),
         player: hslToHex(hue, s, LIGHT_PAGE.player),
         card,
+        // The app frame (frameColor) and the text on accent fills.
         shadow: hslToHex(hue, s, LIGHT_PAGE.shadow),
         text: hslToHex(hue, ts, LIGHT_PAGE.text),
         // Secondary text sits on hovered rows too, so it is checked against the hover colour.
