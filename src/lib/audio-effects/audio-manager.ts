@@ -271,6 +271,24 @@ export default class AudioManager {
         this.setGain(this._currentVolume, this._volumeType)
     }
 
+    /** Ramp the output to silence over `seconds` (the sleep timer's last moments). */
+    fadeOut(seconds: number): void {
+        if (!this._gainNode || !this._audioContext) return
+        const now = this._audioContext.currentTime
+        const gain = this._gainNode.gain
+        gain.cancelScheduledValues(now)
+        gain.setValueAtTime(gain.value, now)
+        gain.linearRampToValueAtTime(0, now + Math.max(0.05, seconds))
+    }
+
+    /** Put the output back where the volume asks, after a fade. */
+    restoreGain(): void {
+        if (!this._gainNode || !this._audioContext) return
+        const now = this._audioContext.currentTime
+        this._gainNode.gain.cancelScheduledValues(now)
+        this._gainNode.gain.setValueAtTime(this.targetGain(), now)
+    }
+
     /** The gain the volume settings ask for, the number setGain writes. */
     private targetGain(): number {
         if (this._currentVolume === 0) return 0

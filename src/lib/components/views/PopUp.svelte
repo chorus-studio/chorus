@@ -21,6 +21,7 @@
     import VolumeSlider from '$lib/components/VolumeSlider.svelte'
     import TimeProgress from '$lib/components/TimeProgress.svelte'
     import MediaControls from '$lib/components/MediaControls.svelte'
+    import SleepTimerButton from '$lib/components/SleepTimerButton.svelte'
     import { formatRulerTime } from '$lib/utils/snip-time'
 
     import { paintPopup, popupLookKey } from '$lib/utils/vibrant-colors'
@@ -133,6 +134,7 @@
             : 'Track notifications off — click to turn on'
     )
     let askingPermission = $state(false)
+    let sleepOpen = $state(false)
 
     async function allowNotifications() {
         askingPermission = true
@@ -171,7 +173,9 @@
     {#if !pip}
         <header class="flex h-6 items-center gap-x-2">
             <Logo size={16} tone="current" />
-            <span class="text-xs font-semibold tracking-tight">Chorus</span>
+            {#if !sleepOpen}
+                <span class="text-xs font-semibold tracking-tight">Chorus</span>
+            {/if}
 
             {#if !isSpotifyTabOpen}
                 <button
@@ -185,7 +189,8 @@
             {/if}
 
             <div class="ml-auto flex items-center gap-x-0.5">
-                {#if onVoice}
+                <SleepTimerButton bind:open={sleepOpen} class={iconBtn} />
+                {#if onVoice && !sleepOpen}
                     <button
                         type="button"
                         aria-label="Vocal separation"
@@ -197,7 +202,9 @@
                     </button>
                 {/if}
 
-                {#if !$settingsStore.notifications.granted}
+                {#if sleepOpen}
+                    <!-- the sleep chips take this room -->
+                {:else if !$settingsStore.notifications.granted}
                     <button
                         type="button"
                         aria-label="Allow track notifications"
@@ -229,15 +236,17 @@
                     </button>
                 {/if}
 
-                <button
-                    type="button"
-                    aria-label="Turn Chorus off"
-                    title="Turn Chorus off (Alt+Shift+O)"
-                    onclick={() => setEnabled(false)}
-                    class={iconBtn}
-                >
-                    <Power />
-                </button>
+                {#if !sleepOpen}
+                    <button
+                        type="button"
+                        aria-label="Turn Chorus off"
+                        title="Turn Chorus off (Alt+Shift+O)"
+                        onclick={() => setEnabled(false)}
+                        class={iconBtn}
+                    >
+                        <Power />
+                    </button>
+                {/if}
             </div>
         </header>
     {/if}

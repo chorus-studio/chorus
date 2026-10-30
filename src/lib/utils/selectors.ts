@@ -20,7 +20,8 @@ export const chorusKeys = {
     'toggle-new-releases': '#chorus-new-releases-icon',
     settings: '[data-testid="now-playing-widget-v2"] div#chorus-ui #chorus-settings',
     'save/unsave': '[data-testid="now-playing-widget-v2"] div#chorus-ui #chorus-heart',
-    'block-track': '[data-testid="now-playing-widget-v2"] div#chorus-ui #chorus-block'
+    'block-track': '[data-testid="now-playing-widget-v2"] div#chorus-ui #chorus-block',
+    'snip-mark': '[data-testid="now-playing-widget-v2"] div#chorus-ui #chorus-snip-mark'
 }
 
 /**

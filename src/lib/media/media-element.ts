@@ -176,6 +176,14 @@ export default class MediaElement {
                     case 'FROM_TRACK_VOLUME_LISTENER':
                         this.mediaOverride.updateTrackVolume(Number(data?.factor) || 1)
                         break
+
+                    case 'FROM_SLEEP_LISTENER':
+                        if (data?.action === 'fade') {
+                            this.mediaOverride.sleepFade(Number(data.seconds) || 0)
+                        } else if (data?.action === 'restore') {
+                            this.mediaOverride.sleepRestore()
+                        }
+                        break
                 }
             } catch (error) {
                 console.warn('Error handling message:', error)
