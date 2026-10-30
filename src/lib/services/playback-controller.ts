@@ -102,7 +102,8 @@ export class PlaybackController {
             songInfo?.blocked ||
             configStore.checkIfTrackShouldBeSkipped({
                 title: songInfo?.title ?? '',
-                artist: songInfo?.artist ?? ''
+                artist: songInfo?.artist ?? '',
+                duration: songInfo?.duration
             })
         )
     }

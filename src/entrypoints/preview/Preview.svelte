@@ -12,6 +12,7 @@
     import SnipsDialog from '$lib/components/SnipsDialog.svelte'
     import { storage } from '@wxt-dev/storage'
     import { dataStore } from '$lib/stores/data'
+    import type { SimpleTrack } from '$lib/stores/data/cache'
     import TimeProgress from '$lib/components/TimeProgress.svelte'
     import VolumeSlider from '$lib/components/VolumeSlider.svelte'
     import LoopButton from '$lib/components/LoopButton.svelte'
@@ -242,6 +243,19 @@
                 : { synced: true, lines: SAMPLE_LYRICS.map(([start, text]) => ({ start, text })) }
         )
         snipSubView.set('lyrics')
+    // ?dialog=auto-skip&artists=M83,Drake&min=60 seeds blocked artists and a length limit.
+    onMount(async () => {
+        if (dialog !== 'auto-skip') return
+        const artists = (params.get('artists') ?? '')
+            .split(',')
+            .map((a) => a.trim())
+            .filter(Boolean)
+        const min = Number(params.get('min')) || 0
+        if (!artists.length && !min) return
+        await new Promise((resolve) => setTimeout(resolve, 20))
+        await configStore.updateConfig({
+            auto_skip: { ...get(configStore).auto_skip, enabled: true, artists, min_seconds: min }
+        })
     })
 
     // ?dialog=backup seeds the same blocked tracks plus two snips, saved presets
@@ -337,6 +351,18 @@
                         cover: hex ? swatch(hex) : null,
                         snip: { mode, ranges: ranges.map(([start, end]) => ({ start, end })) },
                         snipped_at: age ? Date.now() - age : null
+                    }
+                })
+            }
+            // &bad=1 adds the kind of entry an old install can hold: no "title by
+            // artist" string and a snip in the pre-2.10 shape.
+            if (params.get('bad') === '1') {
+                await dataStore.updateTrack({
+                    track_id: 'legacy-entry',
+                    value: {
+                        track_id: 'legacy-entry',
+                        song_id: undefined as unknown as string,
+                        snip: { start_time: 10, end_time: 20 } as unknown as SimpleTrack['snip']
                     }
                 })
             }

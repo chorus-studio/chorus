@@ -4,6 +4,7 @@ import { syncWithType } from '$lib/utils/store-utils'
 import type { Playback } from '$lib/stores/playback'
 import type { AudioEffect } from '$lib/stores/effects'
 import { isNormal, type PresetValues } from '$lib/audio-effects/quick-presets'
+import { skipReason, type TrackFacts } from '$lib/utils/auto-skip'
 import {
     normalizeEffectSettings,
     type EffectSettings
@@ -14,7 +15,7 @@ export const CONFIG_STORE_KEY = 'local:chorus_config'
 export const TITLE_KEYWORDS = 'title_keywords'
 export const ARTIST_KEYWORDS = 'artist_keywords'
 
-export type AutoSkipKey = 'title_keywords' | 'artist_keywords'
+export type AutoSkipKey = 'title_keywords' | 'artist_keywords' | 'artists'
 export type AutoSkipBoolean = 'case_sensitive' | 'match_whole_words' | 'match_exact_words'
 
 export type AutoSkip = {
@@ -24,6 +25,10 @@ export type AutoSkip = {
     case_sensitive: boolean
     match_whole_words: boolean
     match_exact_words: boolean
+    /** Blocked artists: every track by them is skipped, like a blocked track, switch or no switch. */
+    artists: string[]
+    /** Skip tracks shorter than this many seconds while auto-skip is on; 0 = off. */
+    min_seconds: number
 }
 
 export type ConfigState = {
@@ -74,7 +79,9 @@ export const defaultConfig: ConfigState = {
         artist_keywords: [],
         case_sensitive: true,
         match_whole_words: true,
-        match_exact_words: true
+        match_exact_words: true,
+        artists: [],
+        min_seconds: 0
     },
     fx_eq_presets: {
         custom_eq_presets: [],
@@ -96,6 +103,8 @@ export const defaultConfig: ConfigState = {
  */
 function migrate(config: ConfigState): ConfigState {
     const fx_eq_presets = { ...defaultConfig.fx_eq_presets, ...(config.fx_eq_presets ?? {}) }
+    // auto_skip is an object of arrays too, so lists and limits added later are filled here.
+    const auto_skip = { ...defaultConfig.auto_skip, ...(config.auto_skip ?? {}) }
     const audio_presets = (config.audio_presets ?? [])
         .filter((preset) => preset?.playback && preset?.effect && !isNormal(preset))
         .map((preset, index) => ({
@@ -105,7 +114,7 @@ function migrate(config: ConfigState): ConfigState {
             effect: preset.effect,
             lofi: normalizeEffectSettings(preset.lofi)
         }))
-    return { ...config, fx_eq_presets, audio_presets }
+    return { ...config, fx_eq_presets, auto_skip, audio_presets }
 }
 
 function createConfigStore() {
@@ -113,38 +122,31 @@ function createConfigStore() {
     const { subscribe, set } = store
     let isUpdatingStorage = false
 
-    function checkIfTrackShouldBeSkipped({ title, artist }: { title: string; artist: string }) {
-        if (!title || !artist) return false
+    /** Whether the track must be skipped before it plays (see utils/auto-skip). */
+    function checkIfTrackShouldBeSkipped(facts: TrackFacts): boolean {
+        return skipReason(get(store).auto_skip, facts) !== null
+    }
 
-        const {
+    /** Put an artist on the blocked list; every track by them is skipped from now on. */
+    async function blockArtist(name: string) {
+        const artist = name.trim()
+        if (!artist) return
+        const { auto_skip } = get(store)
+        if (auto_skip.artists.some((a) => a.toLocaleLowerCase() === artist.toLocaleLowerCase()))
+            return
+        await updateConfig({ auto_skip: { ...auto_skip, artists: [...auto_skip.artists, artist] } })
+    }
+
+    async function unblockArtist(name: string) {
+        const { auto_skip } = get(store)
+        await updateConfig({
             auto_skip: {
-                enabled,
-                title_keywords,
-                artist_keywords,
-                case_sensitive,
-                match_whole_words,
-                match_exact_words
+                ...auto_skip,
+                artists: auto_skip.artists.filter(
+                    (a) => a.toLocaleLowerCase() !== name.trim().toLocaleLowerCase()
+                )
             }
-        } = get(store)
-        if (!enabled) return false
-
-        const createRegexPattern = (keyword: string) => {
-            let pattern = keyword
-            if (match_exact_words) {
-                pattern = `^${pattern}$`
-            } else if (match_whole_words) {
-                pattern = `\\b${pattern}\\b`
-            }
-            return new RegExp(pattern, case_sensitive ? '' : 'i')
-        }
-
-        const titleMatch = title_keywords.some((keyword) => createRegexPattern(keyword).test(title))
-
-        const artistMatch = artist_keywords.some((keyword) =>
-            artist.split(', ').some((artistName) => createRegexPattern(keyword).test(artistName))
-        )
-
-        return titleMatch || artistMatch
+        })
     }
 
     // The media layer (MAIN world) learns the limiter switch by message, like
@@ -193,7 +195,9 @@ function createConfigStore() {
     return {
         subscribe,
         updateConfig,
-        checkIfTrackShouldBeSkipped
+        checkIfTrackShouldBeSkipped,
+        blockArtist,
+        unblockArtist
     }
 }
 

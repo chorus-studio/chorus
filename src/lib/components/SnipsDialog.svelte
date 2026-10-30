@@ -23,7 +23,12 @@
     import { cn } from '$lib/utils.js'
     import { timeAgo } from '$lib/utils/time-ago'
     import { formatRulerTime } from '$lib/utils/snip-time'
-    import { describeRanges, parseSongId, rangesLength, sortSnipped } from '$lib/utils/snip-library'
+    import {
+        describeRanges,
+        parseSongId,
+        rangesLength,
+        snippedTracks
+    } from '$lib/utils/snip-library'
 
     // Every track with saved sections, newest first: play it, open it in the
     // editor, or drop the snip. The shell is the blocked-tracks dialog's.
@@ -33,7 +38,16 @@
     let tracks = $state<SimpleTrack[]>([])
     let starting = $state<string | null>(null)
 
-    const withSnips = (collection: SimpleTrack[]) => sortSnipped(collection.filter((t) => t.snip))
+    // A list that cannot be built must not take the dialog down with it: an
+    // error here used to leave the page behind the scrim with no dialog.
+    function withSnips(collection: SimpleTrack[]): SimpleTrack[] {
+        try {
+            return snippedTracks(collection)
+        } catch (error) {
+            console.error('[chorus] could not list the snips', error)
+            return []
+        }
+    }
 
     function refresh() {
         tracks = withSnips(dataStore.collection)
@@ -54,7 +68,7 @@
     const filteredTracks = $derived(
         tracks.filter((track) => {
             if (!searchQuery) return true
-            return track.song_id.toLowerCase().includes(searchQuery.toLowerCase())
+            return (track.song_id ?? '').toLowerCase().includes(searchQuery.toLowerCase())
         })
     )
 
@@ -275,136 +289,148 @@
                         {/if}
                     </div>
                     <div class="chorus-scroll min-h-0 overflow-y-auto">
-                        {#each filteredTracks as track (track.track_id ?? track.song_id)}
-                            {@const { title, artists } = parseSongId(track.song_id)}
-                            {@const snip = track.snip!}
-                            {@const isSelected = selectedTracks.has(track.track_id)}
-                            {@const ago = timeAgo(track.snipped_at)}
-                            {@const current = isCurrent(track)}
-                            {@const playing = isPlaying(track)}
-                            <div
-                                class={cn(
-                                    'flex items-center gap-x-2 border-t border-hairline pr-2 transition-colors first:border-t-0',
-                                    isSelected ? 'bg-signal/[0.06]' : 'hover:bg-surface/60'
-                                )}
-                            >
-                                <label
-                                    class="flex min-w-0 flex-1 cursor-pointer items-center gap-x-3 py-2 pl-3.5"
+                        <svelte:boundary
+                            onerror={(error) =>
+                                console.error('[chorus] a snip row failed to render', error)}
+                        >
+                            {#each filteredTracks as track, i (track.track_id || track.song_id || i)}
+                                {@const { title, artists } = parseSongId(track.song_id)}
+                                {@const shownTitle = title || 'Untitled track'}
+                                {@const snip = track.snip!}
+                                {@const isSelected = selectedTracks.has(track.track_id)}
+                                {@const ago = timeAgo(track.snipped_at)}
+                                {@const current = isCurrent(track)}
+                                {@const playing = isPlaying(track)}
+                                <div
+                                    class={cn(
+                                        'flex items-center gap-x-2 border-t border-hairline pr-2 transition-colors first:border-t-0',
+                                        isSelected ? 'bg-signal/[0.06]' : 'hover:bg-surface/60'
+                                    )}
                                 >
-                                    <input
-                                        type="checkbox"
-                                        checked={isSelected}
-                                        onchange={() => toggleTrackSelection(track.track_id)}
-                                        aria-label={`Select ${title}`}
-                                        class="peer sr-only"
-                                    />
-                                    <span
-                                        aria-hidden="true"
-                                        class={cn(
-                                            checkboxBox,
-                                            'size-3.5',
-                                            isSelected
-                                                ? 'bg-signal text-ink'
-                                                : 'border-[1.5px] border-hairline-strong'
-                                        )}
+                                    <label
+                                        class="flex min-w-0 flex-1 cursor-pointer items-center gap-x-3 py-2 pl-3.5"
                                     >
-                                        {#if isSelected}
-                                            <Check class="size-2.5" strokeWidth={3.5} />
-                                        {/if}
-                                    </span>
-                                    <span
-                                        class="inline-flex size-8 shrink-0 items-center justify-center overflow-hidden rounded bg-surface-2 text-ink-dim"
-                                    >
-                                        {#if track.cover}
-                                            <img
-                                                src={track.cover}
-                                                alt=""
-                                                class="size-full object-cover"
-                                            />
-                                        {:else}
-                                            <Music class="size-3.5" />
-                                        {/if}
-                                    </span>
-                                    <span class="flex min-w-0 flex-1 flex-col">
+                                        <input
+                                            type="checkbox"
+                                            checked={isSelected}
+                                            onchange={() => toggleTrackSelection(track.track_id)}
+                                            aria-label={`Select ${title}`}
+                                            class="peer sr-only"
+                                        />
                                         <span
+                                            aria-hidden="true"
                                             class={cn(
-                                                'truncate text-[13px] font-medium',
-                                                current ? 'text-signal' : 'text-ink-fg'
-                                            )}>{title}</span
-                                        >
-                                        <span class="truncate text-[11px] text-ink-muted"
-                                            >{artists}</span
-                                        >
-                                    </span>
-                                    <span
-                                        class="flex w-[236px] shrink-0 items-center gap-x-2"
-                                        title={`${snip.ranges.length} section${snip.ranges.length === 1 ? '' : 's'}, ${formatRulerTime(rangesLength(snip))} in all`}
-                                    >
-                                        <span
-                                            class={cn(
-                                                'inline-flex h-[18px] shrink-0 items-center gap-x-1 rounded-full px-1.5 font-mono text-[10px] uppercase tracking-[0.12em]',
-                                                snip.mode === 'play'
-                                                    ? 'bg-signal/15 text-signal'
-                                                    : 'bg-surface-2 text-ink-fg-2'
+                                                checkboxBox,
+                                                'size-3.5',
+                                                isSelected
+                                                    ? 'bg-signal text-ink'
+                                                    : 'border-[1.5px] border-hairline-strong'
                                             )}
                                         >
-                                            {#if snip.mode === 'play'}
-                                                <Play class="size-2.5" strokeWidth={2.5} />
-                                            {:else}
-                                                <Scissors class="size-2.5" strokeWidth={2.5} />
+                                            {#if isSelected}
+                                                <Check class="size-2.5" strokeWidth={3.5} />
                                             {/if}
-                                            {snip.mode === 'play' ? 'Play' : 'Skip'}
                                         </span>
-                                        <span class="truncate font-mono text-[11px] text-ink-muted"
-                                            >{describeRanges(snip, 2)}</span
+                                        <span
+                                            class="inline-flex size-8 shrink-0 items-center justify-center overflow-hidden rounded bg-surface-2 text-ink-dim"
                                         >
-                                    </span>
-                                </label>
-                                <span
-                                    class="w-12 shrink-0 whitespace-nowrap text-right font-mono text-[10px] text-ink-muted"
-                                    title={savedOn(track.snipped_at)}>{ago ?? ''}</span
-                                >
-                                <Button
-                                    variant="ghost"
-                                    size="xs"
-                                    class={cn(
-                                        'gap-x-1 hover:text-ink-fg [&_svg]:size-3.5',
-                                        current ? 'text-signal' : 'text-ink-muted'
-                                    )}
-                                    aria-label={`${playing ? 'Pause' : 'Play'} ${title}`}
-                                    disabled={starting === track.track_id}
-                                    onclick={() => play(track)}
-                                >
-                                    {#if playing}
-                                        <Pause />
-                                        Pause
-                                    {:else}
-                                        <Play />
-                                        Play
-                                    {/if}
-                                </Button>
-                                <Button
-                                    variant="ghost"
-                                    size="xs"
-                                    class="gap-x-1 text-ink-muted hover:text-ink-fg [&_svg]:size-3.5"
-                                    aria-label={`Edit the snip of ${title}`}
-                                    onclick={() => edit(track)}
-                                >
-                                    <Pencil />
-                                    Edit
-                                </Button>
-                                <Button
-                                    variant="ghost"
-                                    size="xs"
-                                    class="gap-x-1 text-ink-muted hover:text-alarm [&_svg]:size-3.5"
-                                    aria-label={`Remove the snip of ${title}`}
-                                    onclick={() => removeTrack(track.track_id)}
-                                >
-                                    <Trash2 />
-                                    Remove
-                                </Button>
-                            </div>
-                        {/each}
+                                            {#if track.cover}
+                                                <img
+                                                    src={track.cover}
+                                                    alt=""
+                                                    class="size-full object-cover"
+                                                />
+                                            {:else}
+                                                <Music class="size-3.5" />
+                                            {/if}
+                                        </span>
+                                        <span class="flex min-w-0 flex-1 flex-col">
+                                            <span
+                                                class={cn(
+                                                    'truncate text-[13px] font-medium',
+                                                    current ? 'text-signal' : 'text-ink-fg'
+                                                )}>{shownTitle}</span
+                                            >
+                                            <span class="truncate text-[11px] text-ink-muted"
+                                                >{artists}</span
+                                            >
+                                        </span>
+                                        <span
+                                            class="flex w-[236px] shrink-0 items-center gap-x-2"
+                                            title={`${snip.ranges.length} section${snip.ranges.length === 1 ? '' : 's'}, ${formatRulerTime(rangesLength(snip))} in all`}
+                                        >
+                                            <span
+                                                class={cn(
+                                                    'inline-flex h-[18px] shrink-0 items-center gap-x-1 rounded-full px-1.5 font-mono text-[10px] uppercase tracking-[0.12em]',
+                                                    snip.mode === 'play'
+                                                        ? 'bg-signal/15 text-signal'
+                                                        : 'bg-surface-2 text-ink-fg-2'
+                                                )}
+                                            >
+                                                {#if snip.mode === 'play'}
+                                                    <Play class="size-2.5" strokeWidth={2.5} />
+                                                {:else}
+                                                    <Scissors class="size-2.5" strokeWidth={2.5} />
+                                                {/if}
+                                                {snip.mode === 'play' ? 'Play' : 'Skip'}
+                                            </span>
+                                            <span
+                                                class="truncate font-mono text-[11px] text-ink-muted"
+                                                >{describeRanges(snip, 2)}</span
+                                            >
+                                        </span>
+                                    </label>
+                                    <span
+                                        class="w-12 shrink-0 whitespace-nowrap text-right font-mono text-[10px] text-ink-muted"
+                                        title={savedOn(track.snipped_at)}>{ago ?? ''}</span
+                                    >
+                                    <Button
+                                        variant="ghost"
+                                        size="xs"
+                                        class={cn(
+                                            'gap-x-1 hover:text-ink-fg [&_svg]:size-3.5',
+                                            current ? 'text-signal' : 'text-ink-muted'
+                                        )}
+                                        aria-label={`${playing ? 'Pause' : 'Play'} ${title}`}
+                                        disabled={starting === track.track_id}
+                                        onclick={() => play(track)}
+                                    >
+                                        {#if playing}
+                                            <Pause />
+                                            Pause
+                                        {:else}
+                                            <Play />
+                                            Play
+                                        {/if}
+                                    </Button>
+                                    <Button
+                                        variant="ghost"
+                                        size="xs"
+                                        class="gap-x-1 text-ink-muted hover:text-ink-fg [&_svg]:size-3.5"
+                                        aria-label={`Edit the snip of ${title}`}
+                                        onclick={() => edit(track)}
+                                    >
+                                        <Pencil />
+                                        Edit
+                                    </Button>
+                                    <Button
+                                        variant="ghost"
+                                        size="xs"
+                                        class="gap-x-1 text-ink-muted hover:text-alarm [&_svg]:size-3.5"
+                                        aria-label={`Remove the snip of ${title}`}
+                                        onclick={() => removeTrack(track.track_id)}
+                                    >
+                                        <Trash2 />
+                                        Remove
+                                    </Button>
+                                </div>
+                            {/each}
+                            {#snippet failed()}
+                                <p class="px-3.5 py-3 text-xs text-ink-muted">
+                                    Some of these snips could not be shown. The others still play.
+                                </p>
+                            {/snippet}
+                        </svelte:boundary>
                     </div>
                     {#if selectedTracks.size > 0}
                         {@render selectionBar()}
