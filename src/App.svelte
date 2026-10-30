@@ -10,6 +10,7 @@
     import { applyLook, watchSystemMode } from '$lib/utils/theming'
     import { settingsStore } from '$lib/stores/settings'
     import { listenForQuickPresetCommands } from '$lib/utils/quick-presets'
+    import { watchPresetBindings } from '$lib/utils/preset-bindings'
     import { watchSleepTimer } from '$lib/utils/sleep-timer'
 
     // Import stores to ensure they're initialized and set up their listeners
@@ -31,6 +32,7 @@
     let unsubscribeLook: (() => void) | undefined
     let unwatchSystem: (() => void) | undefined
     let unlistenQuickPresets: (() => void) | undefined
+    let unwatchBindings: (() => void) | undefined
     let unwatchSleep: (() => void) | undefined
 
     async function init() {
@@ -59,6 +61,8 @@
         // background as window messages; applying them here keeps the stores,
         // and so every tab of the popover, in step with what is playing.
         unlistenQuickPresets = listenForQuickPresetCommands()
+        // Presets pinned to an artist come on with their tracks and go after.
+        unwatchBindings = watchPresetBindings()
         // The sleep timer set in the popup fades and pauses here, where the audio is.
         unwatchSleep = watchSleepTimer()
     }
@@ -73,6 +77,8 @@
         unwatchSystem = undefined
         unlistenQuickPresets?.()
         unlistenQuickPresets = undefined
+        unwatchBindings?.()
+        unwatchBindings = undefined
         unwatchSleep?.()
         unwatchSleep = undefined
     }
