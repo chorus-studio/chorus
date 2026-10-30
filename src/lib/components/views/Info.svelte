@@ -86,21 +86,21 @@
         </div>
     </div>
 
-    <div class="grid grid-cols-2 gap-1.5">
+    <div class="grid grid-cols-2 gap-2">
         {#each links as link (link.href)}
             <a
                 href={link.href}
                 target="_blank"
                 rel="noopener noreferrer"
-                class="chorus-focus flex h-[34px] items-center gap-x-2.5 rounded-lg border border-hairline bg-panel px-2.5 text-ink-fg no-underline transition-colors hover:border-hairline-strong hover:bg-surface"
+                class="chorus-focus flex min-h-[42px] items-center gap-x-3 rounded-lg border border-hairline bg-panel py-2 pl-2.5 pr-3 text-ink-fg no-underline transition-colors hover:border-hairline-strong hover:bg-surface"
             >
                 <span
-                    class="inline-flex size-6 shrink-0 items-center justify-center rounded-md bg-surface-2 text-ink-fg-2"
+                    class="inline-flex size-7 shrink-0 items-center justify-center rounded-md bg-surface-2 text-ink-fg-2"
                 >
                     <link.icon class="size-3.5" />
                 </span>
-                <span class="flex min-w-0 flex-1 flex-col gap-y-0.5 leading-none">
-                    <span class="truncate text-xs">{link.title}</span>
+                <span class="flex min-w-0 flex-1 flex-col gap-y-1 leading-none">
+                    <span class="truncate text-xs font-medium">{link.title}</span>
                     <span class="truncate text-[10px] text-ink-muted">{link.sub}</span>
                 </span>
                 <ExternalLink class="size-3 shrink-0 text-ink-dim" />
