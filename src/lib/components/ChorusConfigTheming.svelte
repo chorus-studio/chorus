@@ -7,7 +7,15 @@
         type PopupColours,
         type GlassSettings
     } from '$lib/stores/settings'
-    import { applyGlass, GLASS_BLUR_MIN, THEME_NAMES, STATIC_THEMES } from '$lib/utils/theming'
+    import {
+        applyGlass,
+        GLASS_BLUR_MIN,
+        THEME_NAMES,
+        STATIC_THEMES,
+        SPOTIFY_PALETTE,
+        resolveMode
+    } from '$lib/utils/theming'
+    import { frameColor, invertPalette } from '$lib/utils/theme-surfaces'
 
     import Check from '@lucide/svelte/icons/check'
     import { Switch } from '$lib/components/ui/switch'
@@ -92,17 +100,13 @@
     const SWITCH_ROW = 'flex h-6 items-center gap-x-2 text-xs text-ink-fg-2'
     const HINT = 'text-xs leading-snug text-ink-muted'
 
-    const SPOTIFY_PREVIEW = {
-        main: '#121212',
-        sidebar: '#121212',
-        shadow: '#000000',
-        text: '#ffffff',
-        subtext: '#b3b3b3',
-        button: '#1ed760'
-    }
-
+    // The cards show each palette as the page will wear it: inverted for a
+    // light appearance, on the frame colour the page derives (theme-surfaces.ts).
+    const mode = $derived(resolveMode($settingsStore.theme.appearance))
     function preview(theme: ThemeName) {
-        return STATIC_THEMES[theme] ?? SPOTIFY_PREVIEW
+        const base = STATIC_THEMES[theme] ?? SPOTIFY_PALETTE
+        const palette = mode === 'light' ? invertPalette(base) : base
+        return { ...palette, frame: frameColor(palette) }
     }
 
     const label = (theme: string) =>
@@ -270,36 +274,112 @@
                 onclick={() => updateTheme(theme)}
                 class="group flex flex-col gap-y-1.5 text-left focus-visible:outline-none"
             >
+                <!-- A rough sketch of the page: top bar, library and main view, player bar, all panels on the frame. -->
                 <span
                     class={cn(
-                        'relative block h-[84px] w-full overflow-hidden rounded-lg border border-hairline transition-shadow group-hover:border-hairline-strong group-focus-visible:ring-2 group-focus-visible:ring-signal',
+                        'relative block h-24 w-full overflow-hidden rounded-lg border border-hairline transition-shadow group-hover:border-hairline-strong group-focus-visible:ring-2 group-focus-visible:ring-signal',
                         selected && 'ring-2 ring-signal'
                     )}
-                    style="background: {p.shadow}"
+                    style="background: {p.frame}"
                 >
+                    <!-- top bar: home button, search field, two icons -->
                     <span
-                        class="absolute bottom-[18px] left-1.5 top-1.5 w-[22px] rounded"
-                        style="background: {p.sidebar}"
-                    ></span>
-                    <span
-                        class="absolute bottom-[18px] left-8 right-1.5 top-1.5 rounded"
+                        class="absolute left-1.5 right-1.5 top-1.5 h-[11px] rounded-[3px]"
                         style="background: {p.main}"
                     ></span>
                     <span
-                        class="absolute left-[38px] top-3 h-[3px] w-[34px] rounded-sm"
+                        class="absolute left-[calc(50%-23px)] top-[9px] size-[5px] rounded-full"
+                        style="background: {p.card}"
+                    ></span>
+                    <span
+                        class="absolute left-[calc(50%-15px)] top-[9px] h-[5px] w-9 rounded-full"
+                        style="background: {p.card}"
+                    ></span>
+                    <span
+                        class="absolute right-[14px] top-2.5 size-[3px] rounded-full opacity-70"
                         style="background: {p.text}"
                     ></span>
                     <span
-                        class="absolute left-[38px] top-[19px] h-[3px] w-[22px] rounded-sm opacity-60"
+                        class="absolute right-2 top-2.5 size-[3px] rounded-full opacity-70"
+                        style="background: {p.text}"
+                    ></span>
+
+                    <!-- library: three rows of cover and title -->
+                    <span
+                        class="absolute bottom-[21px] left-1.5 top-[21px] w-6 rounded-[3px]"
+                        style="background: {p.sidebar}"
+                    ></span>
+                    {#each [26, 34, 42] as top (top)}
+                        <span
+                            class="absolute left-2.5 size-[5px] rounded-[1px]"
+                            style="top: {top}px; background: {p.card}"
+                        ></span>
+                        <span
+                            class="absolute left-[17px] h-0.5 w-[9px] rounded-sm opacity-60"
+                            style="top: {top + 1.5}px; background: {p.subtext}"
+                        ></span>
+                    {/each}
+
+                    <!-- main view: header with cover and title, play button, two rows -->
+                    <span
+                        class="absolute bottom-[21px] left-[34px] right-1.5 top-[21px] rounded-[3px]"
+                        style="background: {p.main}"
+                    ></span>
+                    <span
+                        class="absolute left-[39px] top-[26px] size-3 rounded-[2px]"
+                        style="background: {p.card}"
+                    ></span>
+                    <span
+                        class="absolute left-[55px] top-[27px] h-[3px] w-[30px] rounded-sm"
+                        style="background: {p.text}"
+                    ></span>
+                    <span
+                        class="absolute left-[55px] top-[33px] h-0.5 w-[18px] rounded-sm opacity-70"
                         style="background: {p.subtext}"
                     ></span>
                     <span
-                        class="absolute bottom-1.5 left-1.5 right-1.5 h-2 rounded-sm"
-                        style="background: {p.sidebar}"
+                        class="absolute left-[39px] top-[43px] size-[7px] rounded-full"
+                        style="background: {p.button}"
+                    ></span>
+                    {#each [55, 61, 67] as top (top)}
+                        <span
+                            class="absolute left-[39px] right-3 h-0.5 rounded-sm opacity-40"
+                            style="top: {top}px; background: {p.subtext}"
+                        ></span>
+                    {/each}
+
+                    <!-- player bar: cover and title, transport, two icons -->
+                    <span
+                        class="absolute bottom-1.5 left-1.5 right-1.5 h-[11px] rounded-[3px]"
+                        style="background: {p.main}"
                     ></span>
                     <span
-                        class="absolute bottom-5 right-3 size-2.5 rounded-full"
-                        style="background: {p.button}"
+                        class="absolute bottom-2 left-[9px] size-[7px] rounded-[1px]"
+                        style="background: {p.card}"
+                    ></span>
+                    <span
+                        class="absolute bottom-[10px] left-[19px] h-0.5 w-3.5 rounded-sm"
+                        style="background: {p.text}"
+                    ></span>
+                    <span
+                        class="absolute bottom-[10px] left-[calc(50%-12px)] size-[3px] rounded-full"
+                        style="background: {p.subtext}"
+                    ></span>
+                    <span
+                        class="absolute bottom-2 left-[calc(50%-3px)] size-1.5 rounded-full"
+                        style="background: {p.text}"
+                    ></span>
+                    <span
+                        class="absolute bottom-[10px] left-[calc(50%+9px)] size-[3px] rounded-full"
+                        style="background: {p.subtext}"
+                    ></span>
+                    <span
+                        class="absolute bottom-[10px] right-[14px] size-[3px] rounded-full"
+                        style="background: {p.subtext}"
+                    ></span>
+                    <span
+                        class="absolute bottom-[10px] right-2 size-[3px] rounded-full"
+                        style="background: {p.subtext}"
                     ></span>
                     {#if selected}
                         <span

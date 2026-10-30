@@ -856,12 +856,12 @@ const HEX_END = '(?![0-9a-f])'
 // Every hex pattern ends in a lookahead, and longer alternatives come first,
 // so `#fff` never eats the start of `#ffffff1a` or `#ffffff`.
 //
-// Spotify's black is two things: the app frame (the gaps between the panels,
-// the top bar and the player bar) and the text on its bright-accent fills.
-// The frame takes `--chorus-frame`: the palette's `shadow`, the colour that
-// painted it before this split, pushed a half step above `card` where the two
-// coincide so the search field and the top bar's buttons keep reading on it
-// (see theme-surfaces.ts frameColor). The text takes `shadow` itself.
+// Spotify's black is two things: the app frame (the page behind the panels,
+// the top bar and the player bar; theme.css then paints those two bars as
+// panels of `main`) and the text on its bright-accent fills. The frame takes
+// `--chorus-frame`: the palette's `shadow`, the colour that painted it before
+// this split, pushed a half step above `card` where the two coincide (see
+// theme-surfaces.ts frameColor). The text takes `shadow` itself.
 function replacementRules(): ReplacementRule[] {
     return [
         { target: `#ffffff([0-9a-f]{2})${HEX_END}`, replacement: translucentWhite },

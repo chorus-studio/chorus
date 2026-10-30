@@ -145,7 +145,7 @@ const LIGHT_PAGE = {
     card: 86,
     /** Hover fallback, scrollbar handle and seek-bar track: a clear step below the page. */
     hover: 80,
-    /** Paints the app frame and both bars (the lightest step, so the panels float on it) and the text on accent fills. */
+    /** Paints the app frame (the lightest step, so the panels and bars float on it) and the text on accent fills. */
     shadow: 97,
     text: 13,
     subtext: 36
@@ -281,14 +281,15 @@ function fitLightness(hsl: Hsl, against: Rgb, wanted: number, mode: Mode): numbe
 }
 
 /**
- * Colour of the app frame (the gaps between Spotify's panels, the top bar and
- * the player bar). It is the palette's `shadow`, the slot that painted the
- * frame before the rewrite split black into frame and text, so the bars keep
- * the tint each palette chose for them; where `shadow` coincides with `card`
- * (most palettes) the frame moves a half step lighter so the elevated controls
- * on it keep reading. `player` is not used: most palettes set it equal to
- * `main`, which left frame and panels one colour, and a step darker than a
- * near-black `main` reads as plain black rather than as the theme.
+ * Colour of the app frame: the page behind Spotify's panels, seen in the gaps
+ * between them and around the top bar and the player bar (theme.css paints
+ * those two as panels of `main`). It is the palette's `shadow`, the slot that
+ * painted the frame before the rewrite split black into frame and text, so
+ * the page keeps the tint each palette chose for it; where `shadow` coincides
+ * with `card` (most palettes) the frame moves a half step lighter so anything
+ * in the card colour still reads on it. `player` is not used: most palettes
+ * set it equal to `main`, which left frame and panels one colour, and a step
+ * darker than a near-black `main` reads as plain black rather than as the theme.
  */
 export function frameColor({ card, shadow }: Pick<ThemeSurfaceSource, 'card' | 'shadow'>): string {
     const [h, s, l] = hexToHsl(shadow)
@@ -300,12 +301,12 @@ export function frameColor({ card, shadow }: Pick<ThemeSurfaceSource, 'card' | '
 /**
  * Colour for active states on the themed player bar: the palette's accent,
  * lifted (or, on a light bar, darkened) if it has to be, else the theme's
- * text, else whichever of white / near-black reads best. The bar is painted
- * in the frame colour, so that is what the accent is checked against.
+ * text, else whichever of white / near-black reads best. theme.css paints the
+ * bar as a panel of `main`, so that is what the accent is checked against.
  */
 export function barSignal(theme: ThemeSurfaceSource, mode: Mode = 'dark'): string {
     const { text, button } = theme
-    const player = frameColor(theme)
+    const player = theme.main
     const bar = hexToRgb(player)
     const [h, s0, l] = hexToHsl(button)
     const s = mode === 'light' ? Math.min(s0, LIGHT_SIGNAL_SATURATION_MAX) : s0
