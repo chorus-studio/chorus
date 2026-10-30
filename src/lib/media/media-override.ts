@@ -149,6 +149,11 @@ export default class MediaOverride {
         this.audioManager?.restoreGain()
     }
 
+    /** The playing track's volume offset, as a factor on the volume. */
+    updateTrackVolume(factor: number): void {
+        this.audioManager?.setTrackGain(factor)
+    }
+
     updateCurrentTime(data: number): void {
         this.source.currentTime = data
     }

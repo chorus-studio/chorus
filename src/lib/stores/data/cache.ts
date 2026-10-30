@@ -14,6 +14,8 @@ export type SimpleTrack = {
     cover?: string | null
     snip?: Snip | null
     playback?: Playback | null
+    /** Volume offset in percent (100 = none) that multiplies the slider while this track plays. */
+    volume?: number | null
     blocked?: boolean | null
     /** When the track was blocked (ms since epoch); absent on entries from before it was recorded. */
     blocked_at?: number | null
@@ -71,6 +73,10 @@ export class CacheStore {
         if (value.blocked === null) {
             delete value.blocked
             delete updatedTrack.blocked
+        }
+        if (value.volume === null) {
+            delete value.volume
+            delete updatedTrack.volume
         }
 
         // Apply the rest of the updates

@@ -258,7 +258,7 @@
         />
         <div class="flex min-w-0 flex-1 flex-col {pip ? 'gap-y-2' : 'gap-y-1'}">
             <TrackInfo isPopup {pip} />
-            {#if $nowPlaying.snip || $nowPlaying.playback}
+            {#if $nowPlaying.snip || $nowPlaying.playback || $nowPlaying.volume}
                 <div
                     class="flex items-center gap-x-1.5 font-mono leading-none {pip
                         ? 'text-[11px]'
@@ -279,6 +279,9 @@
                         <span class="text-[color:var(--text-2)]"
                             >{$nowPlaying.playback.rate.value}×</span
                         >
+                    {/if}
+                    {#if $nowPlaying.volume}
+                        <span class="text-[color:var(--text-2)]">{$nowPlaying.volume}%</span>
                     {/if}
                 </div>
             {/if}

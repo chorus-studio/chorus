@@ -242,7 +242,8 @@ class DataStore {
         const track = this.collectionObject[track_id]
         if (!track) return
 
-        if (!track?.snip && !track?.blocked) {
+        // Keep anything the person set on the track; an entry with none of it is just a cache row.
+        if (!track?.snip && !track?.blocked && !track?.playback && track?.volume == null) {
             await this.removeFromExtensionStorage(track_id)
         } else {
             if (Object.keys(track).includes('liked')) {
