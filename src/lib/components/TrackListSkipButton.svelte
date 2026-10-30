@@ -1,5 +1,6 @@
 <script lang="ts">
     import Ban from '@lucide/svelte/icons/ban'
+    import OctagonX from '@lucide/svelte/icons/octagon-x'
     import * as Tooltip from '$lib/components/ui/tooltip'
     import { buttonVariants } from '$lib/components/ui/button'
 
@@ -89,7 +90,14 @@
                 class: `[&_svg]:size-[18px] ${isBlocked ? 'text-signal-bar opacity-100' : ''}`
             })}
         >
-            <Ban role="block" />
+            <!-- Two glyphs, not one glyph in two colours: several palettes paint the
+                 muted and the signal state in the same hue. Circle-slash is the
+                 action (block), the stop sign is the state (blocked). -->
+            {#if isBlocked}
+                <OctagonX role="block" />
+            {:else}
+                <Ban role="block" />
+            {/if}
         </Tooltip.Trigger>
         <Tooltip.Content>{label}</Tooltip.Content>
     </Tooltip.Root>
