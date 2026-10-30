@@ -7,18 +7,24 @@ type Seek = {
     forward: number
 }
 
-type SeekData = {
+export type SeekData = {
     default: Seek
     long_form: Seek
     is_long_form: boolean
     media_type: 'default' | 'long_form'
+    /** Smart speed: speed through silences in podcasts and audiobooks. */
+    smart_speed: boolean
+    /** Running total of time smart speed has saved (ms). */
+    smart_speed_saved_ms: number
 }
 
 const defaultSeekData: SeekData = {
     is_long_form: false,
     media_type: 'default',
     default: { rewind: 10, forward: 10 },
-    long_form: { rewind: 30, forward: 30 }
+    long_form: { rewind: 30, forward: 30 },
+    smart_speed: false,
+    smart_speed_saved_ms: 0
 }
 
 const SEEK_STORE_KEY = 'local:chorus_seek'
@@ -43,6 +49,12 @@ function createSeekStore() {
             isUpdatingStorage = false
         }
     }
+
+    const setSmartSpeed = (smart_speed: boolean) => updateSeek({ smart_speed })
+
+    /** Add to the saved-time total; the chain reports in batches. */
+    const addSaved = (ms: number) =>
+        updateSeek({ smart_speed_saved_ms: Math.max(0, get(store).smart_speed_saved_ms + ms) })
 
     async function updateSeek(state: Partial<SeekData>) {
         update((prev: SeekData) => ({
@@ -120,7 +132,9 @@ function createSeekStore() {
         subscribe,
         updateSeek,
         toggleLongForm,
-        updateMediaType
+        updateMediaType,
+        setSmartSpeed,
+        addSaved
     }
 }
 
