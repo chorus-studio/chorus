@@ -99,6 +99,21 @@ describe('rewriteSpotifyCss', () => {
             '.a {\n    color: var(--chorus-text) !important;\n    background: var(--chorus-main) !important\n}'
         )
     })
+
+    it('leaves rules on bare element selectors unflagged, so Chorus buttons keep their colours', () => {
+        expect(rewriteSpotifyCss('button{color:var(--text-subdued,#b3b3b3);padding:0}')).toBe(
+            'button{color:var(--text-subdued,var(--chorus-subtext));padding:0}'
+        )
+        expect(rewriteSpotifyCss('body,dialog{color:#b3b3b3}')).toBe(
+            'body,dialog{color:var(--chorus-subtext)}'
+        )
+        expect(rewriteSpotifyCss('@media (min-width:1px){button{color:#fff}}')).toBe(
+            '@media (min-width:1px){button{color:var(--chorus-text)}}'
+        )
+        expect(rewriteSpotifyCss('.a button{color:#b3b3b3}')).toBe(
+            '.a button{color:var(--chorus-subtext) !important}'
+        )
+    })
 })
 
 describe('frameColor', () => {

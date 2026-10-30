@@ -921,11 +921,31 @@ const URL_MARK = '\u0001'
 const URL_PLACEHOLDER = new RegExp(`url\\(${URL_MARK}(\\d+)${URL_MARK}\\)`, 'g')
 
 /**
- * One `property: value` declaration. Every colour in the value is swapped and
- * the `!important` flag goes on once, at the end, so a gradient, a `var()`
- * fallback or a shadow list with a colour inside stays a valid declaration.
+ * Selectors made only of element names, combinators and pseudo-classes:
+ * `button`, `body,dialog`, `html`, a keyframe step. Their rewritten
+ * declarations are not flagged `!important`: Spotify's reset
+ * `button{color:var(--text-subdued,#b3b3b3)}` flagged that way overrode the
+ * colour of every Chorus button on the page (an unreadable "Play" on the
+ * snip cards), while without the flag the copy still wins over the original
+ * by coming later in the head, and still yields to any class.
  */
-function rewriteDeclaration(declaration: string, rules: CompiledRule[]): string {
+const BARE_SELECTOR = /^[a-z0-9\s>+~*:,()-]+$/i
+function isBareSelector(prelude: string): boolean {
+    const selector = prelude.trim()
+    return selector.length > 0 && !selector.startsWith('@') && BARE_SELECTOR.test(selector)
+}
+
+/**
+ * One `property: value` declaration. Every colour in the value is swapped and,
+ * unless the rule sits on a bare element selector, the `!important` flag goes
+ * on once, at the end, so a gradient, a `var()` fallback or a shadow list with
+ * a colour inside stays a valid declaration.
+ */
+function rewriteDeclaration(
+    declaration: string,
+    rules: CompiledRule[],
+    important: boolean
+): string {
     const colon = declaration.indexOf(':')
     if (colon < 0) return declaration
     const original = declaration.slice(colon + 1)
@@ -939,13 +959,14 @@ function rewriteDeclaration(declaration: string, rules: CompiledRule[]): string 
         )
     }
     if (value === original) return declaration
+    if (!important) return `${declaration.slice(0, colon + 1)}${value}`
     const trailing = /\s*$/.exec(value)?.[0] ?? ''
     const body = value.replace(IMPORTANT_FLAG, '').replace(/\s+$/, '')
     return `${declaration.slice(0, colon + 1)}${body} !important${trailing}`
 }
 
 /** The declarations of one `{ ... }` block, with `url()` tokens hidden from the split and from the colour rules. */
-function rewriteBlock(body: string, rules: CompiledRule[]): string {
+function rewriteBlock(body: string, rules: CompiledRule[], important: boolean): string {
     if (!MAY_MATCH.test(body)) return body
     const urls: string[] = []
     const masked = body.replace(
@@ -954,7 +975,7 @@ function rewriteBlock(body: string, rules: CompiledRule[]): string {
     )
     const rewritten = masked
         .split(';')
-        .map((declaration) => rewriteDeclaration(declaration, rules))
+        .map((declaration) => rewriteDeclaration(declaration, rules, important))
         .join(';')
     return rewritten.replace(URL_PLACEHOLDER, (_, index: string) => urls[Number(index)])
 }
@@ -967,7 +988,11 @@ function rewriteBlock(body: string, rules: CompiledRule[]): string {
  */
 export function rewriteSpotifyCss(cssText: string): string {
     const rules = compileRules()
-    return cssText.replace(/\{([^{}]*)\}/g, (_, body: string) => `{${rewriteBlock(body, rules)}}`)
+    return cssText.replace(
+        /([^{}]*)\{([^{}]*)\}/g,
+        (_, prelude: string, body: string) =>
+            `${prelude}{${rewriteBlock(body, rules, !isBareSelector(prelude))}}`
+    )
 }
 
 const THEME_LINK_ID = 'chorus-theme'
