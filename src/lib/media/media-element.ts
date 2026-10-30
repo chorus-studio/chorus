@@ -163,6 +163,14 @@ export default class MediaElement {
                     case 'FROM_CURRENT_TIME_LISTENER':
                         this.mediaOverride.updateCurrentTime(Number(data) || 0)
                         break
+
+                    case 'FROM_SLEEP_LISTENER':
+                        if (data?.action === 'fade') {
+                            this.mediaOverride.sleepFade(Number(data.seconds) || 0)
+                        } else if (data?.action === 'restore') {
+                            this.mediaOverride.sleepRestore()
+                        }
+                        break
                 }
             } catch (error) {
                 console.warn('Error handling message:', error)
