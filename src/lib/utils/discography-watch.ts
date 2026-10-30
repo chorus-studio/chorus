@@ -1,7 +1,7 @@
-import { get } from 'svelte/store'
 import { nowPlaying } from '$lib/stores/now-playing'
-import { discographyStore } from '$lib/stores/discography'
+import { discographyPrefs, discographyStore } from '$lib/stores/discography'
 import { getTrackService } from '$lib/api/services/track'
+import { shouldRecord } from '$lib/utils/discography'
 
 /** The first artist the now-playing bar links to, if any. */
 export function artistFromBar(root: ParentNode = document): { id: string; name: string } | null {
@@ -24,7 +24,8 @@ export function albumIdFromBar(root: ParentNode = document): string | null {
 /**
  * Attribute each track played to its album and artist, so the Discographies
  * dialog can show how far through each artist's albums the person is and
- * where to pick up. The album's track list is fetched once per album.
+ * where to pick up. Only tracked discographies and albums are noted, unless
+ * auto-track is on. The album's track list is fetched once per album.
  * Returns the unsubscribe.
  */
 export function watchDiscography(): () => void {
@@ -34,6 +35,8 @@ export function watchDiscography(): () => void {
         const artist = artistFromBar()
         const album_id = albumIdFromBar()
         if (!artist || !album_id) return
+        if (!shouldRecord(discographyStore.get(), discographyPrefs.get(), artist.id, album_id))
+            return
         const known = discographyStore.get()[artist.id]?.albums[album_id]
         let album = known
             ? {
@@ -41,6 +44,8 @@ export function watchDiscography(): () => void {
                   name: known.name,
                   year: known.year,
                   cover: known.cover,
+                  kind: known.kind,
+                  total: known.total,
                   tracks: known.tracks
               }
             : null
@@ -52,7 +57,9 @@ export function watchDiscography(): () => void {
                 id: album_id,
                 name: fetched?.name ?? album?.name ?? 'Album',
                 year: fetched?.year ?? album?.year ?? null,
-                cover: album?.cover ?? cover ?? null,
+                cover: album?.cover ?? fetched?.cover ?? cover ?? null,
+                kind: album?.kind ?? fetched?.kind,
+                total: album?.total,
                 tracks: fetched?.tracks ?? album?.tracks ?? []
             }
         }

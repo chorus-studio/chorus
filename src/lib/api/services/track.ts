@@ -1,4 +1,6 @@
 import { defineProxyService } from '@webext-core/proxy-service'
+import { kindOf, type ReleaseKind } from '$lib/utils/discography'
+import { pickCover } from './discography'
 import { BaseAPIService, COMMON_QUERIES, type GraphQLQuery } from '../base-service'
 
 const API_URL = 'https://api-partner.spotify.com/pathfinder/v2/query'
@@ -6,6 +8,10 @@ const API_URL = 'https://api-partner.spotify.com/pathfinder/v2/query'
 export type AlbumTracks = {
     name: string
     year: string | null
+    /** Cover art around 300 px, or none. */
+    cover: string | null
+    /** Album, single (EPs included) or compilation. */
+    kind: ReleaseKind
     tracks: Array<{ id: string; name: string }>
 }
 
@@ -72,6 +78,8 @@ export class TrackService extends BaseAPIService implements TrackService {
         return {
             name: String(album.name ?? ''),
             year: album.date?.year != null ? String(album.date.year) : null,
+            cover: pickCover(album.coverArt?.sources),
+            kind: kindOf(album.type),
             tracks
         }
     }
