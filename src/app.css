@@ -117,6 +117,23 @@
         @apply bg-dim shadow-none;
     }
 
+    /* Chorus controls in Spotify's bars sit in one tray, the pill Spotify's
+       search box is, so they read as a group rather than stray icons. The
+       tint is the search box's own: the theme's card colour while a theme
+       is on, Spotify's elevated surface otherwise. */
+    .chorus-tray {
+        @apply inline-flex items-center gap-x-0.5 rounded-full px-1.5;
+        background: var(--chorus-card, var(--background-elevated-base, rgba(255, 255, 255, 0.1)));
+    }
+    /* the top bar, beside Spotify's 48 px round buttons */
+    .chorus-tray--bar {
+        @apply mx-1.5 h-10;
+    }
+    /* the now-playing widget */
+    .chorus-tray--player {
+        @apply ml-1 h-8;
+    }
+
     .chorus-focus {
         @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal focus-visible:ring-offset-1 focus-visible:ring-offset-ink;
     }

@@ -167,11 +167,20 @@ function injectExtras() {
 
     const newFeedButton = document.querySelector('[data-testid="whats-new-feed-button"]')
     if (newFeedButton?.parentElement) {
-        const parent = newFeedButton.parentElement
+        // One tray for the Chorus buttons, the pill Spotify's search box is,
+        // before Spotify's What's New bell. A detached tray (Spotify re-rendered
+        // the bar) is not found by id, so a fresh one is made and refilled.
+        let tray = document.getElementById('chorus-top-bar-tray')
+        if (!tray) {
+            tray = document.createElement('div')
+            tray.id = 'chorus-top-bar-tray'
+            tray.className = 'chorus-tray chorus-tray--bar'
+            newFeedButton.parentElement.insertBefore(tray, newFeedButton)
+        }
 
         if (!document.getElementById('chorus-config-dialog-trigger')) {
             const configDialog = document.createElement('div')
-            parent.insertBefore(configDialog, newFeedButton)
+            tray.appendChild(configDialog)
             mountedExtras.push({
                 instance: mount(ChorusConfigDialog, { target: configDialog }),
                 container: configDialog
@@ -179,7 +188,7 @@ function injectExtras() {
         }
         if (!document.getElementById('snips-dialog-trigger')) {
             const snipsDialog = document.createElement('div')
-            parent.insertBefore(snipsDialog, newFeedButton)
+            tray.appendChild(snipsDialog)
             mountedExtras.push({
                 instance: mount(SnipsDialog, { target: snipsDialog }),
                 container: snipsDialog
@@ -187,7 +196,7 @@ function injectExtras() {
         }
         if (!document.getElementById('discography-dialog-trigger')) {
             const discographyDialog = document.createElement('div')
-            parent.insertBefore(discographyDialog, newFeedButton)
+            tray.appendChild(discographyDialog)
             mountedExtras.push({
                 instance: mount(DiscographyDialog, { target: discographyDialog }),
                 container: discographyDialog
@@ -195,7 +204,7 @@ function injectExtras() {
         }
         if (!document.getElementById('blocked-tracks-dialog-trigger')) {
             const blockedDialog = document.createElement('div')
-            parent.insertBefore(blockedDialog, newFeedButton)
+            tray.appendChild(blockedDialog)
             mountedExtras.push({
                 instance: mount(BlockedTracksDialog, { target: blockedDialog }),
                 container: blockedDialog
@@ -204,7 +213,7 @@ function injectExtras() {
         // Beside Spotify's own What's New bell, which covers the same ground.
         if (!document.getElementById('new-releases-dialog-trigger')) {
             const releasesDialog = document.createElement('div')
-            parent.insertBefore(releasesDialog, newFeedButton)
+            tray.appendChild(releasesDialog)
             mountedExtras.push({
                 instance: mount(NewReleasesDialog, { target: releasesDialog }),
                 container: releasesDialog
@@ -454,6 +463,7 @@ function removeChorusUI() {
         container?.remove()
     }
     mountedExtras = []
+    document.getElementById('chorus-top-bar-tray')?.remove()
     unmountReleasesPage()
 
     document.removeEventListener('FROM_MEDIA_PLAY_INIT', handleMediaPlayInit)
