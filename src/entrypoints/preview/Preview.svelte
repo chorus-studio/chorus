@@ -17,7 +17,7 @@
     import HeartButton from '$lib/components/HeartButton.svelte'
     import SkipButton from '$lib/components/SkipButton.svelte'
     import SettingsPopover from '$lib/components/SettingsPopover.svelte'
-    import { applyPalette } from '$lib/utils/vibrant-colors'
+    import { applyPalette, derivePopupPalette } from '$lib/utils/vibrant-colors'
     import {
         STATIC_THEMES,
         SPOTIFY_PALETTE,
@@ -59,7 +59,11 @@
     onMount(async () => {
         document.documentElement.classList.add('dark')
         document.documentElement.setAttribute('data-mode', mode)
-        applyPalette(document.documentElement, { bg_colour: '#1b6b63', text_colour: '#eafff9' })
+        // A teal cover, in the scene's appearance, stands in for album art.
+        applyPalette(
+            document.documentElement,
+            derivePopupPalette([{ hex: '#1b6b63', population: 1 }], mode)
+        )
         if (themeConfig) applyThemeVariables(themeConfig, mode)
         if (popupColours === 'theme') applyThemePopupPalette(document.documentElement)
         // Components read glass and the popup colour source from the settings

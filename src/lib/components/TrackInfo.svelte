@@ -16,8 +16,17 @@
         <span class="truncate text-ink-muted">{artist}</span>
     </div>
 {:else}
+    <!-- The popup and PiP wear the cover palette (--text); the in-page rack its ink tokens. -->
     <div class="flex w-full min-w-0 flex-col {isPopup ? 'gap-y-1' : 'gap-y-0.5'}">
-        <ScrollingText text={title} className="text-[13px] font-semibold text-ink-fg" />
-        <ScrollingText text={artist} className="text-xs text-ink-muted" />
+        <ScrollingText
+            text={title}
+            className="text-[13px] font-semibold {isPopup
+                ? 'text-[color:var(--text)]'
+                : 'text-ink-fg'}"
+        />
+        <ScrollingText
+            text={artist}
+            className="text-xs {isPopup ? 'text-[color:var(--text-2)]' : 'text-ink-muted'}"
+        />
     </div>
 {/if}

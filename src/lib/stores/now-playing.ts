@@ -22,8 +22,6 @@ export type NowPlaying = SimpleTrack & {
     artist: string | null
     liked?: boolean | null
     album_id: string | null
-    bg_colour: string | null
-    text_colour: string | null
 }
 
 const defaultNowPlaying: NowPlaying = {
@@ -39,8 +37,6 @@ const defaultNowPlaying: NowPlaying = {
     duration: 0,
     current: 0,
     album_id: null,
-    text_colour: '#ffffff',
-    bg_colour: '#000000',
     snip: null,
     playback: null,
     blocked: null
