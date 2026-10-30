@@ -464,6 +464,10 @@
     ]
     onMount(async () => {
         if (dialog !== 'snips') return
+        // &view=grid opens it on the grid.
+        const snipsView = params.get('view')
+        if (snipsView === 'grid' || snipsView === 'list')
+            await storage.setItem('local:chorus_snips_view', snipsView)
         if (params.get('empty') !== '1') {
             for (const [song_id, hex, age, mode, ranges] of SAMPLE_SNIPS) {
                 const track_id = song_id.toLowerCase().replace(/[^a-z0-9]+/g, '-')
