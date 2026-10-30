@@ -63,13 +63,13 @@
 </script>
 
 <div class="flex w-full items-center justify-between {pip ? 'gap-x-2' : 'gap-x-1'}">
-    <div class="flex items-center {pip ? 'gap-x-1' : 'gap-x-0.5'}">
+    <div class="flex items-center {pip ? 'gap-x-1' : 'gap-x-0'}">
         {#each svgsList.slice(0, 3) as svg (svg)}
             <MediaButton icon={svg} {pip} {handleClick} />
         {/each}
     </div>
 
-    <div class="flex items-center {pip ? 'gap-x-1.5' : 'gap-x-0.5'}">
+    <div class="flex items-center {pip ? 'gap-x-1.5' : 'gap-x-0'}">
         {#each svgsList.slice(3) as svg (svg)}
             <MediaButton icon={svg} {pip} {handleClick} />
         {/each}

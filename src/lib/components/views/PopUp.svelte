@@ -159,7 +159,7 @@
         glassOn && 'overflow-hidden',
         pip
             ? 'w-full gap-y-2.5'
-            : 'min-h-[196px] w-[320px] gap-y-2 bg-[color:var(--bg)] px-3 pb-2.5 pt-1.5 text-[color:var(--text)]'
+            : 'min-h-[176px] w-[320px] gap-y-2 bg-[color:var(--bg)] px-3 pb-2 pt-1.5 text-[color:var(--text)]'
     )}
 >
     {#if glassOn && $nowPlaying.cover}
@@ -169,7 +169,7 @@
         <div aria-hidden="true" class="chorus-glass-tint"></div>
     {/if}
     {#if !pip}
-        <header class="flex h-7 items-center gap-x-2">
+        <header class="flex h-6 items-center gap-x-2">
             <Logo size={16} tone="current" />
             <span class="text-xs font-semibold tracking-tight">Chorus</span>
 
@@ -271,7 +271,7 @@
     <div
         class={cn(
             'flex flex-col',
-            pip ? 'gap-y-2.5' : 'gap-y-2',
+            pip ? 'gap-y-2.5' : 'gap-y-1.5',
             glassOn && 'chorus-glass-card -mx-1.5 rounded-lg px-1.5 py-1'
         )}
     >

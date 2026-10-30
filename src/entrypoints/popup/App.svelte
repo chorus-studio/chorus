@@ -25,6 +25,9 @@
     let view = $state<'player' | 'voice'>('player')
     // Only expose vocal separation if this device can actually run it (WebGPU etc).
     let vocalSupported = $state(false)
+    // The frames shown before and instead of the player match its height (the
+    // glass card adds 8 px of padding), so the popup never resizes.
+    const frameHeight = $derived($settingsStore.ui.glass ? 'h-[184px]' : 'h-[176px]')
 
     // First paint before the player mounts, so the loading frame already wears
     // the cover's colour (or the rack tokens for "Popup: Theme"); PopUp keeps
@@ -62,17 +65,17 @@
 </script>
 
 {#if enabled === undefined}
-    <div class="h-[196px] w-[320px] bg-[color:var(--bg)]"></div>
+    <div class="{frameHeight} w-[320px] bg-[color:var(--bg)]"></div>
 {:else if !enabled}
-    <PowerOffOverlay onenable={() => setEnabled(true)} />
+    <PowerOffOverlay frameClass={frameHeight} onenable={() => setEnabled(true)} />
 {:else if loading}
     <div
-        class="flex h-[196px] w-[320px] items-center justify-center bg-[color:var(--bg)] text-[color:var(--text)]"
+        class="flex {frameHeight} w-[320px] items-center justify-center bg-[color:var(--bg)] text-[color:var(--text)]"
     >
         <Logo size={28} tone="current" class="animate-led-pulse" />
     </div>
 {:else if view === 'voice' && vocalSupported}
-    <div class="flex h-[196px] w-[320px] flex-col gap-y-2.5 bg-ink px-3 pb-3 pt-2 text-ink-fg">
+    <div class="flex {frameHeight} w-[320px] flex-col gap-y-2.5 bg-ink px-3 pb-3 pt-2 text-ink-fg">
         <div class="flex h-[26px] items-center justify-between">
             <button
                 type="button"

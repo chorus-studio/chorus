@@ -240,7 +240,7 @@
     {:else if scene === 'popup-voice'}
         <div
             id="frame"
-            class="flex h-[196px] w-[320px] flex-col gap-y-2.5 overflow-hidden rounded-lg border border-hairline-strong bg-ink px-3 pb-3 pt-2"
+            class="flex h-[176px] w-[320px] flex-col gap-y-2.5 overflow-hidden rounded-lg border border-hairline-strong bg-ink px-3 pb-3 pt-2"
         >
             <div class="flex h-[26px] items-center justify-between">
                 <span class="text-xs text-ink-fg-2">‹ Player</span><span class="rack-label"
