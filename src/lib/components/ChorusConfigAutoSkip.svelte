@@ -8,8 +8,13 @@
     import X from '@lucide/svelte/icons/x'
     import Plus from '@lucide/svelte/icons/plus'
     import { Switch } from '$lib/components/ui/switch'
+    import { Input } from '$lib/components/ui/input'
 
-    let inputs = $state<Record<AutoSkipKey, string>>({ title_keywords: '', artist_keywords: '' })
+    let inputs = $state<Record<AutoSkipKey, string>>({
+        title_keywords: '',
+        artist_keywords: '',
+        artists: ''
+    })
 
     async function updateKeyWordList({
         key,
@@ -52,7 +57,8 @@
 
         const shouldSkip = configStore.checkIfTrackShouldBeSkipped({
             title: $nowPlaying.title ?? '',
-            artist: $nowPlaying.artist ?? ''
+            artist: $nowPlaying.artist ?? '',
+            duration: $nowPlaying.duration
         })
 
         if (shouldSkip) trackObserver.nextTrack()
@@ -84,6 +90,19 @@
         }
     ]
 
+    async function setMinSeconds(event: Event) {
+        const raw = Number((event.currentTarget as HTMLInputElement).value)
+        const min_seconds = Number.isFinite(raw) ? Math.max(0, Math.min(600, Math.round(raw))) : 0
+        await configStore.updateConfig({ auto_skip: { ...$configStore.auto_skip, min_seconds } })
+    }
+
+    const ARTISTS_GROUP = {
+        key: 'artists' as AutoSkipKey,
+        title: 'Blocked artists',
+        placeholder: 'Add an artist and press Enter',
+        hint: 'Every track by them is skipped, whatever the switch says. Case does not matter.'
+    }
+
     const KEYWORD_GROUPS: Array<{
         key: AutoSkipKey
         title: string
@@ -105,9 +124,62 @@
     ]
 
     onDestroy(() => {
-        inputs = { title_keywords: '', artist_keywords: '' }
+        inputs = { title_keywords: '', artist_keywords: '', artists: '' }
     })
 </script>
+
+{#snippet keywordGroup(group: {
+    key: AutoSkipKey
+    title: string
+    placeholder: string
+    hint: string
+})}
+    <div class="flex flex-col gap-y-2">
+        <span class="rack-label">{group.title}</span>
+        <div class="flex flex-col gap-y-2.5 rounded-lg border border-hairline bg-panel p-3">
+            <label class="relative block">
+                <Plus
+                    class="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-ink-dim"
+                />
+                <input
+                    id={group.key}
+                    autocomplete="off"
+                    placeholder={group.placeholder}
+                    bind:value={inputs[group.key]}
+                    onkeydown={(event) => handleKeywordInput({ event, key: group.key })}
+                    class="flex h-8 w-full rounded-md border border-hairline bg-inset pl-8 pr-10 text-[13px] text-ink-fg placeholder:text-dim hover:border-hairline-strong focus-visible:border-signal/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal/30"
+                />
+                <kbd
+                    class="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 rounded border border-hairline-strong bg-surface px-1 font-mono text-[10px] text-ink-muted"
+                    >↵</kbd
+                >
+            </label>
+            {#if $configStore.auto_skip[group.key].length}
+                <div class="flex flex-wrap gap-1.5">
+                    {#each $configStore.auto_skip[group.key] as keyword (keyword)}
+                        <span
+                            data-key={group.key}
+                            data-preset={keyword}
+                            class="inline-flex h-[26px] items-center gap-x-1 rounded-md border border-hairline bg-surface pl-2.5 pr-1 text-xs text-ink-fg"
+                        >
+                            {keyword}
+                            <button
+                                type="button"
+                                aria-label={`Remove ${keyword}`}
+                                onclick={() => removeKeyword({ keyword, key: group.key })}
+                                class="inline-flex size-4 items-center justify-center rounded text-ink-muted hover:bg-surface-2 hover:text-ink-fg"
+                            >
+                                <X class="size-3" />
+                            </button>
+                        </span>
+                    {/each}
+                </div>
+            {:else}
+                <span class="text-[11px] text-ink-dim">No entries yet · {group.hint}</span>
+            {/if}
+        </div>
+    </div>
+{/snippet}
 
 <div class="flex flex-col gap-y-3.5">
     <div class="rounded-lg border border-hairline bg-panel">
@@ -115,8 +187,8 @@
             <span class="flex flex-col gap-y-0.5">
                 <span class="text-[13px] font-medium text-ink-fg">Auto-skip matching tracks</span>
                 <span class="text-xs text-ink-muted">
-                    Skip any track whose title or artist matches one of your keywords. Blocked
-                    tracks are always skipped.
+                    Skip any track whose title or artist matches one of your keywords, or that is
+                    shorter than your limit. Blocked tracks and artists are always skipped.
                 </span>
             </span>
             <Switch
@@ -129,7 +201,7 @@
     </div>
 
     <div class="flex flex-col gap-y-2">
-        <span class="rack-label">Matching</span>
+        <span class="rack-label">Rules</span>
         <div class="rounded-lg border border-hairline bg-panel">
             {#each MATCH_OPTIONS as option (option.key)}
                 <label
@@ -149,56 +221,38 @@
                     />
                 </label>
             {/each}
+            <label
+                class="flex cursor-pointer items-center justify-between gap-x-4 border-t border-hairline px-4 py-3"
+            >
+                <span class="flex flex-col gap-y-0.5">
+                    <span class="text-[13px] font-medium text-ink-fg">Skip short tracks</span>
+                    <span class="text-xs text-ink-muted">
+                        Interludes and skits: anything shorter than this is skipped. 0 turns it off.
+                    </span>
+                </span>
+                <span class="flex shrink-0 items-center gap-x-1.5">
+                    <Input
+                        id="auto-skip-min-seconds"
+                        type="number"
+                        min={0}
+                        max={600}
+                        step={5}
+                        value={$configStore.auto_skip.min_seconds}
+                        onchange={setMinSeconds}
+                        aria-label="Shortest track to play, in seconds"
+                        class="h-7 w-[72px] px-2 text-right font-mono text-xs"
+                    />
+                    <span class="font-mono text-[11px] text-ink-muted">s</span>
+                </span>
+            </label>
         </div>
     </div>
 
     <div class="grid grid-cols-2 gap-x-3.5">
         {#each KEYWORD_GROUPS as group (group.key)}
-            <div class="flex flex-col gap-y-2">
-                <span class="rack-label">{group.title}</span>
-                <div class="flex flex-col gap-y-2.5 rounded-lg border border-hairline bg-panel p-3">
-                    <label class="relative block">
-                        <Plus
-                            class="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-ink-dim"
-                        />
-                        <input
-                            id={group.key}
-                            autocomplete="off"
-                            placeholder={group.placeholder}
-                            bind:value={inputs[group.key]}
-                            onkeydown={(event) => handleKeywordInput({ event, key: group.key })}
-                            class="flex h-8 w-full rounded-md border border-hairline bg-inset pl-8 pr-10 text-[13px] text-ink-fg placeholder:text-dim hover:border-hairline-strong focus-visible:border-signal/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal/30"
-                        />
-                        <kbd
-                            class="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 rounded border border-hairline-strong bg-surface px-1 font-mono text-[10px] text-ink-muted"
-                            >↵</kbd
-                        >
-                    </label>
-                    {#if $configStore.auto_skip[group.key].length}
-                        <div class="flex flex-wrap gap-1.5">
-                            {#each $configStore.auto_skip[group.key] as keyword (keyword)}
-                                <span
-                                    data-key={group.key}
-                                    data-preset={keyword}
-                                    class="inline-flex h-[26px] items-center gap-x-1 rounded-md border border-hairline bg-surface pl-2.5 pr-1 text-xs text-ink-fg"
-                                >
-                                    {keyword}
-                                    <button
-                                        type="button"
-                                        aria-label={`Remove ${keyword}`}
-                                        onclick={() => removeKeyword({ keyword, key: group.key })}
-                                        class="inline-flex size-4 items-center justify-center rounded text-ink-muted hover:bg-surface-2 hover:text-ink-fg"
-                                    >
-                                        <X class="size-3" />
-                                    </button>
-                                </span>
-                            {/each}
-                        </div>
-                    {:else}
-                        <span class="text-[11px] text-ink-dim">No keywords yet · {group.hint}</span>
-                    {/if}
-                </div>
-            </div>
+            {@render keywordGroup(group)}
         {/each}
     </div>
+
+    {@render keywordGroup(ARTISTS_GROUP)}
 </div>

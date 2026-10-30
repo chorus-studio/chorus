@@ -94,7 +94,8 @@ function createNowPlayingStore() {
             trackInfo?.blocked ||
             configStore.checkIfTrackShouldBeSkipped({
                 title: title ?? '',
-                artist: artist ?? ''
+                artist: artist ?? '',
+                duration
             })
         ) {
             trackObserver?.nextTrack()
