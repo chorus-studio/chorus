@@ -2,6 +2,7 @@ import Reverb from '$lib/audio-effects/reverb'
 import Equalizer from '$lib/audio-effects/equalizer'
 import MSProcessor from '$lib/audio-effects/ms-processor'
 import AudioManager from '$lib/audio-effects/audio-manager'
+import { secondsSaved } from '$lib/audio-effects/silence-gate'
 import type { SoundTouchData, Rate } from '$lib/stores/playback'
 import type { MSParams } from '$lib/stores/ms-params'
 import type { ReverbParams } from '$lib/stores/reverb-params'
@@ -34,6 +35,9 @@ export default class MediaOverride {
     private _disabled: boolean = false
     // Speed/pitch captured at disable time so it can be resumed on re-enable.
     private _savedRate: number = 1
+    private _smartSpeed: { enabled: boolean; factor: number } = { enabled: false, factor: 2.5 }
+    private _silenceOpenedAt: number | null = null
+    private _savedPending = 0
     private _savedPreservesPitch: boolean = true
 
     constructor(options: MediaOverrideOptions) {
@@ -138,6 +142,46 @@ export default class MediaOverride {
         } else {
             this.source.volume = data.muted ? 0 : Math.min(1, scaledValue)
         }
+    }
+
+    /**
+     * Smart speed: while on, silences in the audio play `factor` times faster
+     * than the current rate (capped at 4×), and the seconds that saves are
+     * reported back in batches.
+     */
+    updateSmartSpeed(state: { enabled: boolean; factor: number }): void {
+        this._smartSpeed = {
+            enabled: Boolean(state.enabled),
+            factor: Math.max(1, Number(state.factor) || 2.5)
+        }
+        this.audioManager.setSilenceSkip(this._smartSpeed.enabled, (open) => this.onSilence(open))
+        if (!this._smartSpeed.enabled) this.flushSaved()
+    }
+
+    private fastRate(): number {
+        return Math.min(4, this._chorusRate * this._smartSpeed.factor)
+    }
+
+    private onSilence(open: boolean): void {
+        if (open) {
+            this._silenceOpenedAt = performance.now()
+            ;(this.source as any).playbackRate = { source: 'chorus', value: this.fastRate() }
+            return
+        }
+        ;(this.source as any).playbackRate = { source: 'chorus', value: this._chorusRate }
+        if (this._silenceOpenedAt !== null) {
+            const wall = (performance.now() - this._silenceOpenedAt) / 1000
+            this._savedPending += secondsSaved(wall, this._chorusRate, this.fastRate()) * 1000
+            this._silenceOpenedAt = null
+            if (this._savedPending >= 2000) this.flushSaved()
+        }
+    }
+
+    private flushSaved(): void {
+        const saved_ms = Math.round(this._savedPending)
+        this._savedPending = 0
+        if (saved_ms <= 0) return
+        window.postMessage({ type: 'FROM_SMART_SPEED_STATS', data: { saved_ms } }, '*')
     }
 
     /** The sleep timer's fade (seconds) and the restore once paused. */

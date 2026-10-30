@@ -11,7 +11,10 @@
     import { settingsStore } from '$lib/stores/settings'
     import { listenForQuickPresetCommands } from '$lib/utils/quick-presets'
     import { watchDiscography } from '$lib/utils/discography-watch'
+    import { watchFeatures } from '$lib/utils/features-watch'
+    import { watchPresetBindings } from '$lib/utils/preset-bindings'
     import { watchSleepTimer } from '$lib/utils/sleep-timer'
+    import { watchSmartSpeed } from '$lib/utils/smart-speed'
 
     // Import stores to ensure they're initialized and set up their listeners
     import '$lib/stores/effects'
@@ -33,7 +36,10 @@
     let unwatchSystem: (() => void) | undefined
     let unlistenQuickPresets: (() => void) | undefined
     let unwatchDiscography: (() => void) | undefined
+    let unwatchFeatures: (() => void) | undefined
+    let unwatchBindings: (() => void) | undefined
     let unwatchSleep: (() => void) | undefined
+    let unwatchSmartSpeed: (() => void) | undefined
 
     async function init() {
         setMode('dark')
@@ -63,8 +69,14 @@
         unlistenQuickPresets = listenForQuickPresetCommands()
         // Every track played is noted against its album and artist.
         unwatchDiscography = watchDiscography()
+        // Pausing the sound effects sends them to the chain as none, and back.
+        unwatchFeatures = watchFeatures()
+        // Presets pinned to an artist come on with their tracks and go after.
+        unwatchBindings = watchPresetBindings()
         // The sleep timer set in the popup fades and pauses here, where the audio is.
         unwatchSleep = watchSleepTimer()
+        // Smart speed's switch and the podcast/music distinction live in the seek store.
+        unwatchSmartSpeed = watchSmartSpeed()
     }
 
     function removeListener() {
@@ -79,8 +91,14 @@
         unlistenQuickPresets = undefined
         unwatchDiscography?.()
         unwatchDiscography = undefined
+        unwatchFeatures?.()
+        unwatchFeatures = undefined
+        unwatchBindings?.()
+        unwatchBindings = undefined
         unwatchSleep?.()
         unwatchSleep = undefined
+        unwatchSmartSpeed?.()
+        unwatchSmartSpeed = undefined
     }
 
     onMount(() => {

@@ -36,6 +36,8 @@
                 releasesHeaderComponent = mount(NewReleasesHeader, { target: parent }) as Component
                 showReleases = true
                 newReleasesUIStore.setVisible(true)
+                // Opening the view is seeing the releases: the toolbar badge clears.
+                void newReleasesStore.markSeen()
             }
         } else {
             mainEl.style.display = 'block'

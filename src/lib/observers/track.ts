@@ -5,6 +5,8 @@ import { effectsStore } from '$lib/stores/effects'
 import { lofiStore } from '$lib/stores/lofi'
 import { nowPlaying } from '$lib/stores/now-playing'
 import { snipStore } from '$lib/stores/snip'
+import { featureOn } from '$lib/utils/features'
+import { announceSkip, noteTrackStarted } from '$lib/utils/skip-notice'
 import { playback } from '$lib/utils/playback'
 import { currentSongInfo } from '$lib/utils/song'
 import { playbackObserver } from '$lib/observers/playback'
@@ -103,6 +105,8 @@ export class TrackObserver {
     private activeSegments(): { segments: PlaySegment[]; editing: boolean } {
         const song = this.currentSong
         const draft = this.snip
+        // Snips paused from the Settings tab: no constraint, the track plays whole.
+        if (!featureOn('snips')) return { segments: [], editing: false }
         if (!draft) return { segments: toSegments(song.snip, song.duration), editing: false }
 
         let segments = toSegments(draft, song.duration)
@@ -117,8 +121,10 @@ export class TrackObserver {
     async processSongTransition() {
         this._skipping = false
         const songInfo = this.currentSong
+        noteTrackStarted(songInfo?.track_id)
 
         if (this.playbackController.isBlocked(songInfo)) {
+            announceSkip(songInfo)
             return this.nextTrack()
         }
 
@@ -187,6 +193,7 @@ export class TrackObserver {
         const currentTimeMS = positionSeconds * 1000
 
         if (this.playbackController.isBlocked(currentSong)) {
+            announceSkip(currentSong)
             this._skipping = true
             return this.nextTrack()
         }
@@ -230,7 +237,9 @@ export class TrackObserver {
         // A counted loop that ran out, or a snipped / blocked track, moves on
         // without waiting for Spotify's own auto-advance.
         const loopExhausted = this.loop.type === 'amount' && this.loop.iteration === 0
-        if (loopExhausted || currentSong.snip || currentSong.blocked) {
+        const snipped = featureOn('snips') && Boolean(currentSong.snip)
+        const blocked = featureOn('blocks') && Boolean(currentSong.blocked)
+        if (loopExhausted || snipped || blocked) {
             this._skipping = true
             this.nextTrack()
         }

@@ -1,4 +1,6 @@
 import { get } from 'svelte/store'
+import { featureOn } from '$lib/utils/features'
+import { isAllowedOnce } from '$lib/utils/skip-notice'
 import { volumeStore } from '$lib/stores/volume'
 import { loopStore } from '$lib/stores/loop'
 import { configStore } from '$lib/stores/config'
@@ -98,6 +100,10 @@ export class PlaybackController {
 
     /** Blocked by the user, or matched by a skip rule in the config. */
     isBlocked(songInfo: NowPlaying): boolean {
+        // Blocks paused from the Settings tab: everything plays.
+        if (!featureOn('blocks')) return false
+        // The one track the person chose to hear anyway (see utils/skip-notice).
+        if (isAllowedOnce(songInfo?.track_id)) return false
         return (
             songInfo?.blocked ||
             configStore.checkIfTrackShouldBeSkipped({
