@@ -24,6 +24,8 @@ import { registerPlayerService } from '$lib/api/services/player'
 import { registerNewReleasesService } from '$lib/api/services/new-releases'
 import { registerLyricsService } from '$lib/api/services/lyrics'
 import { getEnabled, toggleEnabled, watchEnabled } from '$lib/stores/enabled'
+import { NEW_RELEASES_STORE_KEY, type NewReleases } from '$lib/stores/new-releases'
+import { badgeText, unseenReleases } from '$lib/utils/releases-badge'
 import { applyActionIndicator } from '$lib/utils/action-indicator'
 import { executeButtonClick, registerCommandService } from '$lib/utils/command'
 import { registerNotificationService, showNotification } from '$lib/utils/notifications'
@@ -51,6 +53,7 @@ export default defineBackground(() => {
     })
     watchEnabled((enabled) => {
         isEnabled = enabled
+        void updateReleasesBadge()
         applyActionIndicator(enabled)
     })
 
@@ -221,6 +224,25 @@ export default defineBackground(() => {
         if (resp?.error) throw new Error(resp.error)
         return resp
     }
+
+    // Toolbar badge: how many new releases arrived since the New Releases view
+    // was last opened (the page refreshes the counts when it loads; opening the
+    // view marks them seen). Blank while Chorus is off, like its other surfaces.
+    async function updateReleasesBadge(state?: NewReleases | null) {
+        const action = browser.action
+        if (!action?.setBadgeText) return
+        try {
+            const releases = state ?? (await storage.getItem<NewReleases>(NEW_RELEASES_STORE_KEY))
+            const text = isEnabled ? badgeText(unseenReleases(releases)) : ''
+            await action.setBadgeBackgroundColor({ color: '#1ed760' })
+            await action.setBadgeTextColor?.({ color: '#121212' })
+            await action.setBadgeText({ text })
+        } catch (error) {
+            console.warn('[chorus] releases badge:', error)
+        }
+    }
+    readyPromise.then(() => updateReleasesBadge())
+    storage.watch<NewReleases>(NEW_RELEASES_STORE_KEY, (state) => void updateReleasesBadge(state))
 
     // Dedicated port (not runtime.onMessage) so the @webext-core proxy-service
     // message validator never sees these control messages.
