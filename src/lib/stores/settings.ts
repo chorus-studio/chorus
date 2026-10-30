@@ -8,7 +8,7 @@ export const SETTINGS_STORE_KEY = 'local:chorus_settings'
 export type SettingsKey = 'ui' | 'views' | 'notifications' | 'theme'
 /** Dark or light rack (and page, while a theme is applied); `system` follows the OS. */
 export type Appearance = 'dark' | 'light' | 'system'
-/** Where the toolbar popup and PiP player take their colours from. */
+/** Where the toolbar popup takes its colours from (the PiP player always follows the theme). */
 export type PopupColours = 'album' | 'theme'
 /** Glass material tweaks: panel opacity (0..1), backdrop blur (px), refraction strength (0 = off). */
 export type GlassSettings = {

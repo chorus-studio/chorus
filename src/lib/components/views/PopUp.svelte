@@ -6,7 +6,7 @@
     import { nowPlaying } from '$lib/stores/now-playing'
     import { setEnabled } from '$lib/stores/enabled'
     import { settingsStore } from '$lib/stores/settings'
-    import { watchSystemMode } from '$lib/utils/theming'
+    import { applyThemePopupPalette, watchSystemMode } from '$lib/utils/theming'
 
     import BellOff from '@lucide/svelte/icons/bell-off'
     import BellPlus from '@lucide/svelte/icons/bell-plus'
@@ -59,11 +59,16 @@
             : ''
     )
 
-    // The popup wears the cover's colour in the current appearance, or the rack
-    // tokens when the Theme tab says "Popup: Theme". In PiP the variables land
-    // on the page root and pip.ts mirrors them into the PiP document.
-    function loadColours() {
-        return paintPopup(document.documentElement, $settingsStore, $nowPlaying.cover)
+    // The toolbar popup wears the cover's colour in the current appearance, or
+    // the rack tokens when the Theme tab says "Popup: Theme". The PiP always
+    // wears the theme: its variables land on the page root and pip.ts mirrors
+    // them into the PiP document.
+    async function loadColours() {
+        if (pip) {
+            applyThemePopupPalette(document.documentElement)
+            return
+        }
+        await paintPopup(document.documentElement, $settingsStore, $nowPlaying.cover)
     }
 
     function openSpotify() {

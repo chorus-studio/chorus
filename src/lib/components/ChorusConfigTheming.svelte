@@ -169,7 +169,8 @@
                     { label: 'Theme', value: 'theme', title: 'The same colours as these panels' }
                 ]}
             />
-            <span class={HINT}>Where the toolbar popup and PiP player take their colours from.</span
+            <span class={HINT}
+                >Where the toolbar popup takes its colours from; the PiP player follows the theme.</span
             >
         </div>
 
