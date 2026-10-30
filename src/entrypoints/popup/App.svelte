@@ -95,5 +95,6 @@
         --text: #ffffff;
         --text-2: #b3b3b3;
         --album-accent: #1ed760;
+        --album-accent-fg: #000000;
     }
 </style>

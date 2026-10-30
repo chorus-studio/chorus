@@ -104,6 +104,10 @@ describe('derivePopupPalette', () => {
                             contrastRatio(p!.bg, p!.accent),
                             `accent ${at}`
                         ).toBeGreaterThanOrEqual(3)
+                        expect(
+                            contrastRatio(p!.accent, p!.accentFg),
+                            `glyph ${at}`
+                        ).toBeGreaterThanOrEqual(4.5)
                     }
                 }
             }

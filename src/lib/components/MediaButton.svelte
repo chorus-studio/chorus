@@ -15,8 +15,9 @@
     import SkipForward from '@lucide/svelte/icons/skip-forward'
 
     // Transport button for the popup / PiP. Colours come from the album palette:
-    // --text for idle, --accent (adaptive green) for "on" states, and the play
-    // button inverts --text / --bg.
+    // --text for idle, --album-accent for "on" states and the play disc (the
+    // theme's accent, or the cover's), whose glyph is --album-accent-fg: white
+    // or near-black, chosen for contrast with the accent.
     let {
         icon,
         pip = false,
@@ -112,10 +113,10 @@
         isPlayPause
             ? cn(
                   pip ? 'size-11' : 'size-8',
-                  'bg-[color:var(--text)] text-[color:var(--bg)] hover:scale-105'
+                  'bg-[color:var(--album-accent)] text-[color:var(--album-accent-fg)] hover:scale-105'
               )
             : icon === 'dj'
-              ? cn(size, 'bg-[color:var(--album-accent)] text-[color:var(--bg)]')
+              ? cn(size, 'bg-[color:var(--album-accent)] text-[color:var(--album-accent-fg)]')
               : cn(
                     size,
                     'hover:bg-[color:color-mix(in_srgb,var(--text)_12%,transparent)] hover:opacity-100',
@@ -178,9 +179,9 @@
 
     {#if badge}
         <span
-            class="pointer-events-none absolute inset-x-0 -bottom-1 text-center font-mono font-bold leading-none {pip
-                ? 'text-[9px]'
-                : 'text-[8px]'}"
+            class="pointer-events-none absolute inset-x-0 text-center font-mono font-bold leading-none {pip
+                ? '-bottom-1.5 text-[11px]'
+                : '-bottom-1 text-[8px]'}"
         >
             {badge}
         </span>

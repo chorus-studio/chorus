@@ -80,6 +80,7 @@ export function applyPalette(root: HTMLElement, palette: PopupPalette): PopupPal
     root.style.setProperty('--text', palette.text)
     root.style.setProperty('--text-2', palette.text2)
     root.style.setProperty('--album-accent', palette.accent)
+    root.style.setProperty('--album-accent-fg', palette.accentFg)
     // The accent as an HSL triplet too, for rack primitives that take hsl(var(--signal)).
     const [h, s, l] = hexToHsl(palette.accent)
     root.style.setProperty(
