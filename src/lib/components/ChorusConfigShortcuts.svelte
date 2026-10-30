@@ -32,6 +32,7 @@
             rows: [
                 { name: 'save/unsave', label: 'Save or unsave' },
                 { name: 'block-track', label: 'Block this track' },
+                { name: 'snip-mark', label: 'Mark a snip: start, then end' },
                 { name: 'show-track', label: 'Show as a notification' }
             ]
         },

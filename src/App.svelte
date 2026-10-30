@@ -23,6 +23,7 @@
     import SkipButton from '$lib/components/SkipButton.svelte'
     import HeartButton from '$lib/components/HeartButton.svelte'
     import SettingsPopover from '$lib/components/SettingsPopover.svelte'
+    import SnipMarkButton from '$lib/components/SnipMarkButton.svelte'
 
     let supportsPip = false
     let themeChangeListener: (e: Event) => void
@@ -98,6 +99,7 @@
     <HeartButton />
     <SettingsPopover />
     <SkipButton />
+    <SnipMarkButton />
     {#if supportsPip}
         <PipButton />
     {/if}
