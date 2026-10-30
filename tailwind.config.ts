@@ -2,8 +2,33 @@ import { fontFamily } from 'tailwindcss/defaultTheme'
 import type { Config } from 'tailwindcss'
 import tailwindcssAnimate from 'tailwindcss-animate'
 
+/**
+ * The surface tokens below multiply their alpha by `--surface-alpha`, which the
+ * glass material lowers, so a panel and the cards inside it go translucent
+ * together. That must stop at backgrounds: text, borders, focus-ring offsets,
+ * icon fills and placeholders painted in the same tokens stay at full strength,
+ * or the ink text on a signal chip fades to the glass's opacity.
+ */
+const opaque = (name: string) => `hsl(var(--${name}) / <alpha-value>)`
+const opaqueSurfaceTokens = {
+    ink: { DEFAULT: opaque('ink') },
+    panel: opaque('panel'),
+    surface: { DEFAULT: opaque('surface'), 2: opaque('surface-2') },
+    inset: opaque('inset'),
+    input: opaque('input'),
+    background: opaque('background'),
+    secondary: { DEFAULT: opaque('secondary') },
+    muted: { DEFAULT: opaque('muted') },
+    accent: { DEFAULT: opaque('accent') },
+    popover: { DEFAULT: opaque('popover') },
+    card: { DEFAULT: opaque('card') }
+}
+
 const config: Config = {
     darkMode: ['class'],
+    // The preflight is imported by app.css inside the `chorus-base` cascade
+    // layer instead, so it cannot outrank Spotify's own layered styles.
+    corePlugins: { preflight: false },
     content: ['./src/**/*.{html,js,svelte,ts}'],
     safelist: ['dark'],
     theme: {
@@ -22,6 +47,13 @@ const config: Config = {
             '4xl': '1800px'
         },
         extend: {
+            textColor: opaqueSurfaceTokens,
+            borderColor: opaqueSurfaceTokens,
+            ringOffsetColor: opaqueSurfaceTokens,
+            outlineColor: opaqueSurfaceTokens,
+            placeholderColor: opaqueSurfaceTokens,
+            fill: opaqueSurfaceTokens,
+            stroke: opaqueSurfaceTokens,
             colors: {
                 // ---- studio tokens ----
                 // Surface colours multiply their alpha by --surface-alpha, which frosted

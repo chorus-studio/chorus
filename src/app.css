@@ -1,3 +1,15 @@
+/* Cascade layers. Spotify keeps its component styles in `@layer encore`, with
+   `reset` and `fonts` beneath it, and an unlayered element rule outranks any
+   layered rule whatever its specificity. Tailwind's preflight used to be
+   unlayered in the content stylesheet, so `button { padding: 0 }` squashed
+   Spotify's round icon buttons and `h1 { font-size: inherit }` flattened its
+   headings. The preflight now lives in `chorus-base`, ordered above Spotify's
+   resets (as before) and below its components. Chrome puts the content
+   stylesheet ahead of the page's own, so this statement fixes the order; the
+   class-based Chorus styles stay unlayered and keep winning as they always have. */
+@layer reset, fonts, chorus-base, encore;
+@import 'tailwindcss/src/css/preflight.css' layer(chorus-base);
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -72,7 +84,7 @@
     }
 }
 
-@layer base {
+@layer chorus-base {
     * {
         @apply border-border;
     }
@@ -153,9 +165,17 @@
     --glass-alpha: 0.5;
     --glass-blur: 40px;
     --glass-saturate: 1.8;
+    /* Legibility floor on the tint. A light page shows dark text and artwork
+       through a light glass, and the panels' secondary text has nowhere to
+       go, so light glass is a thick material (iOS keeps sheets thick for the
+       same reason); dark glass over a dark page reads at the slider's value. */
+    --glass-alpha-min: 0.2;
+}
+[data-mode='light'][data-glass] {
+    --glass-alpha-min: 0.72;
 }
 [data-glass] .chorus-float {
-    --surface-alpha: var(--glass-alpha);
+    --surface-alpha: max(var(--glass-alpha), var(--glass-alpha-min));
     isolation: isolate;
     border-color: hsl(var(--ink-fg) / 0.16);
     -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
@@ -182,9 +202,11 @@
         saturate(var(--glass-saturate));
     backdrop-filter: url(#chorus-glass) blur(var(--glass-blur)) saturate(var(--glass-saturate));
 }
-/* the dialog scrim must stay light enough for the page to show through the glass */
+/* The dialog scrim is the dimming layer under the glass: a wash of the rack's
+   own ink (dark on a dark rack, white on a light one), so the page recedes
+   towards the panel's tint instead of towards black, and still shows through. */
 [data-glass] .chorus-scrim {
-    background-color: hsl(var(--shadow) / 0.3);
+    background-color: hsl(var(--ink) / 0.5);
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
 }

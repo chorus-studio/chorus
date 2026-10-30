@@ -568,7 +568,7 @@ export const STATIC_THEMES: Record<ThemeName, null | Record<CSSVariable, string>
 const PAGE_VARS: Record<string, CSSVariable | 'highlight' | 'highlight-elevated'> = {
     main: 'main',
     card: 'card',
-    // Spotify's elevated surfaces (context menus, the hover of main-level controls) take the card colour.
+    // Spotify's elevated surfaces (context menus, the top bar's controls, the hover of main-level controls) take the card colour.
     'main-elevated': 'card',
     sidebar: 'sidebar',
     button: 'button',
@@ -609,11 +609,13 @@ export function applyPageVariables(
 ): void {
     const root = document.documentElement
     for (const [name, key] of Object.entries(PAGE_VARS)) {
+        // Hovered elevated surfaces (the search box, the top bar's buttons, menu
+        // items) step up to the palette's hover colour, as the theme intends for rows.
         const value =
             key === 'highlight'
                 ? themeConfig.main
                 : key === 'highlight-elevated'
-                  ? themeConfig.sidebar
+                  ? themeConfig.button_disabled
                   : themeConfig[key]
         root.style.setProperty(`--chorus-${name}`, value)
         root.style.setProperty(`--chorus-rgb-${name}`, rgbTriplet(value))
@@ -646,6 +648,7 @@ export function applyThemeVariables(
 // ---- Glass ------------------------------------------------------------------
 
 const GLASS_FILTER_ID = 'chorus-glass'
+export const GLASS_BLUR_MIN = 16
 const SVG_NS = 'http://www.w3.org/2000/svg'
 
 /**
@@ -710,7 +713,9 @@ export function applyGlass(settings: SettingsState, doc: Document = document): v
     }
     root.toggleAttribute('data-glass', on)
     root.style.setProperty('--glass-alpha', String(opacity))
-    root.style.setProperty('--glass-blur', `${blur}px`)
+    // Below this radius the page's text stays legible through the glass and
+    // fights the panel's own; the Theme tab's slider starts here too.
+    root.style.setProperty('--glass-blur', `${Math.max(blur, GLASS_BLUR_MIN)}px`)
     const refract = on && refraction > 0
     root.toggleAttribute('data-refraction', refract)
     if (refract) ensureGlassFilter(doc)?.setAttribute('scale', String(refraction))
@@ -730,13 +735,12 @@ export function clearGlass(doc: Document = document): void {
 
 /** Strip the page re-skin: Spotify's own stylesheets and colours come back. */
 export function removePageTheme(): void {
-    const themeLink = document.getElementById('chorus-theme')
+    unwatchStylesheets()
     clearPageVariables()
-    const allOverrideStyles = document.querySelectorAll('style[id^="chorus-override-styles-"]')
-    allOverrideStyles.forEach((style) => {
-        document.head.removeChild(style)
-    })
-    if (themeLink) document.head.removeChild(themeLink)
+    document
+        .querySelectorAll(`style[id^="${OVERRIDE_ID_PREFIX}"]`)
+        .forEach((style) => style.remove())
+    document.getElementById(THEME_LINK_ID)?.remove()
 }
 
 /** Everything theming put on the page: re-skin, rack tokens, glass and mode. */
@@ -811,7 +815,12 @@ export function applyThemePopupPalette(root: HTMLElement): void {
 type ReplacementRule = {
     target: string
     replacement: string | ((match: string, group: string) => string)
+    /** Only declarations of these properties; the next rule for the same colour takes the rest. */
+    properties?: RegExp
 }
+
+/** Backgrounds and the `--background-*` tokens, as opposed to text, icons and masks. */
+const BACKGROUND_PROPERTY = /^(--)?background/
 
 /** Below this alpha a translucent white is a hover / selection tint; above it, dimmed text or an icon. */
 const OVERLAY_ALPHA_MAX = 0.25
@@ -833,17 +842,33 @@ const HEX_END = '(?![0-9a-f])'
 
 // Every hex pattern ends in a lookahead, and longer alternatives come first,
 // so `#fff` never eats the start of `#ffffff1a` or `#ffffff`.
+//
+// Spotify's black is two things: the app frame (the gaps between the panels,
+// the top bar and the player bar) and the text on its bright-accent fills.
+// The frame takes the palette's `player` colour, the text its `shadow`.
 function replacementRules(): ReplacementRule[] {
     return [
         { target: `#ffffff([0-9a-f]{2})${HEX_END}`, replacement: translucentWhite },
         { target: `#(181818|212121)${HEX_END}`, replacement: 'var(--chorus-player)' },
         { target: `#282828${HEX_END}`, replacement: 'var(--chorus-card)' },
-        { target: `#(242424|1f1f1f)${HEX_END}`, replacement: 'var(--chorus-main-elevated)' },
+        {
+            target: `#(242424|1f1f1f|191919)${HEX_END}`,
+            replacement: 'var(--chorus-main-elevated)'
+        },
         { target: `#121212${HEX_END}`, replacement: 'var(--chorus-main)' },
         { target: `#1a1a1a${HEX_END}`, replacement: 'var(--chorus-highlight)' },
         { target: `#2a2a2a${HEX_END}`, replacement: 'var(--chorus-highlight-elevated)' },
+        {
+            target: `#(000000|000)${HEX_END}`,
+            replacement: 'var(--chorus-player)',
+            properties: BACKGROUND_PROPERTY
+        },
         { target: `#(000000|000)${HEX_END}`, replacement: 'var(--chorus-shadow)' },
         { target: `#(ffffff|fff)${HEX_END}`, replacement: 'var(--chorus-text)' },
+        // The white (inverted-light) buttons, the player bar's play button among
+        // them: their hover and pressed greys follow the text colour the white maps to.
+        { target: `#f0f0f0${HEX_END}`, replacement: 'var(--chorus-text)' },
+        { target: `#c7c7c7${HEX_END}`, replacement: 'var(--chorus-subtext)' },
         { target: `#(b3b3b3|a7a7a7)${HEX_END}`, replacement: 'var(--chorus-subtext)' },
         { target: `#(1ed760|1fdf64|169c46)${HEX_END}`, replacement: 'var(--chorus-button-active)' },
         { target: `#535353${HEX_END}`, replacement: 'var(--chorus-button-disabled)' },
@@ -862,51 +887,148 @@ function replacementRules(): ReplacementRule[] {
     ]
 }
 
-/**
- * Rewrites Spotify's stylesheet text onto the `--chorus-*` variables. Pure,
- * so the rules can be checked against a saved copy of the stylesheet.
- */
-export function rewriteSpotifyCss(cssText: string): string {
-    let modified = cssText
-    for (const { target, replacement } of replacementRules()) {
-        const regex = new RegExp(target, 'gi')
-        modified = modified.replaceAll(regex, (match: string, ...groups: string[]) =>
-            typeof replacement === 'function'
-                ? `${replacement(match, groups[0] || '')} !important`
-                : `${replacement} !important`
-        )
-    }
-    // A declaration Spotify already marked important would otherwise get the flag twice and be dropped.
-    return modified.replaceAll(' !important !important', ' !important')
+type CompiledRule = Omit<ReplacementRule, 'target'> & { regex: RegExp }
+
+function compileRules(): CompiledRule[] {
+    return replacementRules().map(({ target, ...rule }) => ({
+        ...rule,
+        regex: new RegExp(target, 'gi')
+    }))
 }
 
-export async function overrideExternalStyles() {
-    const styleSheets = Array.from(document.styleSheets)
-    let count = 0
+/** A value can only match a rule if it holds a hex colour or one of the two rgba() greys. */
+const MAY_MATCH = /#|rgba\(/i
+const IMPORTANT_FLAG = /\s*!\s*important\s*$/i
+/** `url(...)` tokens, quoted or bare: a data URI can carry `;` and hex colours of its own. */
+const URL_TOKEN = /url\((?:"[^"]*"|'[^']*'|[^)]*)\)/gi
+const URL_MARK = '\u0001'
+const URL_PLACEHOLDER = new RegExp(`url\\(${URL_MARK}(\\d+)${URL_MARK}\\)`, 'g')
 
-    for (const sheet of styleSheets) {
-        if (!sheet.href) continue
-        try {
-            const response = await fetch(sheet.href)
-            const cssText = await response.text()
-
-            const styleEl = document.createElement('style')
-            styleEl.id = `chorus-override-styles-${count++}`
-            styleEl.textContent = rewriteSpotifyCss(cssText)
-            document.head.appendChild(styleEl)
-        } catch (fetchErr) {
-            console.warn('Could not fetch and override:', sheet.href, fetchErr)
-        }
+/**
+ * One `property: value` declaration. Every colour in the value is swapped and
+ * the `!important` flag goes on once, at the end, so a gradient, a `var()`
+ * fallback or a shadow list with a colour inside stays a valid declaration.
+ */
+function rewriteDeclaration(declaration: string, rules: CompiledRule[]): string {
+    const colon = declaration.indexOf(':')
+    if (colon < 0) return declaration
+    const original = declaration.slice(colon + 1)
+    if (!MAY_MATCH.test(original)) return declaration
+    const property = declaration.slice(0, colon).trim().toLowerCase()
+    let value = original
+    for (const { regex, replacement, properties } of rules) {
+        if (properties && !properties.test(property)) continue
+        value = value.replace(regex, (match: string, ...groups: string[]) =>
+            typeof replacement === 'function' ? replacement(match, groups[0] || '') : replacement
+        )
     }
+    if (value === original) return declaration
+    const trailing = /\s*$/.exec(value)?.[0] ?? ''
+    const body = value.replace(IMPORTANT_FLAG, '').replace(/\s+$/, '')
+    return `${declaration.slice(0, colon + 1)}${body} !important${trailing}`
+}
+
+/** The declarations of one `{ ... }` block, with `url()` tokens hidden from the split and from the colour rules. */
+function rewriteBlock(body: string, rules: CompiledRule[]): string {
+    if (!MAY_MATCH.test(body)) return body
+    const urls: string[] = []
+    const masked = body.replace(
+        URL_TOKEN,
+        (token) => `url(${URL_MARK}${urls.push(token) - 1}${URL_MARK})`
+    )
+    const rewritten = masked
+        .split(';')
+        .map((declaration) => rewriteDeclaration(declaration, rules))
+        .join(';')
+    return rewritten.replace(URL_PLACEHOLDER, (_, index: string) => urls[Number(index)])
+}
+
+/**
+ * Rewrites Spotify's stylesheet text onto the `--chorus-*` variables. Pure,
+ * so the rules can be checked against a saved copy of the stylesheet. Only
+ * declaration values are touched, never selectors, and since declarations
+ * only live in innermost blocks, nested at-rules need no special handling.
+ */
+export function rewriteSpotifyCss(cssText: string): string {
+    const rules = compileRules()
+    return cssText.replace(/\{([^{}]*)\}/g, (_, body: string) => `{${rewriteBlock(body, rules)}}`)
+}
+
+const THEME_LINK_ID = 'chorus-theme'
+const OVERRIDE_ID_PREFIX = 'chorus-override-styles-'
+
+/** Spotify stylesheets already fetched and rewritten, by href. */
+const rewrittenSheets = new Set<string>()
+let overrideCount = 0
+let sheetObserver: MutationObserver | null = null
+
+/** One of Spotify's own stylesheets: served over http(s), unlike the extension's. */
+function isPageStylesheet(node: Node): node is HTMLLinkElement {
+    if (node.nodeName !== 'LINK') return false
+    const link = node as HTMLLinkElement
+    return link.rel === 'stylesheet' && /^https?:/i.test(link.href)
+}
+
+/**
+ * Fetch one of Spotify's stylesheets and add its rewritten copy, kept ahead
+ * of theme.css so the theme's own rules still win ties.
+ */
+async function overrideStylesheet(href: string): Promise<void> {
+    if (rewrittenSheets.has(href)) return
+    rewrittenSheets.add(href)
+    try {
+        const response = await fetch(href)
+        const cssText = await response.text()
+        const styleEl = document.createElement('style')
+        styleEl.id = `${OVERRIDE_ID_PREFIX}${overrideCount++}`
+        styleEl.textContent = rewriteSpotifyCss(cssText)
+        const themeLink = document.getElementById(THEME_LINK_ID)
+        if (themeLink) themeLink.before(styleEl)
+        else document.head.appendChild(styleEl)
+    } catch (fetchErr) {
+        rewrittenSheets.delete(href)
+        console.warn('Could not fetch and override:', href, fetchErr)
+    }
+}
+
+/** The stylesheets Spotify has loaded so far, rewritten in document order. */
+export async function overrideExternalStyles(): Promise<void> {
+    const links = Array.from(document.querySelectorAll('link')).filter(isPageStylesheet)
+    for (const link of links) await overrideStylesheet(link.href)
+}
+
+/**
+ * Spotify loads most of its CSS lazily, a chunk per route or feature (the
+ * player bar's own styles among them), long after the first pass has run.
+ * Each stylesheet it adds to <head> from then on is rewritten as it lands.
+ */
+function watchStylesheets(): void {
+    if (sheetObserver || typeof MutationObserver === 'undefined') return
+    sheetObserver = new MutationObserver((records) => {
+        for (const record of records) {
+            for (const node of Array.from(record.addedNodes)) {
+                if (isPageStylesheet(node)) void overrideStylesheet(node.href)
+            }
+        }
+    })
+    sheetObserver.observe(document.head, { childList: true })
+}
+
+function unwatchStylesheets(): void {
+    sheetObserver?.disconnect()
+    sheetObserver = null
+    rewrittenSheets.clear()
+    overrideCount = 0
 }
 
 export async function injectThemeCss(): Promise<void> {
-    if (document.getElementById('chorus-theme')) return
+    if (document.getElementById(THEME_LINK_ID)) return
 
+    watchStylesheets()
     await overrideExternalStyles()
 
     const style = document.createElement('link')
-    style.id = 'chorus-theme'
+    style.id = THEME_LINK_ID
     style.rel = 'stylesheet'
     style.href = chrome.runtime.getURL('/content-scripts/theme.css')
     document.head.appendChild(style)
