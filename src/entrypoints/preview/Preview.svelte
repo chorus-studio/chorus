@@ -39,7 +39,14 @@
     import { applyPresetValues } from '$lib/utils/quick-presets'
     import { lofiStore, type LofiEffectKey } from '$lib/stores/lofi'
     import { effectsStore } from '$lib/stores/effects'
-    import { eqSubView, fxSubView, msSubView, presetsSubView } from '$lib/stores/effects-ui'
+    import {
+        eqSubView,
+        fxSubView,
+        msSubView,
+        presetsSubView,
+        snipSubView
+    } from '$lib/stores/effects-ui'
+    import { lyricsStore } from '$lib/stores/lyrics'
 
     const params = new URLSearchParams(location.search)
     const scene = params.get('scene') ?? 'tabs'
@@ -205,6 +212,37 @@
             trigger.click()
         }, 50)
         return () => clearInterval(tick)
+    })
+
+    // ?tab=snip&view=lyrics opens the lyrics picker over made-up timed lines;
+    // &lyrics=none shows the no-lyrics state instead.
+    const SAMPLE_LYRICS = [
+        [12.0, '♪'],
+        [18.4, 'Streetlights blur into a line'],
+        [24.1, 'We drive until the signs run out'],
+        [30.0, 'The radio keeps asking why'],
+        [36.2, 'And every answer is a doubt'],
+        [42.4, 'Hold on, the night is wide awake'],
+        [48.9, 'It knows the roads we never take'],
+        [55.0, 'It knows the names we never say'],
+        [61.3, 'Hold on, it carries us away'],
+        [71.2, '♪'],
+        [84.0, 'Morning finds us in the car'],
+        [90.1, 'With nothing left of who we are'],
+        [96.5, 'But the hum beneath the floor'],
+        [102.8, 'And the hunger for one more']
+    ] as const
+    onMount(async () => {
+        if (tab !== 'snip' || params.get('view') !== 'lyrics') return
+        await new Promise((resolve) => setTimeout(resolve, 30))
+        const id = get(nowPlaying).track_id || '1'
+        lyricsStore.seed(
+            id,
+            params.get('lyrics') === 'none'
+                ? null
+                : { synced: true, lines: SAMPLE_LYRICS.map(([start, text]) => ({ start, text })) }
+        )
+        snipSubView.set('lyrics')
     })
 
     // ?dialog=auto-skip&artists=M83,Drake&min=60 seeds blocked artists and a length limit.
