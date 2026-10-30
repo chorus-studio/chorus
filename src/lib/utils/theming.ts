@@ -19,7 +19,13 @@
 // ; notification-error = Error notification toast.
 // ; misc               = Miscellaneous.
 
-import { applyThemeSurfaces, clearThemeSurfaces, invertPalette, type Mode } from './theme-surfaces'
+import {
+    applyThemeSurfaces,
+    clearThemeSurfaces,
+    frameColor,
+    invertPalette,
+    type Mode
+} from './theme-surfaces'
 import type { Appearance, SettingsState } from '$lib/stores/settings'
 
 export type { Mode }
@@ -565,8 +571,10 @@ export const STATIC_THEMES: Record<ThemeName, null | Record<CSSVariable, string>
     }
 }
 
-const PAGE_VARS: Record<string, CSSVariable | 'highlight' | 'highlight-elevated'> = {
+const PAGE_VARS: Record<string, CSSVariable | 'highlight' | 'highlight-elevated' | 'frame'> = {
     main: 'main',
+    // The app frame around the panels: a step beyond `main` (theme-surfaces.ts frameColor).
+    frame: 'frame',
     card: 'card',
     // Spotify's elevated surfaces (context menus, the top bar's controls, the hover of main-level controls) take the card colour.
     'main-elevated': 'card',
@@ -616,7 +624,9 @@ export function applyPageVariables(
                 ? themeConfig.main
                 : key === 'highlight-elevated'
                   ? themeConfig.button_disabled
-                  : themeConfig[key]
+                  : key === 'frame'
+                    ? frameColor(themeConfig.main, mode)
+                    : themeConfig[key]
         root.style.setProperty(`--chorus-${name}`, value)
         root.style.setProperty(`--chorus-rgb-${name}`, rgbTriplet(value))
     }
@@ -848,7 +858,9 @@ const HEX_END = '(?![0-9a-f])'
 //
 // Spotify's black is two things: the app frame (the gaps between the panels,
 // the top bar and the player bar) and the text on its bright-accent fills.
-// The frame takes the palette's `player` colour, the text its `shadow`.
+// The frame takes `--chorus-frame`, a step beyond the page's `main` so the
+// panels keep reading as panels (most palettes give main, sidebar and player
+// one colour); the text takes the palette's `shadow`.
 function replacementRules(): ReplacementRule[] {
     return [
         { target: `#ffffff([0-9a-f]{2})${HEX_END}`, replacement: translucentWhite },
@@ -863,7 +875,7 @@ function replacementRules(): ReplacementRule[] {
         { target: `#2a2a2a${HEX_END}`, replacement: 'var(--chorus-highlight-elevated)' },
         {
             target: `#(000000|000)${HEX_END}`,
-            replacement: 'var(--chorus-player)',
+            replacement: 'var(--chorus-frame)',
             properties: BACKGROUND_PROPERTY
         },
         { target: `#(000000|000)${HEX_END}`, replacement: 'var(--chorus-shadow)' },

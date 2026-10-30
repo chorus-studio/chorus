@@ -138,7 +138,7 @@ const LIGHT_PAGE = {
     subtextSaturationMax: 50,
     main: 94,
     sidebar: 90,
-    /** Paints Spotify's black app frame and both bars: the lightest step, so the panels float on it. */
+    /** The bar slot (Spotify's #181818 surfaces); the frame itself derives from `main`, see `frameColor`. */
     player: 97,
     card: 86,
     /** Hover fallback, scrollbar handle and seek-bar track: a clear step below the page. */
@@ -147,6 +147,14 @@ const LIGHT_PAGE = {
     text: 13,
     subtext: 36
 }
+
+/**
+ * The app frame (the gaps between Spotify's panels, the top bar and the player
+ * bar) sits a step beyond the page so the panels read as panels: darker on a
+ * dark page, as Spotify's own black frame does under its #121212 panels, and
+ * lighter on a light one. Lightness points from `main`.
+ */
+const FRAME_STEP: Record<Mode, number> = { dark: -6, light: 3 }
 
 type Rgb = [number, number, number]
 type Hsl = [number, number, number]
@@ -268,6 +276,16 @@ function fitLightness(hsl: Hsl, against: Rgb, wanted: number, mode: Mode): numbe
     return mode === 'light'
         ? dropLightness(hsl, against, wanted)
         : liftLightness(hsl, against, wanted)
+}
+
+/**
+ * Colour of the app frame for a page palette. Derived from `main` rather than
+ * read from the palette because most palettes give the page a single tone
+ * (main = sidebar = player), which would leave frame and panels one colour.
+ */
+export function frameColor(main: string, mode: Mode = 'dark'): string {
+    const [h, s, l] = hexToHsl(main)
+    return hslToHex(h, s, l + FRAME_STEP[mode])
 }
 
 /**
