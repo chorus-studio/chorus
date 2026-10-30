@@ -43,11 +43,12 @@
 </script>
 
 <!-- In the player bar the fill sits on Spotify's (possibly themed) chrome, so
-     the slider's signal colour follows --bar-signal there. -->
+     the slider's signal colour follows --bar-signal there; in PiP it follows
+     the popup palette's accent. -->
 <div
     id="chorus-volume"
-    class="flex w-full items-center gap-x-1.5 {pip ? '' : 'max-w-[240px] self-end'}"
-    style={pip ? undefined : '--signal: var(--bar-signal)'}
+    class="flex w-full items-center {pip ? 'gap-x-2' : 'max-w-[240px] gap-x-1.5 self-end'}"
+    style={pip ? '--signal: var(--album-accent-hsl)' : '--signal: var(--bar-signal)'}
 >
     <VolumeReset {pip} {port} />
 
@@ -59,9 +60,9 @@
             aria-label={muteLabel}
             aria-pressed={$volumeStore.muted}
             class={buttonVariants({
-                variant: pip ? 'ghost' : 'bar',
+                variant: 'bar',
                 size: 'icon',
-                class: '[&_svg]:size-4'
+                class: pip ? '[&_svg]:size-[18px]' : '[&_svg]:size-4'
             })}
         >
             <VolumeIcon />
@@ -95,9 +96,9 @@
         step={1}
     />
     <span
-        class="min-w-9 text-right font-mono text-[11px] tabular-nums {pip
-            ? 'text-ink-muted'
-            : 'opacity-80'}"
+        class="text-right font-mono tabular-nums {pip
+            ? 'min-w-10 text-xs text-[color:var(--text-2)]'
+            : 'min-w-9 text-[11px] opacity-80'}"
     >
         {shown}%
     </span>

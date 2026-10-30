@@ -92,10 +92,10 @@
         handleClick(role)
     }
 
-    // 28 px buttons sit edge to edge in the 296 px popup row (3 + 6 + the play
-    // disc); the glyphs carry the size.
-    const size = 'size-7'
-    const iconSize = $derived(pip ? 'size-4' : 'size-[18px]')
+    // Buttons sit edge to edge (3 + 6 + the play disc): 28 px in the 296 px
+    // popup row, 36 px in the 408 px PiP row; the glyphs carry the size.
+    const size = $derived(pip ? 'size-9' : 'size-7')
+    const iconSize = $derived(pip ? 'size-5' : 'size-[18px]')
 </script>
 
 <button
@@ -111,7 +111,7 @@
         'relative inline-flex shrink-0 items-center justify-center rounded-full transition-[opacity,transform,background-color] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--album-accent)]',
         isPlayPause
             ? cn(
-                  pip ? 'size-[34px]' : 'size-8',
+                  pip ? 'size-11' : 'size-8',
                   'bg-[color:var(--text)] text-[color:var(--bg)] hover:scale-105'
               )
             : icon === 'dj'
@@ -154,7 +154,7 @@
             stroke-width="2.5"
             stroke-linecap="round"
             stroke-linejoin="round"
-            class={cn(pip ? 'size-[18px]' : 'size-5', icon === 'seek-forward' && '-scale-x-100')}
+            class={cn(pip ? 'size-[22px]' : 'size-5', icon === 'seek-forward' && '-scale-x-100')}
             aria-hidden="true"
         >
             <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
@@ -178,7 +178,9 @@
 
     {#if badge}
         <span
-            class="pointer-events-none absolute inset-x-0 -bottom-1 text-center font-mono text-[8px] font-bold leading-none"
+            class="pointer-events-none absolute inset-x-0 -bottom-1 text-center font-mono font-bold leading-none {pip
+                ? 'text-[9px]'
+                : 'text-[8px]'}"
         >
             {badge}
         </span>

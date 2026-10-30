@@ -237,7 +237,9 @@
             <span class="min-w-8 font-mono text-[11px] {timeClass} tabular-nums">{total}</span>
         {:else}
             <div
-                class="flex w-full items-center justify-between font-mono text-[10px] leading-none {timeClass} tabular-nums"
+                class="flex w-full items-center justify-between font-mono leading-none {pip
+                    ? 'text-[11px]'
+                    : 'text-[10px]'} {timeClass} tabular-nums"
             >
                 <span>{current}</span>
                 <span>{total}</span>

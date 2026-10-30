@@ -150,8 +150,10 @@
     class={cn(
         'relative isolate flex flex-col',
         glassOn && 'overflow-hidden',
+        // In PiP the player fills the tab's content area (negative margins undo
+        // the tab padding) and wears the popup palette like the toolbar popup.
         pip
-            ? 'w-full gap-y-2.5'
+            ? '-mx-4 -mb-2 -mt-3 flex-1 gap-y-2 bg-[color:var(--bg)] px-4 pb-2.5 pt-3 text-[color:var(--text)]'
             : 'min-h-[176px] w-[320px] gap-y-2 bg-[color:var(--bg)] px-3 pb-2 pt-1.5 text-[color:var(--text)]'
     )}
 >
@@ -235,12 +237,19 @@
         </header>
     {/if}
 
-    <div class="flex items-center {pip ? 'gap-x-3' : 'gap-x-2.5'}">
-        <CoverImage size={pip ? 56 : 52} />
-        <div class="flex min-w-0 flex-1 flex-col gap-y-1">
-            <TrackInfo isPopup />
+    <div class="flex items-center {pip ? 'gap-x-3.5' : 'gap-x-2.5'}">
+        <CoverImage
+            size={pip ? 112 : 52}
+            class={pip ? 'rounded-lg shadow-[0_6px_18px_rgba(0,0,0,0.35)]' : ''}
+        />
+        <div class="flex min-w-0 flex-1 flex-col {pip ? 'gap-y-2' : 'gap-y-1'}">
+            <TrackInfo isPopup {pip} />
             {#if $nowPlaying.snip || $nowPlaying.playback}
-                <div class="flex items-center gap-x-1.5 font-mono text-[10px] leading-none">
+                <div
+                    class="flex items-center gap-x-1.5 font-mono leading-none {pip
+                        ? 'text-[11px]'
+                        : 'text-[10px]'}"
+                >
                     {#if $nowPlaying.snip?.ranges?.length}
                         {@const first = $nowPlaying.snip.ranges[0]}
                         {@const more = $nowPlaying.snip.ranges.length - 1}
@@ -265,13 +274,25 @@
     <div
         class={cn(
             'flex flex-col',
-            pip ? 'gap-y-2.5' : 'gap-y-1.5',
-            glassOn && 'chorus-glass-card -mx-1.5 rounded-lg px-1.5 py-1'
+            pip ? 'gap-y-2' : 'gap-y-1.5',
+            !pip && glassOn && 'chorus-glass-card -mx-1.5 rounded-lg px-1.5 py-1'
         )}
     >
         <TimeProgress {port} {pip} />
 
-        <MediaControls {port} {pip} />
+        {#if pip}
+            <!-- The PiP transport rides on a card, glass or not. -->
+            <div
+                class={cn(
+                    'rounded-xl px-1.5 py-1',
+                    glassOn ? 'chorus-glass-card' : 'chorus-pip-card'
+                )}
+            >
+                <MediaControls {port} {pip} />
+            </div>
+        {:else}
+            <MediaControls {port} {pip} />
+        {/if}
     </div>
 
     {#if pip}

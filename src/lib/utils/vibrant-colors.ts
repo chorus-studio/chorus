@@ -10,7 +10,12 @@ import { Vibrant } from 'node-vibrant/browser'
 import type { SettingsState } from '$lib/stores/settings'
 import type { Mode } from '$lib/utils/theme-surfaces'
 import { applyThemePopupPalette, resolveMode } from '$lib/utils/theming'
-import { derivePopupPalette, type PopupPalette, type Swatch } from '$lib/utils/popup-palette'
+import {
+    derivePopupPalette,
+    hexToHsl,
+    type PopupPalette,
+    type Swatch
+} from '$lib/utils/popup-palette'
 
 export * from '$lib/utils/popup-palette'
 
@@ -75,6 +80,12 @@ export function applyPalette(root: HTMLElement, palette: PopupPalette): PopupPal
     root.style.setProperty('--text', palette.text)
     root.style.setProperty('--text-2', palette.text2)
     root.style.setProperty('--album-accent', palette.accent)
+    // The accent as an HSL triplet too, for rack primitives that take hsl(var(--signal)).
+    const [h, s, l] = hexToHsl(palette.accent)
+    root.style.setProperty(
+        '--album-accent-hsl',
+        `${Math.round(h)} ${s.toFixed(1)}% ${l.toFixed(1)}%`
+    )
     return palette
 }
 
