@@ -124,7 +124,7 @@
                     class={cn(
                         'chorus-focus inline-flex h-6 flex-1 items-center justify-center rounded-md px-1 text-[10.5px] transition-colors',
                         active
-                            ? 'bg-signal font-semibold text-ink'
+                            ? 'bg-signal font-semibold text-signal-fg'
                             : 'bg-surface-2 text-ink-fg-2 hover:text-ink-fg'
                     )}
                 >

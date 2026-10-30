@@ -4,7 +4,7 @@
         base: 'inline-flex select-none items-center gap-1 rounded-md border px-2 py-0.5 text-xs font-medium leading-tight transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-signal',
         variants: {
             variant: {
-                default: 'border-transparent bg-signal text-ink',
+                default: 'border-transparent bg-signal text-signal-fg',
                 secondary: 'border-transparent bg-surface-2 text-ink-fg',
                 destructive: 'border-transparent bg-alarm/15 text-alarm',
                 outline: 'border-hairline-strong text-ink-fg-2',

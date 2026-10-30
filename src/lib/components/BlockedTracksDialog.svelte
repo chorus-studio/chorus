@@ -158,7 +158,7 @@
                     checkboxBox,
                     'size-3.5',
                     allSelected || someSelected
-                        ? 'bg-signal text-ink'
+                        ? 'bg-signal text-signal-fg'
                         : 'border-[1.5px] border-hairline-strong'
                 )}
             >
@@ -196,7 +196,7 @@
                         <ListX />
                         {#if blockedCount > 0}
                             <span
-                                class="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-signal px-1 font-mono text-[9px] font-bold text-ink"
+                                class="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-signal px-1 font-mono text-[9px] font-bold text-signal-fg"
                             >
                                 {blockedCount > 99 ? '99+' : blockedCount}
                             </span>
@@ -304,7 +304,7 @@
                                             checkboxBox,
                                             'size-3.5',
                                             isSelected
-                                                ? 'bg-signal text-ink'
+                                                ? 'bg-signal text-signal-fg'
                                                 : 'border-[1.5px] border-hairline-strong'
                                         )}
                                     >
@@ -398,7 +398,7 @@
                                                 class={cn(
                                                     'absolute left-2 top-2 inline-flex size-[18px] items-center justify-center rounded transition-opacity peer-focus-visible:opacity-100 peer-focus-visible:ring-2 peer-focus-visible:ring-signal',
                                                     isSelected
-                                                        ? 'bg-signal text-ink'
+                                                        ? 'bg-signal text-signal-fg'
                                                         : 'border-[1.5px] border-ink-fg/70 bg-ink/40 opacity-0 group-hover:opacity-100'
                                                 )}
                                             >

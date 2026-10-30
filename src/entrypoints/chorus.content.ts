@@ -6,6 +6,7 @@ import { type VolumeState } from '$lib/stores/volume'
 import { closePictureInPicture } from '$lib/utils/pip'
 import { playbackObserver } from '$lib/observers/playback'
 import { tracklistObserver } from '$lib/observers/tracklist'
+import { discographyPages } from '$lib/utils/discography-pages'
 import { getEnabled, watchEnabled } from '$lib/stores/enabled'
 import { type SettingsState, SETTINGS_STORE_KEY } from '$lib/stores/settings'
 import { type ContentScriptContext, injectScript, createIntegratedUi } from 'wxt/client'
@@ -290,6 +291,11 @@ function reconcile() {
     // exists, so steady state never watches the whole document.
     ensureBarScope()
 
+    // The Track pill on the artist / album pages needs only the main view, not
+    // the now-playing widget, so it is armed here rather than from the App and
+    // survives the App's remounts. No-ops once watching.
+    if (!discographyPages.observing) discographyPages.observe()
+
     const widget = document.querySelector(NOW_PLAYING_WIDGET)
     if (!widget) return
 
@@ -427,6 +433,7 @@ function removeChorusUI() {
     // vanilla. These singletons survive App remounts, so it's safe to call here.
     playbackObserver.teardown()
     tracklistObserver.teardown()
+    discographyPages.teardown()
 
     for (const { instance, container } of mountedControlButtons) {
         try {

@@ -22,6 +22,7 @@ import { THEME_NAMES } from '$lib/utils/theming'
 import { registerTrackService } from '$lib/api/services/track'
 import { registerPlayerService } from '$lib/api/services/player'
 import { registerNewReleasesService } from '$lib/api/services/new-releases'
+import { registerDiscographyService } from '$lib/api/services/discography'
 import { registerLyricsService } from '$lib/api/services/lyrics'
 import { getEnabled, toggleEnabled, watchEnabled } from '$lib/stores/enabled'
 import { NEW_RELEASES_STORE_KEY, type ReleasesState } from '$lib/stores/new-releases'
@@ -135,6 +136,7 @@ export default defineBackground(() => {
     registerCommandService()
     registerNotificationService()
     registerNewReleasesService()
+    registerDiscographyService()
     registerLyricsService()
 
     // ---- Real-time vocal remover: tab capture → offscreen document ----
