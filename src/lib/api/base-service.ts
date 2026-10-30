@@ -6,7 +6,7 @@ import { setOptions, request } from './request'
  */
 export abstract class BaseAPIService {
     protected readonly baseUrl: string
-    
+
     constructor(baseUrl: string) {
         this.baseUrl = baseUrl
     }
@@ -35,21 +35,21 @@ export abstract class BaseAPIService {
                 throw new Error('Failed to set request options - no auth token found')
             }
 
-            const response = await request<any>({ 
-                url: this.baseUrl, 
+            const response = await request<any>({
+                url: this.baseUrl,
                 options,
                 dedupe: query.dedupe,
-                cacheKey: query.cacheKey 
+                cacheKey: query.cacheKey
             })
-            
+
             if (response?.data) {
                 return response.data as T
             }
-            
+
             if (response?.errors) {
                 console.error('GraphQL errors:', response.errors)
             }
-            
+
             return null
         } catch (error) {
             this.handleError(error, `GraphQL query: ${query.operationName}`)
@@ -66,6 +66,7 @@ export abstract class BaseAPIService {
             method?: 'GET' | 'POST' | 'PUT' | 'DELETE'
             body?: Record<string, unknown>
             connect?: boolean
+            platform?: boolean
             dedupe?: boolean
             cacheKey?: string
         } = {}
@@ -74,7 +75,8 @@ export abstract class BaseAPIService {
             const requestOptions = await setOptions({
                 method: options.method || 'GET',
                 body: options.body,
-                connect: options.connect
+                connect: options.connect,
+                platform: options.platform
             })
 
             if (!requestOptions) {
@@ -82,9 +84,9 @@ export abstract class BaseAPIService {
             }
 
             const url = endpoint.startsWith('http') ? endpoint : `${this.baseUrl}${endpoint}`
-            
-            return await request<T>({ 
-                url, 
+
+            return await request<T>({
+                url,
                 options: requestOptions,
                 dedupe: options.dedupe,
                 cacheKey: options.cacheKey
@@ -101,8 +103,8 @@ export abstract class BaseAPIService {
     protected async executeBatchRequests<T>(
         requests: Array<() => Promise<T>>
     ): Promise<(T | null)[]> {
-        const results = await Promise.allSettled(requests.map(req => req()))
-        
+        const results = await Promise.allSettled(requests.map((req) => req()))
+
         return results.map((result, index) => {
             if (result.status === 'fulfilled') {
                 return result.value
@@ -119,7 +121,7 @@ export abstract class BaseAPIService {
     protected handleError(error: unknown, context: string): void {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error'
         console.error(`API Service Error [${context}]:`, errorMessage)
-        
+
         // Add performance monitoring for errors
         if (process.env.NODE_ENV === 'development') {
             console.trace('API Error Stack Trace')
@@ -176,7 +178,7 @@ export const COMMON_QUERIES = {
         dedupe: true
     },
     ADD_TO_LIBRARY: {
-        operationName: 'addToLibrary', 
+        operationName: 'addToLibrary',
         sha256Hash: 'a3c1ff58e6a36fec5fe1e3a193dc95d9071d96b9ba53c5ba9c1494fb1ee73915'
     },
     REMOVE_FROM_LIBRARY: {

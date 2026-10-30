@@ -12,6 +12,8 @@
     import Play from '@lucide/svelte/icons/play'
     import Plus from '@lucide/svelte/icons/plus'
     import Scissors from '@lucide/svelte/icons/scissors'
+    import MicVocal from '@lucide/svelte/icons/mic-vocal'
+    import { snipSubView } from '$lib/stores/effects-ui'
     import SegmentedControl from '$lib/components/SegmentedControl.svelte'
 
     const duration = $derived(Math.max($nowPlaying.duration ?? 0, 0))
@@ -79,12 +81,22 @@
             </div>
         </div>
 
+        <button
+            type="button"
+            onclick={() => snipSubView.set('lyrics')}
+            disabled={!$nowPlaying.track_id}
+            title="Set this section from the lyrics: click its first line, then its last"
+            class="chorus-focus ml-auto inline-flex h-6 shrink-0 items-center gap-x-1 rounded-md px-1.5 text-[11px] text-ink-muted hover:bg-surface-2 hover:text-ink-fg disabled:cursor-not-allowed disabled:opacity-40"
+        >
+            <MicVocal class="size-[11px]" />
+            Lyrics
+        </button>
         {#if ranges.length > 1}
             <button
                 type="button"
                 onclick={() => snipStore.removeSelected()}
                 title="Remove this section"
-                class="chorus-focus ml-auto inline-flex h-6 shrink-0 items-center gap-x-1 rounded-md px-1.5 text-[11px] text-ink-muted hover:bg-surface-2 hover:text-ink-fg"
+                class="chorus-focus inline-flex h-6 shrink-0 items-center gap-x-1 rounded-md px-1.5 text-[11px] text-ink-muted hover:bg-surface-2 hover:text-ink-fg"
             >
                 <X class="size-[11px]" />
                 Remove

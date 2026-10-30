@@ -17,3 +17,9 @@ export const msSubView = writable<EffectSubView>('presets')
 export type PresetsSubView = 'cards' | 'rack'
 
 export const presetsSubView = writable<PresetsSubView>('cards')
+
+// The Snip tab shows its editor or, drilled down from the sections row, the
+// lyrics picker that sets the selected section from two lines.
+export type SnipSubView = 'editor' | 'lyrics'
+
+export const snipSubView = writable<SnipSubView>('editor')

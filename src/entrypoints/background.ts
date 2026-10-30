@@ -22,6 +22,7 @@ import { THEME_NAMES } from '$lib/utils/theming'
 import { registerTrackService } from '$lib/api/services/track'
 import { registerPlayerService } from '$lib/api/services/player'
 import { registerNewReleasesService } from '$lib/api/services/new-releases'
+import { registerLyricsService } from '$lib/api/services/lyrics'
 import { getEnabled, toggleEnabled, watchEnabled } from '$lib/stores/enabled'
 import { applyActionIndicator } from '$lib/utils/action-indicator'
 import { executeButtonClick, registerCommandService } from '$lib/utils/command'
@@ -131,6 +132,7 @@ export default defineBackground(() => {
     registerCommandService()
     registerNotificationService()
     registerNewReleasesService()
+    registerLyricsService()
 
     // ---- Real-time vocal remover: tab capture → offscreen document ----
     // The model runs in an offscreen doc (off the page thread). Tab audio is piped
