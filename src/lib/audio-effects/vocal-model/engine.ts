@@ -18,9 +18,19 @@
 // ORT on every Spotify page.
 import * as ort from 'onnxruntime-web/webgpu'
 import type { InferenceSession, Tensor } from 'onnxruntime-web'
-import { separate, separateChunk, CHUNK, lastTimings, type SeparateResult, type OrtSession } from './mdx'
+import {
+    separate,
+    separateChunk,
+    CHUNK,
+    lastTimings,
+    type SeparateResult,
+    type OrtSession,
+    type TensorFactory
+} from './mdx'
 
 export { CHUNK, lastTimings }
+export type { StemMix } from './mix'
+import { blendStems, scaleStem, type StemMix } from './mix'
 
 // rt_core_v1: small-frame real-time MDX-Net (MIT, UVR weights). Bundled locally
 // (no public download URL); drop into src/public/models/. The download fallback
@@ -80,7 +90,10 @@ async function fetchModelBytes(onStatus?: StatusFn): Promise<ArrayBuffer> {
     if (!res.ok) throw new Error(`model download failed: ${res.status}`)
     const buf = await res.arrayBuffer()
     try {
-        await cache.put(MODEL_DOWNLOAD_URL, new Response(buf.slice(0), { headers: { 'content-type': 'application/octet-stream' } }))
+        await cache.put(
+            MODEL_DOWNLOAD_URL,
+            new Response(buf.slice(0), { headers: { 'content-type': 'application/octet-stream' } })
+        )
     } catch {
         // caching is best-effort
     }
@@ -97,14 +110,18 @@ async function getSession(onStatus?: StatusFn): Promise<InferenceSession> {
             // wasm if the GPU path can't init.
             const providers = 'gpu' in navigator ? ['webgpu', 'wasm'] : ['wasm']
             try {
-                const s = await ort.InferenceSession.create(bytes, { executionProviders: providers })
+                const s = await ort.InferenceSession.create(bytes, {
+                    executionProviders: providers
+                })
                 runtimeInfo.ep = providers[0]
                 console.log('[chorus] ORT session created with', providers[0])
                 return s
             } catch (err) {
                 if (providers[0] === 'webgpu') {
                     console.warn('[chorus] WebGPU init failed, falling back to wasm:', err)
-                    const s = await ort.InferenceSession.create(bytes, { executionProviders: ['wasm'] })
+                    const s = await ort.InferenceSession.create(bytes, {
+                        executionProviders: ['wasm']
+                    })
                     runtimeInfo.ep = 'wasm (webgpu failed)'
                     return s
                 }
@@ -152,31 +169,35 @@ export async function warmup(onStatus?: StatusFn): Promise<void> {
 }
 
 /**
- * Streaming entrypoint: separate ONE block of CHUNK samples. Returns the chosen
- * stem blended with the original mix by `depth` (1 = full effect, 0 = original).
- * The blend is done here (mix & stems are time-aligned) so the worklet's delay
- * handling is unaffected. Used by the offscreen doc.
+ * Streaming entrypoint: separate ONE block of CHUNK samples and play it at the
+ * given stem mix. The two pure stems are the model's own outputs (instrumental
+ * with its volume compensation; vocals through the soft mask), so Instrumental
+ * and Acapella sound as they always have; anything in between blends the
+ * instrumental with what the model left out of it (mix − instrumental), which
+ * gives the original back exactly at (1, 1). The blend is done here (mix and
+ * stems are time-aligned) so the worklet's delay handling is unaffected.
  */
 export async function runChunk(
     left: Float32Array,
     right: Float32Array,
-    mode: 'remove' | 'isolate',
-    depth = 1
+    mix: StemMix
 ): Promise<{ left: Float32Array; right: Float32Array }> {
     const ort = getOrt()
     const session = (await getSession()) as unknown as OrtSession
-    const stem = await separateChunk(session, left, right, {
-        createTensor: (data, dims) => new ort.Tensor('float32', data, dims) as Tensor,
-        mode
-    })
-    if (depth >= 0.999) return stem
+    const createTensor: TensorFactory = (data, dims) =>
+        new ort.Tensor('float32', data, dims) as Tensor
 
-    const n = left.length
-    const oL = new Float32Array(n)
-    const oR = new Float32Array(n)
-    for (let i = 0; i < n; i++) {
-        oL[i] = left[i] * (1 - depth) + stem.left[i] * depth
-        oR[i] = right[i] * (1 - depth) + stem.right[i] * depth
+    if (mix.vocals <= 0.001) {
+        const inst = await separateChunk(session, left, right, { createTensor, mode: 'remove' })
+        return {
+            left: scaleStem(inst.left, mix.instruments),
+            right: scaleStem(inst.right, mix.instruments)
+        }
     }
-    return { left: oL, right: oR }
+    if (mix.instruments <= 0.001) {
+        const voc = await separateChunk(session, left, right, { createTensor, mode: 'isolate' })
+        return { left: scaleStem(voc.left, mix.vocals), right: scaleStem(voc.right, mix.vocals) }
+    }
+    const inst = await separateChunk(session, left, right, { createTensor, mode: 'remove' })
+    return { left: blendStems(left, inst.left, mix), right: blendStems(right, inst.right, mix) }
 }
