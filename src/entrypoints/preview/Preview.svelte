@@ -14,6 +14,7 @@
     import SnipsDialog from '$lib/components/SnipsDialog.svelte'
     import DiscographyDialog from '$lib/components/DiscographyDialog.svelte'
     import NewReleasesDialog from '$lib/components/NewReleasesDialog.svelte'
+    import NewReleasesPage from '$lib/components/NewReleasesPage.svelte'
     import { newReleasesStore, releasesUI } from '$lib/stores/new-releases'
     import { stamp, startOfDay, type Release, type ReleaseType } from '$lib/utils/releases'
     import { discographyStore } from '$lib/stores/discography'
@@ -140,6 +141,7 @@
     ] as const
     let ready = $state(
         !['blocked', 'backup', 'snips', 'discography', 'releases'].includes(dialog) &&
+            scene !== 'releases-page' &&
             !['presets', 'fx', 'eq', 'ms'].includes(tab)
     )
 
@@ -496,7 +498,8 @@
         }
         ready = true
     })
-    // ?dialog=releases seeds a fortnight of releases from followed artists and
+    // ?dialog=releases (or ?scene=releases-page, the same list across a mock
+    // main view) seeds a fortnight of releases from followed artists and
     // three podcast episodes (solid-colour covers), synced two hours ago so the
     // dialog leaves Spotify alone. &scope=all|podcasts, &range=month,
     // &group=artist|type and &view=grid set the controls; &dismissed=1 hides
@@ -517,7 +520,7 @@
         ['M83 on Midnight City', 'Song Exploder', 'EPISODE', '#b3833a', 4, 27]
     ]
     onMount(async () => {
-        if (dialog !== 'releases') return
+        if (dialog !== 'releases' && scene !== 'releases-page') return
         const releasesView = params.get('view')
         if (releasesView === 'grid' || releasesView === 'list')
             await storage.setItem('local:chorus_releases_view', releasesView)
@@ -643,6 +646,15 @@
                 <div class="w-full"><TimeProgress id="chorus-time-progress" port={null} /></div>
             </div>
             <div class="flex w-[300px] justify-end"><VolumeSlider port={null} /></div>
+        </div>
+    {:else if scene === 'releases-page'}
+        <!-- Spotify's main view, roughly: the page overlays it and takes its background. -->
+        <div
+            id="frame"
+            class="relative h-[760px] w-[1180px] overflow-hidden rounded-lg"
+            style="--background-base: {themeConfig?.main ?? '#121212'}"
+        >
+            {#if ready}<NewReleasesPage /><Alert />{/if}
         </div>
     {:else if scene === 'dialog'}
         <div id="frame" class="flex items-center gap-x-4 rounded-lg bg-ink p-4">

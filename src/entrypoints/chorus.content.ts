@@ -9,6 +9,7 @@ import { tracklistObserver } from '$lib/observers/tracklist'
 import { getEnabled, watchEnabled } from '$lib/stores/enabled'
 import { type SettingsState, SETTINGS_STORE_KEY } from '$lib/stores/settings'
 import { type ContentScriptContext, injectScript, createIntegratedUi } from 'wxt/client'
+import { isReleasesRoute } from '$lib/utils/releases-route'
 
 import '../app.css'
 import App from '../App.svelte'
@@ -20,6 +21,7 @@ import BlockedTracksDialog from '$lib/components/BlockedTracksDialog.svelte'
 import SnipsDialog from '$lib/components/SnipsDialog.svelte'
 import DiscographyDialog from '$lib/components/DiscographyDialog.svelte'
 import NewReleasesDialog from '$lib/components/NewReleasesDialog.svelte'
+import NewReleasesPage from '$lib/components/NewReleasesPage.svelte'
 
 // Stable Spotify anchors. The footer `now-playing-bar` persists for the lifetime
 // of the page (only its descendants swap), so it is a reliable observation root.
@@ -210,6 +212,72 @@ function injectExtras() {
     }
 }
 
+// The New releases page: an overlay on Spotify's main view while the URL
+// carries #chorus/releases. syncReleasesPage() mounts or removes it, and runs
+// on every navigation the main-world router reports (FROM_ROUTER), on
+// hashchange / popstate, on reconcile, and on a 1 s tick while the page is
+// open in case Spotify re-renders the container underneath it. The tick goes
+// through an event rather than naming syncReleasesPage: WXT reads this file at
+// build time with main() emptied and prunes what is then unused, and a
+// function that refers to itself never becomes unused, so every import it
+// touches would be evaluated in that read (where the proxy services throw).
+const MAIN_VIEW = '.main-view-container'
+const RELEASES_SYNC_EVENT = 'chorus:releases-sync'
+let releasesPage: { instance: Record<string, any>; container: HTMLElement } | null = null
+let releasesPageTimer: ReturnType<typeof setInterval> | null = null
+let routeListenersBound = false
+
+function unmountReleasesPage() {
+    if (releasesPageTimer != null) {
+        clearInterval(releasesPageTimer)
+        releasesPageTimer = null
+    }
+    if (!releasesPage) return
+    try {
+        unmount(releasesPage.instance)
+    } catch (error) {
+        console.warn('Failed to unmount the New releases page', error)
+    }
+    releasesPage.container.remove()
+    releasesPage = null
+}
+
+function syncReleasesPage() {
+    if (!chorusEnabled || !isReleasesRoute(location.hash)) return unmountReleasesPage()
+    if (releasesPage?.container.isConnected) return
+    unmountReleasesPage()
+
+    const host =
+        document.querySelector<HTMLElement>(MAIN_VIEW) ??
+        document.querySelector('main')?.parentElement ??
+        null
+    if (!host) return
+    if (getComputedStyle(host).position === 'static') host.style.position = 'relative'
+
+    const container = document.createElement('div')
+    container.id = 'chorus-releases-page'
+    host.appendChild(container)
+    releasesPage = { instance: mount(NewReleasesPage, { target: container }), container }
+    releasesPageTimer = setInterval(
+        () => window.dispatchEvent(new Event(RELEASES_SYNC_EVENT)),
+        1000
+    )
+}
+
+function onRouterMessage(event: MessageEvent) {
+    if (event.source !== window || event.data?.type !== 'FROM_ROUTER') return
+    syncReleasesPage()
+}
+
+function bindRouteListeners() {
+    if (routeListenersBound) return
+    routeListenersBound = true
+    window.addEventListener('message', onRouterMessage)
+    window.addEventListener('hashchange', syncReleasesPage)
+    window.addEventListener('popstate', syncReleasesPage)
+    window.addEventListener(RELEASES_SYNC_EVENT, syncReleasesPage)
+}
+
 // The single source of truth for "is the Chorus UI where it should be?". Re-mounts
 // the App into the *current* widget whenever Spotify swapped/destroyed the previous
 // one (which also re-binds the App's song-change/media observers to live nodes),
@@ -248,6 +316,8 @@ function reconcile() {
     // Chorus bar/slider and uncovers the native ones. Idempotent, so it runs
     // on every tick once the App is up.
     if (document.getElementById('chorus-ui')) playbackObserver.updateChorusUI()
+
+    syncReleasesPage()
 }
 
 // Debounced reconcile — coalesces Spotify's bursty mutation batches. setTimeout
@@ -292,6 +362,7 @@ async function injectChorusUI(ctx: ContentScriptContext) {
     }
 
     document.addEventListener('FROM_MEDIA_PLAY_INIT', handleMediaPlayInit)
+    bindRouteListeners()
 
     if (!scriptsInjected) {
         await injectScript('/router.js')
@@ -376,6 +447,7 @@ function removeChorusUI() {
         container?.remove()
     }
     mountedExtras = []
+    unmountReleasesPage()
 
     document.removeEventListener('FROM_MEDIA_PLAY_INIT', handleMediaPlayInit)
 
