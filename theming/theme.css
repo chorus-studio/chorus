@@ -30,6 +30,31 @@ html[data-mode='light'] .encore-dark-theme .encore-base-set {
     --essential-subdued: var(--chorus-subtext) !important;
 }
 
+/* Light appearance: text over artwork keeps its white. Spotify's over-media
+   token set and the cover play button on a hovered track row both sit on a
+   black scrim, which the rewrite leaves black, so the white there must not
+   follow the page's dark text colour. */
+html[data-mode='light'] .encore-over-media-set {
+    --text-base: #fff !important;
+    --text-subdued: #fff !important;
+    --text-bright-accent: #fff !important;
+    --essential-base: #fff !important;
+    --essential-subdued: #fff !important;
+    --essential-bright-accent: #fff !important;
+    --decorative-base: #fff !important;
+}
+html[data-mode='light'] [data-testid='tracklist-row'] div:has(> img) button {
+    color: #fff !important;
+}
+
+/* Inputs: the extension's own Tailwind preflight reaches Spotify's page and
+   pins every placeholder to a fixed mid grey, which vanishes on a tinted
+   field (the search box sits on the card colour). */
+input::placeholder,
+textarea::placeholder {
+    color: var(--chorus-subtext) !important;
+}
+
 /* background */
 .main-home-homeHeader,
 .main-entityHeader-backgroundColor,

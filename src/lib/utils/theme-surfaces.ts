@@ -138,7 +138,8 @@ const LIGHT_PAGE = {
     subtextSaturationMax: 50,
     main: 94,
     sidebar: 90,
-    player: 91,
+    /** Paints Spotify's black app frame and both bars: the lightest step, so the panels float on it. */
+    player: 97,
     card: 86,
     /** Hover fallback, scrollbar handle and seek-bar track: a clear step below the page. */
     hover: 80,
@@ -365,13 +366,18 @@ export function deriveThemeSurfaces(
         light ? TEXT_CONTRAST : CONTROL_CONTRAST,
         mode
     )
-    vars.signal = triplet(ah, as, control)
+    // Signal fills carry `ink` text (chips, switches, primary buttons). A
+    // mid-tone accent such as raisin's orchid clears 3:1 on the surface yet
+    // reads neither in light nor in dark text, so the fill moves further from
+    // the surface until the ink text on it reaches text contrast as well.
+    const fill = fitLightness([ah, as, control], surfaces.ink, TEXT_CONTRAST, mode)
+    vars.signal = triplet(ah, as, fill)
     vars['signal-bright'] = triplet(
         ah,
         as,
         fitLightness([ah, as, al], surfaces.surface, TEXT_CONTRAST, mode)
     )
-    vars['signal-dark'] = triplet(ah, as, control - SIGNAL_DARK_DROP)
+    vars['signal-dark'] = triplet(ah, as, fill - SIGNAL_DARK_DROP)
 
     // Hairline borders sit at the surface-2 step, like the default.
     vars.border = vars['surface-2']
