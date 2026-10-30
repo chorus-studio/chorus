@@ -10,6 +10,7 @@
     import ChorusConfigTheming from './ChorusConfigTheming.svelte'
     import ChorusConfigShortcuts from './ChorusConfigShortcuts.svelte'
     import ChorusConfigAutoSkip from './ChorusConfigAutoSkip.svelte'
+    import ChorusConfigBackup from './ChorusConfigBackup.svelte'
 
     let { open = false, initialTab = 'auto-skip' }: { open?: boolean; initialTab?: string } =
         $props()
@@ -19,7 +20,8 @@
         { id: 'auto-skip', label: 'Auto-skip' },
         { id: 'shortcuts', label: 'Shortcuts' },
         { id: 'fx-eq', label: 'Hidden presets' },
-        { id: 'theming', label: 'Theme' }
+        { id: 'theming', label: 'Theme' },
+        { id: 'backup', label: 'Backup' }
     ]
 </script>
 
@@ -58,7 +60,8 @@
                         >Chorus settings</Dialog.Title
                     >
                     <Dialog.Description class="text-xs text-ink-muted">
-                        Auto-skip rules, keyboard shortcuts, preset lists and the Spotify theme
+                        Auto-skip rules, keyboard shortcuts, preset lists, the Spotify theme and
+                        backups
                     </Dialog.Description>
                 </div>
             </div>
@@ -84,6 +87,7 @@
                 >
                 <Tabs.Content value="fx-eq" class="mt-0"><ChorusConfigFXEQ /></Tabs.Content>
                 <Tabs.Content value="theming" class="mt-0"><ChorusConfigTheming /></Tabs.Content>
+                <Tabs.Content value="backup" class="mt-0"><ChorusConfigBackup /></Tabs.Content>
             </div>
         </Tabs.Root>
     </Dialog.Content>
