@@ -3,22 +3,18 @@
  * art, popup-palette.ts turns the swatches into a palette for the current
  * appearance, and the result lands on the root as --bg / --text / --text-2 /
  * --album-accent. "Popup: Theme" in the Theme tab points those variables at
- * the rack tokens instead.
+ * the rack tokens instead, and so does a cover with no colour to offer, so
+ * the popup always matches either the record or the theme.
  */
 import { Vibrant } from 'node-vibrant/browser'
 import type { SettingsState } from '$lib/stores/settings'
 import type { Mode } from '$lib/utils/theme-surfaces'
 import { applyThemePopupPalette, resolveMode } from '$lib/utils/theming'
-import {
-    derivePopupPalette,
-    neutralPopupPalette,
-    type PopupPalette,
-    type Swatch
-} from '$lib/utils/popup-palette'
+import { derivePopupPalette, type PopupPalette, type Swatch } from '$lib/utils/popup-palette'
 
 export * from '$lib/utils/popup-palette'
 
-const cache = new Map<string, { palette: PopupPalette; timestamp: number }>()
+const cache = new Map<string, { palette: PopupPalette | null; timestamp: number }>()
 const CACHE_DURATION = 5 * 60 * 1000
 
 function loadImage(url: string, element: HTMLImageElement): Promise<void> {
@@ -39,19 +35,23 @@ async function coverSwatches(url: string): Promise<Swatch[]> {
         .map((swatch) => ({ hex: swatch.hex, population: swatch.population }))
 }
 
-/** The cover's popup palette for the mode; a cover that cannot be read gets the neutral one, uncached. */
+/**
+ * The cover's popup palette for the mode, null when it has no colour to wear.
+ * A cover that cannot be read also yields null, uncached, so a flaky load is
+ * retried on the next paint.
+ */
 export async function getColours({
     url,
     mode
 }: {
     url: string
     mode: Mode
-}): Promise<PopupPalette> {
+}): Promise<PopupPalette | null> {
     const key = `${mode}|${url}`
     const cached = cache.get(key)
     if (cached && Date.now() - cached.timestamp < CACHE_DURATION) return cached.palette
 
-    return new Promise<PopupPalette>((resolve) => {
+    return new Promise<PopupPalette | null>((resolve) => {
         const run = async () => {
             try {
                 const palette = derivePopupPalette(await coverSwatches(url), mode)
@@ -59,7 +59,7 @@ export async function getColours({
                 resolve(palette)
             } catch (error) {
                 console.error('[chorus] cover colours:', error)
-                resolve(neutralPopupPalette(mode))
+                resolve(null)
             }
         }
         // Colour work waits for an idle moment so a track change in the page
@@ -86,9 +86,10 @@ export function popupLookKey(settings: SettingsState): string {
 const paints = new WeakMap<HTMLElement, number>()
 
 /**
- * Paint `root` for the settings: the rack tokens for "Popup: Theme", else the
- * cover's palette in the current appearance (neutral while nothing plays).
- * A paint that is overtaken by a newer one for the same root is dropped.
+ * Paint `root` for the settings: the cover's palette in the current
+ * appearance when "Popup: Album" has a colourful cover to work from, else the
+ * rack tokens (the theme). A paint overtaken by a newer one for the same root
+ * is dropped.
  */
 export async function paintPopup(
     root: HTMLElement,
@@ -102,7 +103,8 @@ export async function paintPopup(
         return
     }
     const mode = resolveMode(settings.theme?.appearance)
-    const palette = cover ? await getColours({ url: cover, mode }) : neutralPopupPalette(mode)
+    const palette = cover ? await getColours({ url: cover, mode }) : null
     if (paints.get(root) !== paint) return
-    applyPalette(root, palette)
+    if (palette) applyPalette(root, palette)
+    else applyThemePopupPalette(root)
 }

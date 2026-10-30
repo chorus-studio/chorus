@@ -13,8 +13,9 @@
     import PopUp from '$lib/components/views/PopUp.svelte'
     import PowerOffOverlay from '$lib/components/PowerOffOverlay.svelte'
     import VocalRemovalToggle from '$lib/components/VocalRemovalToggle.svelte'
+    import PopupSubview from '$lib/components/PopupSubview.svelte'
     import { checkVocalSupport } from '$lib/audio-effects/vocal-model/support'
-    import ChevronLeft from '@lucide/svelte/icons/chevron-left'
+    import { syncNotificationPermission } from '$lib/utils/notification-permission'
 
     let loading = $state(false)
     // undefined until the persisted flag resolves, so we never flash the on-state
@@ -44,6 +45,8 @@
 
     onMount(() => {
         init()
+        // Chrome's permission prompt closes the popup, so a grant is read back here.
+        syncNotificationPermission()
         getEnabled().then((value) => (enabled = value))
         checkVocalSupport().then((s) => {
             vocalSupported = s.supported
@@ -75,20 +78,13 @@
         <Logo size={28} tone="current" class="animate-led-pulse" />
     </div>
 {:else if view === 'voice' && vocalSupported}
-    <div class="flex {frameHeight} w-[320px] flex-col gap-y-2.5 bg-ink px-3 pb-3 pt-2 text-ink-fg">
-        <div class="flex h-[26px] items-center justify-between">
-            <button
-                type="button"
-                onclick={() => (view = 'player')}
-                class="chorus-focus inline-flex h-6 items-center gap-x-1 rounded-md pl-0.5 pr-1.5 text-xs text-ink-fg-2 hover:bg-surface-2 hover:text-ink-fg"
-            >
-                <ChevronLeft class="size-3.5" />
-                Player
-            </button>
-            <span class="rack-label">Chrome only · on-device</span>
-        </div>
+    <PopupSubview
+        frameClass={frameHeight}
+        label="Chrome only · on-device"
+        onback={() => (view = 'player')}
+    >
         <VocalRemovalToggle />
-    </div>
+    </PopupSubview>
 {:else}
     <PopUp onVoice={vocalSupported ? () => (view = 'voice') : undefined} />
 {/if}

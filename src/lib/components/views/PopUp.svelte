@@ -8,7 +8,6 @@
     import { settingsStore } from '$lib/stores/settings'
     import { watchSystemMode } from '$lib/utils/theming'
 
-    import Bell from '@lucide/svelte/icons/bell'
     import BellOff from '@lucide/svelte/icons/bell-off'
     import BellPlus from '@lucide/svelte/icons/bell-plus'
     import BellRing from '@lucide/svelte/icons/bell-ring'
@@ -25,7 +24,11 @@
     import { formatRulerTime } from '$lib/utils/snip-time'
 
     import { paintPopup, popupLookKey } from '$lib/utils/vibrant-colors'
-    import { getCheckPermissionsService } from '$lib/utils/check-permissions'
+    import {
+        requestNotificationPermission,
+        setTrackNotifications,
+        syncNotificationPermission
+    } from '$lib/utils/notification-permission'
     import { cn } from '$lib/utils.js'
 
     // onVoice is passed only from the toolbar popup, so the vocal-separation
@@ -55,35 +58,6 @@
             ? `background-image: url("${$nowPlaying.cover.replace(/["\\\n]/g, (c) => '%' + c.charCodeAt(0).toString(16))}")`
             : ''
     )
-
-    function notificationState() {
-        if ($settingsStore.notifications.enabled) {
-            if ($settingsStore.notifications.on_track_change) return 3
-            return 2
-        }
-        return 1
-    }
-
-    async function toggleNotifications() {
-        const currentState = notificationState()
-        await settingsStore.updateSettings({
-            notifications: {
-                ...$settingsStore.notifications,
-                enabled: currentState === 3 ? false : true,
-                on_track_change: currentState === 2 ? true : false
-            }
-        })
-    }
-
-    async function grantNotificationPermission() {
-        const checkPermissionsService = getCheckPermissionsService()
-        let granted = await checkPermissionsService.verifyPermission('notifications')
-        if (import.meta.env.FIREFOX) granted = true
-
-        await settingsStore.updateSettings({
-            notifications: { ...$settingsStore.notifications, granted, enabled: granted }
-        })
-    }
 
     // The popup wears the cover's colour in the current appearance, or the rack
     // tokens when the Theme tab says "Popup: Theme". In PiP the variables land
@@ -140,13 +114,32 @@
         }
     })
 
-    const notificationLabel = $derived(
-        !$settingsStore.notifications.enabled
-            ? 'Notifications off — click to enable'
-            : $settingsStore.notifications.on_track_change
-              ? 'Notifying on every track change — click to turn off'
-              : 'Notifications on — click to also notify on track change'
+    // Track notifications: Allow (permission missing), off, or on. The one
+    // notification Chorus sends is on track change, so both legacy flags move
+    // together and there is no in-between state.
+    const notificationsOn = $derived(
+        $settingsStore.notifications.granted &&
+            $settingsStore.notifications.enabled &&
+            $settingsStore.notifications.on_track_change
     )
+    const notificationLabel = $derived(
+        notificationsOn
+            ? 'Notifying on track change — click to turn off'
+            : 'Track notifications off — click to turn on'
+    )
+    let askingPermission = $state(false)
+
+    async function allowNotifications() {
+        askingPermission = true
+        try {
+            // Chrome's prompt usually closes the popup; App.svelte reads the
+            // answer back on the next open. If it stays open, record it now.
+            await requestNotificationPermission()
+            await syncNotificationPermission()
+        } finally {
+            askingPermission = false
+        }
+    }
 
     // Palette-aware icon button for the popup header.
     const iconBtn =
@@ -200,10 +193,11 @@
                 {#if !$settingsStore.notifications.granted}
                     <button
                         type="button"
-                        aria-label="Allow notifications"
-                        title="Allow track notifications"
-                        onclick={grantNotificationPermission}
-                        class="inline-flex h-6 items-center gap-x-1 rounded-md bg-[color:var(--text)] px-2 text-[11px] font-medium text-[color:var(--bg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--text)]"
+                        aria-label="Allow track notifications"
+                        title="Allow track notifications: a silent system notice with Like and Block when the track changes"
+                        onclick={allowNotifications}
+                        disabled={askingPermission}
+                        class="inline-flex h-6 items-center gap-x-1 rounded-md bg-[color:var(--text)] px-2 text-[11px] font-medium text-[color:var(--bg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--text)] disabled:opacity-60"
                     >
                         <BellPlus class="size-3" />
                         Allow
@@ -213,15 +207,15 @@
                         type="button"
                         aria-label={notificationLabel}
                         title={notificationLabel}
-                        onclick={toggleNotifications}
-                        class={iconBtn}
+                        aria-pressed={notificationsOn}
+                        onclick={() => setTrackNotifications(!notificationsOn)}
+                        class={cn(
+                            iconBtn,
+                            notificationsOn && 'text-[color:var(--album-accent)] opacity-100'
+                        )}
                     >
-                        {#if $settingsStore.notifications.enabled}
-                            {#if $settingsStore.notifications.on_track_change}
-                                <BellRing />
-                            {:else}
-                                <Bell />
-                            {/if}
+                        {#if notificationsOn}
+                            <BellRing />
                         {:else}
                             <BellOff />
                         {/if}

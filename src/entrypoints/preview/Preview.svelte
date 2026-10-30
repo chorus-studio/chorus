@@ -6,6 +6,7 @@
     import PopUp from '$lib/components/views/PopUp.svelte'
     import PowerOffOverlay from '$lib/components/PowerOffOverlay.svelte'
     import VocalRemovalToggle from '$lib/components/VocalRemovalToggle.svelte'
+    import PopupSubview from '$lib/components/PopupSubview.svelte'
     import ChorusConfigDialog from '$lib/components/ChorusConfigDialog.svelte'
     import BlockedTracksDialog from '$lib/components/BlockedTracksDialog.svelte'
     import { storage } from '@wxt-dev/storage'
@@ -60,19 +61,29 @@
         document.documentElement.classList.add('dark')
         document.documentElement.setAttribute('data-mode', mode)
         // A teal cover, in the scene's appearance, stands in for album art.
-        applyPalette(
-            document.documentElement,
-            derivePopupPalette([{ hex: '#1b6b63', population: 1 }], mode)
-        )
+        const teal = derivePopupPalette([{ hex: '#1b6b63', population: 1 }], mode)
+        if (teal) applyPalette(document.documentElement, teal)
         if (themeConfig) applyThemeVariables(themeConfig, mode)
         if (popupColours === 'theme') applyThemePopupPalette(document.documentElement)
         // Components read glass and the popup colour source from the settings
         // store; the preview shim's storage never fires change events, so seed
         // the store directly (it writes storage too).
         const current = get(settingsStore)
+        // ?granted=1&on=1 seeds the header's notification control (Allow / off / on).
+        const notificationsOn = params.get('on') === '1'
         await settingsStore.updateSettings({
             ui: { ...current.ui, glass },
-            theme: { ...current.theme, appearance: mode, popup: popupColours, glass: DEFAULT_GLASS }
+            theme: {
+                ...current.theme,
+                appearance: mode,
+                popup: popupColours,
+                glass: DEFAULT_GLASS
+            },
+            notifications: {
+                granted: params.get('granted') === '1',
+                enabled: notificationsOn,
+                on_track_change: notificationsOn
+            }
         })
         applyGlass(get(settingsStore))
     })
@@ -238,16 +249,10 @@
             <PowerOffOverlay onenable={() => {}} />
         </div>
     {:else if scene === 'popup-voice'}
-        <div
-            id="frame"
-            class="flex h-[176px] w-[320px] flex-col gap-y-2.5 overflow-hidden rounded-lg border border-hairline-strong bg-ink px-3 pb-3 pt-2"
-        >
-            <div class="flex h-[26px] items-center justify-between">
-                <span class="text-xs text-ink-fg-2">‹ Player</span><span class="rack-label"
-                    >Chrome only · on-device</span
-                >
-            </div>
-            <VocalRemovalToggle />
+        <div id="frame" class="w-[320px] overflow-hidden rounded-lg border border-hairline-strong">
+            <PopupSubview label="Chrome only · on-device" onback={() => {}}>
+                <VocalRemovalToggle />
+            </PopupSubview>
         </div>
     {:else if scene === 'bar'}
         <div

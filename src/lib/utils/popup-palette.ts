@@ -5,8 +5,10 @@
  * One swatch of the album palette gives the hue and the appearance setting
  * gives the lightness, so the popup reads dark or light like the rest of
  * Chorus while keeping the record's tint, and every result clears WCAG
- * contrast: text at 4.5:1, the accent at 3:1. Pure maths; vibrant-colors.ts
- * feeds it swatches and paints the result.
+ * contrast: text at 4.5:1, the accent at 3:1. A cover without a usable
+ * colour yields nothing, and the popup wears the theme's rack tokens instead
+ * (vibrant-colors.ts). Pure maths; vibrant-colors.ts feeds it swatches and
+ * paints the result.
  */
 import type { Mode } from '$lib/utils/theme-surfaces'
 
@@ -27,10 +29,9 @@ type Rgb = [number, number, number]
 /** Hue in degrees, saturation and lightness in percent. */
 type Hsl = [number, number, number]
 
-export const SIGNAL_GREEN = '#1ed760'
 const TEXT_CONTRAST = 4.5
 const ACCENT_CONTRAST = 3
-/** Swatches this grey or greyer give no hue: the popup goes neutral. */
+/** Swatches this grey or greyer carry no hue the popup could wear. */
 const GREY_SATURATION_MAX = 18
 /** A colour has to cover this share of the sampled pixels to tint the popup. */
 const TINT_SHARE_MIN = 0.05
@@ -141,17 +142,18 @@ export function mixHex(fg: string, bg: string, alpha: number): string {
 
 /**
  * The swatch that gives the popup its hue: the most populous coloured one
- * that covers enough of the image, else the most populous of all (usually a
- * grey, which makes the popup neutral).
+ * that covers enough of the image. Null for a grey cover or a speck of colour.
  */
 export function pickSwatch(swatches: Swatch[]): Swatch | null {
     if (!swatches.length) return null
     const byPopulation = [...swatches].sort((a, b) => b.population - a.population)
     const total = swatches.reduce((sum, s) => sum + s.population, 0)
-    const coloured = byPopulation.find(
-        (s) => hexToHsl(s.hex)[1] > GREY_SATURATION_MAX && s.population >= total * TINT_SHARE_MIN
+    return (
+        byPopulation.find(
+            (s) =>
+                hexToHsl(s.hex)[1] > GREY_SATURATION_MAX && s.population >= total * TINT_SHARE_MIN
+        ) ?? null
     )
-    return coloured ?? byPopulation[0]
 }
 
 /** Walks a colour's lightness, up on a dark panel and down on a light one, until it clears `wanted` on `bg`. */
@@ -166,23 +168,22 @@ function fitLightness([h, s, l]: Hsl, bg: string, wanted: number, mode: Mode): s
     return hex
 }
 
-export function derivePopupPalette(swatches: Swatch[], mode: Mode): PopupPalette {
+/** The popup palette for a cover, or null when the cover has no colour to wear. */
+export function derivePopupPalette(swatches: Swatch[], mode: Mode): PopupPalette | null {
     const key = pickSwatch(swatches)
-    const [hue, saturation] = key ? hexToHsl(key.hex) : [0, 0]
-    const chroma = saturation > GREY_SATURATION_MAX ? saturation : 0
+    if (!key) return null
+    const [hue, saturation, lightness] = hexToHsl(key.hex)
 
-    const bg = hslToHex(hue, Math.min(chroma, BG[mode].saturationMax), BG[mode].lightness)
+    const bg = hslToHex(hue, Math.min(saturation, BG[mode].saturationMax), BG[mode].lightness)
 
-    let text = hslToHex(hue, Math.min(chroma, TEXT[mode].saturationMax), TEXT[mode].lightness)
+    let text = hslToHex(hue, Math.min(saturation, TEXT[mode].saturationMax), TEXT[mode].lightness)
     if (contrastRatio(bg, text) < TEXT_CONTRAST) text = readableText(bg, null)
 
     const text2 = mixHex(text, bg, TEXT2_MIX)
 
-    // The cover's own colour marks active states when it can be made to read
-    // on the panel; a grey cover keeps Spotify's green, darkened on a light panel.
-    const [ah, as, al] = hexToHsl(key && chroma ? key.hex : SIGNAL_GREEN)
+    // The cover's own colour marks active states, walked in lightness until it reads on the panel.
     let accent = fitLightness(
-        [ah, Math.min(as, ACCENT_SATURATION_MAX[mode]), al],
+        [hue, Math.min(saturation, ACCENT_SATURATION_MAX[mode]), lightness],
         bg,
         ACCENT_CONTRAST,
         mode
@@ -190,9 +191,4 @@ export function derivePopupPalette(swatches: Swatch[], mode: Mode): PopupPalette
     if (contrastRatio(bg, accent) < ACCENT_CONTRAST) accent = text
 
     return { bg, text, text2, accent }
-}
-
-/** What a cover without colour, or no cover at all, gets in the mode. */
-export function neutralPopupPalette(mode: Mode): PopupPalette {
-    return derivePopupPalette([], mode)
 }
