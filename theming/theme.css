@@ -57,6 +57,49 @@ textarea::placeholder {
     color: var(--chorus-subtext) !important;
 }
 
+/* Entity header heroes (album, artist, playlist, show, author, …). Spotify
+   sets the colour it pulled from the cover as custom properties inline on the
+   hero, the action bar under it and the sticky top strip (--background-base,
+   with a lighter --background-base-min-contrast for the top of the hero), and
+   its own rules paint from those: the hero in the base colour with the lighter
+   tint fading down, the action bar fading from the base colour into the page.
+   Under a theme the same rules run from the palette instead: the top of the
+   hero is the deepest shade of the main colour, the hero a little lighter, and
+   the action bar lightens into the main colour, so the gradient keeps its
+   shape in the theme's own colour. !important beats the inline values. */
+:root {
+    --chorus-hero: color-mix(in oklab, var(--chorus-main) 76%, #000);
+    --chorus-hero-top: color-mix(in oklab, var(--chorus-main) 58%, #000);
+    /* hovered things on the hero (Follow, the sticky bar's buttons) step towards the text colour */
+    --chorus-hero-lift: color-mix(in oklab, var(--chorus-hero) 84%, var(--chorus-text));
+}
+html[data-mode='light'] {
+    --chorus-hero: color-mix(in oklab, var(--chorus-main) 84%, #000);
+    --chorus-hero-top: color-mix(in oklab, var(--chorus-main) 72%, #000);
+}
+[style*='--background-base'] {
+    --background-base: var(--chorus-hero) !important;
+    --background-base-min-contrast: var(--chorus-hero-top) !important;
+    /* the action bar's fade starts from this, the base at 70 % */
+    --background-base-70: color-mix(in srgb, var(--chorus-hero) 70%, transparent) !important;
+    --background-highlight: var(--chorus-hero-top) !important;
+    --background-press: var(--chorus-hero-top) !important;
+    --background-elevated-base: var(--chorus-hero) !important;
+    --background-elevated-highlight: var(--chorus-hero-top) !important;
+    --background-elevated-press: var(--chorus-hero-top) !important;
+    --background-tinted-base: var(--chorus-hero-lift) !important;
+    --background-tinted-highlight: var(--chorus-hero-lift) !important;
+    --background-tinted-press: var(--chorus-hero-lift) !important;
+    /* the hero's secondary text is tinted from the cover too */
+    --text-subdued: var(--chorus-subtext) !important;
+    --essential-subdued: var(--chorus-subtext) !important;
+    --decorative-subdued: var(--chorus-subtext) !important;
+}
+/* artist and playlist heroes with a photo: the wash the page keeps behind it, at Spotify's 70 % */
+[data-testid='overscroll-background'] {
+    background-color: color-mix(in srgb, var(--chorus-hero) 70%, transparent) !important;
+}
+
 /* background */
 .main-home-homeHeader,
 .main-entityHeader-backgroundColor,
