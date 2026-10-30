@@ -163,13 +163,13 @@ export function parseBackup(text: string): Backup {
     }
 }
 
-/** Keep the entries storage itself keeps: tracks with a snip, a block or a speed. */
+/** Keep the entries storage itself keeps: tracks with a snip, a block, a speed or a volume offset. */
 function cleanCollection(value: unknown): Collection {
     if (!isRecord(value)) throw new BackupError('The library in that backup is damaged.')
     const collection: Collection = {}
     for (const [id, track] of Object.entries(value)) {
         if (!isRecord(track)) continue
-        if (!track.snip && !track.blocked && !track.playback) continue
+        if (!track.snip && !track.blocked && !track.playback && track.volume == null) continue
         const track_id = typeof track.track_id === 'string' ? track.track_id : id
         collection[track_id] = { ...(track as SimpleTrack), track_id }
     }

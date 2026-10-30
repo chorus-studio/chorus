@@ -31,6 +31,7 @@
     } from '$lib/utils/theming'
     import { invertPalette } from '$lib/utils/theme-surfaces'
     import { DEFAULT_GLASS, settingsStore } from '$lib/stores/settings'
+    import { nowPlaying } from '$lib/stores/now-playing'
     import { configStore, createAudioPreset } from '$lib/stores/config'
     import { NORMAL_VALUES, QUICK_PRESETS, quickPresetById } from '$lib/audio-effects/quick-presets'
     import { applyPresetValues } from '$lib/utils/quick-presets'
@@ -87,6 +88,9 @@
             }
         })
         applyGlass(get(settingsStore))
+        // ?volume=120 gives the playing track a saved volume offset.
+        const volume = Number(params.get('volume'))
+        if (volume > 0) await nowPlaying.updateState({ volume })
     })
 
     // ?dialog=blocked&view=grid seeds a few blocked tracks (solid-colour covers) and

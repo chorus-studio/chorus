@@ -25,6 +25,8 @@ export default class AudioManager {
 
     private _currentVolume: number = 1
     private _volumeType: 'linear' | 'logarithmic' = 'linear'
+    /** The playing track's own offset on top of the volume (1 = none). */
+    private _trackGain: number = 1
     private _preTransitionGain: number | null = null
 
     // Track active effect nodes for multi-effect chaining
@@ -245,7 +247,7 @@ export default class AudioManager {
         if (!(this._element instanceof HTMLMediaElement) || !this._gainNode) {
             if (this._element instanceof HTMLMediaElement) {
                 const scaledValue = type === 'logarithmic' ? this.linearToLogarithmic(value) : value
-                const finalValue = Math.min(1, scaledValue)
+                const finalValue = Math.min(1, scaledValue * this._trackGain)
                 this._element.volume = finalValue
                 this._element.muted = value === 0
             }
@@ -260,7 +262,13 @@ export default class AudioManager {
 
         const gainValue = type === 'logarithmic' ? this.linearToLogarithmic(value) : value
         // Ensure gain is never negative
-        this._gainNode.gain.value = Math.max(0, gainValue)
+        this._gainNode.gain.value = Math.max(0, gainValue * this._trackGain)
+    }
+
+    /** Apply a track's saved volume offset (a factor; 1 clears it) on top of the volume. */
+    setTrackGain(factor: number): void {
+        this._trackGain = Number.isFinite(factor) && factor > 0 ? factor : 1
+        this.setGain(this._currentVolume, this._volumeType)
     }
 
     /** The gain the volume settings ask for, the number setGain writes. */
@@ -270,7 +278,7 @@ export default class AudioManager {
             this._volumeType === 'logarithmic'
                 ? this.linearToLogarithmic(this._currentVolume)
                 : this._currentVolume
-        return Math.max(0, gain)
+        return Math.max(0, gain * this._trackGain)
     }
 
     /**
