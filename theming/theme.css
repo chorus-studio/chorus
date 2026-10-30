@@ -531,26 +531,24 @@ a[data-encore-id='box'] {
    part of the frame. Here each gets a panel on its grid area, inside that
    bleed, so it floats on the frame like the library and the main view do.
    The controls sit --bar-pad from every edge of the panel: the bar's own
-   padding is the bleed plus that, and the spacing Spotify adds for an
+   spacing is the bleed plus that, and the spacing Spotify adds for an
    edge-to-edge bar (the logo's 20px margin, the player bar's 8px left inset)
-   is removed so all four sides match. */
+   is removed so all four sides match.
+
+   The top bar's panel is its own background: the bleed becomes a transparent
+   border and the background is clipped to the padding box, with the outer
+   radius set so the inner edge rounds by --br-2. No pseudo-element and no
+   stacking context, because an isolated bar traps the search field's
+   dropdown in its layer and the main view paints over it. */
 #global-nav-bar,
 [data-testid='global-nav-bar'] {
-    position: relative;
-    isolation: isolate;
-    background-color: transparent !important;
+    box-sizing: border-box;
     height: calc(48px + (var(--panel-gap, 8px) + var(--bar-pad)) * 2) !important;
-    padding: calc(var(--panel-gap, 8px) + var(--bar-pad)) !important;
-}
-
-#global-nav-bar::before,
-[data-testid='global-nav-bar']::before {
-    content: '';
-    position: absolute;
-    inset: var(--panel-gap, 8px);
-    z-index: -1;
-    border-radius: var(--br-2);
-    background-color: var(--chorus-main);
+    border: var(--panel-gap, 8px) solid transparent !important;
+    border-radius: calc(var(--panel-gap, 8px) + var(--br-2));
+    padding: var(--bar-pad) !important;
+    background-color: var(--chorus-main) !important;
+    background-clip: padding-box;
 }
 
 #global-nav-bar .q0FidAZWryX6_3wcKwT4,
