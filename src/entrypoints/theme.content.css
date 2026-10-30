@@ -1,6 +1,8 @@
 :root {
     --br-1: 10px;
     --br-2: 8px;
+    /* Space between a floating bar's panel edge and its controls, all four sides. */
+    --bar-pad: 12px;
     --scrollbar: unset;
 
     /* spotify default */
@@ -810,21 +812,18 @@ a[data-encore-id='box'] {
 /* Floating bars. Spotify paints the top bar and the player bar black and
    bleeds both into the page's padding with a negative margin, so they read as
    part of the frame. Here each gets a panel on its grid area, inside that
-   bleed, so it floats on the frame like the library and the main view do and
-   the layout keeps its size. The top bar is painted with a pseudo-element
-   behind its controls (it has no inner wrapper); the player bar's <aside>
-   already fills the grid area. */
+   bleed, so it floats on the frame like the library and the main view do.
+   The controls sit --bar-pad from every edge of the panel: the bar's own
+   padding is the bleed plus that, and the spacing Spotify adds for an
+   edge-to-edge bar (the logo's 20px margin, the player bar's 8px left inset)
+   is removed so all four sides match. */
 #global-nav-bar,
 [data-testid='global-nav-bar'] {
     position: relative;
     isolation: isolate;
     background-color: transparent !important;
-    /* Room inside the panel: the panel starts one gap in (the bleed), so the
-       controls get a gap above and below and two at the sides. The bar grows
-       by two gaps; its negative margin keeps the grid row at the same height
-       as before plus those two gaps. */
-    height: calc(48px + var(--panel-gap, 8px) * 4) !important;
-    padding: calc(var(--panel-gap, 8px) * 2) calc(var(--panel-gap, 8px) * 3) !important;
+    height: calc(48px + (var(--panel-gap, 8px) + var(--bar-pad)) * 2) !important;
+    padding: calc(var(--panel-gap, 8px) + var(--bar-pad)) !important;
 }
 
 #global-nav-bar::before,
@@ -837,11 +836,20 @@ a[data-encore-id='box'] {
     background-color: var(--chorus-main);
 }
 
+#global-nav-bar .q0FidAZWryX6_3wcKwT4 /* unconverted */,
+[data-testid='global-nav-bar'] .q0FidAZWryX6_3wcKwT4 /* unconverted */ {
+    margin: 0 !important;
+}
+
+/* The player bar's <aside> fills its grid area; its 72px row centres the
+   56px cover, which already leaves 8px above and below. */
 [data-testid='now-playing-bar'] {
     box-sizing: border-box;
     border-radius: var(--br-2);
     background-color: var(--chorus-main) !important;
-    /* The controls already sit a gap and a half from the top and bottom; the
-       sides get two gaps to match the top bar. */
-    padding-inline: calc(var(--panel-gap, 8px) * 2);
+    padding: max(0px, calc(var(--bar-pad) - 8px)) var(--bar-pad);
+}
+
+[data-testid='now-playing-bar'] .GT3btISbKLXrhHILRLON /* unconverted */ {
+    padding-inline-start: 0 !important;
 }
