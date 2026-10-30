@@ -50,6 +50,7 @@
         snipSubView
     } from '$lib/stores/effects-ui'
     import { lyricsStore } from '$lib/stores/lyrics'
+    import { presetBindingsStore } from '$lib/stores/preset-bindings'
 
     const params = new URLSearchParams(location.search)
     const scene = params.get('scene') ?? 'tabs'
@@ -194,6 +195,15 @@
             await lofiStore.update(knob as LofiEffectKey, { intensity: Number(amount) })
         }
         if (params.get('view') === 'rack') presetsSubView.set('rack')
+        // &bound=1 pins the applied preset to the stand-in artist link below.
+        if (params.get('bound') === '1' && preset) {
+            await presetBindingsStore.bind({
+                key: 'artist:previewM83',
+                name: 'M83',
+                preset_id: preset.id,
+                preset_name: preset.name
+            })
+        }
         ready = true
     })
 
@@ -417,6 +427,10 @@
         </div>
     {/if}
     {#if scene === 'tabs'}
+        <!-- A stand-in for the now-playing bar's artist link, for the Presets pin. -->
+        <div data-testid="now-playing-widget-v2" class="hidden">
+            <a href="/artist/previewM83">M83</a>
+        </div>
         <div
             id="frame"
             class="chorus-float relative h-[360px] w-[440px] overflow-hidden rounded-xl border border-hairline-strong bg-ink shadow-float"
