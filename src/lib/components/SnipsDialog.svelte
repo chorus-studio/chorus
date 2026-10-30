@@ -159,8 +159,12 @@
     const removeSelected = () => remove(Array.from(selectedTracks))
 
     const savedOn = (at?: number | null) => (at ? new Date(at).toLocaleString() : undefined)
-    const sectionsTitle = (snip: NonNullable<SimpleTrack['snip']>) =>
-        `${snip.ranges.length} section${snip.ranges.length === 1 ? '' : 's'}, ${formatRulerTime(rangesLength(snip))} in all`
+    type SavedSnip = NonNullable<SimpleTrack['snip']>
+    // The mode reads as a verb on the sections ("Plays 0:42–1:11", "Skips 0:00–0:18"),
+    // so the word Play is left to the button that plays the track.
+    const modeVerb = (snip: SavedSnip) => (snip.mode === 'play' ? 'Plays' : 'Skips')
+    const sectionsTitle = (snip: SavedSnip) =>
+        `${snip.mode === 'play' ? 'Plays only' : 'Skips'} ${snip.ranges.length} section${snip.ranges.length === 1 ? '' : 's'}, ${formatRulerTime(rangesLength(snip))} in all`
 
     const triggerLabel = $derived(count ? `Snips (${count})` : 'Snips')
 
@@ -232,25 +236,36 @@
     </div>
 {/snippet}
 
-{#snippet modePill(mode: 'play' | 'skip', onCover: boolean)}
+{#snippet modeIcon(snip: SavedSnip, onCover: boolean)}
     <span
         class={cn(
-            'inline-flex h-[18px] shrink-0 items-center gap-x-1 rounded-full px-1.5 font-mono text-[10px] uppercase tracking-[0.12em]',
-            mode === 'play'
-                ? onCover
-                    ? 'bg-signal text-ink shadow-float'
-                    : 'bg-signal/15 text-signal'
-                : onCover
-                  ? 'bg-ink/80 text-ink-fg shadow-float'
-                  : 'bg-surface-2 text-ink-fg-2'
+            'inline-flex shrink-0 items-center justify-center rounded-full',
+            onCover
+                ? snip.mode === 'play'
+                    ? 'size-5 bg-signal text-ink shadow-float'
+                    : 'size-5 bg-ink/80 text-ink-fg shadow-float'
+                : snip.mode === 'play'
+                  ? 'size-3.5 text-signal'
+                  : 'size-3.5 text-ink-fg-2'
         )}
     >
-        {#if mode === 'play'}
-            <Play class="size-2.5" strokeWidth={2.5} />
+        {#if snip.mode === 'play'}
+            <Play class={onCover ? 'size-3' : 'size-3'} strokeWidth={2.5} />
         {:else}
-            <Scissors class="size-2.5" strokeWidth={2.5} />
+            <Scissors class={onCover ? 'size-3' : 'size-3'} strokeWidth={2.5} />
         {/if}
-        {mode === 'play' ? 'Play' : 'Skip'}
+    </span>
+{/snippet}
+
+{#snippet sectionsLine(snip: SavedSnip, shown: number, textClass: string)}
+    <span class={cn('flex min-w-0 items-center gap-x-1.5 font-mono text-ink-muted', textClass)}>
+        {@render modeIcon(snip, false)}
+        <span class="truncate">
+            <span class={snip.mode === 'play' ? 'text-signal' : 'text-ink-fg-2'}
+                >{modeVerb(snip)}</span
+            >
+            {describeRanges(snip, shown)}
+        </span>
     </span>
 {/snippet}
 
@@ -425,14 +440,10 @@
                                             >
                                         </span>
                                         <span
-                                            class="flex w-[236px] shrink-0 items-center gap-x-2"
+                                            class="w-[236px] shrink-0"
                                             title={sectionsTitle(snip)}
                                         >
-                                            {@render modePill(snip.mode, false)}
-                                            <span
-                                                class="truncate font-mono text-[11px] text-ink-muted"
-                                                >{describeRanges(snip, 2)}</span
-                                            >
+                                            {@render sectionsLine(snip, 2, 'text-[11px]')}
                                         </span>
                                     </label>
                                     <span
@@ -498,7 +509,7 @@
                             onerror={(error) =>
                                 console.error('[chorus] a snip card failed to render', error)}
                         >
-                            <div class="grid grid-cols-5 gap-x-3.5 gap-y-4 p-0.5">
+                            <div class="grid grid-cols-5 gap-3 p-0.5">
                                 {#each filteredTracks as track, i (track.track_id || track.song_id || i)}
                                     {@const { title, artists } = parseSongId(track.song_id)}
                                     {@const shownTitle = title || 'Untitled track'}
@@ -507,7 +518,14 @@
                                     {@const ago = timeAgo(track.snipped_at)}
                                     {@const current = isCurrent(track)}
                                     {@const playing = isPlaying(track)}
-                                    <div class="group flex min-w-0 flex-col gap-y-1">
+                                    <div
+                                        class={cn(
+                                            'group flex min-w-0 flex-col gap-y-1 rounded-lg border p-2 transition-colors',
+                                            isSelected
+                                                ? 'border-signal/40 bg-signal/[0.08]'
+                                                : 'border-hairline bg-panel hover:border-hairline-strong hover:bg-surface/70'
+                                        )}
+                                    >
                                         <div
                                             class={cn(
                                                 'relative aspect-square w-full overflow-hidden rounded-md bg-surface-2 text-ink-dim',
@@ -554,7 +572,7 @@
                                                 class="pointer-events-none absolute right-2 top-2"
                                                 title={sectionsTitle(snip)}
                                             >
-                                                {@render modePill(snip.mode, true)}
+                                                {@render modeIcon(snip, true)}
                                             </span>
                                             <div
                                                 class="pointer-events-none absolute inset-x-0 bottom-0 flex items-center justify-center gap-x-1.5 p-2 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100"
@@ -610,19 +628,18 @@
                                         <span class="truncate text-[11px] text-ink-muted"
                                             >{artists}</span
                                         >
+                                        <!-- The cover's badge carries the mode; here only the sections, then the age, as the blocked grid lays it out. -->
                                         <span
-                                            class="flex items-center justify-between gap-x-2 font-mono text-[10px] text-ink-muted"
+                                            class="truncate font-mono text-[10px] text-ink-muted"
+                                            title={sectionsTitle(snip)}
+                                            >{describeRanges(snip, 1)}</span
                                         >
-                                            <span class="truncate" title={sectionsTitle(snip)}
-                                                >{describeRanges(snip, 1)}</span
+                                        {#if ago}
+                                            <span
+                                                class="font-mono text-[10px] text-ink-muted"
+                                                title={savedOn(track.snipped_at)}>{ago}</span
                                             >
-                                            {#if ago}
-                                                <span
-                                                    class="shrink-0"
-                                                    title={savedOn(track.snipped_at)}>{ago}</span
-                                                >
-                                            {/if}
-                                        </span>
+                                        {/if}
                                     </div>
                                 {/each}
                             </div>
