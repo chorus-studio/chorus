@@ -8,6 +8,7 @@ import { playback } from '$lib/utils/playback'
 import { configStore } from '$lib/stores/config'
 import { currentSongInfo } from '$lib/utils/song'
 import { trackObserver } from '$lib/observers/track'
+import { featureOn } from '$lib/utils/features'
 import { announceSkip, isAllowedOnce } from '$lib/utils/skip-notice'
 import type { SimpleTrack } from '$lib/stores/data/cache'
 
@@ -93,6 +94,7 @@ function createNowPlayingStore() {
 
         const facts = { title: title ?? '', artist: artist ?? '', duration }
         if (
+            featureOn('blocks') &&
             !isAllowedOnce(songInfo?.track_id) &&
             (trackInfo?.blocked || configStore.checkIfTrackShouldBeSkipped(facts))
         ) {
