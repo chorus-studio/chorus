@@ -8,6 +8,8 @@
     import VocalRemovalToggle from '$lib/components/VocalRemovalToggle.svelte'
     import PopupSubview from '$lib/components/PopupSubview.svelte'
     import ChorusConfigDialog from '$lib/components/ChorusConfigDialog.svelte'
+    import Alert from '$lib/components/Alert.svelte'
+    import { announceSkip } from '$lib/utils/skip-notice'
     import BlockedTracksDialog from '$lib/components/BlockedTracksDialog.svelte'
     import SnipsDialog from '$lib/components/SnipsDialog.svelte'
     import { storage } from '@wxt-dev/storage'
@@ -193,6 +195,22 @@
         }
         if (params.get('view') === 'rack') presetsSubView.set('rack')
         ready = true
+    })
+
+    // ?scene=toast shows the "Skipped …" notice; &blocked=1 the blocked-track variant.
+    onMount(() => {
+        if (scene !== 'toast') return
+        const blocked = params.get('blocked') === '1'
+        setTimeout(
+            () =>
+                announceSkip({
+                    track_id: 'sample',
+                    title: blocked ? 'Easier Said Than Done' : 'Red Room (Live at Wembley)',
+                    artist: blocked ? 'Thee Sacred Souls' : 'Hiatus Kaiyote',
+                    blocked
+                }),
+            50
+        )
     })
 
     // ?open=reverb-bottom clicks that select's trigger once the tab is up, so a
@@ -426,6 +444,8 @@
                 <VocalRemovalToggle />
             </PopupSubview>
         </div>
+    {:else if scene === 'toast'}
+        <div id="frame" class="relative h-[200px] w-[460px]"><Alert /></div>
     {:else if scene === 'bar'}
         <div
             id="frame"
