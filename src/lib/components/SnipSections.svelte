@@ -61,7 +61,7 @@
                         class={cn(
                             'chorus-focus inline-flex size-5 shrink-0 items-center justify-center rounded font-mono text-[11px] tabular-nums transition-colors',
                             active
-                                ? 'bg-signal font-semibold text-ink'
+                                ? 'bg-signal font-semibold text-signal-fg'
                                 : 'bg-surface-2 font-medium text-ink-muted hover:text-ink-fg'
                         )}
                     >

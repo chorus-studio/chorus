@@ -216,7 +216,7 @@
                     checkboxBox,
                     'size-3.5',
                     allSelected || someSelected
-                        ? 'bg-signal text-ink'
+                        ? 'bg-signal text-signal-fg'
                         : 'border-[1.5px] border-hairline-strong'
                 )}
             >
@@ -242,7 +242,7 @@
             'inline-flex shrink-0 items-center justify-center rounded-full',
             onCover
                 ? snip.mode === 'play'
-                    ? 'size-5 bg-signal text-ink shadow-float'
+                    ? 'size-5 bg-signal text-signal-fg shadow-float'
                     : 'size-5 bg-ink/80 text-ink-fg shadow-float'
                 : snip.mode === 'play'
                   ? 'size-3.5 text-signal'
@@ -293,7 +293,7 @@
                         <ListMusic />
                         {#if count > 0}
                             <span
-                                class="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-signal px-1 font-mono text-[9px] font-bold text-ink"
+                                class="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-signal px-1 font-mono text-[9px] font-bold text-signal-fg"
                             >
                                 {count > 99 ? '99+' : count}
                             </span>
@@ -407,7 +407,7 @@
                                                 checkboxBox,
                                                 'size-3.5',
                                                 isSelected
-                                                    ? 'bg-signal text-ink'
+                                                    ? 'bg-signal text-signal-fg'
                                                     : 'border-[1.5px] border-hairline-strong'
                                             )}
                                         >
@@ -559,7 +559,7 @@
                                                     class={cn(
                                                         'absolute left-2 top-2 inline-flex size-[18px] items-center justify-center rounded transition-opacity peer-focus-visible:opacity-100 peer-focus-visible:ring-2 peer-focus-visible:ring-signal',
                                                         isSelected
-                                                            ? 'bg-signal text-ink'
+                                                            ? 'bg-signal text-signal-fg'
                                                             : 'border-[1.5px] border-ink-fg/70 bg-ink/40 opacity-0 group-hover:opacity-100'
                                                     )}
                                                 >

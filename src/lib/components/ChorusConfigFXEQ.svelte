@@ -229,7 +229,7 @@
                             class={cn(
                                 'inline-flex size-3.5 shrink-0 items-center justify-center rounded-[3px] transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-signal peer-focus-visible:ring-offset-1 peer-focus-visible:ring-offset-panel',
                                 shown
-                                    ? 'bg-signal text-ink'
+                                    ? 'bg-signal text-signal-fg'
                                     : 'border-[1.5px] border-hairline-strong group-hover:border-ink-muted'
                             )}
                         >

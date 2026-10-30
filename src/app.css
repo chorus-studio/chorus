@@ -46,6 +46,9 @@
         --signal: 141 76% 48%; /* #1ed760  Spotify green */
         --signal-bright: 141 75% 50%; /* #1fdf64 */
         --signal-dark: 141 75% 35%; /* #169c46 */
+        /* text and glyphs on a solid signal fill: black or white, whichever
+           reads better on the fill (theme-surfaces.ts picks per theme) */
+        --signal-fg: 0 0% 7%; /* #121212 */
         /* signal for controls grafted into Spotify's player bar: a theme swaps
            in its own accent when green can't clear 3:1 on the themed bar */
         --bar-signal: var(--signal);

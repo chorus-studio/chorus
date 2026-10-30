@@ -24,6 +24,7 @@ export const LAST_BACKUP_KEY = 'local:chorus_backup_at'
 export const BACKUP_KEYS = [
     'chorus_collection', // snips, blocked tracks, per-track speeds
     'chorus_discography', // progress through artists' albums
+    'chorus_discography_prefs', // what counts towards it, auto-track
     'chorus_settings',
     'chorus_config', // auto-skip rules, Mine presets, hidden preset lists
     'chorus_playback',

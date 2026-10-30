@@ -356,6 +356,7 @@ export const RACK_TOKENS = [
     'signal',
     'signal-bright',
     'signal-dark',
+    'signal-fg',
     'border',
     'bar-signal',
     'shadow',
@@ -415,6 +416,15 @@ export function deriveThemeSurfaces(
         fitLightness([ah, as, al], surfaces.surface, TEXT_CONTRAST, mode)
     )
     vars['signal-dark'] = triplet(ah, as, fill - SIGNAL_DARK_DROP)
+    // Text and glyphs on a solid signal fill: pure white or pure black,
+    // whichever reads better on it. The pairing used to be `ink`, and a light
+    // rack's ink is a pastel of the fill's own hue, so a magenta button
+    // carried pink text at the 4.5:1 floor and read as faded.
+    const fillRgb = hslToRgb(ah, as, fill)
+    vars['signal-fg'] =
+        contrastRgb(fillRgb, [255, 255, 255]) >= contrastRgb(fillRgb, [0, 0, 0])
+            ? '0 0% 100%'
+            : '0 0% 0%'
 
     // Hairline borders sit at the surface-2 step, like the default.
     vars.border = vars['surface-2']
