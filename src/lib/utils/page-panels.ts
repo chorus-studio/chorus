@@ -83,7 +83,7 @@ let onWake: (() => void) | null = null
 export type PassResult = {
     /** A layout grid was on the page. */
     grid: boolean
-    /** Walked regions with a box of their own. */
+    /** Walked areas with at least one child that has a box of its own. */
     sized: number
     /** Of those, the ones given a panel. */
     found: number
@@ -236,10 +236,22 @@ function paintedInPanelColours(
     return found
 }
 
-function paintsColour(colour: string): boolean {
+/**
+ * Whether a computed background colour paints anything: everything but a
+ * zero alpha. Computed colours come as `rgb(r, g, b)`, `rgba(r, g, b, a)`,
+ * `color(srgb r g b / a)` or another space with a `/ a`; the alpha is only
+ * ever the fourth channel, never a trailing zero blue channel (`rgb(122, 0,
+ * 0)` is an opaque red).
+ */
+export function paintsColour(colour: string): boolean {
     if (!colour || colour === 'transparent') return false
-    const alpha = /rgba?\([^)]*?(?:,|\/)\s*([\d.]+)\)$/.exec(colour)
-    return !alpha || parseFloat(alpha[1]) > 0
+    const open = colour.indexOf('(')
+    if (open < 0) return true
+    const inner = colour.slice(open + 1, colour.lastIndexOf(')'))
+    const slash = inner.indexOf('/')
+    if (slash >= 0) return parseFloat(inner.slice(slash + 1)) > 0
+    const parts = inner.split(',')
+    return parts.length < 4 || parseFloat(parts[3]) > 0
 }
 
 /**
@@ -327,6 +339,7 @@ export function tagPagePanels(): PassResult {
         tag(el, FRAME_ATTR)
     }
     const claimed = new Set<string>()
+    const sizedAreas = new Set<string>()
     const colours = panelColours()
     for (const { child, area } of regionsOf(grid)) {
         if (!area || claimed.has(area)) continue
@@ -341,7 +354,7 @@ export function tagPagePanels(): PassResult {
         } else if (WALKED_AREAS.has(area)) {
             const box = child.getBoundingClientRect()
             if (sizeless(box)) continue
-            result.sized++
+            sizedAreas.add(area)
             let found = findPanel(child, box)
             let painted: HTMLElement[]
             if (found) {
@@ -368,7 +381,6 @@ export function tagPagePanels(): PassResult {
                 found = { panel, layers: [] }
                 painted = painted.filter((el) => el !== panel)
             }
-            result.found++
             claimed.add(area)
             tag(child, AREA_ATTR, area)
             tag(found.panel, PANEL_ATTR)
@@ -376,6 +388,8 @@ export function tagPagePanels(): PassResult {
             for (const layer of painted) tag(layer, LAYER_ATTR)
         }
     }
+    result.sized = sizedAreas.size
+    result.found = [...sizedAreas].filter((area) => claimed.has(area)).length
     return result
 }
 
