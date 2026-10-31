@@ -15,9 +15,11 @@
  *   `data-chorus-panel-layer` on any element under it that covers the panel
  *   (as wide as it, and at least as tall: the main view's scroll content runs
  *   far past the box on an artist or album page) and paints the same surface
- *   again (Spotify stacks a few). The panel takes the translucent colour; the
- *   layers go transparent; anything narrower or shorter than the panel (a
- *   sticky header, a hero band, a card) keeps its own opaque colour.
+ *   again (Spotify stacks a few), and on any sizeable element under it that
+ *   paints one of the panel colours without covering the box: the library's
+ *   list below its header, the Queue, the Now playing view inside its cell.
+ *   The panel takes the translucent colour; the layers go transparent; a
+ *   sticky header and anything small keeps its own opaque colour.
  *
  * The grid also holds overlays placed on the same areas (toasts, onboarding,
  * the cinema view), so each area name is claimed once, by the first child
@@ -45,6 +47,17 @@ const WALK_DEPTH_MAX = 10
 const COVER_SLACK = 24
 /** The most elements one pass looks at under an area, so a huge tree stays cheap. */
 const WALK_NODES_MAX = 80
+/** The colour pass: how deep and how many elements under an area it checks. */
+const PAINT_DEPTH_MAX = 8
+const PAINT_NODES_MAX = 400
+/** An element painted in a panel colour counts when it spans this much of the area's width and is at least this tall. */
+const PAINT_MIN_WIDTH_SHARE = 0.4
+const PAINT_MIN_HEIGHT = 48
+/** The palette variables theming writes as plain hex, which panels paint in. */
+const PANEL_COLOUR_VARS = ['--chorus-main', '--chorus-sidebar', '--chorus-player']
+/** Tints theme.css builds with color-mix(); a probe element resolves them to rgb. */
+const PANEL_TINT_VARS = ['--chorus-hero', '--chorus-hero-top']
+const PROBE_ID = 'chorus-colour-probe'
 const DEBOUNCE_MS = 120
 
 let observer: MutationObserver | null = null
@@ -74,6 +87,93 @@ function areaOf(el: HTMLElement): string | null {
     if (el.matches(PLAYER_BAR) || el.querySelector(PLAYER_BAR)) return 'now-playing-bar'
     const start = getComputedStyle(el).gridRowStart
     return /^[a-z][a-z-]*$/.test(start) ? start : null
+}
+
+/** `#rrggbb` as `rgb(r, g, b)`, the form computed styles use. */
+function rgbString(hex: string): string | null {
+    const h = hex.trim().replace('#', '')
+    const full = h.length === 3 ? h.replace(/./g, (c) => c + c) : h
+    if (!/^[0-9a-f]{6}$/i.test(full)) return null
+    const n = parseInt(full, 16)
+    return `rgb(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255})`
+}
+
+/** A hidden element that resolves a colour expression (a color-mix()) to the rgb computed styles report. */
+function probeColour(expression: string): string {
+    let probe = document.getElementById(PROBE_ID)
+    if (!probe) {
+        probe = document.createElement('span')
+        probe.id = PROBE_ID
+        probe.setAttribute('aria-hidden', 'true')
+        probe.style.cssText =
+            'position:fixed;left:-9999px;top:0;width:0;height:0;pointer-events:none;visibility:hidden'
+        document.documentElement.appendChild(probe)
+    }
+    probe.style.backgroundColor = expression
+    return getComputedStyle(probe).backgroundColor
+}
+
+/** The opaque colours a panel paints in under the current palette, resolved once per pass. */
+function panelColours(): Set<string> {
+    const root = document.documentElement
+    const colours = new Set<string>()
+    for (const name of PANEL_COLOUR_VARS) {
+        const rgb = rgbString(root.style.getPropertyValue(name))
+        if (rgb) colours.add(rgb)
+    }
+    for (const name of PANEL_TINT_VARS) {
+        const rgb = probeColour(`var(${name})`)
+        if (rgb && rgb !== 'rgba(0, 0, 0, 0)') colours.add(rgb)
+    }
+    return colours
+}
+
+/** One of Chorus's own surfaces (the theme page, the drawer, the trays): never a layer. */
+function isChorusOwn(el: Element): boolean {
+    return Boolean(el.closest('[id^="chorus-"], .chorus-tray'))
+}
+
+/**
+ * Sizeable elements under an area that paint one of the panel colours without
+ * covering the area's box: the sidebar's list below its header, the Queue, the
+ * Now playing view inside its cell. Sticky and fixed things (a header that
+ * rows scroll under) keep their colour.
+ */
+function paintedInPanelColours(
+    root: HTMLElement,
+    box: DOMRect,
+    colours: Set<string>,
+    skip: Set<Element>
+): HTMLElement[] {
+    const found: HTMLElement[] = []
+    const queue: Array<{ el: HTMLElement; depth: number }> = [{ el: root, depth: 0 }]
+    let seen = 0
+    while (queue.length && seen < PAINT_NODES_MAX) {
+        const { el, depth } = queue.shift()!
+        seen++
+        if (depth > 0 && !skip.has(el)) {
+            const style = getComputedStyle(el)
+            if (
+                colours.has(style.backgroundColor) &&
+                style.position !== 'sticky' &&
+                style.position !== 'fixed'
+            ) {
+                const rect = el.getBoundingClientRect()
+                if (
+                    rect.width >= box.width * PAINT_MIN_WIDTH_SHARE &&
+                    rect.height >= PAINT_MIN_HEIGHT &&
+                    !isChorusOwn(el)
+                ) {
+                    found.push(el)
+                }
+            }
+        }
+        if (depth >= PAINT_DEPTH_MAX) continue
+        for (const child of el.children) {
+            if (child instanceof HTMLElement) queue.push({ el: child, depth: depth + 1 })
+        }
+    }
+    return found
 }
 
 function paintsSomething(el: HTMLElement): boolean {
@@ -155,6 +255,7 @@ export function tagPagePanels(): void {
         tag(el, FRAME_ATTR)
     }
     const claimed = new Set<string>()
+    const colours = panelColours()
     for (const child of grid.children) {
         if (!(child instanceof HTMLElement)) continue
         const area = areaOf(child)
@@ -174,6 +275,11 @@ export function tagPagePanels(): void {
             tag(child, AREA_ATTR, area)
             tag(found.panel, PANEL_ATTR)
             for (const layer of found.layers) tag(layer, LAYER_ATTR)
+            const skip = new Set<Element>([found.panel, ...found.layers])
+            const box = child.getBoundingClientRect()
+            for (const layer of paintedInPanelColours(child, box, colours, skip)) {
+                tag(layer, LAYER_ATTR)
+            }
         }
     }
 }

@@ -95,6 +95,22 @@ html[data-mode='light'] {
     --essential-subdued: var(--chorus-subtext) !important;
     --decorative-subdued: var(--chorus-subtext) !important;
 }
+/* Under a backdrop the hero bands, and the Now playing view, which Spotify
+   tints the same way, are panels too: the same colours, at the panels'
+   show-through, so the backdrop comes through them as it does everywhere. */
+html[data-backdrop] [style*='--background-base'] {
+    --background-base: color-mix(in srgb, var(--chorus-hero) var(--chorus-panel-pct, 100%), transparent) !important;
+    --background-base-min-contrast: color-mix(
+        in srgb,
+        var(--chorus-hero-top) var(--chorus-panel-pct, 100%),
+        transparent
+    ) !important;
+    --background-elevated-base: color-mix(
+        in srgb,
+        var(--chorus-hero) var(--chorus-panel-pct, 100%),
+        transparent
+    ) !important;
+}
 /* artist and playlist heroes with a photo: the wash the page keeps behind it, at Spotify's 70 % */
 [data-testid='overscroll-background'] {
     background-color: color-mix(in srgb, var(--chorus-hero) 70%, transparent) !important;
