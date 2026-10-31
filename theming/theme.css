@@ -717,6 +717,30 @@ html[data-backdrop] [data-chorus-panel] #chorus-theme-page-root {
     background-color: transparent !important;
 }
 
+/* Clear surfaces (a look's Panels › Surfaces, the default): the controls that
+   float on the bars, Spotify's home button and search pill and Chorus's trays
+   (reached by id: a class here would be taken for one of Spotify's), go translucent with a soft shadow instead of the palette's card colour, so
+   they read as glass over the backdrop. Tinted keeps the card colour. */
+html[data-backdrop][data-surfaces='clear']
+    [data-testid='global-nav-bar']
+    [data-testid='home-button'],
+html[data-backdrop][data-surfaces='clear']
+    [data-testid='global-nav-bar']
+    input[data-testid='search-input'],
+html[data-backdrop][data-surfaces='clear'] #chorus-top-bar-tray,
+html[data-backdrop][data-surfaces='clear'] #chorus-ui {
+    background-color: color-mix(in srgb, var(--chorus-main) 45%, transparent) !important;
+    box-shadow:
+        0 1px 2px rgb(0 0 0 / 25%),
+        0 8px 24px rgb(0 0 0 / 18%),
+        inset 0 1px 0 rgb(255 255 255 / 8%) !important;
+}
+html[data-backdrop][data-surfaces='clear']
+    [data-testid='global-nav-bar']
+    input[data-testid='search-input']:focus {
+    background-color: color-mix(in srgb, var(--chorus-main) 62%, transparent) !important;
+}
+
 /* Glass panels: the backdrop blurred behind each panel. The blur sits on a
    pseudo-element, never on the panel itself, because backdrop-filter makes
    a stacking context and a containing block, and the top bar's search

@@ -48,7 +48,8 @@
         type BackdropKind,
         type ImageBackdrop,
         type Look,
-        type PaletteSource
+        type PaletteSource,
+        type Surfaces
     } from '$lib/types/look'
 
     // The look editor, laid out for the drawer that sits over Spotify's live
@@ -92,7 +93,9 @@
     /** While Hold to compare is held, the page wears the saved look instead of the draft. */
     let comparing = $state(false)
     /** A remix or a saved look opens on its backdrop; a blank new look starts with colours. */
-    let tab = $state<'panels' | 'palette' | 'backdrop'>(original.backdrop ? 'backdrop' : 'palette')
+    let tab = $state<'panels' | 'palette' | 'backdrop'>(
+        original.backdrop || original.palette.kind === 'backdrop' ? 'backdrop' : 'palette'
+    )
 
     const defaultShowThrough = $derived($settingsStore.theme.showThrough)
     const followsDefault = $derived(draft.panels.showThrough === null)
@@ -106,7 +109,32 @@
     })
     const rawPalette = $derived.by(() => {
         void $playingPalette
-        return resolvePalette(draft.palette)
+        return resolvePalette(draft.palette, draft.backdrop)
+    })
+
+    // A palette read from a picture keeps the colours it read as its seed,
+    // taken once per picture, so the page and the file carry them along.
+    let seededFrom: string | null = null
+    $effect(() => {
+        const palette = draft.palette
+        const backdrop = draft.backdrop
+        if (palette.kind !== 'backdrop' || backdrop?.kind !== 'image') return
+        const url =
+            backdrop.info?.thumb ?? (backdrop.source.type === 'url' ? backdrop.source.url : null)
+        if (!url || url === seededFrom) return
+        seededFrom = url
+        let stale = false
+        imageSwatches(url)
+            .then((swatches) => {
+                const seed = seedFromSwatches(swatches, 'dark')
+                if (!stale && seed && draft.palette.kind === 'backdrop') {
+                    draft.palette = { kind: 'backdrop', seed }
+                }
+            })
+            .catch(() => undefined)
+        return () => {
+            stale = true
+        }
     })
 
     const checks = $derived([
@@ -148,6 +176,9 @@
             draft.palette = { kind: 'builtin', name: 'spotify' }
         } else if (kind === 'cover') {
             draft.palette = { kind: 'cover' }
+        } else if (kind === 'backdrop') {
+            seededFrom = null
+            draft.palette = { kind: 'backdrop' }
         } else {
             draft.palette = { kind: 'slots', colours: { ...current } }
         }
@@ -400,6 +431,33 @@
                             <span class="text-ink-muted">· blurs the backdrop behind them</span>
                         </span>
                     </label>
+                    <div class="mt-1 flex items-center justify-between gap-x-2">
+                        <span class="rack-label">Surfaces</span>
+                        <SegmentedControl
+                            size="xs"
+                            ariaLabel="Surfaces"
+                            value={draft.panels.surfaces ?? 'clear'}
+                            onValueChange={(v) =>
+                                (draft.panels = { ...draft.panels, surfaces: v as Surfaces })}
+                            options={[
+                                {
+                                    label: 'Clear',
+                                    value: 'clear',
+                                    title: 'Translucent, with a soft shadow'
+                                },
+                                {
+                                    label: 'Tinted',
+                                    value: 'tinted',
+                                    title: "The palette's card colour"
+                                }
+                            ]}
+                        />
+                    </div>
+                    <span class={HINT}>
+                        Clear: the search pill, the home button and Chorus's trays go translucent
+                        with a soft shadow over the backdrop. Tinted: they take the palette's card
+                        colour.
+                    </span>
                     {#if !draft.backdrop}
                         <span class={HINT}>These apply once the look has a backdrop.</span>
                     {/if}
@@ -414,6 +472,11 @@
                         value={paletteKind}
                         onValueChange={setPaletteKind}
                         options={[
+                            {
+                                label: 'Backdrop',
+                                value: 'backdrop',
+                                title: 'Colours read from the backdrop itself'
+                            },
                             {
                                 label: 'Colours',
                                 value: 'colours',
@@ -475,6 +538,17 @@
                         <span class={HINT}
                             >Any of the built-in palettes as the colour half of this look.</span
                         >
+                    {:else if draft.palette.kind === 'backdrop'}
+                        <span class={HINT}>
+                            The base and accent are read from the backdrop: a gradient's widest stop
+                            and the stop furthest from it in hue, a picture's colours, or the
+                            playing cover. Change the backdrop and the palette follows.
+                            {#if !draft.backdrop}
+                                No backdrop yet, so Spotify's colours stand in.
+                            {:else if draft.backdrop.kind === 'image' && !draft.palette.seed}
+                                Reading the picture…
+                            {/if}
+                        </span>
                     {:else if draft.palette.kind === 'cover'}
                         <span class={HINT}>
                             The base and accent are read from the playing cover, as Match palette

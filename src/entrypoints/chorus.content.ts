@@ -302,6 +302,7 @@ function unmountThemePage() {
         clearInterval(themePageTimer)
         themePageTimer = null
     }
+    showUnderThemePage()
     if (!themePage) return
     try {
         unmount(themePage.instance)
@@ -312,9 +313,36 @@ function unmountThemePage() {
     themePage = null
 }
 
+/**
+ * Spotify's own main-view content would show through the theme page, which
+ * paints like a translucent panel under a backdrop, so it is hidden while the
+ * page is there: the host's other children, marked so they can be put back.
+ * (app.css has the same rule by class; this does not depend on the class.)
+ */
+const HIDDEN_UNDER_PAGE = 'data-chorus-under-page'
+function hideUnderThemePage(host: HTMLElement, page: HTMLElement) {
+    for (const child of host.children) {
+        if (child === page || !(child instanceof HTMLElement)) continue
+        if (child.hasAttribute(HIDDEN_UNDER_PAGE)) continue
+        child.setAttribute(HIDDEN_UNDER_PAGE, child.style.visibility || '')
+        child.style.visibility = 'hidden'
+    }
+}
+function showUnderThemePage() {
+    for (const el of document.querySelectorAll<HTMLElement>(`[${HIDDEN_UNDER_PAGE}]`)) {
+        el.style.visibility = el.getAttribute(HIDDEN_UNDER_PAGE) || ''
+        el.removeAttribute(HIDDEN_UNDER_PAGE)
+    }
+}
+
 function syncThemePage() {
     if (!chorusEnabled || !isThemeRoute(location.hash)) return unmountThemePage()
-    if (themePage?.container.isConnected) return
+    if (themePage?.container.isConnected) {
+        // Spotify may have re-rendered part of the view underneath: keep it hidden.
+        const host = themePage.container.parentElement
+        if (host) hideUnderThemePage(host, themePage.container)
+        return
+    }
     unmountThemePage()
 
     const host = mainViewHost()
@@ -322,6 +350,7 @@ function syncThemePage() {
     const container = document.createElement('div')
     container.id = 'chorus-theme-page'
     host.appendChild(container)
+    hideUnderThemePage(host, container)
     themePage = { instance: mount(ThemePage, { target: container }), container }
     themePageTimer = setInterval(() => window.dispatchEvent(new Event(THEME_SYNC_EVENT)), 1000)
 }

@@ -150,9 +150,8 @@
         openLookEditor(
             newLook({
                 name: looksStore.uniqueName('New look'),
-                palette: current
-                    ? structuredClone(current.palette)
-                    : { kind: 'builtin', name: $settingsStore.theme.name }
+                // The palette reads itself from whatever backdrop the new look gets.
+                palette: { kind: 'backdrop' }
             }),
             true
         )

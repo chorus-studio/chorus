@@ -203,6 +203,27 @@ describe('sanitiseLook', () => {
         )
     })
 
+    it('keeps a palette read from the backdrop, with its seed when it has one, and the surfaces', () => {
+        expect(sanitiseLook({ name: 'B', palette: { kind: 'backdrop' } })?.palette).toEqual({
+            kind: 'backdrop'
+        })
+        expect(
+            sanitiseLook({
+                name: 'B',
+                palette: {
+                    kind: 'backdrop',
+                    seed: { base: 'abc', accent: '#ff8c42', text: 'nope' }
+                }
+            })?.palette
+        ).toEqual({ kind: 'backdrop', seed: { base: '#aabbcc', accent: '#ff8c42' } })
+        expect(sanitiseLook({ name: 'B', panels: { surfaces: 'tinted' } })?.panels.surfaces).toBe(
+            'tinted'
+        )
+        expect(
+            sanitiseLook({ name: 'B', panels: { surfaces: 'shiny' } })?.panels.surfaces
+        ).toBeUndefined()
+    })
+
     it('returns null for anything without a name', () => {
         expect(sanitiseLook(null)).toBeNull()
         expect(sanitiseLook({ id: 'x' })).toBeNull()

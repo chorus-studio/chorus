@@ -32,11 +32,12 @@ import {
     builtinLook,
     isVideoBackdrop,
     resolveShowThrough,
+    type Backdrop,
     type Look,
     type LooksState,
     type PaletteSource
 } from '$lib/types/look'
-import { completePalette, derivePalette } from './look-palette'
+import { completePalette, derivePalette, seedFromGradient } from './look-palette'
 import { BACKDROP_PROPERTIES, backdropVariables, panelAlpha } from './backdrop-css'
 import { wallpaperStill, wallpaperUrl } from './wallpapers'
 import { unwatchPagePanels, watchPagePanels } from './page-panels'
@@ -171,7 +172,17 @@ export type PageLook = {
 }
 
 /** The fifteen page colours a look's palette source stands for, before any light inversion. */
-export function resolvePalette(source: PaletteSource): Record<CSSVariable, string> {
+/**
+ * The fifteen page colours a look's palette source stands for, before any
+ * light inversion. A palette read "from the backdrop" needs the look's
+ * backdrop: a gradient's stops are read on the spot, a picture's colours
+ * were kept as the source's seed when it was picked, the playing cover's
+ * palette comes from setPlayingCover; Spotify's colours stand in otherwise.
+ */
+export function resolvePalette(
+    source: PaletteSource,
+    backdrop: Backdrop | null = null
+): Record<CSSVariable, string> {
     switch (source.kind) {
         case 'builtin':
             return STATIC_THEMES[source.name] ?? SPOTIFY_PALETTE
@@ -182,6 +193,14 @@ export function resolvePalette(source: PaletteSource): Record<CSSVariable, strin
         case 'cover':
             // The playing cover's palette once read (setPlayingCover); Spotify's stands in before.
             return coverPalette ?? SPOTIFY_PALETTE
+        case 'backdrop': {
+            if (backdrop?.kind === 'gradient') {
+                const seed = seedFromGradient(backdrop, 'dark')
+                return seed ? derivePalette(seed) : SPOTIFY_PALETTE
+            }
+            if (backdrop?.kind === 'cover') return coverPalette ?? SPOTIFY_PALETTE
+            return source.seed ? derivePalette(source.seed) : SPOTIFY_PALETTE
+        }
     }
 }
 
@@ -208,7 +227,9 @@ export function lookFromSettings(
     const applied = Boolean(settings.ui?.theme)
     const look = applied ? (override ?? lookById(looks, settings.theme?.look)) : null
     const name: ThemeName = applied ? (settings.theme?.name ?? 'spotify') : 'spotify'
-    const base = look ? resolvePalette(look.palette) : (STATIC_THEMES[name] ?? SPOTIFY_PALETTE)
+    const base = look
+        ? resolvePalette(look.palette, look.backdrop)
+        : (STATIC_THEMES[name] ?? SPOTIFY_PALETTE)
     const light = mode === 'light'
     const palette = light ? invertPalette(base) : base
     const spotifyPalette = look
@@ -921,6 +942,7 @@ function paintBackdrop(
     root.style.setProperty('--chorus-panel-alpha', String(panelAlpha(showThrough)))
     root.setAttribute('data-backdrop', media.video ? 'video' : backdrop.kind)
     root.toggleAttribute('data-panel-glass', look.panels.glass)
+    root.setAttribute('data-surfaces', look.panels.surfaces ?? 'clear')
     root.toggleAttribute('data-drift', backdrop.kind === 'gradient' && backdrop.drift)
     if (media.video && media.url) mountBackdropVideo(media.url, media.play)
     else removeBackdropVideo()
@@ -965,7 +987,7 @@ export function setPlayingCover(
     }
     if (palette === undefined || palette === coverPalette) return
     coverPalette = palette
-    if (appliedPaletteKind === 'cover') reapply?.()
+    if (appliedPaletteKind === 'cover' || appliedPaletteKind === 'backdrop') reapply?.()
 }
 
 export function clearBackdrop(doc: Document = document): void {
@@ -974,6 +996,7 @@ export function clearBackdrop(doc: Document = document): void {
     currentBackdrop = null
     root.removeAttribute('data-backdrop')
     root.removeAttribute('data-panel-glass')
+    root.removeAttribute('data-surfaces')
     root.removeAttribute('data-drift')
     for (const name of BACKDROP_PROPERTIES) root.style.removeProperty(name)
     removeBackdropVideo()

@@ -18,6 +18,7 @@
  * Pure maths; no DOM, no stores.
  */
 import type { CSSVariable } from '$lib/utils/theming'
+import type { GradientBackdrop } from '$lib/types/look'
 import { contrastRatio, hexToHsl, hslToHex, mixHex, pickSwatch, type Swatch } from './popup-palette'
 import type { Mode } from './theme-surfaces'
 
@@ -253,6 +254,75 @@ export function seedFromSwatches(swatches: Swatch[], mode: Mode): ColourSeed | n
     )
     const coloured = pickSwatch(swatches) ?? dominant
     const [ah, as, al] = hexToHsl(coloured.hex)
+    const accent = hslToHex(
+        ah,
+        Math.max(as, SEED_ACCENT_SATURATION_MIN),
+        as < SEED_ACCENT_SATURATION_MIN ? SEED_ACCENT_LIGHTNESS : al
+    )
+    return { base, accent }
+}
+
+// ---- Seeds from a gradient --------------------------------------------------
+
+/** Hues this far apart (degrees) read as two colours rather than one. */
+const ACCENT_HUE_GAP_MIN = 40
+
+/**
+ * A gradient's stops as swatches, each weighted by the span it colours
+ * (half-way to its neighbours); a mesh's last stop is the ground under the
+ * blobs and carries half the weight.
+ */
+export function swatchesFromGradient(gradient: GradientBackdrop): Swatch[] {
+    const stops = [...gradient.stops].sort((a, b) => a.at - b.at)
+    if (!stops.length) return []
+    if (gradient.type === 'mesh') {
+        const ground = stops[stops.length - 1]
+        const blobs = stops.slice(0, -1)
+        return [
+            { hex: ground.color, population: 50 },
+            ...blobs.map((stop) => ({
+                hex: stop.color,
+                population: Math.max(1, Math.round(50 / blobs.length))
+            }))
+        ]
+    }
+    return stops.map((stop, i) => {
+        const from = i === 0 ? 0 : (stops[i - 1].at + stop.at) / 2
+        const to = i === stops.length - 1 ? 100 : (stop.at + stops[i + 1].at) / 2
+        return { hex: stop.color, population: Math.max(1, Math.round(to - from)) }
+    })
+}
+
+/**
+ * A base and an accent from a gradient ("From backdrop" with a gradient on):
+ * the widest stop gives the base its hue, deepened to a surface; the accent
+ * is the coloured stop whose hue sits furthest from the base's, so a two-tone
+ * gradient yields two tones (the widest coloured stop when there is only one).
+ */
+export function seedFromGradient(gradient: GradientBackdrop, mode: Mode): ColourSeed | null {
+    const swatches = swatchesFromGradient(gradient)
+    if (!swatches.length) return null
+    const dominant = [...swatches].sort((a, b) => b.population - a.population)[0]
+    const [bh, bs] = hexToHsl(dominant.hex)
+    const base = hslToHex(
+        bh,
+        Math.min(bs, SEED_BASE[mode].saturationMax),
+        SEED_BASE[mode].lightness
+    )
+    const hueGap = (h: number) => {
+        const d = Math.abs(h - bh) % 360
+        return d > 180 ? 360 - d : d
+    }
+    const coloured = swatches.filter((swatch) => hexToHsl(swatch.hex)[1] > 18)
+    const apart = coloured.filter((swatch) => hueGap(hexToHsl(swatch.hex)[0]) >= ACCENT_HUE_GAP_MIN)
+    const pool = apart.length ? apart : coloured
+    const picked =
+        [...pool].sort(
+            (a, b) =>
+                hueGap(hexToHsl(b.hex)[0]) - hueGap(hexToHsl(a.hex)[0]) ||
+                b.population - a.population
+        )[0] ?? dominant
+    const [ah, as, al] = hexToHsl(picked.hex)
     const accent = hslToHex(
         ah,
         Math.max(as, SEED_ACCENT_SATURATION_MIN),

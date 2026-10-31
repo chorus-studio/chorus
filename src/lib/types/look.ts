@@ -105,12 +105,23 @@ export type PaletteSource =
     | { kind: 'slots'; colours: Record<CSSVariable, string> }
     /** The playing cover's colours, read as Match palette reads them; they change with the music. */
     | { kind: 'cover' }
+    /**
+     * Colours read from the look's own backdrop: a gradient's stops as they
+     * are, a picture's colours (kept as `seed` once read), the playing cover
+     * when the backdrop is the cover. Change the backdrop and the palette follows.
+     */
+    | { kind: 'backdrop'; seed?: { base: string; accent: string; text?: string } }
+
+/** How the controls on the bars paint: translucent with a soft shadow, or in the palette's card colour. */
+export type Surfaces = 'clear' | 'tinted'
 
 export type Panels = {
     /** 0–100 %: how much of the backdrop shows through the page's panels; at 100 they vanish. Null follows the default in settings (`theme.showThrough`). */
     showThrough: number | null
     /** Blur the backdrop behind each panel. */
     glass: boolean
+    /** The search pill, the home button and Chorus's trays: `clear` (the default) or `tinted`. */
+    surfaces?: Surfaces
 }
 
 export type Look = {
@@ -159,8 +170,8 @@ export const ANCHORS: Anchor[] = [
     'bottom right'
 ]
 
-/** A new look (and every built-in) follows the default show-through. */
-export const DEFAULT_PANELS: Panels = { showThrough: null, glass: false }
+/** A new look (and every built-in) follows the default show-through, with clear surfaces. */
+export const DEFAULT_PANELS: Panels = { showThrough: null, glass: false, surfaces: 'clear' }
 
 /** A look's show-through, or the default when it has none of its own. */
 export function resolveShowThrough(panels: Panels, fallback: number): number {
@@ -488,7 +499,8 @@ export function newLook(partial: Partial<Look> = {}): Look {
     return {
         id: crypto.randomUUID(),
         name: 'New look',
-        palette: { kind: 'colours', base: '#141a2e', accent: '#ffb36b' },
+        // The palette reads itself from whatever backdrop the look gets.
+        palette: { kind: 'backdrop' },
         backdrop: null,
         panels: { ...DEFAULT_PANELS },
         createdAt: now,

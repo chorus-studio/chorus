@@ -18,13 +18,7 @@
     import { looksStore, ownLooks, findLook } from '$lib/stores/looks'
     import { nowPlaying } from '$lib/stores/now-playing'
     import { openLookEditor, remixForEditing } from '$lib/stores/look-editor'
-    import {
-        THEME_NAMES,
-        applyLook,
-        lookById,
-        resolveMode,
-        type ThemeName
-    } from '$lib/utils/theming'
+    import { THEME_NAMES, applyLook, resolveMode, type ThemeName } from '$lib/utils/theming'
     import { lookSketch, paletteSketch, type Sketch } from '$lib/utils/look-preview'
     import { playingPalette } from '$lib/utils/cover-palette'
     import { LookFileError, parseLookFile } from '$lib/utils/look-file'
@@ -298,14 +292,11 @@
     // ---- the editor (a drawer over the live page; this page steps aside) ----
 
     function startNew() {
-        // A new look starts from whatever is on now, backdrop aside.
-        const current = lookById(get(looksStore), $settingsStore.theme.look)
         openLookEditor(
             newLook({
                 name: looksStore.uniqueName('New look'),
-                palette: current
-                    ? structuredClone(current.palette)
-                    : { kind: 'builtin', name: $settingsStore.theme.name }
+                // The palette reads itself from whatever backdrop the new look gets.
+                palette: { kind: 'backdrop' }
             }),
             true
         )
@@ -386,7 +377,10 @@
             </div>
 
             <div class="flex items-start gap-x-6">
-                <aside class="sticky top-0 flex w-[212px] shrink-0 flex-col gap-y-1 self-start">
+                <!-- A panel of its own, like Spotify's sidebar: readable whatever shows through the page. -->
+                <aside
+                    class="chorus-float sticky top-0 flex w-[224px] shrink-0 flex-col gap-y-1 self-start rounded-xl border border-hairline bg-ink/90 p-2 shadow-float"
+                >
                     <div class="relative mb-1.5">
                         <Search
                             class="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-ink-muted"

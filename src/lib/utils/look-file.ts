@@ -130,6 +130,14 @@ function sanitisePalette(raw: unknown): PaletteSource {
         return text ? { kind: 'colours', base, accent, text } : { kind: 'colours', base, accent }
     }
     if (raw.kind === 'cover') return { kind: 'cover' }
+    if (raw.kind === 'backdrop') {
+        const seed = isRecord(raw.seed) ? raw.seed : null
+        const base = normaliseHex(seed?.base as string)
+        const accent = normaliseHex(seed?.accent as string)
+        if (!base || !accent) return { kind: 'backdrop' }
+        const text = normaliseHex(seed?.text as string)
+        return { kind: 'backdrop', seed: text ? { base, accent, text } : { base, accent } }
+    }
     if (raw.kind === 'slots' && isRecord(raw.colours)) {
         const partial: Partial<Record<CSSVariable, string>> = {}
         for (const slot of SLOTS) {
@@ -253,7 +261,10 @@ export function sanitiseLook(raw: unknown): Look | null {
                 typeof panels.showThrough === 'number'
                     ? clamp(panels.showThrough, 0, SHOW_THROUGH_MAX, 25)
                     : null,
-            glass: bool(panels.glass, false)
+            glass: bool(panels.glass, false),
+            ...(panels.surfaces === 'tinted' || panels.surfaces === 'clear'
+                ? { surfaces: panels.surfaces }
+                : {})
         },
         ...(typeof raw.remixedFrom === 'string'
             ? { remixedFrom: raw.remixedFrom.slice(0, 120) }
