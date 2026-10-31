@@ -166,6 +166,18 @@
     // ---- palette ----
 
     const paletteKind = $derived(draft.palette.kind)
+    // Every slot by hand is hidden until a look has them (a pasted Spicetify
+    // scheme, an imported look): fifteen bare colour slots mean little without
+    // a map of where each lands on the page.
+    const paletteOptions = $derived([
+        { label: 'Backdrop', value: 'backdrop', title: 'Colours read from the backdrop itself' },
+        { label: 'Colours', value: 'colours', title: 'Two colours derive all fifteen' },
+        { label: 'Built-in', value: 'builtin' },
+        ...(paletteKind === 'slots'
+            ? [{ label: 'Advanced', value: 'slots', title: 'Every slot by hand' }]
+            : []),
+        { label: 'Album art', value: 'cover', title: 'Colours read from the playing cover' }
+    ])
 
     function setPaletteKind(kind: string) {
         if (kind === draft.palette.kind) return
@@ -471,25 +483,7 @@
                         ariaLabel="Palette source"
                         value={paletteKind}
                         onValueChange={setPaletteKind}
-                        options={[
-                            {
-                                label: 'Backdrop',
-                                value: 'backdrop',
-                                title: 'Colours read from the backdrop itself'
-                            },
-                            {
-                                label: 'Colours',
-                                value: 'colours',
-                                title: 'Two colours derive all fifteen'
-                            },
-                            { label: 'Built-in', value: 'builtin' },
-                            { label: 'Advanced', value: 'slots', title: 'Every slot by hand' },
-                            {
-                                label: 'Album art',
-                                value: 'cover',
-                                title: 'Colours read from the playing cover'
-                            }
-                        ]}
+                        options={paletteOptions}
                     />
 
                     {#if draft.palette.kind === 'colours'}
@@ -569,36 +563,43 @@
                                 />
                             {/each}
                         </div>
-                        <div class="flex flex-wrap items-center gap-2">
-                            <Button
-                                variant="outline"
-                                size="xs"
-                                onclick={() => (iniOpen = !iniOpen)}
-                            >
-                                Paste a Spicetify color.ini
-                            </Button>
-                            <Button variant="outline" size="xs" onclick={copyIni}
-                                >Copy as color.ini</Button
-                            >
-                        </div>
                         <span class={HINT}>The fifteen slots are Spicetify's keys one for one.</span
                         >
-                        {#if iniOpen}
-                            <textarea
-                                bind:value={iniText}
-                                rows="5"
-                                spellcheck="false"
-                                placeholder={'[Scheme]\ntext = ffffff\nmain = 121212\nbutton = 1ed760\n…'}
-                                aria-label="Spicetify color.ini text"
-                                class="w-full rounded-md border border-hairline bg-inset px-2 py-1.5 font-mono text-[11px] text-ink-fg outline-none placeholder:text-ink-dim focus-visible:border-signal/60"
-                            ></textarea>
-                            <div class="flex items-center gap-x-2">
-                                <Button size="xs" onclick={applyIni}>Apply scheme</Button>
-                                <Button variant="ghost" size="xs" onclick={() => (iniOpen = false)}
-                                    >Close</Button
-                                >
-                            </div>
-                        {/if}
+                    {/if}
+
+                    <div class="flex flex-wrap items-center gap-2">
+                        <Button
+                            variant="outline"
+                            size="xs"
+                            onclick={() => (iniOpen = !iniOpen)}
+                            title="A Spicetify colour scheme becomes this look's palette, every slot as written"
+                        >
+                            Paste a Spicetify color.ini
+                        </Button>
+                        <Button
+                            variant="outline"
+                            size="xs"
+                            onclick={copyIni}
+                            title="The palette as it stands, as a Spicetify scheme"
+                        >
+                            Copy as color.ini
+                        </Button>
+                    </div>
+                    {#if iniOpen}
+                        <textarea
+                            bind:value={iniText}
+                            rows="5"
+                            spellcheck="false"
+                            placeholder={'[Scheme]\ntext = ffffff\nmain = 121212\nbutton = 1ed760\n…'}
+                            aria-label="Spicetify color.ini text"
+                            class="w-full rounded-md border border-hairline bg-inset px-2 py-1.5 font-mono text-[11px] text-ink-fg outline-none placeholder:text-ink-dim focus-visible:border-signal/60"
+                        ></textarea>
+                        <div class="flex items-center gap-x-2">
+                            <Button size="xs" onclick={applyIni}>Apply scheme</Button>
+                            <Button variant="ghost" size="xs" onclick={() => (iniOpen = false)}
+                                >Close</Button
+                            >
+                        </div>
                     {/if}
 
                     <div class="flex gap-0.5" aria-label="The palette's colours">
