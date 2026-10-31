@@ -45,7 +45,7 @@
         type Mode
     } from '$lib/utils/theming'
     import { frameColor, invertPalette } from '$lib/utils/theme-surfaces'
-    import { DEFAULT_GLASS, settingsStore } from '$lib/stores/settings'
+    import { settingsStore } from '$lib/stores/settings'
     import { nowPlaying } from '$lib/stores/now-playing'
     import { followPlayingCover } from '$lib/utils/cover-palette'
     import { sleepStore } from '$lib/stores/sleep'
@@ -125,12 +125,11 @@
         const notificationsOn = params.get('on') === '1'
         const paused = (params.get('paused') ?? '').split(',')
         await settingsStore.updateSettings({
-            ui: { ...current.ui, glass },
+            ui: { ...current.ui },
             theme: {
                 ...current.theme,
                 appearance: mode,
-                popup: popupColours,
-                glass: DEFAULT_GLASS
+                popup: popupColours
             },
             notifications: {
                 granted: params.get('granted') === '1',
@@ -144,7 +143,7 @@
                 effects: !paused.includes('effects')
             }
         })
-        applyGlass(get(settingsStore))
+        applyGlass(glass)
         // ?volume=120 gives the playing track a saved volume offset.
         const volume = Number(params.get('volume'))
         if (volume > 0) await nowPlaying.updateState({ volume })

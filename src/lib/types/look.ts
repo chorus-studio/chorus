@@ -113,15 +113,12 @@ export type PaletteSource =
     | { kind: 'backdrop'; seed?: { base: string; accent: string; text?: string } }
 
 /** How the controls on the bars paint: translucent with a soft shadow, or in the palette's card colour. */
-export type Surfaces = 'clear' | 'tinted'
 
 export type Panels = {
     /** 0–100 %: how much of the backdrop shows through the page's panels; at 100 they vanish. Null follows the default in settings (`theme.showThrough`). */
     showThrough: number | null
     /** Blur the backdrop behind each panel. */
     glass: boolean
-    /** The search pill, the home button and Chorus's trays: `clear` (the default) or `tinted`. */
-    surfaces?: Surfaces
 }
 
 export type Look = {
@@ -170,8 +167,8 @@ export const ANCHORS: Anchor[] = [
     'bottom right'
 ]
 
-/** A new look (and every built-in) follows the default show-through, with clear surfaces. */
-export const DEFAULT_PANELS: Panels = { showThrough: null, glass: false, surfaces: 'clear' }
+/** A new look (and every built-in) follows the default show-through, without glass. */
+export const DEFAULT_PANELS: Panels = { showThrough: null, glass: false }
 
 /** A look's show-through, or the default when it has none of its own. */
 export function resolveShowThrough(panels: Panels, fallback: number): number {

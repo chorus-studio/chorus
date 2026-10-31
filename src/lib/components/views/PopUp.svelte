@@ -6,7 +6,8 @@
     import { nowPlaying } from '$lib/stores/now-playing'
     import { setEnabled } from '$lib/stores/enabled'
     import { settingsStore } from '$lib/stores/settings'
-    import { applyThemePopupPalette, watchSystemMode } from '$lib/utils/theming'
+    import { looksStore } from '$lib/stores/looks'
+    import { applyThemePopupPalette, lookFromSettings, watchSystemMode } from '$lib/utils/theming'
 
     import BellOff from '@lucide/svelte/icons/bell-off'
     import BellPlus from '@lucide/svelte/icons/bell-plus'
@@ -51,7 +52,10 @@
     // Colour source and appearance: a change to either repaints the popup.
     let currentLook = popupLookKey($settingsStore)
 
-    const glassOn = $derived(Boolean($settingsStore.ui.glass))
+    // Glass follows the look, as the rack's does (theming.applyGlass).
+    const glassOn = $derived(
+        Boolean(lookFromSettings($settingsStore, $looksStore).look?.panels.glass)
+    )
     // Quoted so a cover URL (or a data: URI) with spaces, quotes or
     // parentheses still parses inside url().
     const coverBackdrop = $derived(

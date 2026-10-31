@@ -9,6 +9,8 @@
         value,
         onChange,
         auto = false,
+        size = 'sm',
+        hideLabel = false,
         class: className = ''
     }: {
         label: string
@@ -16,6 +18,10 @@
         onChange: (hex: string) => void
         /** The value was derived, not chosen; shown as a hint beside it. */
         auto?: boolean
+        /** `lg`: a taller chip with a bigger swatch, for rows that stand on their own. */
+        size?: 'sm' | 'lg'
+        /** Keep the label for assistive tech only (a numbered stop beside its slider). */
+        hideLabel?: boolean
         class?: string
     } = $props()
 
@@ -33,12 +39,15 @@
 
 <label
     class={cn(
-        'inline-flex h-7 items-center gap-x-1.5 rounded-md border border-hairline bg-inset px-1 focus-within:border-signal/60 hover:border-hairline-strong',
+        'inline-flex items-center rounded-md border border-hairline bg-inset focus-within:border-signal/60 hover:border-hairline-strong',
+        size === 'lg' ? 'h-[30px] gap-x-2 px-1.5' : 'h-7 gap-x-1.5 px-1',
         className
     )}
 >
     <span
-        class="relative size-5 shrink-0 overflow-hidden rounded-[4px] border border-hairline"
+        class="relative shrink-0 overflow-hidden border border-hairline {size === 'lg'
+            ? 'size-6 rounded-[5px]'
+            : 'size-5 rounded-[4px]'}"
         style="background: {value}"
     >
         <input
@@ -49,7 +58,9 @@
             aria-label="{label} colour"
         />
     </span>
-    <span class="text-[11px] text-ink-fg-2">{label}</span>
+    {#if !hideLabel}
+        <span class="text-[11px] text-ink-fg-2">{label}</span>
+    {/if}
     <input
         type="text"
         bind:value={text}
@@ -62,7 +73,10 @@
         }}
         spellcheck="false"
         maxlength="7"
-        class="w-[58px] bg-transparent font-mono text-[11px] text-ink-fg outline-none placeholder:text-ink-dim"
+        class="bg-transparent font-mono text-ink-fg outline-none placeholder:text-ink-dim {size ===
+        'lg'
+            ? 'w-[66px] text-xs'
+            : 'w-[58px] text-[11px]'}"
         aria-label="{label} hex"
     />
     {#if auto}

@@ -6,23 +6,11 @@
     import { CustomSlider } from '$lib/components/ui/custom-slider'
     import SegmentedControl from '$lib/components/SegmentedControl.svelte'
     import LookSketch from './theming/LookSketch.svelte'
-    import {
-        settingsStore,
-        DEFAULT_GLASS,
-        type Appearance,
-        type PopupColours,
-        type GlassSettings
-    } from '$lib/stores/settings'
+    import { settingsStore, type Appearance, type PopupColours } from '$lib/stores/settings'
     import { looksStore } from '$lib/stores/looks'
     import { nowPlaying } from '$lib/stores/now-playing'
     import { openLookEditor, remixForEditing } from '$lib/stores/look-editor'
-    import {
-        applyGlass,
-        applyLook,
-        GLASS_BLUR_MIN,
-        lookById,
-        resolveMode
-    } from '$lib/utils/theming'
+    import { applyLook, lookById, resolveMode } from '$lib/utils/theming'
     import { get } from 'svelte/store'
     import { lookSketch, paletteSketch } from '$lib/utils/look-preview'
     import { playingPalette } from '$lib/utils/cover-palette'
@@ -30,7 +18,7 @@
     import { SHOW_THROUGH_MAX, newLook } from '$lib/types/look'
 
     // The Theme tab of Chorus settings: the quick controls (Apply, Appearance,
-    // Popup colours, Glass) and a strip showing the current look, with the
+    // Popup colours) and a strip showing the current look, with the
     // way to the theme page, where the looks, the palettes and the editor
     // live. Every control here only writes settings: App.svelte re-applies
     // the look (page re-skin, backdrop, rack tokens, glass) whenever they
@@ -52,25 +40,6 @@
         await settingsStore.updateSettings({
             theme: { ...$settingsStore.theme, popup: value as PopupColours }
         })
-    }
-
-    async function toggleGlass(enabled: boolean) {
-        await settingsStore.updateSettings({ ui: { ...$settingsStore.ui, glass: enabled } })
-    }
-
-    // The glass sliders paint live and persist a beat later, so a drag doesn't
-    // write storage (and re-run the look in every window) on every pixel.
-    let glass = $state<GlassSettings>({ ...($settingsStore.theme.glass ?? DEFAULT_GLASS) })
-    let persistTimer: ReturnType<typeof setTimeout> | null = null
-
-    function setGlass(key: keyof GlassSettings, value: number) {
-        glass = { ...glass, [key]: value }
-        applyGlass({ ...$settingsStore, theme: { ...$settingsStore.theme, glass } })
-        if (persistTimer) clearTimeout(persistTimer)
-        persistTimer = setTimeout(() => {
-            persistTimer = null
-            settingsStore.updateSettings({ theme: { ...$settingsStore.theme, glass } })
-        }, 200)
     }
 
     // The default show-through, for looks without their own: live paint, persisted a beat later.
@@ -157,7 +126,7 @@
         )
     }
 
-    // The four cards share one shell: label on top, the control, then a hint.
+    // The three cards share one shell: label on top, the control, then a hint.
     const CARD = 'flex flex-col gap-y-2 rounded-md border border-hairline bg-panel px-2.5 py-2'
     const SWITCH_ROW = 'flex h-6 items-center gap-x-2 text-xs text-ink-fg-2'
     const HINT = 'text-xs leading-snug text-ink-muted'
@@ -204,7 +173,7 @@
         </div>
     </div>
 
-    <div class="grid grid-cols-4 gap-3">
+    <div class="grid grid-cols-3 gap-3">
         <div class={CARD}>
             <span class="rack-label">Apply theme</span>
             <label class={SWITCH_ROW}>
@@ -251,83 +220,7 @@
                 >Where the toolbar popup takes its colours from; the PiP player follows the theme.</span
             >
         </div>
-
-        <div class={CARD}>
-            <span class="rack-label">Glass</span>
-            <label
-                class={SWITCH_ROW}
-                title="Chorus panels go translucent over a blurred view of what sits behind them"
-            >
-                <Switch
-                    checked={$settingsStore.ui.glass}
-                    onCheckedChange={toggleGlass}
-                    aria-label="Glass surfaces"
-                />
-                {$settingsStore.ui.glass ? 'On' : 'Off'}
-            </label>
-            <span class={HINT}>
-                Translucent Chorus panels over a blurred page; the popup blurs its cover art.
-            </span>
-        </div>
     </div>
-
-    {#if $settingsStore.ui.glass}
-        <div class="grid grid-cols-3 gap-x-4 rounded-md border border-hairline bg-panel px-3 py-2">
-            <div class="flex flex-col gap-y-1.5">
-                <div class="flex items-center justify-between">
-                    <span class="rack-label">Opacity</span>
-                    <span class="font-mono text-[11px] text-ink-fg-2"
-                        >{Math.round(glass.opacity * 100)}%</span
-                    >
-                </div>
-                <CustomSlider
-                    type="single"
-                    min={20}
-                    max={85}
-                    step={5}
-                    value={Math.round(glass.opacity * 100)}
-                    label="Glass opacity"
-                    onValueChange={(v) => setGlass('opacity', (v as number) / 100)}
-                />
-            </div>
-            <div class="flex flex-col gap-y-1.5">
-                <div class="flex items-center justify-between">
-                    <span class="rack-label">Blur</span>
-                    <span class="font-mono text-[11px] text-ink-fg-2">{glass.blur} px</span>
-                </div>
-                <CustomSlider
-                    type="single"
-                    min={GLASS_BLUR_MIN}
-                    max={64}
-                    step={4}
-                    value={glass.blur}
-                    label="Glass blur"
-                    onValueChange={(v) => setGlass('blur', v as number)}
-                />
-            </div>
-            <div class="flex flex-col gap-y-1.5">
-                <div class="flex items-center justify-between">
-                    <span
-                        class="rack-label"
-                        title="Bends the page behind the panel like thick glass. Chrome only; other browsers keep the plain blur."
-                        >Refraction · Chrome</span
-                    >
-                    <span class="font-mono text-[11px] text-ink-fg-2"
-                        >{glass.refraction === 0 ? 'off' : glass.refraction}</span
-                    >
-                </div>
-                <CustomSlider
-                    type="single"
-                    min={0}
-                    max={40}
-                    step={2}
-                    value={glass.refraction}
-                    label="Glass refraction"
-                    onValueChange={(v) => setGlass('refraction', v as number)}
-                />
-            </div>
-        </div>
-    {/if}
 
     <div class="flex items-center gap-x-4 rounded-md border border-hairline bg-panel px-3 py-2">
         <div class="flex w-[190px] shrink-0 flex-col gap-y-0.5">

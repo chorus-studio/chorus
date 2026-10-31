@@ -4,7 +4,6 @@
         DEFAULT_IMAGE_OPTIONS,
         IMAGE_BLUR_MAX,
         IMAGE_DIM_MAX,
-        IMAGE_SATURATE_MAX,
         isVideoBackdrop,
         type ImageBackdrop,
         type ImageFit
@@ -27,7 +26,6 @@
     import { Input } from '$lib/components/ui/input'
     import { CustomSlider } from '$lib/components/ui/custom-slider'
     import SegmentedControl from '$lib/components/SegmentedControl.svelte'
-    import AnchorGrid from './AnchorGrid.svelte'
 
     // The image half of the Backdrop section: a drop zone until a picture is
     // in, then the picture's chip and its controls. A dropped file is checked
@@ -121,9 +119,12 @@
             ? `${(bytes / (1024 * 1024)).toFixed(1)} MB`
             : `${Math.round(bytes / 1024)} KB`
 
-    const SLIDER = 'flex flex-col gap-y-1'
-    const SLIDER_HEAD = 'flex items-center justify-between'
-    const VALUE = 'font-mono text-[11px] text-ink-fg-2'
+    const LABEL = 'text-[13px] font-semibold text-ink-fg'
+    const HINT = 'text-xs leading-snug text-ink-muted'
+    const VALUE = 'font-mono text-xs text-ink-fg-2'
+    const ROW =
+        'flex items-center justify-between gap-x-3 rounded-[10px] border border-hairline bg-inset px-3 py-2.5'
+    const MB = (bytes: number) => Math.round(bytes / (1024 * 1024))
 </script>
 
 <input
@@ -138,7 +139,7 @@
     <div
         role="group"
         aria-label="Add a picture or video"
-        class="flex flex-col items-center justify-center gap-y-2 rounded-md border border-dashed px-3 py-5 text-center transition-colors {dragging
+        class="flex flex-col items-center justify-center gap-y-2.5 rounded-[10px] border border-dashed px-4 py-7 text-center transition-colors {dragging
             ? 'border-signal bg-signal/5'
             : 'border-hairline-strong bg-inset'}"
         ondragover={(e) => {
@@ -149,32 +150,33 @@
         ondrop={onDrop}
     >
         {#if busy}
-            <LoaderCircle class="size-5 animate-spin text-ink-muted" />
-            <span class="text-xs text-ink-muted">Reading the picture…</span>
+            <LoaderCircle class="size-6 animate-spin text-ink-muted" />
+            <span class="text-[13px] text-ink-muted">Reading the picture…</span>
         {:else}
-            <ImageIcon class="size-5 text-ink-muted" />
-            <span class="text-xs text-ink-fg-2">Drop an image, GIF or short video here</span>
+            <ImageIcon class="size-6 text-ink-muted" />
+            <span class="text-[13px] font-medium text-ink-fg"
+                >Drop a picture, GIF or short video here</span
+            >
             <div class="flex items-center gap-x-2">
-                <Button variant="outline" size="xs" onclick={() => fileInput?.click()}
+                <Button variant="outline" size="sm" onclick={() => fileInput?.click()}
                     >Browse…</Button
                 >
-                <Button variant="outline" size="xs" onclick={() => (linking = !linking)}>
-                    <Link class="size-3" />
+                <Button variant="outline" size="sm" onclick={() => (linking = !linking)}>
+                    <Link class="size-3.5" />
                     Paste a link
                 </Button>
             </div>
-            <span class="text-[11px] leading-snug text-ink-muted">
-                JPEG, PNG, WebP, GIF or APNG, or an MP4 / WebM loop. Stills are resized to {MAX_STILL_EDGE}
-                px; animations stay as they are, up to {Math.round(MAX_BYTES / (1024 * 1024))} MB; a
-                video up to {Math.round(MAX_VIDEO_BYTES / (1024 * 1024))} MB and {MAX_VIDEO_SECONDS}
-                s.
+            <span class={HINT}>
+                JPEG, PNG, WebP, GIF or APNG up to {MB(MAX_BYTES)} MB; MP4 or WebM up to {MB(
+                    MAX_VIDEO_BYTES
+                )} MB and {MAX_VIDEO_SECONDS} s. Stills are resized to {MAX_STILL_EDGE} px.
             </span>
         {/if}
     </div>
 {:else}
-    <div class="flex items-center gap-x-2.5">
+    <div class="flex items-center gap-x-3 rounded-[10px] border border-hairline bg-inset p-2.5">
         <span
-            class="block h-9 w-14 shrink-0 rounded-md border border-hairline bg-inset bg-cover bg-center"
+            class="block h-11 w-16 shrink-0 rounded-lg border border-hairline bg-inset bg-cover bg-center"
             style={backdrop.info?.thumb
                 ? `background-image: url("${backdrop.info.thumb}")`
                 : backdrop.source.type === 'url'
@@ -184,11 +186,11 @@
             aria-label="The picture"
         ></span>
         <div class="flex min-w-0 flex-1 flex-col gap-y-0.5">
-            <span class="truncate text-xs text-ink-fg">
+            <span class="truncate text-[13px] font-semibold text-ink-fg">
                 {backdrop.info?.name ??
                     (backdrop.source.type === 'url' ? backdrop.source.url : 'Picture')}
             </span>
-            <span class="truncate font-mono text-[10px] text-ink-muted">
+            <span class="truncate font-mono text-[11px] text-ink-muted">
                 {#if backdrop.info}
                     {backdrop.info.width} × {backdrop.info.height} · {sizeText(backdrop.info.bytes)}
                     {backdrop.info.video
@@ -204,25 +206,25 @@
         {#if busy}
             <LoaderCircle class="size-4 animate-spin text-ink-muted" />
         {/if}
-        <Button variant="outline" size="xs" onclick={() => fileInput?.click()} disabled={busy}>
+        <Button variant="outline" size="sm" onclick={() => fileInput?.click()} disabled={busy}>
             Replace
         </Button>
         <Button
             variant="outline"
-            size="xs"
+            size="icon-sm"
             onclick={() => (linking = !linking)}
             aria-label="Use a link instead"
             title="Use a link instead"
         >
-            <Link class="size-3" />
+            <Link class="size-3.5" />
         </Button>
         <Button
             variant="outline"
-            size="xs"
+            size="sm"
             onclick={() => onMatch(backdrop)}
             title="Pick the base and accent colours from this picture"
         >
-            <WandSparkles class="size-3" />
+            <WandSparkles class="size-3.5" />
             Match palette
         </Button>
     </div>
@@ -241,110 +243,88 @@
             bind:value={link}
             placeholder="https://…/picture.jpg"
             aria-label="Picture link"
-            class="h-7 text-xs"
+            class="h-8 text-[13px]"
         />
-        <Button type="submit" size="xs">Use link</Button>
+        <Button type="submit" size="sm">Use link</Button>
     </form>
 {/if}
 
 {#if backdrop}
-    <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
-        <div class="flex items-center gap-x-2">
-            <span class="rack-label">Fit</span>
-            <SegmentedControl
-                size="xs"
-                ariaLabel="Fit"
-                value={backdrop.fit}
-                onValueChange={(v) => patch({ fit: v as ImageFit })}
-                options={[
-                    {
-                        label: 'Cover',
-                        value: 'cover',
-                        title: 'Fill the window, cropping the edges'
-                    },
-                    { label: 'Contain', value: 'contain', title: 'Show the whole picture' },
-                    { label: 'Tile', value: 'tile', title: 'Repeat the picture at its own size' }
-                ]}
-            />
-        </div>
-        <div class="flex items-center gap-x-2">
-            <span class="rack-label">Anchor</span>
-            <AnchorGrid value={backdrop.anchor} onChange={(anchor) => patch({ anchor })} />
-        </div>
-        <label
-            class="ml-auto flex items-center gap-x-2 text-xs text-ink-fg-2"
-            title="The wash over the picture is the palette's frame colour, so the gaps stay the theme's colour; off, it is plain black (white in Light)"
-        >
-            <Switch
-                checked={backdrop.tint}
-                onCheckedChange={(v) => patch({ tint: v })}
-                aria-label="Tint with palette"
-            />
-            Tint with palette
-        </label>
+    <div class="flex items-center justify-between gap-x-3">
+        <span class={LABEL}>Fit</span>
+        <SegmentedControl
+            size="sm"
+            ariaLabel="Fit"
+            value={backdrop.fit}
+            onValueChange={(v) => patch({ fit: v as ImageFit })}
+            options={[
+                { label: 'Fill', value: 'cover', title: 'Fill the window, cropping the edges' },
+                // Whole letterboxes a backdrop; it stays only for a look that already has it.
+                ...(backdrop.fit === 'contain'
+                    ? [{ label: 'Whole', value: 'contain', title: 'Show the whole picture' }]
+                    : []),
+                { label: 'Tile', value: 'tile', title: 'Repeat the picture at its own size' }
+            ]}
+        />
     </div>
 
-    <div class="grid grid-cols-3 gap-x-4">
-        <div class={SLIDER}>
-            <div class={SLIDER_HEAD}>
-                <span class="rack-label">Dim</span>
-                <span class={VALUE}>{backdrop.dim} %</span>
-            </div>
-            <CustomSlider
-                type="single"
-                min={0}
-                max={IMAGE_DIM_MAX}
-                step={5}
-                value={backdrop.dim}
-                label="Dim"
-                onValueChange={(v) => patch({ dim: v as number })}
-            />
+    <div class="flex flex-col gap-y-1.5">
+        <div class="flex items-center justify-between">
+            <span class={LABEL}>Dim</span>
+            <span class={VALUE}>{backdrop.dim} %</span>
         </div>
-        <div class={SLIDER}>
-            <div class={SLIDER_HEAD}>
-                <span class="rack-label">Blur</span>
-                <span class={VALUE}>{backdrop.blur} px</span>
-            </div>
-            <CustomSlider
-                type="single"
-                min={0}
-                max={IMAGE_BLUR_MAX}
-                step={2}
-                value={backdrop.blur}
-                label="Blur"
-                onValueChange={(v) => patch({ blur: v as number })}
-            />
+        <CustomSlider
+            type="single"
+            min={0}
+            max={IMAGE_DIM_MAX}
+            step={5}
+            value={backdrop.dim}
+            label="Dim"
+            onValueChange={(v) => patch({ dim: v as number })}
+        />
+    </div>
+    <div class="flex flex-col gap-y-1.5">
+        <div class="flex items-center justify-between">
+            <span class={LABEL}>Blur</span>
+            <span class={VALUE}>{backdrop.blur} px</span>
         </div>
-        <div class={SLIDER}>
-            <div class={SLIDER_HEAD}>
-                <span class="rack-label">Saturation</span>
-                <span class={VALUE}>{backdrop.saturate} %</span>
-            </div>
-            <CustomSlider
-                type="single"
-                min={0}
-                max={IMAGE_SATURATE_MAX}
-                step={10}
-                value={backdrop.saturate}
-                label="Saturation"
-                onValueChange={(v) => patch({ saturate: v as number })}
-            />
-        </div>
+        <CustomSlider
+            type="single"
+            min={0}
+            max={IMAGE_BLUR_MAX}
+            step={2}
+            value={backdrop.blur}
+            label="Blur"
+            onValueChange={(v) => patch({ blur: v as number })}
+        />
     </div>
 
+    <div class={ROW}>
+        <div class="flex min-w-0 flex-col gap-y-0.5">
+            <span class={LABEL}>Tint with the palette</span>
+            <span class={HINT}
+                >The dim wash takes the frame colour instead of black, white in Light</span
+            >
+        </div>
+        <Switch
+            checked={backdrop.tint}
+            onCheckedChange={(v) => patch({ tint: v })}
+            aria-label="Tint with the palette"
+        />
+    </div>
     {#if backdrop.info?.animated || isVideoBackdrop(backdrop)}
-        <label class="flex items-center gap-x-2 text-xs text-ink-fg-2">
+        <div class={ROW}>
+            <div class="flex min-w-0 flex-col gap-y-0.5">
+                <span class={LABEL}
+                    >{isVideoBackdrop(backdrop) ? 'Play the video' : 'Play the animation'}</span
+                >
+                <span class={HINT}>Off, or under Reduce motion, a still frame shows</span>
+            </div>
             <Switch
                 checked={backdrop.animate}
                 onCheckedChange={(v) => patch({ animate: v })}
                 aria-label="Play the animation"
             />
-            <span>
-                {isVideoBackdrop(backdrop) ? 'Play the video' : 'Play the animation'}
-                <span class="text-ink-muted"
-                    >· off, or under Reduce motion, a still frame shows</span
-                >
-            </span>
-        </label>
+        </div>
     {/if}
 {/if}

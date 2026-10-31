@@ -261,10 +261,7 @@ export function sanitiseLook(raw: unknown): Look | null {
                 typeof panels.showThrough === 'number'
                     ? clamp(panels.showThrough, 0, SHOW_THROUGH_MAX, 25)
                     : null,
-            glass: bool(panels.glass, false),
-            ...(panels.surfaces === 'tinted' || panels.surfaces === 'clear'
-                ? { surfaces: panels.surfaces }
-                : {})
+            glass: bool(panels.glass, false)
         },
         ...(typeof raw.remixedFrom === 'string'
             ? { remixedFrom: raw.remixedFrom.slice(0, 120) }
