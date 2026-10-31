@@ -95,9 +95,48 @@ html[data-mode='light'] {
     --essential-subdued: var(--chorus-subtext) !important;
     --decorative-subdued: var(--chorus-subtext) !important;
 }
+/* Under a backdrop the hero bands, and the Now playing view, which Spotify
+   tints the same way, sit on a panel that is already translucent, so their
+   own paint stacks on it: painted at the panel's alpha, a band read about
+   twice as solid as the page around it. They paint at the panel's alpha
+   squared instead (--chorus-hero-pct): the full tint when the panels are
+   solid, a trace of it when they are mostly clear, and never far above the
+   panel in between. The action bar's fade (--background-base-70) follows. */
+html[data-backdrop] {
+    --chorus-hero-pct: calc(var(--chorus-panel-pct, 100%) * var(--chorus-panel-alpha, 1));
+}
+html[data-backdrop] [style*='--background-base'] {
+    --background-base: color-mix(
+        in srgb,
+        var(--chorus-hero) var(--chorus-hero-pct),
+        transparent
+    ) !important;
+    --background-base-min-contrast: color-mix(
+        in srgb,
+        var(--chorus-hero-top) var(--chorus-hero-pct),
+        transparent
+    ) !important;
+    --background-base-70: color-mix(
+        in srgb,
+        var(--chorus-hero) calc(var(--chorus-hero-pct) * 7 / 10),
+        transparent
+    ) !important;
+    --background-elevated-base: color-mix(
+        in srgb,
+        var(--chorus-hero) var(--chorus-hero-pct),
+        transparent
+    ) !important;
+}
 /* artist and playlist heroes with a photo: the wash the page keeps behind it, at Spotify's 70 % */
 [data-testid='overscroll-background'] {
     background-color: color-mix(in srgb, var(--chorus-hero) 70%, transparent) !important;
+}
+html[data-backdrop] [data-testid='overscroll-background'] {
+    background-color: color-mix(
+        in srgb,
+        var(--chorus-hero) calc(var(--chorus-hero-pct) * 7 / 10),
+        transparent
+    ) !important;
 }
 
 /* background */
@@ -518,11 +557,24 @@ input:checked ~ .x-toggle-indicatorWrapper .x-toggle-indicator {
 .npv-header__metadata {
     color: var(--chorus-text);
 }
-/* misc */
-.lyrics-lyrics-container {
+/* Lyrics. Spotify colours the lyrics page from the playing cover through
+   custom properties set inline on the page's root (the class that root
+   carried, lyrics-lyrics-container, is gone), and paints the page from them.
+   Under a theme the palette takes their place, and under a backdrop the page
+   is one of the translucent panels. !important beats the inline values. */
+.lyrics-lyrics-container,
+[style*='--lyrics-color'] {
     --lyrics-color-active: var(--chorus-text) !important;
     --lyrics-color-inactive: var(--chorus-subtext) !important;
+    --lyrics-color-passed: var(--chorus-subtext) !important;
+    --lyrics-color-messaging: var(--chorus-text) !important;
     --lyrics-color-background: var(--chorus-main) !important;
+    background-color: var(--chorus-main) !important;
+}
+html[data-backdrop] .lyrics-lyrics-container,
+html[data-backdrop] [style*='--lyrics-color'] {
+    --lyrics-color-background: rgba(var(--chorus-rgb-main), var(--chorus-panel-alpha)) !important;
+    background-color: rgba(var(--chorus-rgb-main), var(--chorus-panel-alpha)) !important;
 }
 .lyrics-lyrics-background {
     background: var(--chorus-card) !important;
@@ -689,6 +741,13 @@ html[data-backdrop='gradient'][data-drift]::before {
 html[data-backdrop] body,
 html[data-backdrop] [data-chorus-frame],
 html[data-backdrop] [data-chorus-panel-layer] {
+    background-color: transparent !important;
+}
+/* A pseudo-element that paints a panel colour (the Now playing view draws
+   its surface on its ::before) goes clear like a layer; the walker names
+   which of the two. */
+html[data-backdrop] [data-chorus-panel-pseudo~='before']::before,
+html[data-backdrop] [data-chorus-panel-pseudo~='after']::after {
     background-color: transparent !important;
 }
 /* Entity pages (artist, album, playlist) paint the main colour on their

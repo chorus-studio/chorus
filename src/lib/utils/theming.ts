@@ -918,7 +918,10 @@ function paintBackdrop(
         imageUrl: media.video ? null : media.url
     })
     for (const [name, value] of Object.entries(vars)) root.style.setProperty(name, value)
-    root.style.setProperty('--chorus-panel-alpha', String(panelAlpha(showThrough)))
+    const alpha = panelAlpha(showThrough)
+    root.style.setProperty('--chorus-panel-alpha', String(alpha))
+    // The same as a percentage, for the color-mix() tints theme.css builds from it.
+    root.style.setProperty('--chorus-panel-pct', `${Math.round(alpha * 100)}%`)
     root.setAttribute('data-backdrop', media.video ? 'video' : backdrop.kind)
     root.toggleAttribute('data-panel-glass', look.panels.glass)
     root.toggleAttribute('data-drift', backdrop.kind === 'gradient' && backdrop.drift)
