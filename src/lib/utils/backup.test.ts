@@ -18,6 +18,7 @@ import {
     createBackup,
     describeSummary,
     mergeCollections,
+    mergeLooks,
     mergeMinePresets,
     parseBackup,
     summarizeBackup,
@@ -27,18 +28,52 @@ import {
 } from './backup'
 import { REVERB_MIX_VERSION } from '$lib/stores/reverb-params'
 import type { AudioPreset } from '$lib/stores/config'
+import type { LooksState } from '$lib/types/look'
 
-function memoryStore(initial: Partial<Record<BackupKey, unknown>> = {}) {
+function memoryStore(initial: Partial<Record<BackupKey | string, unknown>> = {}) {
     const data = new Map<string, unknown>(Object.entries(initial))
     const store: BackupStorage & { data: Map<string, unknown> } = {
         data,
-        get: async <T>(key: BackupKey) => (data.has(key) ? (data.get(key) as T) : null),
-        set: async (key: BackupKey, value: unknown) => {
+        get: async <T>(key: string) => (data.has(key) ? (data.get(key) as T) : null),
+        set: async (key: string, value: unknown) => {
             data.set(key, value)
+        },
+        remove: async (key: string) => {
+            data.delete(key)
         }
     }
     return store
 }
+
+const pixel = 'UklGRhoAAABXRUJQVlA4TA0AAAAvAAAAEAcQERGIiP4HAA=='
+const picture = { mime: 'image/webp', data: pixel, width: 1, height: 1, bytes: 34, animated: false }
+const look = (id: string, name: string, wallpaper?: string) => ({
+    id,
+    name,
+    palette: { kind: 'colours', base: '#10263a', accent: '#ffb36b' },
+    backdrop: wallpaper
+        ? {
+              kind: 'image',
+              source: { type: 'file', id: wallpaper },
+              fit: 'cover',
+              anchor: 'center',
+              dim: 35,
+              blur: 0,
+              saturate: 100,
+              tint: true,
+              animate: true
+          }
+        : null,
+    panels: { showThrough: 25, glass: false },
+    createdAt: 1,
+    updatedAt: 1
+})
+const looksState = (...looks: ReturnType<typeof look>[]): LooksState =>
+    ({
+        version: 1,
+        looks: Object.fromEntries(looks.map((l) => [l.id, l])),
+        hiddenBuiltIn: []
+    }) as unknown as LooksState
 
 const snip = { mode: 'play', ranges: [{ start: 10, end: 40 }] }
 const track = (track_id: string, extra: Record<string, unknown>) => ({
@@ -73,6 +108,23 @@ describe('createBackup', () => {
 
     it('names the file after the day it was made', () => {
         expect(backupFileName(file({}))).toBe('chorus-backup-2026-10-30.json')
+    })
+
+    it('carries the pictures the saved looks keep, and no other', async () => {
+        const store = memoryStore({
+            chorus_looks: looksState(look('a', 'Beach', 'a.w1'), look('b', 'Plain')),
+            chorus_wallpaper_a_w1: picture,
+            'chorus_wallpaper_a.w1': picture,
+            'chorus_wallpaper_old.w0': picture
+        })
+        const backup = await createBackup('2.11.0', store)
+        expect(Object.keys(backup.wallpapers ?? {})).toEqual(['a.w1'])
+        expect(backup.wallpapers?.['a.w1']).toEqual(picture)
+        const plain = await createBackup(
+            '2.11.0',
+            memoryStore({ chorus_looks: looksState(look('b', 'Plain')) })
+        )
+        expect(plain.wallpapers).toBeUndefined()
     })
 })
 
@@ -131,6 +183,43 @@ describe('parseBackup', () => {
         )
     })
 
+    it('checks every look and keeps only the pictures the looks name', () => {
+        const parsed = parseBackup(
+            JSON.stringify({
+                ...file({
+                    chorus_looks: {
+                        looks: {
+                            a: look('a', 'Beach', 'a.w1'),
+                            b: {
+                                ...look('b', 'Odd'),
+                                panels: { showThrough: 500, glass: 'x' },
+                                palette: 'nope'
+                            },
+                            c: { id: 'c' }
+                        },
+                        hiddenBuiltIn: ['regal', 7]
+                    }
+                }),
+                wallpapers: {
+                    'a.w1': picture,
+                    stray: picture,
+                    bad: { mime: 'image/png', data: '%%%' }
+                }
+            })
+        )
+        const looks = parsed.data.chorus_looks as {
+            looks: Record<string, unknown>
+            hiddenBuiltIn: string[]
+        }
+        expect(Object.keys(looks.looks)).toEqual(['a', 'b'])
+        expect(looks.looks.b).toMatchObject({
+            panels: { showThrough: 60, glass: false },
+            palette: { kind: 'builtin', name: 'spotify' }
+        })
+        expect(looks.hiddenBuiltIn).toEqual(['regal'])
+        expect(Object.keys(parsed.wallpapers ?? {})).toEqual(['a.w1'])
+    })
+
     it('fills in a missing version and date', () => {
         const parsed = parseBackup('{"app":"chorus","data":{}}')
         expect(parsed.version).toBe('unknown')
@@ -150,26 +239,48 @@ describe('summarizeBackup / describeSummary', () => {
         chorus_user_eq_presets: { Warm: [], Bright: [] },
         chorus_user_reverb_presets: { Attic: {} },
         chorus_config: { audio_presets: [mine('1', 'Study')] },
+        chorus_looks: looksState(look('a', 'Beach', 'a.w1'), look('b', 'Plain')),
         chorus_settings: {}
     }
 
     it('counts what the file holds', () => {
-        expect(summarizeBackup(data)).toEqual({
+        expect(summarizeBackup(data, { 'a.w1': { ...picture, bytes: 2048 } })).toEqual({
             snips: 2,
             blocked: 2,
             speeds: 1,
             eq_presets: 2,
             reverb_presets: 1,
             mine_presets: 1,
+            looks: 2,
+            picture_bytes: 2048,
             settings: true
         })
     })
 
     it('reads as a list of what is there', () => {
         expect(describeSummary(summarizeBackup(data))).toBe(
-            '2 snips · 2 blocked tracks · 1 track speed · 2 EQ presets · 1 reverb preset · 1 Mine preset · settings'
+            '2 snips · 2 blocked tracks · 1 track speed · 2 EQ presets · 1 reverb preset · 1 Mine preset · 2 looks · settings'
         )
         expect(describeSummary(summarizeBackup({}))).toBe('an empty library')
+    })
+})
+
+describe('mergeLooks', () => {
+    it('adds looks new by id, renaming a taken name, and leaves the hidden list alone', () => {
+        const current = {
+            ...looksState(look('a', 'Beach'), look('b', 'Plain')),
+            hiddenBuiltIn: ['regal']
+        }
+        const merged = mergeLooks(
+            current,
+            looksState({ ...look('a', 'Beach renamed') }, look('c', 'plain'), look('d', 'Dusk'))
+        )
+        expect(Object.keys(merged.looks)).toEqual(['a', 'b', 'c', 'd'])
+        expect(merged.looks.a.name).toBe('Beach')
+        expect(merged.looks.c.name).toBe('plain 2')
+        expect(merged.looks.d.name).toBe('Dusk')
+        expect(merged.hiddenBuiltIn).toEqual(['regal'])
+        expect(mergeLooks(current, looksState(look('a', 'Beach')))).toBe(current)
     })
 })
 
@@ -305,5 +416,77 @@ describe('applyBackup', () => {
         })
         expect(summary.settings).toBe(false)
         expect(summary.snips).toBe(1)
+    })
+
+    it('replace swaps the looks and their pictures, dropping pictures no look names any more', async () => {
+        const store = memoryStore({
+            chorus_looks: looksState(look('old', 'Old', 'old.w0'), look('same', 'Same', 'same.w1')),
+            'chorus_wallpaper_old.w0': picture,
+            'chorus_wallpaper_same.w1': { ...picture, bytes: 1 }
+        })
+        const summary = await applyBackup(
+            {
+                ...file({
+                    chorus_looks: looksState(
+                        look('same', 'Same', 'same.w1'),
+                        look('new', 'New', 'new.w2')
+                    )
+                }),
+                wallpapers: { 'new.w2': picture }
+            },
+            'replace',
+            store
+        )
+        expect(Object.keys((store.data.get('chorus_looks') as { looks: object }).looks)).toEqual([
+            'same',
+            'new'
+        ])
+        expect(store.data.has('chorus_wallpaper_old.w0')).toBe(false)
+        // The file had no bytes for this one; what is there stays.
+        expect(store.data.get('chorus_wallpaper_same.w1')).toEqual({ ...picture, bytes: 1 })
+        expect(store.data.get('chorus_wallpaper_new.w2')).toEqual(picture)
+        expect(summary.looks).toBe(2)
+        expect(summary.picture_bytes).toBe(34)
+    })
+
+    it('replace without looks in the file leaves looks and pictures alone', async () => {
+        const store = memoryStore({
+            chorus_looks: looksState(look('old', 'Old', 'old.w0')),
+            'chorus_wallpaper_old.w0': picture
+        })
+        await applyBackup(file({ chorus_settings: {} }), 'replace', store)
+        expect(store.data.get('chorus_looks')).toEqual(looksState(look('old', 'Old', 'old.w0')))
+        expect(store.data.get('chorus_wallpaper_old.w0')).toEqual(picture)
+    })
+
+    it('add brings in new looks with their pictures and skips ones already there', async () => {
+        const store = memoryStore({
+            chorus_looks: { ...looksState(look('a', 'Beach', 'a.w1')), hiddenBuiltIn: ['regal'] },
+            'chorus_wallpaper_a.w1': { ...picture, bytes: 1 }
+        })
+        const summary = await applyBackup(
+            {
+                ...file({
+                    chorus_looks: {
+                        ...looksState(look('a', 'Beach', 'a.w9'), look('b', 'Beach', 'b.w1')),
+                        hiddenBuiltIn: ['lava']
+                    }
+                }),
+                wallpapers: { 'a.w9': picture, 'b.w1': picture }
+            },
+            'add',
+            store
+        )
+        const looks = store.data.get('chorus_looks') as {
+            looks: Record<string, { name: string }>
+            hiddenBuiltIn: string[]
+        }
+        expect(Object.keys(looks.looks)).toEqual(['a', 'b'])
+        expect(looks.looks.b.name).toBe('Beach 2')
+        expect(looks.hiddenBuiltIn).toEqual(['regal'])
+        expect(store.data.get('chorus_wallpaper_a.w1')).toEqual({ ...picture, bytes: 1 })
+        expect(store.data.has('chorus_wallpaper_a.w9')).toBe(false)
+        expect(store.data.get('chorus_wallpaper_b.w1')).toEqual(picture)
+        expect(summary.looks).toBe(2)
     })
 })

@@ -20,12 +20,16 @@
         resolveMode
     } from '$lib/utils/theming'
     import { lookSketch, paletteSketch, type Sketch } from '$lib/utils/look-preview'
+    import { LookFileError, parseLookFile } from '$lib/utils/look-file'
+    import { saveTextFile } from '$lib/utils/save-file'
+    import { extensionVersion } from '$lib/utils/extension-version'
     import { BUILTIN_LOOKS, newLook, type Look } from '$lib/types/look'
 
     import Check from '@lucide/svelte/icons/check'
     import Plus from '@lucide/svelte/icons/plus'
     import Search from '@lucide/svelte/icons/search'
     import Ellipsis from '@lucide/svelte/icons/ellipsis'
+    import Upload from '@lucide/svelte/icons/upload'
     import { Switch } from '$lib/components/ui/switch'
     import { Button } from '$lib/components/ui/button'
     import { Input } from '$lib/components/ui/input'
@@ -93,6 +97,8 @@
     let showHidden = $state(false)
     let menuFor = $state<string | null>(null)
     let confirmDelete = $state<string | null>(null)
+    let fileInput = $state<HTMLInputElement | null>(null)
+    let importing = $state(false)
     // Raw: the editor clones the look, and a reactive proxy cannot be cloned.
     let editing = $state.raw<{ look: Look; isNew: boolean } | null>(null)
 
@@ -231,6 +237,49 @@
             await settingsStore.updateSettings({ theme: { ...$settingsStore.theme, look: null } })
         }
         toast.success(`“${item.label}” deleted.`)
+    }
+
+    // ---- look files ----
+
+    async function exportItem(item: Item) {
+        menuFor = null
+        try {
+            const file = await looksStore.exportLook(item.id, extensionVersion())
+            if (!file) return
+            saveTextFile(file.name, file.text)
+            toast.success(`“${item.label}” saved to your downloads.`)
+        } catch (error) {
+            console.error('[chorus] look export:', error)
+            toast.error('Could not save that look.')
+        }
+    }
+
+    async function onLookFileChosen(event: Event) {
+        const input = event.currentTarget as HTMLInputElement
+        const file = input.files?.[0]
+        // Clear the input so the same file can be chosen again after a cancel.
+        input.value = ''
+        if (!file) return
+        importing = true
+        try {
+            const parsed = parseLookFile(await file.text())
+            const saved = await looksStore.importLook(parsed)
+            await settingsStore.updateSettings({
+                theme: { ...$settingsStore.theme, look: saved.id },
+                ui: { ...$settingsStore.ui, theme: true }
+            })
+            if (parsed.missingPicture) {
+                toast.message(`Imported “${saved.name}” without its picture.`, {
+                    description: 'The file did not carry it; add one in the editor.'
+                })
+            } else toast.success(`Imported “${saved.name}”.`)
+        } catch (error) {
+            toast.error(
+                error instanceof LookFileError ? error.message : 'Could not read that file.'
+            )
+        } finally {
+            importing = false
+        }
     }
 
     // ---- the editor ----
@@ -473,10 +522,29 @@
                     {showHidden ? 'Hide hidden' : `Show hidden · ${hiddenCount}`}
                 </button>
             {/if}
+            <Button
+                variant="outline"
+                size="sm"
+                onclick={() => fileInput?.click()}
+                disabled={importing}
+                title="Add a look from a chorus-look file"
+            >
+                <Upload class="size-3.5" />
+                Import
+            </Button>
             <Button size="sm" onclick={startNew}>
                 <Plus class="size-3.5" strokeWidth={2.5} />
                 New look
             </Button>
+            <input
+                bind:this={fileInput}
+                type="file"
+                accept=".json,application/json"
+                class="hidden"
+                tabindex="-1"
+                aria-hidden="true"
+                onchange={onLookFileChosen}
+            />
         </div>
 
         <div
@@ -601,6 +669,15 @@
                                 >
                                     {item.builtIn ? 'Remix as a new look' : 'Duplicate'}
                                 </button>
+                                {#if item.kind === 'look'}
+                                    <button
+                                        type="button"
+                                        class={MENU_ITEM}
+                                        onclick={() => exportItem(item)}
+                                        title="Save this look as a file to share or keep"
+                                        >Export…</button
+                                    >
+                                {/if}
                                 {#if item.builtIn}
                                     <button
                                         type="button"

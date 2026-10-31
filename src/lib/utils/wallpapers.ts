@@ -185,6 +185,12 @@ export async function saveWallpaper(id: string, imported: ImportedWallpaper): Pr
     await storage.setItem<StoredWallpaper>(wallpaperKey(id), stored)
 }
 
+/** Keep a picture's record as it came from a look file or a backup, already encoded. */
+export async function writeStoredWallpaper(id: string, stored: StoredWallpaper): Promise<void> {
+    release(id)
+    await storage.setItem<StoredWallpaper>(wallpaperKey(id), stored)
+}
+
 export async function deleteWallpaper(id: string): Promise<void> {
     release(id)
     await storage.removeItem(wallpaperKey(id))

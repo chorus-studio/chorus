@@ -13,8 +13,15 @@ import {
     type Look,
     type LooksState
 } from '$lib/types/look'
-import { deleteWallpaper } from '$lib/utils/wallpapers'
+import { deleteWallpaper, readWallpaper, writeStoredWallpaper } from '$lib/utils/wallpapers'
 import { LOOKS_STORE_KEY, findLook, sanitiseLooks } from '$lib/utils/looks-state'
+import {
+    adoptLook,
+    lookFileName,
+    lookWallpaperId,
+    serialiseLookFile,
+    type ParsedLookFile
+} from '$lib/utils/look-file'
 
 export {
     LOOKS_STORE_KEY,
@@ -93,6 +100,29 @@ function createLooksStore() {
         return saveLook(copy)
     }
 
+    /** A look read from a file, taken in as one of the person's own, picture and all. */
+    async function importLook(parsed: ParsedLookFile): Promise<Look> {
+        const id = crypto.randomUUID()
+        const wallpaperId = `${id}.${Date.now().toString(36)}`
+        const look = adoptLook(parsed, id, wallpaperId)
+        if (parsed.wallpaper && lookWallpaperId(look) === wallpaperId) {
+            await writeStoredWallpaper(wallpaperId, parsed.wallpaper)
+        }
+        return saveLook(look)
+    }
+
+    /** A look (any, built-in included) as a file's name and text, its picture inside. */
+    async function exportLook(
+        id: string,
+        version: string
+    ): Promise<{ name: string; text: string } | null> {
+        const look = findLook(get(store), id)
+        if (!look) return null
+        const wallpaperId = lookWallpaperId(look)
+        const wallpaper = wallpaperId ? await readWallpaper(wallpaperId) : null
+        return { name: lookFileName(look), text: serialiseLookFile(look, version, wallpaper) }
+    }
+
     /** Hide or show a built-in palette or look on the Theme tab. */
     async function setHidden(id: string, hidden: boolean): Promise<void> {
         update((state) => ({
@@ -112,7 +142,16 @@ function createLooksStore() {
         set(sanitiseLooks(stored))
     })
 
-    return { subscribe, saveLook, deleteLook, duplicateLook, setHidden, uniqueName }
+    return {
+        subscribe,
+        saveLook,
+        deleteLook,
+        duplicateLook,
+        importLook,
+        exportLook,
+        setHidden,
+        uniqueName
+    }
 }
 
 export const looksStore = createLooksStore()

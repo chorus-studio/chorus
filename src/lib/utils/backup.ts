@@ -2,12 +2,16 @@ import { storage } from '@wxt-dev/storage'
 import type { Collection, SimpleTrack } from '$lib/stores/data/cache'
 import { MAX_AUDIO_PRESETS, type AudioPreset, type ConfigState } from '$lib/stores/config'
 import { migrateReverbMix, REVERB_MIX_VERSION, type ReverbParams } from '$lib/stores/reverb-params'
+import type { Look, LooksState } from '$lib/types/look'
+import { WALLPAPER_KEY_PREFIX, release, type StoredWallpaper } from './wallpapers'
+import { lookWallpaperId, sanitiseLook, sanitiseWallpaper } from './look-file'
 
 /**
  * Backup and restore of everything Chorus keeps for a person: the library
- * (snips, blocked tracks, per-track speeds), saved presets and every setting,
- * as one plain JSON file. Nothing here talks to a server; the file is written
- * to and read from the person's own disk.
+ * (snips, blocked tracks, per-track speeds), saved presets, saved looks with
+ * their pictures, and every setting, as one plain JSON file. Nothing here
+ * talks to a server; the file is written to and read from the person's own
+ * disk.
  */
 
 export const BACKUP_APP = 'chorus'
@@ -26,7 +30,7 @@ export const BACKUP_KEYS = [
     'chorus_discography', // progress through artists' albums
     'chorus_discography_prefs', // what counts towards it, auto-track
     'chorus_settings',
-    'chorus_looks', // saved looks and hidden built-ins; an uploaded wallpaper's bytes stay out
+    'chorus_looks', // saved looks and hidden built-ins; their pictures ride in `wallpapers`
     'chorus_config', // auto-skip rules, Mine presets, hidden preset lists
     'chorus_playback',
     'chorus_seek',
@@ -58,6 +62,8 @@ export type Backup = {
     /** ISO timestamp of the export. */
     exported_at: string
     data: BackupData
+    /** The pictures the saved looks keep in Chorus, by wallpaper id. An older Chorus ignores this. */
+    wallpapers?: Record<string, StoredWallpaper>
 }
 
 /** `add` folds the file's library into the current one; `replace` takes everything from the file. */
@@ -70,18 +76,41 @@ export type BackupSummary = {
     eq_presets: number
     reverb_presets: number
     mine_presets: number
+    looks: number
+    /** What the looks' pictures weigh in the file, before base64. */
+    picture_bytes: number
     settings: boolean
 }
 
+/** Keys are storage keys without the `local:` area: a BackupKey, or a wallpaper's. */
 export interface BackupStorage {
-    get<T = unknown>(key: BackupKey): Promise<T | null>
-    set(key: BackupKey, value: unknown): Promise<void>
+    get<T = unknown>(key: string): Promise<T | null>
+    set(key: string, value: unknown): Promise<void>
+    remove(key: string): Promise<void>
 }
+
+/** `chorus_wallpaper_`: the storage key prefix (without the area) a look's picture lives under. */
+const WALLPAPER_PREFIX = WALLPAPER_KEY_PREFIX.replace(/^local:/, '')
+const wallpaperKey = (id: string) => `${WALLPAPER_PREFIX}${id}`
 
 const extensionStorage: BackupStorage = {
     get: (key) => storage.getItem(`local:${key}`),
-    set: (key, value) => storage.setItem(`local:${key}`, value)
+    set: async (key, value) => {
+        await storage.setItem(`local:${key}`, value)
+        // A picture restored over one this page has already loaded is re-read next time.
+        if (key.startsWith(WALLPAPER_PREFIX)) release(key.slice(WALLPAPER_PREFIX.length))
+    },
+    remove: (key) => storage.removeItem(`local:${key}`)
 }
+
+const looksOf = (data: BackupData): Look[] =>
+    Object.values((data.chorus_looks as LooksState | undefined)?.looks ?? {})
+
+/** The wallpaper ids the looks in `data` name, in look order. */
+const wallpaperIds = (data: BackupData): string[] =>
+    looksOf(data)
+        .map(lookWallpaperId)
+        .filter((id): id is string => Boolean(id))
 
 export class BackupError extends Error {
     constructor(message: string) {
@@ -109,12 +138,18 @@ export async function createBackup(
         const value = await store.get(key)
         if (value !== null && value !== undefined) data[key] = value
     }
+    const wallpapers: Record<string, StoredWallpaper> = {}
+    for (const id of wallpaperIds(data)) {
+        const stored = await store.get<StoredWallpaper>(wallpaperKey(id))
+        if (stored) wallpapers[id] = stored
+    }
     return {
         app: BACKUP_APP,
         format: BACKUP_FORMAT,
         version,
         exported_at: new Date().toISOString(),
-        data
+        data,
+        ...(Object.keys(wallpapers).length ? { wallpapers } : {})
     }
 }
 
@@ -152,9 +187,19 @@ export function parseBackup(text: string): Backup {
         const value = raw.data[key]
         if (value === undefined || value === null) continue
         if (key === 'chorus_collection') data[key] = cleanCollection(value)
+        else if (key === 'chorus_looks') data[key] = cleanLooks(value)
         else if (VERSION_KEYS.has(key)) {
             if (typeof value === 'number') data[key] = value
         } else if (isRecord(value)) data[key] = value
+    }
+
+    // Only the pictures the file's looks name, each checked.
+    const wallpapers: Record<string, StoredWallpaper> = {}
+    if (isRecord(raw.wallpapers)) {
+        for (const id of wallpaperIds(data)) {
+            const stored = sanitiseWallpaper(raw.wallpapers[id])
+            if (stored) wallpapers[id] = stored
+        }
     }
 
     return {
@@ -162,7 +207,27 @@ export function parseBackup(text: string): Backup {
         format,
         version: typeof raw.version === 'string' ? raw.version : 'unknown',
         exported_at: typeof raw.exported_at === 'string' ? raw.exported_at : '',
-        data
+        data,
+        ...(Object.keys(wallpapers).length ? { wallpapers } : {})
+    }
+}
+
+/** The looks a file carries, each checked field by field; a damaged record is dropped, not fatal. */
+function cleanLooks(value: unknown): LooksState {
+    const raw = isRecord(value) ? value : {}
+    const looks: Record<string, Look> = {}
+    if (isRecord(raw.looks)) {
+        for (const [id, record] of Object.entries(raw.looks)) {
+            const look = sanitiseLook(record)
+            if (look) looks[id] = { ...look, id }
+        }
+    }
+    return {
+        version: 1,
+        looks,
+        hiddenBuiltIn: Array.isArray(raw.hiddenBuiltIn)
+            ? raw.hiddenBuiltIn.filter((id): id is string => typeof id === 'string')
+            : []
     }
 }
 
@@ -179,7 +244,10 @@ function cleanCollection(value: unknown): Collection {
     return collection
 }
 
-export function summarizeBackup(data: BackupData): BackupSummary {
+export function summarizeBackup(
+    data: BackupData,
+    wallpapers: Record<string, StoredWallpaper> = {}
+): BackupSummary {
     const tracks = Object.values((data.chorus_collection as Collection | undefined) ?? {})
     const config = data.chorus_config as Partial<ConfigState> | undefined
     return {
@@ -189,6 +257,8 @@ export function summarizeBackup(data: BackupData): BackupSummary {
         eq_presets: Object.keys(asRecord(data.chorus_user_eq_presets)).length,
         reverb_presets: Object.keys(asRecord(data.chorus_user_reverb_presets)).length,
         mine_presets: Array.isArray(config?.audio_presets) ? config.audio_presets.length : 0,
+        looks: looksOf(data).length,
+        picture_bytes: Object.values(wallpapers).reduce((sum, w) => sum + (w.bytes || 0), 0),
         settings: data.chorus_settings !== undefined
     }
 }
@@ -203,7 +273,8 @@ export function describeSummary(summary: BackupSummary): string {
         count(summary.speeds, 'track speed'),
         count(summary.eq_presets, 'EQ preset'),
         count(summary.reverb_presets, 'reverb preset'),
-        count(summary.mine_presets, 'Mine preset')
+        count(summary.mine_presets, 'Mine preset'),
+        count(summary.looks, 'look')
     ].filter(Boolean)
     if (summary.settings) parts.push('settings')
     return parts.length ? parts.join(' · ') : 'an empty library'
@@ -249,6 +320,25 @@ export function mergeCollections(current: Collection, incoming: Collection): Col
     return merged
 }
 
+/**
+ * The file's looks that are new by id, renamed where a name is taken, folded
+ * into the current ones; the hidden list stays as it is.
+ */
+export function mergeLooks(current: LooksState, incoming: LooksState): LooksState {
+    const looks = { ...current.looks }
+    const names = new Set(Object.values(looks).map((look) => look.name.toLowerCase()))
+    let changed = false
+    for (const [id, look] of Object.entries(incoming.looks)) {
+        if (looks[id]) continue
+        let name = look.name
+        for (let n = 2; names.has(name.toLowerCase()); n++) name = `${look.name} ${n}`
+        names.add(name.toLowerCase())
+        looks[id] = { ...look, name }
+        changed = true
+    }
+    return changed ? { ...current, looks } : current
+}
+
 /** Fill the free Mine slots with presets whose id and name are both new; the current ones keep their positions. */
 export function mergeMinePresets(current: AudioPreset[], incoming: AudioPreset[]): AudioPreset[] {
     const slots = [...current]
@@ -275,12 +365,39 @@ export async function applyBackup(
     store: BackupStorage = extensionStorage
 ): Promise<BackupSummary> {
     const data = withCurrentReverbMix(backup.data)
+    const wallpapers = backup.wallpapers ?? {}
 
     if (mode === 'replace') {
+        const before = data.chorus_looks
+            ? wallpaperIds({ chorus_looks: await currentLooks(store) })
+            : []
         for (const key of BACKUP_KEYS) {
             if (data[key] !== undefined) await store.set(key, data[key])
         }
-        return summarizeBackup(data)
+        const after = new Set(wallpaperIds(data))
+        await writeWallpapers(store, [...after], wallpapers)
+        // Pictures of looks the file has just replaced would otherwise sit in storage for good.
+        for (const id of before) {
+            if (!after.has(id)) await store.remove(wallpaperKey(id))
+        }
+        return summarizeBackup(data, wallpapers)
+    }
+
+    const incomingLooks = data.chorus_looks as LooksState | undefined
+    if (incomingLooks && Object.keys(incomingLooks.looks).length) {
+        const current = await currentLooks(store)
+        const merged = mergeLooks(current, incomingLooks)
+        if (merged !== current) {
+            await store.set('chorus_looks', merged)
+            const added = Object.keys(merged.looks).filter((id) => !current.looks[id])
+            await writeWallpapers(
+                store,
+                added
+                    .map((id) => lookWallpaperId(merged.looks[id]))
+                    .filter((id): id is string => Boolean(id)),
+                wallpapers
+            )
+        }
     }
 
     const incoming = data.chorus_collection as Collection | undefined
@@ -312,5 +429,20 @@ export async function applyBackup(
         }
     }
 
-    return { ...summarizeBackup(data), settings: false }
+    return { ...summarizeBackup(data, wallpapers), settings: false }
+}
+
+async function currentLooks(store: BackupStorage): Promise<LooksState> {
+    return cleanLooks(await store.get('chorus_looks'))
+}
+
+/** Store the pictures the file carries for these ids; an id the file has no picture for is left as it is. */
+async function writeWallpapers(
+    store: BackupStorage,
+    ids: string[],
+    wallpapers: Record<string, StoredWallpaper>
+): Promise<void> {
+    for (const id of ids) {
+        if (wallpapers[id]) await store.set(wallpaperKey(id), wallpapers[id])
+    }
 }

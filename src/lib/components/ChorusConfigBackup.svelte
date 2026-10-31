@@ -10,6 +10,8 @@
     import { dataStore } from '$lib/stores/data'
     import { COLLECTION_KEY } from '$lib/stores/data/cache'
     import { timeAgo } from '$lib/utils/time-ago'
+    import { saveTextFile } from '$lib/utils/save-file'
+    import { extensionVersion } from '$lib/utils/extension-version'
     import {
         LAST_BACKUP_KEY,
         BackupError,
@@ -32,6 +34,8 @@
         eq_presets: 0,
         reverb_presets: 0,
         mine_presets: 0,
+        looks: 0,
+        picture_bytes: 0,
         settings: false
     }
 
@@ -43,17 +47,9 @@
     let busy = $state(false)
     let fileInput = $state<HTMLInputElement | null>(null)
 
-    function extensionVersion(): string {
-        try {
-            return chrome.runtime.getManifest().version
-        } catch {
-            return 'dev'
-        }
-    }
-
     async function refresh() {
         const backup = await createBackup(extensionVersion())
-        summary = summarizeBackup(backup.data)
+        summary = summarizeBackup(backup.data, backup.wallpapers)
         lastBackup = (await storage.getItem<number>(LAST_BACKUP_KEY)) ?? null
     }
 
@@ -64,27 +60,17 @@
             'local:chorus_collection',
             'local:chorus_user_eq_presets',
             'local:chorus_user_reverb_presets',
-            'local:chorus_config'
+            'local:chorus_config',
+            'local:chorus_looks'
         ].map((key) => storage.watch(key as `local:${string}`, refresh))
         return () => unwatch.forEach((stop) => stop())
     })
-
-    /** Hand the browser a link to save; a content script has no downloads API. */
-    function saveFile(name: string, text: string) {
-        const link = document.createElement('a')
-        link.href = `data:application/json;charset=utf-8,${encodeURIComponent(text)}`
-        link.download = name
-        link.style.display = 'none'
-        document.body.appendChild(link)
-        link.click()
-        link.remove()
-    }
 
     async function exportBackup() {
         busy = true
         try {
             const backup = await createBackup(extensionVersion())
-            saveFile(backupFileName(backup), serializeBackup(backup))
+            saveTextFile(backupFileName(backup), serializeBackup(backup))
             lastBackup = Date.now()
             await storage.setItem(LAST_BACKUP_KEY, lastBackup)
             toast.success('Backup saved to your downloads')
@@ -105,7 +91,11 @@
         error = null
         try {
             const backup = parseBackup(await file.text())
-            pending = { name: file.name, backup, summary: summarizeBackup(backup.data) }
+            pending = {
+                name: file.name,
+                backup,
+                summary: summarizeBackup(backup.data, backup.wallpapers)
+            }
         } catch (err) {
             pending = null
             error = err instanceof BackupError ? err.message : 'Could not read that file.'
@@ -142,10 +132,19 @@
     ])
 
     const MODE_HINT: Record<RestoreMode, string> = {
-        add: 'Adds the file’s snips, blocked tracks, track speeds and saved presets to yours. Your settings stay as they are.',
+        add: 'Adds the file’s snips, blocked tracks, track speeds, saved presets and looks to yours. Your settings stay as they are.',
         replace:
-            'Everything in the file takes the place of what you have now, settings and theme included.'
+            'Everything in the file takes the place of what you have now, settings, theme and looks included.'
     }
+
+    const megabytes = (bytes: number) => `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+    /** "Settings, auto-skip rules and 3 looks (pictures 12.4 MB) go in too." */
+    const alsoLine = $derived.by(() => {
+        const looks = summary.looks
+            ? `${summary.looks} look${summary.looks === 1 ? '' : 's'}${summary.picture_bytes ? ` (pictures ${megabytes(summary.picture_bytes)})` : ''}`
+            : 'your looks'
+        return `Settings, auto-skip rules and ${looks} go in too.`
+    })
 
     const madeOn = (iso: string) =>
         iso
@@ -161,8 +160,8 @@
     <div class="flex flex-col gap-y-0.5">
         <span class="text-[13px] font-medium text-ink-fg">Keep a copy of your library</span>
         <span class="text-xs text-ink-muted">
-            Snips, blocked tracks, track speeds, saved presets and every setting, as one JSON file
-            on your computer. Restore it here, in another browser, or after a reinstall.
+            Snips, blocked tracks, track speeds, saved presets, your looks and every setting, as one
+            JSON file on your computer. Restore it here, in another browser, or after a reinstall.
         </span>
     </div>
 
@@ -194,9 +193,7 @@
                 {/each}
             </dl>
             <div class="mt-auto flex items-center justify-between gap-x-3">
-                <span class="text-[11px] text-ink-muted">
-                    Settings, theme and auto-skip rules go in too.
-                </span>
+                <span class="text-[11px] text-ink-muted">{alsoLine}</span>
                 <Button size="sm" onclick={exportBackup} disabled={busy}>
                     <Download /> Export backup
                 </Button>
