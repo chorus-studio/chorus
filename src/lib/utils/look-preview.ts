@@ -4,7 +4,13 @@
  * appearance, with the frame colour the page derives), the backdrop as CSS
  * background layers, and the panel colour at the look's show-through.
  */
-import { isVideoBackdrop, type Backdrop, type Look } from '$lib/types/look'
+import {
+    SHOW_THROUGH_DEFAULT,
+    isVideoBackdrop,
+    resolveShowThrough,
+    type Backdrop,
+    type Look
+} from '$lib/types/look'
 import {
     SPOTIFY_PALETTE,
     STATIC_THEMES,
@@ -90,10 +96,15 @@ export function backdropPreviewCss(
     return layers.join(', ')
 }
 
-export function lookSketch(look: Look, mode: Mode, cover?: string | null): Sketch {
+export function lookSketch(
+    look: Look,
+    mode: Mode,
+    cover?: string | null,
+    defaultShowThrough: number = SHOW_THROUGH_DEFAULT
+): Sketch {
     const colours = lookColours(look, mode)
     const backdrop = backdropPreviewCss(look.backdrop, colours, mode, cover)
-    const alpha = backdrop ? panelAlpha(look.panels.showThrough) : 1
+    const alpha = backdrop ? panelAlpha(resolveShowThrough(look.panels, defaultShowThrough)) : 1
     return {
         colours,
         backdrop,

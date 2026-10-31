@@ -974,6 +974,15 @@ html[data-backdrop] [data-chorus-frame],
 html[data-backdrop] [data-chorus-panel-layer] {
     background-color: transparent !important;
 }
+/* Entity pages (artist, album, playlist) paint the main colour on their
+   content wrappers as well, which run far past the view; the panel walker
+   (lib/utils/page-panels) tags those it can reach as layers, and this catches
+   the wrappers it cannot: the main element and its first section. Sticky
+   headers and cards sit deeper and keep their colour. */
+html[data-backdrop] [data-chorus-panel] main,
+html[data-backdrop] [data-chorus-panel] main > section {
+    background-color: transparent !important;
+}
 html[data-backdrop] [data-chorus-panel],
 html[data-backdrop] #global-nav-bar,
 html[data-backdrop] [data-testid='global-nav-bar'],

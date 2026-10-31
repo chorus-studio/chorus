@@ -11,6 +11,7 @@
     import { CustomSlider } from '$lib/components/ui/custom-slider'
     import { CustomSelect } from '$lib/components/ui/custom-select'
     import SegmentedControl from '$lib/components/SegmentedControl.svelte'
+    import * as Tabs from '$lib/components/ui/tabs'
     import ColourField from './ColourField.svelte'
     import GradientEditor from './GradientEditor.svelte'
     import ImageBackdropEditor from './ImageBackdropEditor.svelte'
@@ -42,6 +43,7 @@
         IMAGE_BLUR_MAX,
         IMAGE_DIM_MAX,
         SHOW_THROUGH_MAX,
+        resolveShowThrough,
         type Backdrop,
         type BackdropKind,
         type ImageBackdrop,
@@ -50,8 +52,9 @@
     } from '$lib/types/look'
 
     // The look editor, laid out for the drawer that sits over Spotify's live
-    // page (LookDrawer): one column of sections and no preview sketch, because
-    // the page around the drawer is the preview. Everything edits a draft; the
+    // page (LookDrawer): three tabs (Panels, Palette, Backdrop), the legibility
+    // readout in the footer so it is seen from any tab, and no preview sketch,
+    // because the page around the drawer is the preview. Everything edits a draft; the
     // page shows the draft as it changes (onPreview) and nothing is stored
     // until Save. A picture dropped here is stored at once under a fresh id,
     // so Cancel (or a later Replace) can throw the unused ones away.
@@ -88,6 +91,12 @@
     let iniText = $state('')
     /** While Hold to compare is held, the page wears the saved look instead of the draft. */
     let comparing = $state(false)
+    /** A remix or a saved look opens on its backdrop; a blank new look starts with colours. */
+    let tab = $state<'panels' | 'palette' | 'backdrop'>(original.backdrop ? 'backdrop' : 'palette')
+
+    const defaultShowThrough = $derived($settingsStore.theme.showThrough)
+    const followsDefault = $derived(draft.panels.showThrough === null)
+    const shownShowThrough = $derived(resolveShowThrough(draft.panels, defaultShowThrough))
 
     const mode = $derived(resolveMode($settingsStore.theme.appearance))
     // The cover's palette lands a beat after the cover; the colours follow it.
@@ -271,7 +280,12 @@
         onCancel()
     }
 
-    const SECTION = 'flex flex-col gap-y-2.5 border-b border-hairline px-4 py-3.5'
+    const TABS = [
+        { id: 'panels', label: 'Panels' },
+        { id: 'palette', label: 'Palette' },
+        { id: 'backdrop', label: 'Backdrop' }
+    ] as const
+    const TAB = 'flex flex-col gap-y-2.5 px-4 py-3.5'
     const HINT = 'text-[11px] leading-snug text-ink-muted'
     const SLIDER_HEAD = 'flex items-center justify-between'
     const VALUE = 'font-mono text-[11px] text-ink-fg-2'
@@ -317,281 +331,344 @@
         <Button size="sm" onclick={save}>Save</Button>
     </div>
 
-    <div class="chorus-scroll min-h-0 flex-1 overflow-y-auto">
-        <section class={SECTION} aria-label="Panels">
-            <div class={SLIDER_HEAD}>
-                <span class="rack-label">Panels</span>
-                <span class={VALUE}>Show-through {draft.panels.showThrough} %</span>
-            </div>
-            <CustomSlider
-                type="single"
-                min={0}
-                max={SHOW_THROUGH_MAX}
-                step={5}
-                value={draft.panels.showThrough}
-                label="Show-through"
-                disabled={!draft.backdrop}
-                onValueChange={(v) =>
-                    (draft.panels = { ...draft.panels, showThrough: v as number })}
-            />
-            <span class={HINT}>
-                How much of the backdrop shows through the library, main view and bars. 0 % keeps
-                them solid; at 100 % they vanish, and Glass keeps the text readable over the blur.
-            </span>
-            <label class="flex items-center gap-x-2 text-xs text-ink-fg-2">
-                <Switch
-                    checked={draft.panels.glass}
-                    disabled={!draft.backdrop}
-                    onCheckedChange={(v) => (draft.panels = { ...draft.panels, glass: v })}
-                    aria-label="Glass on Spotify's panels"
-                />
-                <span>
-                    Glass on Spotify's panels
-                    <span class="text-ink-muted">· blurs the backdrop behind them</span>
-                </span>
-            </label>
-        </section>
-
-        <section class={SECTION} aria-label="Palette">
-            <span class="rack-label">Palette</span>
-            <SegmentedControl
-                size="xs"
-                grow
-                ariaLabel="Palette source"
-                value={paletteKind}
-                onValueChange={setPaletteKind}
-                options={[
-                    { label: 'Colours', value: 'colours', title: 'Two colours derive all fifteen' },
-                    { label: 'Built-in', value: 'builtin' },
-                    { label: 'Advanced', value: 'slots', title: 'Every slot by hand' },
-                    {
-                        label: 'Album art',
-                        value: 'cover',
-                        title: 'Colours read from the playing cover'
-                    }
-                ]}
-            />
-
-            {#if draft.palette.kind === 'colours'}
-                {@const seed = draft.palette}
-                <div class="flex flex-wrap items-center gap-2">
-                    <ColourField
-                        label="Base"
-                        value={rawPalette.main}
-                        onChange={(hex) => setSeed({ base: hex })}
-                    />
-                    <ColourField
-                        label="Accent"
-                        value={rawPalette.button}
-                        onChange={(hex) => setSeed({ accent: hex })}
-                    />
-                    <ColourField
-                        label="Text"
-                        value={rawPalette.text}
-                        auto={!seed.text}
-                        onChange={(hex) => setSeed({ text: hex })}
-                    />
-                    {#if seed.text}
-                        <button
-                            type="button"
-                            class="text-[11px] text-signal hover:underline"
-                            onclick={() => setSeed({ text: undefined })}>Text auto</button
-                        >
-                    {/if}
-                </div>
-                <span class={HINT}>
-                    The base sets the surfaces (a darker sidebar, card and hover a step up, the
-                    frame above them); the accent fills the controls, lifted until it reads; text is
-                    light or dark by contrast unless you pick one.
-                </span>
-            {:else if draft.palette.kind === 'builtin'}
-                <CustomSelect
-                    size="sm"
-                    selected={draft.palette.name}
-                    onValueChange={(name) =>
-                        (draft.palette = { kind: 'builtin', name: name as ThemeName })}
-                    options={THEME_NAMES.map((name) => ({
-                        label: themeLabel(name),
-                        value: name
-                    }))}
-                />
-                <span class={HINT}
-                    >Any of the built-in palettes as the colour half of this look.</span
+    <Tabs.Root bind:value={tab} class="flex min-h-0 flex-1 flex-col">
+        <Tabs.List
+            class="h-9 w-full shrink-0 justify-start gap-x-4 rounded-none border-0 border-b border-hairline bg-transparent px-4 py-0"
+        >
+            {#each TABS as t (t.id)}
+                <Tabs.Trigger
+                    value={t.id}
+                    class="relative h-9 rounded-none px-0.5 text-xs after:absolute after:inset-x-0 after:-bottom-px after:h-0.5 after:rounded-sm after:bg-transparent after:content-[''] data-[state=active]:bg-transparent data-[state=active]:after:bg-signal"
                 >
-            {:else if draft.palette.kind === 'cover'}
-                <span class={HINT}>
-                    The base and accent are read from the playing cover, as Match palette reads
-                    them, and change with the music. Light makes a pale version of each.
-                    {#if !$nowPlaying.cover}
-                        Nothing is playing now, so Spotify's colours stand in.
-                    {/if}
-                </span>
-            {:else}
-                <div class="grid grid-cols-2 gap-1.5">
-                    {#each Object.keys(SLOT_LABELS) as slot (slot)}
-                        <ColourField
-                            label={SLOT_LABELS[slot as CSSVariable]}
-                            value={rawPalette[slot as CSSVariable]}
-                            onChange={(hex) => setSlot(slot as CSSVariable, hex)}
-                            class="w-full"
-                        />
-                    {/each}
-                </div>
-                <div class="flex flex-wrap items-center gap-2">
-                    <Button variant="outline" size="xs" onclick={() => (iniOpen = !iniOpen)}>
-                        Paste a Spicetify color.ini
-                    </Button>
-                    <Button variant="outline" size="xs" onclick={copyIni}>Copy as color.ini</Button>
-                </div>
-                <span class={HINT}>The fifteen slots are Spicetify's keys one for one.</span>
-                {#if iniOpen}
-                    <textarea
-                        bind:value={iniText}
-                        rows="5"
-                        spellcheck="false"
-                        placeholder={'[Scheme]\ntext = ffffff\nmain = 121212\nbutton = 1ed760\n…'}
-                        aria-label="Spicetify color.ini text"
-                        class="w-full rounded-md border border-hairline bg-inset px-2 py-1.5 font-mono text-[11px] text-ink-fg outline-none placeholder:text-ink-dim focus-visible:border-signal/60"
-                    ></textarea>
-                    <div class="flex items-center gap-x-2">
-                        <Button size="xs" onclick={applyIni}>Apply scheme</Button>
-                        <Button variant="ghost" size="xs" onclick={() => (iniOpen = false)}
-                            >Close</Button
+                    {t.label}
+                </Tabs.Trigger>
+            {/each}
+        </Tabs.List>
+        <div class="chorus-scroll min-h-0 flex-1 overflow-y-auto">
+            <Tabs.Content value="panels" class="mt-0">
+                <div class={TAB}>
+                    <div class={SLIDER_HEAD}>
+                        <span class="rack-label">Show-through</span>
+                        <span class={VALUE}
+                            >{shownShowThrough} %{followsDefault ? ' · default' : ''}</span
                         >
                     </div>
-                {/if}
-            {/if}
+                    <CustomSlider
+                        type="single"
+                        min={0}
+                        max={SHOW_THROUGH_MAX}
+                        step={5}
+                        value={shownShowThrough}
+                        label="Show-through"
+                        disabled={!draft.backdrop || followsDefault}
+                        onValueChange={(v) =>
+                            (draft.panels = { ...draft.panels, showThrough: v as number })}
+                    />
+                    <label class="flex items-center gap-x-2 text-xs text-ink-fg-2">
+                        <Switch
+                            checked={followsDefault}
+                            disabled={!draft.backdrop}
+                            onCheckedChange={(on) =>
+                                (draft.panels = {
+                                    ...draft.panels,
+                                    showThrough: on ? null : defaultShowThrough
+                                })}
+                            aria-label="Follow the default show-through"
+                        />
+                        <span>
+                            Follow the default
+                            <span class="text-ink-muted"
+                                >· {defaultShowThrough} %, set on the theme page</span
+                            >
+                        </span>
+                    </label>
+                    <span class={HINT}>
+                        How much of the backdrop shows through the library, main view and bars. 0 %
+                        keeps them solid; at 100 % they vanish, and Glass keeps the text readable
+                        over the blur. Most looks can follow the default; set a value here when this
+                        one wants its own.
+                    </span>
+                    <label class="mt-1 flex items-center gap-x-2 text-xs text-ink-fg-2">
+                        <Switch
+                            checked={draft.panels.glass}
+                            disabled={!draft.backdrop}
+                            onCheckedChange={(v) => (draft.panels = { ...draft.panels, glass: v })}
+                            aria-label="Glass on Spotify's panels"
+                        />
+                        <span>
+                            Glass on Spotify's panels
+                            <span class="text-ink-muted">· blurs the backdrop behind them</span>
+                        </span>
+                    </label>
+                    {#if !draft.backdrop}
+                        <span class={HINT}>These apply once the look has a backdrop.</span>
+                    {/if}
+                </div>
+            </Tabs.Content>
+            <Tabs.Content value="palette" class="mt-0">
+                <div class={TAB}>
+                    <SegmentedControl
+                        size="xs"
+                        grow
+                        ariaLabel="Palette source"
+                        value={paletteKind}
+                        onValueChange={setPaletteKind}
+                        options={[
+                            {
+                                label: 'Colours',
+                                value: 'colours',
+                                title: 'Two colours derive all fifteen'
+                            },
+                            { label: 'Built-in', value: 'builtin' },
+                            { label: 'Advanced', value: 'slots', title: 'Every slot by hand' },
+                            {
+                                label: 'Album art',
+                                value: 'cover',
+                                title: 'Colours read from the playing cover'
+                            }
+                        ]}
+                    />
 
-            <div class="flex gap-0.5" aria-label="The palette's colours">
-                {#each ['main', 'sidebar', 'shadow', 'card', 'button_disabled', 'button', 'button_active', 'subtext', 'text'] as slot (slot)}
-                    <span
-                        class="h-2 flex-1 rounded-[2px] border border-hairline"
-                        style="background: {colours[slot as CSSVariable]}"
-                        title={SLOT_LABELS[slot as CSSVariable]}
-                    ></span>
-                {/each}
-            </div>
-        </section>
-
-        <section class={SECTION} aria-label="Backdrop">
-            <span class="rack-label">Backdrop</span>
-            <SegmentedControl
-                size="xs"
-                grow
-                ariaLabel="Backdrop kind"
-                value={backdropKind}
-                onValueChange={setBackdropKind}
-                options={[
-                    { label: 'None', value: 'none' },
-                    { label: 'Gradient', value: 'gradient' },
-                    { label: 'Image', value: 'image', title: 'A picture, GIF or video loop' },
-                    { label: 'Album art', value: 'cover', title: 'The playing cover, blurred' }
-                ]}
-            />
-
-            {#if backdropKind === 'none'}
-                <span class={HINT}>The frame keeps the palette's own colour.</span>
-            {:else if backdropKind === 'gradient' && draft.backdrop?.kind === 'gradient'}
-                <GradientEditor gradient={draft.backdrop} onChange={(g) => (draft.backdrop = g)} />
-            {:else if backdropKind === 'image'}
-                <ImageBackdropEditor
-                    backdrop={draft.backdrop?.kind === 'image' ? draft.backdrop : null}
-                    wallpaperId={nextWallpaperId()}
-                    onChange={setImage}
-                    onMatch={matchToBackdrop}
-                />
-            {:else if backdropKind === 'cover' && draft.backdrop?.kind === 'cover'}
-                {@const cover = draft.backdrop}
-                <div class="grid grid-cols-3 gap-x-3">
-                    <div class="flex flex-col gap-y-1">
-                        <div class={SLIDER_HEAD}>
-                            <span class="rack-label">Blur</span><span class={VALUE}
-                                >{cover.blur} px</span
+                    {#if draft.palette.kind === 'colours'}
+                        {@const seed = draft.palette}
+                        <div class="flex flex-wrap items-center gap-2">
+                            <ColourField
+                                label="Base"
+                                value={rawPalette.main}
+                                onChange={(hex) => setSeed({ base: hex })}
+                            />
+                            <ColourField
+                                label="Accent"
+                                value={rawPalette.button}
+                                onChange={(hex) => setSeed({ accent: hex })}
+                            />
+                            <ColourField
+                                label="Text"
+                                value={rawPalette.text}
+                                auto={!seed.text}
+                                onChange={(hex) => setSeed({ text: hex })}
+                            />
+                            {#if seed.text}
+                                <button
+                                    type="button"
+                                    class="text-[11px] text-signal hover:underline"
+                                    onclick={() => setSeed({ text: undefined })}>Text auto</button
+                                >
+                            {/if}
+                        </div>
+                        <span class={HINT}>
+                            The base sets the surfaces (a darker sidebar, card and hover a step up,
+                            the frame above them); the accent fills the controls, lifted until it
+                            reads; text is light or dark by contrast unless you pick one.
+                        </span>
+                    {:else if draft.palette.kind === 'builtin'}
+                        <CustomSelect
+                            size="sm"
+                            selected={draft.palette.name}
+                            onValueChange={(name) =>
+                                (draft.palette = { kind: 'builtin', name: name as ThemeName })}
+                            options={THEME_NAMES.map((name) => ({
+                                label: themeLabel(name),
+                                value: name
+                            }))}
+                        />
+                        <span class={HINT}
+                            >Any of the built-in palettes as the colour half of this look.</span
+                        >
+                    {:else if draft.palette.kind === 'cover'}
+                        <span class={HINT}>
+                            The base and accent are read from the playing cover, as Match palette
+                            reads them, and change with the music. Light makes a pale version of
+                            each.
+                            {#if !$nowPlaying.cover}
+                                Nothing is playing now, so Spotify's colours stand in.
+                            {/if}
+                        </span>
+                    {:else}
+                        <div class="grid grid-cols-2 gap-1.5">
+                            {#each Object.keys(SLOT_LABELS) as slot (slot)}
+                                <ColourField
+                                    label={SLOT_LABELS[slot as CSSVariable]}
+                                    value={rawPalette[slot as CSSVariable]}
+                                    onChange={(hex) => setSlot(slot as CSSVariable, hex)}
+                                    class="w-full"
+                                />
+                            {/each}
+                        </div>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <Button
+                                variant="outline"
+                                size="xs"
+                                onclick={() => (iniOpen = !iniOpen)}
+                            >
+                                Paste a Spicetify color.ini
+                            </Button>
+                            <Button variant="outline" size="xs" onclick={copyIni}
+                                >Copy as color.ini</Button
                             >
                         </div>
-                        <CustomSlider
-                            type="single"
-                            min={0}
-                            max={IMAGE_BLUR_MAX}
-                            step={2}
-                            value={cover.blur}
-                            label="Blur"
-                            onValueChange={(v) => setCover({ blur: v as number })}
-                        />
-                    </div>
-                    <div class="flex flex-col gap-y-1">
-                        <div class={SLIDER_HEAD}>
-                            <span class="rack-label">Dim</span><span class={VALUE}
-                                >{cover.dim} %</span
-                            >
-                        </div>
-                        <CustomSlider
-                            type="single"
-                            min={0}
-                            max={IMAGE_DIM_MAX}
-                            step={5}
-                            value={cover.dim}
-                            label="Dim"
-                            onValueChange={(v) => setCover({ dim: v as number })}
-                        />
-                    </div>
-                    <div class="flex flex-col gap-y-1">
-                        <div class={SLIDER_HEAD}>
-                            <span class="rack-label">Zoom</span><span class={VALUE}
-                                >{cover.zoom} %</span
-                            >
-                        </div>
-                        <CustomSlider
-                            type="single"
-                            min={COVER_ZOOM_MIN}
-                            max={COVER_ZOOM_MAX}
-                            step={5}
-                            value={cover.zoom}
-                            label="Zoom"
-                            onValueChange={(v) => setCover({ zoom: v as number })}
-                        />
+                        <span class={HINT}>The fifteen slots are Spicetify's keys one for one.</span
+                        >
+                        {#if iniOpen}
+                            <textarea
+                                bind:value={iniText}
+                                rows="5"
+                                spellcheck="false"
+                                placeholder={'[Scheme]\ntext = ffffff\nmain = 121212\nbutton = 1ed760\n…'}
+                                aria-label="Spicetify color.ini text"
+                                class="w-full rounded-md border border-hairline bg-inset px-2 py-1.5 font-mono text-[11px] text-ink-fg outline-none placeholder:text-ink-dim focus-visible:border-signal/60"
+                            ></textarea>
+                            <div class="flex items-center gap-x-2">
+                                <Button size="xs" onclick={applyIni}>Apply scheme</Button>
+                                <Button variant="ghost" size="xs" onclick={() => (iniOpen = false)}
+                                    >Close</Button
+                                >
+                            </div>
+                        {/if}
+                    {/if}
+
+                    <div class="flex gap-0.5" aria-label="The palette's colours">
+                        {#each ['main', 'sidebar', 'shadow', 'card', 'button_disabled', 'button', 'button_active', 'subtext', 'text'] as slot (slot)}
+                            <span
+                                class="h-2 flex-1 rounded-[2px] border border-hairline"
+                                style="background: {colours[slot as CSSVariable]}"
+                                title={SLOT_LABELS[slot as CSSVariable]}
+                            ></span>
+                        {/each}
                     </div>
                 </div>
-                <span class={HINT}>
-                    The playing track's cover, enlarged so the blur's soft edge stays off screen,
-                    washed with the frame colour. It changes with the music; the palette stays
-                    yours.
-                </span>
-            {/if}
-        </section>
+            </Tabs.Content>
+            <Tabs.Content value="backdrop" class="mt-0">
+                <div class={TAB}>
+                    <SegmentedControl
+                        size="xs"
+                        grow
+                        ariaLabel="Backdrop kind"
+                        value={backdropKind}
+                        onValueChange={setBackdropKind}
+                        options={[
+                            { label: 'None', value: 'none' },
+                            { label: 'Gradient', value: 'gradient' },
+                            {
+                                label: 'Image',
+                                value: 'image',
+                                title: 'A picture, GIF or video loop'
+                            },
+                            {
+                                label: 'Album art',
+                                value: 'cover',
+                                title: 'The playing cover, blurred'
+                            }
+                        ]}
+                    />
 
-        <section class="{SECTION} border-b-0" aria-label="Legibility">
+                    {#if backdropKind === 'none'}
+                        <span class={HINT}>The frame keeps the palette's own colour.</span>
+                    {:else if backdropKind === 'gradient' && draft.backdrop?.kind === 'gradient'}
+                        <GradientEditor
+                            gradient={draft.backdrop}
+                            onChange={(g) => (draft.backdrop = g)}
+                        />
+                    {:else if backdropKind === 'image'}
+                        <ImageBackdropEditor
+                            backdrop={draft.backdrop?.kind === 'image' ? draft.backdrop : null}
+                            wallpaperId={nextWallpaperId()}
+                            onChange={setImage}
+                            onMatch={matchToBackdrop}
+                        />
+                    {:else if backdropKind === 'cover' && draft.backdrop?.kind === 'cover'}
+                        {@const cover = draft.backdrop}
+                        <div class="grid grid-cols-3 gap-x-3">
+                            <div class="flex flex-col gap-y-1">
+                                <div class={SLIDER_HEAD}>
+                                    <span class="rack-label">Blur</span><span class={VALUE}
+                                        >{cover.blur} px</span
+                                    >
+                                </div>
+                                <CustomSlider
+                                    type="single"
+                                    min={0}
+                                    max={IMAGE_BLUR_MAX}
+                                    step={2}
+                                    value={cover.blur}
+                                    label="Blur"
+                                    onValueChange={(v) => setCover({ blur: v as number })}
+                                />
+                            </div>
+                            <div class="flex flex-col gap-y-1">
+                                <div class={SLIDER_HEAD}>
+                                    <span class="rack-label">Dim</span><span class={VALUE}
+                                        >{cover.dim} %</span
+                                    >
+                                </div>
+                                <CustomSlider
+                                    type="single"
+                                    min={0}
+                                    max={IMAGE_DIM_MAX}
+                                    step={5}
+                                    value={cover.dim}
+                                    label="Dim"
+                                    onValueChange={(v) => setCover({ dim: v as number })}
+                                />
+                            </div>
+                            <div class="flex flex-col gap-y-1">
+                                <div class={SLIDER_HEAD}>
+                                    <span class="rack-label">Zoom</span><span class={VALUE}
+                                        >{cover.zoom} %</span
+                                    >
+                                </div>
+                                <CustomSlider
+                                    type="single"
+                                    min={COVER_ZOOM_MIN}
+                                    max={COVER_ZOOM_MAX}
+                                    step={5}
+                                    value={cover.zoom}
+                                    label="Zoom"
+                                    onValueChange={(v) => setCover({ zoom: v as number })}
+                                />
+                            </div>
+                        </div>
+                        <span class={HINT}>
+                            The playing track's cover, enlarged so the blur's soft edge stays off
+                            screen, washed with the frame colour. It changes with the music; the
+                            palette stays yours.
+                        </span>
+                    {/if}
+                </div>
+            </Tabs.Content>
+        </div>
+    </Tabs.Root>
+
+    <div class="flex flex-col gap-y-2 border-t border-hairline px-4 pb-2.5 pt-2">
+        <div class="flex items-center gap-x-2">
             <span class="rack-label">Legibility</span>
-            <div class="flex flex-wrap gap-1.5">
-                {#each checks as check (check.label)}
-                    {@const ok = check.ratio >= check.min}
-                    <span
-                        class="inline-flex items-center gap-x-1 rounded-sm border border-hairline px-1.5 py-0.5 font-mono text-[10px] text-ink-fg-2"
-                        title={ok
-                            ? `${check.label}: ${check.ratio.toFixed(1)}:1, at least ${check.min}:1 needed`
-                            : `${check.label}: ${check.ratio.toFixed(1)}:1, below the ${check.min}:1 needed`}
-                    >
-                        {#if ok}
-                            <Check class="size-2.5 text-signal" strokeWidth={3} />
-                        {:else}
-                            <TriangleAlert class="size-2.5 text-amber" />
-                        {/if}
-                        {check.label}
-                        {check.ratio.toFixed(1)}
-                    </span>
-                {/each}
-            </div>
-            <span class={HINT}>
-                Measured on the palette's own colours; a clear panel over a loud backdrop is yours
-                to judge on the page.
-            </span>
-        </section>
+            <span class={HINT}>on the palette's own colours</span>
+        </div>
+        <div class="flex flex-wrap gap-1.5">
+            {#each checks as check (check.label)}
+                {@const ok = check.ratio >= check.min}
+                <span
+                    class="inline-flex items-center gap-x-1 rounded-sm border border-hairline px-1.5 py-0.5 font-mono text-[10px] text-ink-fg-2"
+                    title={ok
+                        ? `${check.label}: ${check.ratio.toFixed(1)}:1, at least ${check.min}:1 needed`
+                        : `${check.label}: ${check.ratio.toFixed(1)}:1, below the ${check.min}:1 needed`}
+                >
+                    {#if ok}
+                        <Check class="size-2.5 text-signal" strokeWidth={3} />
+                    {:else}
+                        <TriangleAlert class="size-2.5 text-amber" />
+                    {/if}
+                    {check.label}
+                    {check.ratio.toFixed(1)}
+                </span>
+            {/each}
+        </div>
     </div>
 
     <div class="flex items-center justify-between gap-x-3 border-t border-hairline px-4 py-2.5">
         <span class={HINT}>
-            {isNew ? 'A new look.' : 'Editing a saved look.'} The page around this drawer shows it as
-            you go; Spotify stays live beside it.
+            {isNew ? 'A new look: nothing is kept until Save.' : 'Editing a saved look.'} The page around
+            this drawer shows it as you go.
         </span>
         <Button variant="outline" size="sm" onclick={cancel}>Cancel</Button>
     </div>

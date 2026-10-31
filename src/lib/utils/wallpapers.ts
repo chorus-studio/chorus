@@ -267,6 +267,14 @@ export async function writeStoredWallpaper(id: string, stored: StoredWallpaper):
     await storage.setItem<StoredWallpaper>(wallpaperKey(id), stored)
 }
 
+/** A remix of a look with a stored picture gets its own copy of the bytes, so deleting either look never blanks the other. */
+export async function duplicateWallpaper(id: string, newId: string): Promise<boolean> {
+    const stored = await readWallpaper(id)
+    if (!stored) return false
+    await storage.setItem<StoredWallpaper>(wallpaperKey(newId), stored)
+    return true
+}
+
 export async function deleteWallpaper(id: string): Promise<void> {
     release(id)
     await storage.removeItem(wallpaperKey(id))

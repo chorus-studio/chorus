@@ -190,6 +190,19 @@ describe('sanitiseLook', () => {
         })
     })
 
+    it('keeps a look on the default show-through when it has no value of its own', () => {
+        expect(sanitiseLook({ name: 'D', panels: { glass: true } })?.panels).toEqual({
+            showThrough: null,
+            glass: true
+        })
+        expect(sanitiseLook({ name: 'D', panels: { showThrough: null } })?.panels.showThrough).toBe(
+            null
+        )
+        expect(sanitiseLook({ name: 'D', panels: { showThrough: 40 } })?.panels.showThrough).toBe(
+            40
+        )
+    })
+
     it('returns null for anything without a name', () => {
         expect(sanitiseLook(null)).toBeNull()
         expect(sanitiseLook({ id: 'x' })).toBeNull()

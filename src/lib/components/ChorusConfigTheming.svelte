@@ -15,12 +15,19 @@
     } from '$lib/stores/settings'
     import { looksStore } from '$lib/stores/looks'
     import { nowPlaying } from '$lib/stores/now-playing'
-    import { openLookEditor } from '$lib/stores/look-editor'
-    import { applyGlass, GLASS_BLUR_MIN, lookById, resolveMode } from '$lib/utils/theming'
+    import { openLookEditor, remixForEditing } from '$lib/stores/look-editor'
+    import {
+        applyGlass,
+        applyLook,
+        GLASS_BLUR_MIN,
+        lookById,
+        resolveMode
+    } from '$lib/utils/theming'
+    import { get } from 'svelte/store'
     import { lookSketch, paletteSketch } from '$lib/utils/look-preview'
     import { playingPalette } from '$lib/utils/cover-palette'
     import { openThemePage } from '$lib/utils/theme-route'
-    import { newLook } from '$lib/types/look'
+    import { SHOW_THROUGH_MAX, newLook } from '$lib/types/look'
 
     // The Theme tab of Chorus settings: the quick controls (Apply, Appearance,
     // Popup colours, Glass) and a strip showing the current look, with the
@@ -66,6 +73,23 @@
         }, 200)
     }
 
+    // The default show-through, for looks without their own: live paint, persisted a beat later.
+    let showThrough = $state($settingsStore.theme.showThrough)
+    let showThroughTimer: ReturnType<typeof setTimeout> | null = null
+    function setShowThrough(value: number) {
+        showThrough = value
+        const settings = {
+            ...$settingsStore,
+            theme: { ...$settingsStore.theme, showThrough: value }
+        }
+        void applyLook(settings, get(looksStore))
+        if (showThroughTimer) clearTimeout(showThroughTimer)
+        showThroughTimer = setTimeout(() => {
+            showThroughTimer = null
+            settingsStore.updateSettings({ theme: settings.theme })
+        }, 200)
+    }
+
     // ---- the current look ----
 
     const label = (theme: string) =>
@@ -84,7 +108,7 @@
     const currentSketch = $derived.by(() => {
         void $playingPalette
         return current
-            ? lookSketch(current, mode, $nowPlaying.cover)
+            ? lookSketch(current, mode, $nowPlaying.cover, $settingsStore.theme.showThrough)
             : paletteSketch($settingsStore.theme.name, mode)
     })
     const backdropWord = (kind: string) =>
@@ -93,8 +117,12 @@
         if (!current) return 'Built-in palette'
         const kind = current.builtIn ? 'Built-in look' : 'Your look'
         const backdrop = current.backdrop ? backdropWord(current.backdrop.kind) : 'no backdrop'
+        const through =
+            current.panels.showThrough === null
+                ? `the default (${$settingsStore.theme.showThrough} %)`
+                : `${current.panels.showThrough} %`
         const panels = current.backdrop
-            ? ` · show-through ${current.panels.showThrough} % · glass ${current.panels.glass ? 'on' : 'off'}`
+            ? ` · show-through ${through} · glass ${current.panels.glass ? 'on' : 'off'}`
             : ''
         return `${kind} · ${backdrop}${panels}`
     })
@@ -109,8 +137,9 @@
         if (!current) return
         onNavigate?.()
         if (current.builtIn) {
-            const copy = await looksStore.duplicateLook(current.id)
-            if (copy) openLookEditor(copy, false)
+            // A remix opens as an unsaved draft; Save creates it.
+            const copy = await remixForEditing(current, looksStore.uniqueName(current.name))
+            openLookEditor(copy, true)
         } else {
             openLookEditor(structuredClone(current), false)
         }
@@ -300,6 +329,25 @@
             </div>
         </div>
     {/if}
+
+    <div class="flex items-center gap-x-4 rounded-md border border-hairline bg-panel px-3 py-2">
+        <div class="flex w-[190px] shrink-0 flex-col gap-y-0.5">
+            <span class="rack-label">Default show-through</span>
+            <span class={HINT}>For looks without a value of their own.</span>
+        </div>
+        <div class="flex-1">
+            <CustomSlider
+                type="single"
+                min={0}
+                max={SHOW_THROUGH_MAX}
+                step={5}
+                value={showThrough}
+                label="Default show-through"
+                onValueChange={(v) => setShowThrough(v as number)}
+            />
+        </div>
+        <span class="w-10 text-right font-mono text-[11px] text-ink-fg-2">{showThrough} %</span>
+    </div>
 
     <span class={HINT}>
         Alt+Shift+] and Alt+Shift+[ step through the looks and palettes you have not hidden; change

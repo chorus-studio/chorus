@@ -28,8 +28,10 @@ import {
 } from './theme-surfaces'
 import type { Appearance, SettingsState } from '$lib/stores/settings'
 import {
+    SHOW_THROUGH_DEFAULT,
     builtinLook,
     isVideoBackdrop,
+    resolveShowThrough,
     type Look,
     type LooksState,
     type PaletteSource
@@ -164,6 +166,8 @@ export type PageLook = {
     recolourPage: boolean
     /** The saved look in force (a built-in or the person's own); null for a bare palette. */
     look: Look | null
+    /** The default show-through (settings), for a look without its own. */
+    showThrough: number
 }
 
 /** The fifteen page colours a look's palette source stands for, before any light inversion. */
@@ -216,7 +220,8 @@ export function lookFromSettings(
         palette,
         themedRack: themed || light,
         recolourPage: applied && (themed || light || Boolean(look?.backdrop)),
-        look
+        look,
+        showThrough: settings.theme?.showThrough ?? SHOW_THROUGH_DEFAULT
     }
 }
 
@@ -792,7 +797,7 @@ export function clearGlass(doc: Document = document): void {
 // ---- Backdrop ---------------------------------------------------------------
 
 /** The backdrop on the page now, kept so a new cover can repaint a cover backdrop on its own. */
-let currentBackdrop: { look: Look; frame: string; mode: Mode } | null = null
+let currentBackdrop: { look: Look; frame: string; mode: Mode; showThrough: number } | null = null
 /** The playing track's cover, as the page last reported it (utils/cover-palette feeds it). */
 let coverUrl: string | null = null
 /** The cover's palette, once read; a look whose palette follows the cover wears it. */
@@ -897,7 +902,13 @@ function removeBackdropVideo(): void {
     }
 }
 
-function paintBackdrop(look: Look, frame: string, mode: Mode, media: BackdropMedia): void {
+function paintBackdrop(
+    look: Look,
+    frame: string,
+    mode: Mode,
+    media: BackdropMedia,
+    showThrough: number
+): void {
     const backdrop = look.backdrop
     if (!backdrop) return
     const root = document.documentElement
@@ -907,7 +918,7 @@ function paintBackdrop(look: Look, frame: string, mode: Mode, media: BackdropMed
         imageUrl: media.video ? null : media.url
     })
     for (const [name, value] of Object.entries(vars)) root.style.setProperty(name, value)
-    root.style.setProperty('--chorus-panel-alpha', String(panelAlpha(look.panels.showThrough)))
+    root.style.setProperty('--chorus-panel-alpha', String(panelAlpha(showThrough)))
     root.setAttribute('data-backdrop', media.video ? 'video' : backdrop.kind)
     root.toggleAttribute('data-panel-glass', look.panels.glass)
     root.toggleAttribute('data-drift', backdrop.kind === 'gradient' && backdrop.drift)
@@ -928,8 +939,9 @@ async function applyBackdrop(pageLook: PageLook): Promise<void> {
     }
     const frame = frameColor(pageLook.palette)
     const media = await backdropMedia(look)
-    paintBackdrop(look, frame, pageLook.mode, media)
-    currentBackdrop = { look, frame, mode: pageLook.mode }
+    const showThrough = resolveShowThrough(look.panels, pageLook.showThrough)
+    paintBackdrop(look, frame, pageLook.mode, media, showThrough)
+    currentBackdrop = { look, frame, mode: pageLook.mode, showThrough }
     watchPagePanels()
 }
 
@@ -947,8 +959,8 @@ export function setPlayingCover(
     if (url !== coverUrl) {
         coverUrl = url
         if (currentBackdrop?.look.backdrop?.kind === 'cover') {
-            const { look, frame, mode } = currentBackdrop
-            paintBackdrop(look, frame, mode, { ...STILL_MEDIA, url })
+            const { look, frame, mode, showThrough } = currentBackdrop
+            paintBackdrop(look, frame, mode, { ...STILL_MEDIA, url }, showThrough)
         }
     }
     if (palette === undefined || palette === coverPalette) return
