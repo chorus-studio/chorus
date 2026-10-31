@@ -338,3 +338,12 @@ a[href$='/download'] {
     padding-inline-end: 64px;
     padding-left: 48px;
 }
+
+/* The theme page (lib/components/ThemePage) is mounted into Spotify's main view
+   and, under a backdrop, paints like a translucent panel; the view's own
+   content underneath would show through it, so that content is hidden
+   while the page is there. The releases page is opaque and needs no such
+   rule. */
+.main-view-container:has(> #chorus-theme-page) > :not(#chorus-theme-page) {
+    visibility: hidden;
+}
