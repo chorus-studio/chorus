@@ -42,7 +42,7 @@
     {#key $lookEditing.look.id}
         <div
             id="chorus-look-drawer-root"
-            class="chorus-float dark absolute right-4 top-4 z-[9] flex h-[min(720px,calc(100%-2rem))] w-[400px] max-w-[calc(100%-2rem)] flex-col overflow-hidden rounded-2xl border border-hairline-strong bg-ink/80 text-ink-fg shadow-float backdrop-blur-xl backdrop-saturate-150"
+            class="chorus-float dark absolute right-4 top-4 z-[9] flex h-[min(720px,calc(100%-2rem))] w-[460px] max-w-[calc(100%-2rem)] flex-col overflow-hidden rounded-2xl border border-hairline-strong bg-ink/80 text-ink-fg shadow-float backdrop-blur-xl backdrop-saturate-150"
             role="dialog"
             aria-modal="false"
             aria-label={$lookEditing.isNew ? 'New look' : `Edit ${$lookEditing.look.name}`}

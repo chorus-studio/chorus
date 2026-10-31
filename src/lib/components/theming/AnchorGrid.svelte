@@ -15,7 +15,7 @@
 <div
     role="radiogroup"
     aria-label={label}
-    class="grid grid-cols-3 gap-0.5 rounded-md border border-hairline bg-inset p-1"
+    class="grid grid-cols-3 gap-1 rounded-md border border-hairline bg-inset p-1"
 >
     {#each ANCHORS as anchor (anchor)}
         <button
@@ -26,7 +26,7 @@
             title={title(anchor)}
             onclick={() => onChange(anchor)}
             class={cn(
-                'size-3 rounded-[2px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal',
+                'size-[18px] rounded-[3px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal',
                 anchor === value ? 'bg-signal' : 'bg-surface-2 hover:bg-ink-dim'
             )}
         ></button>
