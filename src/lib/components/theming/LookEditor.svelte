@@ -43,7 +43,6 @@
         IMAGE_BLUR_MAX,
         IMAGE_DIM_MAX,
         SHOW_THROUGH_MAX,
-        SHOW_THROUGH_MAX_LIGHT,
         type Backdrop,
         type BackdropKind,
         type ImageBackdrop,
@@ -102,7 +101,6 @@
         void $playingPalette
         return resolvePalette(draft.palette)
     })
-    const showThroughMax = $derived(mode === 'light' ? SHOW_THROUGH_MAX_LIGHT : SHOW_THROUGH_MAX)
 
     const checks = $derived([
         { label: 'Text on panel', ratio: contrastRatio(colours.main, colours.text), min: 4.5 },
@@ -345,9 +343,7 @@
                 <div class="flex flex-col gap-y-1.5">
                     <div class={SLIDER_HEAD}>
                         <span class="text-xs text-ink-fg-2">Show-through</span>
-                        <span class={VALUE}
-                            >{Math.min(draft.panels.showThrough, showThroughMax)} %</span
-                        >
+                        <span class={VALUE}>{draft.panels.showThrough} %</span>
                     </div>
                     <CustomSlider
                         type="single"
@@ -362,7 +358,8 @@
                     />
                     <span class={HINT}>
                         How much of the backdrop shows through the library, main view and bars. 0 %
-                        keeps them solid; Light caps it at {SHOW_THROUGH_MAX_LIGHT} %.
+                        keeps them solid; at 100 % they vanish, and Glass keeps the text readable
+                        over the blur.
                     </span>
                 </div>
                 <label class="flex items-center gap-x-2 text-xs text-ink-fg-2">
