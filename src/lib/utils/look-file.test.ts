@@ -120,7 +120,7 @@ describe('sanitiseLook', () => {
                     { color: '#000000', at: -5 }
                 ]
             },
-            panels: { showThrough: 95, glass: 1 },
+            panels: { showThrough: 150, glass: 1 },
             createdAt: 'then'
         })
         expect(look).toMatchObject({
@@ -138,7 +138,7 @@ describe('sanitiseLook', () => {
                     { color: '#000000', at: 0 }
                 ]
             },
-            panels: { showThrough: 60, glass: false }
+            panels: { showThrough: 100, glass: false }
         })
         expect(typeof look?.createdAt).toBe('number')
     })

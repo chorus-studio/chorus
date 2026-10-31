@@ -107,7 +107,7 @@ export type PaletteSource =
     | { kind: 'cover' }
 
 export type Panels = {
-    /** 0–60 %: how much of the backdrop shows through the page's panels. */
+    /** 0–100 %: how much of the backdrop shows through the page's panels; at 100 they vanish. */
     showThrough: number
     /** Blur the backdrop behind each panel. */
     glass: boolean
@@ -135,9 +135,8 @@ export type LooksState = {
 
 export const DEFAULT_LOOKS_STATE: LooksState = { version: 1, looks: {}, hiddenBuiltIn: [] }
 
-export const SHOW_THROUGH_MAX = 60
-/** A light page shows dark text over a light panel; less of the backdrop can come through before it fights the text. */
-export const SHOW_THROUGH_MAX_LIGHT = 40
+/** The panels can go all the way to clear; Glass keeps the text readable over the blur when they do. */
+export const SHOW_THROUGH_MAX = 100
 export const GRADIENT_STOPS_MAX = 5
 export const GRADIENT_STOPS_MIN = 2
 export const IMAGE_DIM_MAX = 80
