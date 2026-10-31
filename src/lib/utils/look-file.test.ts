@@ -227,6 +227,37 @@ describe('sanitiseBackdrop', () => {
         })
     })
 
+    it("keeps a gradient's repeat and shape, dropping a shape it does not know", () => {
+        const rings = sanitiseBackdrop({
+            kind: 'gradient',
+            type: 'radial',
+            repeat: true,
+            shape: 'circle',
+            stops: [
+                { color: '#f00', at: 0 },
+                { color: '#00f', at: 20 }
+            ]
+        })
+        expect(rings).toMatchObject({
+            kind: 'gradient',
+            type: 'radial',
+            repeat: true,
+            shape: 'circle'
+        })
+        const odd = sanitiseBackdrop({
+            kind: 'gradient',
+            type: 'radial',
+            repeat: 'yes',
+            shape: 'square',
+            stops: [
+                { color: '#f00', at: 0 },
+                { color: '#00f', at: 20 }
+            ]
+        })
+        expect(odd && 'repeat' in odd).toBe(false)
+        expect(odd && 'shape' in odd).toBe(false)
+    })
+
     it('needs at least two usable stops for a gradient, and clamps a cover', () => {
         expect(sanitiseBackdrop({ kind: 'gradient', stops: [{ color: '#fff', at: 0 }] })).toBeNull()
         expect(sanitiseBackdrop({ kind: 'cover', blur: 100, dim: 100, zoom: 10 })).toEqual({
