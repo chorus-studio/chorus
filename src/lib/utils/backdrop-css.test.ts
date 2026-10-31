@@ -105,11 +105,13 @@ describe('filters, washes and panels', () => {
         expect(dimColour(50, false, '#1c2440', 'light')).toBe('rgb(255 255 255 / 0.5)')
     })
 
-    it('caps show-through at 60 % dark and 40 % light', () => {
-        expect(panelAlpha(0, 'dark')).toBe(1)
-        expect(panelAlpha(25, 'dark')).toBe(0.75)
-        expect(panelAlpha(90, 'dark')).toBe(0.4)
-        expect(panelAlpha(90, 'light')).toBe(0.6)
+    it('turns show-through into a panel alpha, clear at 100 %', () => {
+        expect(panelAlpha(0)).toBe(1)
+        expect(panelAlpha(25)).toBe(0.75)
+        expect(panelAlpha(90)).toBe(0.1)
+        expect(panelAlpha(100)).toBe(0)
+        expect(panelAlpha(140)).toBe(0)
+        expect(panelAlpha(-5)).toBe(1)
     })
 
     it('escapes quotes in an address', () => {

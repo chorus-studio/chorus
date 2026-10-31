@@ -93,7 +93,7 @@ export function backdropPreviewCss(
 export function lookSketch(look: Look, mode: Mode, cover?: string | null): Sketch {
     const colours = lookColours(look, mode)
     const backdrop = backdropPreviewCss(look.backdrop, colours, mode, cover)
-    const alpha = backdrop ? panelAlpha(look.panels.showThrough, mode) : 1
+    const alpha = backdrop ? panelAlpha(look.panels.showThrough) : 1
     return {
         colours,
         backdrop,

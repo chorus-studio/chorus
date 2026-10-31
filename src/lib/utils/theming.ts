@@ -907,10 +907,7 @@ function paintBackdrop(look: Look, frame: string, mode: Mode, media: BackdropMed
         imageUrl: media.video ? null : media.url
     })
     for (const [name, value] of Object.entries(vars)) root.style.setProperty(name, value)
-    root.style.setProperty(
-        '--chorus-panel-alpha',
-        String(panelAlpha(look.panels.showThrough, mode))
-    )
+    root.style.setProperty('--chorus-panel-alpha', String(panelAlpha(look.panels.showThrough)))
     root.setAttribute('data-backdrop', media.video ? 'video' : backdrop.kind)
     root.toggleAttribute('data-panel-glass', look.panels.glass)
     root.toggleAttribute('data-drift', backdrop.kind === 'gradient' && backdrop.drift)

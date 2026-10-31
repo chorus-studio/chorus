@@ -10,7 +10,6 @@
  */
 import {
     SHOW_THROUGH_MAX,
-    SHOW_THROUGH_MAX_LIGHT,
     type Anchor,
     type Backdrop,
     type GradientBackdrop
@@ -89,10 +88,9 @@ export function dimColour(dim: number, tint: boolean, frame: string, mode: Mode)
     return `rgb(${r} ${g} ${b} / ${alpha})`
 }
 
-/** The panels' opacity for a show-through setting, capped lower on a light page. */
-export function panelAlpha(showThrough: number, mode: Mode): number {
-    const cap = mode === 'light' ? SHOW_THROUGH_MAX_LIGHT : SHOW_THROUGH_MAX
-    const through = Math.min(cap, Math.max(0, showThrough))
+/** The panels' opacity for a show-through setting: 1 at 0 %, clear at 100 %. */
+export function panelAlpha(showThrough: number): number {
+    const through = Math.min(SHOW_THROUGH_MAX, Math.max(0, showThrough))
     return Math.round((1 - through / 100) * 100) / 100
 }
 
