@@ -21,6 +21,7 @@
     } from '$lib/utils/theming'
     import { lookSketch, paletteSketch, type Sketch } from '$lib/utils/look-preview'
     import { LookFileError, parseLookFile } from '$lib/utils/look-file'
+    import { playingPalette } from '$lib/utils/cover-palette'
     import { saveTextFile } from '$lib/utils/save-file'
     import { extensionVersion } from '$lib/utils/extension-version'
     import { BUILTIN_LOOKS, newLook, type Look } from '$lib/types/look'
@@ -118,6 +119,8 @@
     const hidden = $derived(new Set($looksStore.hiddenBuiltIn))
     const items = $derived.by<Item[]>(() => {
         const cover = $nowPlaying.cover
+        // A look whose palette follows the cover redraws when that palette is read.
+        void $playingPalette
         const mine = ownLooks($looksStore).map((look) => ({
             id: look.id,
             kind: 'look' as const,

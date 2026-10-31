@@ -7,7 +7,12 @@ import {
     gradientCss,
     panelAlpha
 } from './backdrop-css'
-import { BUILTIN_LOOKS, DEFAULT_IMAGE_OPTIONS, type GradientBackdrop } from '$lib/types/look'
+import {
+    BUILTIN_LOOKS,
+    DEFAULT_IMAGE_OPTIONS,
+    isVideoBackdrop,
+    type GradientBackdrop
+} from '$lib/types/look'
 
 const linear: GradientBackdrop = {
     kind: 'gradient',
@@ -108,6 +113,11 @@ describe('backdropVariables', () => {
         expect(vars['--chorus-backdrop-image']).toBe('url("blob:x")')
         expect(vars['--chorus-backdrop-repeat']).toBe('repeat')
         expect(vars['--chorus-backdrop-size']).toBe('auto')
+        // A video cannot tile; the element fills the window.
+        expect(vars['--chorus-backdrop-fit']).toBe('cover')
+        expect(backdropVariables({ ...image, fit: 'contain' }, ctx)['--chorus-backdrop-fit']).toBe(
+            'contain'
+        )
         expect(vars['--chorus-backdrop-filter']).toBe('blur(6px)')
         expect(vars['--chorus-backdrop-blur']).toBe('6px')
         expect(vars['--chorus-backdrop-dim']).toBe('rgb(28 36 64 / 0.35)')
@@ -121,5 +131,46 @@ describe('backdropVariables', () => {
         expect(vars['--chorus-backdrop-scale']).toBe('1.20')
         expect(vars['--chorus-backdrop-filter']).toBe('blur(40px) saturate(1.20)')
         expect(vars['--chorus-backdrop-dim']).toBe('rgb(28 36 64 / 0.3)')
+    })
+})
+
+describe('isVideoBackdrop', () => {
+    const image = { kind: 'image' as const, ...DEFAULT_IMAGE_OPTIONS }
+    const info = {
+        name: 'x',
+        mime: 'image/webp',
+        width: 1,
+        height: 1,
+        bytes: 1,
+        animated: false,
+        thumb: 'data:image/webp;base64,AA=='
+    }
+    it('knows a stored video by its info and a linked one by its extension', () => {
+        expect(
+            isVideoBackdrop({
+                ...image,
+                source: { type: 'file', id: 'a' },
+                info: { ...info, mime: 'video/mp4' }
+            })
+        ).toBe(true)
+        expect(
+            isVideoBackdrop({
+                ...image,
+                source: { type: 'file', id: 'a' },
+                info: { ...info, video: true }
+            })
+        ).toBe(true)
+        expect(isVideoBackdrop({ ...image, source: { type: 'file', id: 'a' }, info })).toBe(false)
+        expect(
+            isVideoBackdrop({ ...image, source: { type: 'url', url: 'https://x/loop.webm?v=2' } })
+        ).toBe(true)
+        expect(
+            isVideoBackdrop({ ...image, source: { type: 'url', url: 'https://x/loop.MP4' } })
+        ).toBe(true)
+        expect(
+            isVideoBackdrop({ ...image, source: { type: 'url', url: 'https://x/still.jpg' } })
+        ).toBe(false)
+        expect(isVideoBackdrop(BUILTIN_LOOKS[0].backdrop)).toBe(false)
+        expect(isVideoBackdrop(null)).toBe(false)
     })
 })

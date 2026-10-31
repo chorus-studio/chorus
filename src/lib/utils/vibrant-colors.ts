@@ -6,44 +6,19 @@
  * the rack tokens instead, and so does a cover with no colour to offer, so
  * the popup always matches either the record or the theme.
  */
-import { Vibrant } from 'node-vibrant/browser'
 import type { SettingsState } from '$lib/stores/settings'
 import type { Mode } from '$lib/utils/theme-surfaces'
 import { applyThemePopupPalette, resolveMode } from '$lib/utils/theming'
-import {
-    derivePopupPalette,
-    hexToHsl,
-    type PopupPalette,
-    type Swatch
-} from '$lib/utils/popup-palette'
+import { derivePopupPalette, hexToHsl, type PopupPalette } from '$lib/utils/popup-palette'
+import { imageSwatches } from '$lib/utils/image-swatches'
 
 export * from '$lib/utils/popup-palette'
+export { imageSwatches } from '$lib/utils/image-swatches'
 
 const cache = new Map<string, { palette: PopupPalette | null; timestamp: number }>()
 const CACHE_DURATION = 5 * 60 * 1000
 
-function loadImage(url: string, element: HTMLImageElement): Promise<void> {
-    return new Promise((resolve, reject) => {
-        element.onload = () => resolve()
-        element.onerror = reject
-        element.crossOrigin = 'anonymous'
-        element.src = url
-    })
-}
-
-/** The colours of any picture the page may load (a cover, a wallpaper's thumbnail), by population. */
-export async function imageSwatches(url: string): Promise<Swatch[]> {
-    return coverSwatches(url)
-}
-
-async function coverSwatches(url: string): Promise<Swatch[]> {
-    const image = new Image(64, 64)
-    await loadImage(url, image)
-    const palette = await new Vibrant(image).getPalette()
-    return Object.values(palette)
-        .filter((swatch) => swatch != null)
-        .map((swatch) => ({ hex: swatch.hex, population: swatch.population }))
-}
+const coverSwatches = imageSwatches
 
 /**
  * The cover's popup palette for the mode, null when it has no colour to wear.

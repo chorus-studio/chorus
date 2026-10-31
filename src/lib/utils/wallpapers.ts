@@ -19,8 +19,12 @@ export const WALLPAPER_KEY_PREFIX = 'local:chorus_wallpaper_'
 export const MAX_STILL_EDGE = 2560
 /** The most a stored file may weigh; a still is re-encoded to fit, an animation is refused. */
 export const MAX_BYTES = 8 * 1024 * 1024
-/** Files above this are refused before any decoding, so a dropped video does not stall the page. */
+/** Files above this are refused before any decoding, so a huge drop does not stall the page. */
 const MAX_INPUT_BYTES = 48 * 1024 * 1024
+/** Video loops: what the page can play directly, kept byte for byte. */
+export const VIDEO_TYPES = new Set(['video/mp4', 'video/webm'])
+export const MAX_VIDEO_BYTES = 16 * 1024 * 1024
+export const MAX_VIDEO_SECONDS = 60
 const THUMB_WIDTH = 160
 /** The still frame shown for an animated file under Reduce motion (or with its animation off). */
 const STILL_WIDTH = 1280
@@ -113,8 +117,11 @@ function formatBytes(bytes: number): string {
  * WallpaperError with a sentence for the person when the file will not do.
  */
 export async function importWallpaper(file: File): Promise<ImportedWallpaper> {
+    if (VIDEO_TYPES.has(file.type)) return importVideo(file)
     if (!file.type.startsWith('image/')) {
-        throw new WallpaperError('Pick an image: JPEG, PNG, WebP, GIF or APNG.')
+        throw new WallpaperError(
+            'Pick an image or a short video: JPEG, PNG, WebP, GIF, APNG, MP4 or WebM.'
+        )
     }
     if (file.size > MAX_INPUT_BYTES) {
         throw new WallpaperError(
@@ -167,6 +174,75 @@ export async function importWallpaper(file: File): Promise<ImportedWallpaper> {
         }
     } finally {
         bitmap.close()
+    }
+}
+
+/** A frame of the video a second in (past any fade from black), with its size and length. */
+async function probeVideo(
+    file: File
+): Promise<{ width: number; height: number; duration: number; frame: ImageBitmap }> {
+    const video = document.createElement('video')
+    video.setAttribute('data-chorus-backdrop', '')
+    video.muted = true
+    video.playsInline = true
+    video.preload = 'auto'
+    const url = useDataUrls ? await blobToDataUrl(file) : URL.createObjectURL(file)
+    try {
+        await new Promise<void>((resolve, reject) => {
+            video.onloadeddata = () => resolve()
+            video.onerror = () => reject(new WallpaperError('That video could not be read.'))
+            video.src = url
+        })
+        const duration = video.duration
+        if (!Number.isFinite(duration) || duration <= 0) {
+            throw new WallpaperError('That video has no length Chorus can read.')
+        }
+        await new Promise<void>((resolve) => {
+            video.onseeked = () => resolve()
+            video.currentTime = Math.min(1, duration / 2)
+        })
+        const frame = await createImageBitmap(video)
+        return { width: video.videoWidth, height: video.videoHeight, duration, frame }
+    } finally {
+        video.removeAttribute('src')
+        video.load()
+        if (!useDataUrls) URL.revokeObjectURL(url)
+    }
+}
+
+/** An MP4 or WebM loop: kept as it is, with a still frame for Reduce motion and a thumbnail. */
+async function importVideo(file: File): Promise<ImportedWallpaper> {
+    if (file.size > MAX_VIDEO_BYTES) {
+        throw new WallpaperError(
+            `A video has to stay under ${formatBytes(MAX_VIDEO_BYTES)}; this one is ${formatBytes(file.size)}. A shorter or smaller loop will do.`
+        )
+    }
+    const { width, height, duration, frame } = await probeVideo(file)
+    try {
+        if (duration > MAX_VIDEO_SECONDS) {
+            throw new WallpaperError(
+                `A loop has to be under ${MAX_VIDEO_SECONDS} seconds; this one runs ${Math.round(duration)}.`
+            )
+        }
+        const still = await blobToDataUrl(await encode(frame, STILL_WIDTH, WEBP_QUALITY))
+        const thumb = await blobToDataUrl(await encode(frame, THUMB_WIDTH, THUMB_QUALITY))
+        return {
+            blob: file,
+            still,
+            info: {
+                name: file.name,
+                mime: file.type,
+                width,
+                height,
+                bytes: file.size,
+                animated: true,
+                video: true,
+                duration: Math.round(duration),
+                thumb
+            }
+        }
+    } finally {
+        frame.close()
     }
 }
 
@@ -244,6 +320,12 @@ export async function wallpaperUrl(id: string, still = false): Promise<string | 
     }
     if (!entry) return null
     return (still && entry.still) || entry.full || null
+}
+
+/** A stored file's still frame (an animated file or a video has one), as a data URL; null otherwise. */
+export async function wallpaperStill(id: string): Promise<string | null> {
+    await wallpaperUrl(id)
+    return urls.get(id)?.still ?? null
 }
 
 /** Forget a wallpaper's address (and free its blob) after it is replaced or deleted. */

@@ -47,6 +47,10 @@ export type ImageInfo = {
     animated: boolean
     /** A small data URL for cards and the editor's chip. */
     thumb: string
+    /** An MP4 or WebM loop rather than a picture. */
+    video?: boolean
+    /** A video's length in seconds. */
+    duration?: number
 }
 
 export type ImageBackdrop = {
@@ -78,12 +82,24 @@ export type CoverBackdrop = {
 export type Backdrop = GradientBackdrop | ImageBackdrop | CoverBackdrop
 export type BackdropKind = Backdrop['kind']
 
+/** A linked address that is a video, by its extension. */
+export const VIDEO_URL = /\.(mp4|webm)(?:[?#]|$)/i
+
+/** An image backdrop whose file is a video loop: a stored MP4/WebM, or a link to one. (A plain boolean, not a type guard: callers already hold an image backdrop and a guard would narrow its false branch to never.) */
+export function isVideoBackdrop(backdrop: Backdrop | null | undefined): boolean {
+    if (backdrop?.kind !== 'image') return false
+    if (backdrop.source.type === 'url') return VIDEO_URL.test(backdrop.source.url)
+    return Boolean(backdrop.info?.video || backdrop.info?.mime.startsWith('video/'))
+}
+
 export type PaletteSource =
     | { kind: 'builtin'; name: ThemeName }
     /** Two colours (and an optional text colour) derive all fifteen slots. */
     | { kind: 'colours'; base: string; accent: string; text?: string }
     /** Every slot by hand, Spicetify's keys one for one. */
     | { kind: 'slots'; colours: Record<CSSVariable, string> }
+    /** The playing cover's colours, read as Match palette reads them; they change with the music. */
+    | { kind: 'cover' }
 
 export type Panels = {
     /** 0–60 %: how much of the backdrop shows through the page's panels. */

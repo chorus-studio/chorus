@@ -27,10 +27,16 @@ import {
     type Mode
 } from './theme-surfaces'
 import type { Appearance, SettingsState } from '$lib/stores/settings'
-import { builtinLook, type Look, type LooksState, type PaletteSource } from '$lib/types/look'
+import {
+    builtinLook,
+    isVideoBackdrop,
+    type Look,
+    type LooksState,
+    type PaletteSource
+} from '$lib/types/look'
 import { completePalette, derivePalette } from './look-palette'
 import { BACKDROP_PROPERTIES, backdropVariables, panelAlpha } from './backdrop-css'
-import { wallpaperUrl } from './wallpapers'
+import { wallpaperStill, wallpaperUrl } from './wallpapers'
 import { unwatchPagePanels, watchPagePanels } from './page-panels'
 
 export type { Mode }
@@ -169,6 +175,9 @@ export function resolvePalette(source: PaletteSource): Record<CSSVariable, strin
             return derivePalette(source)
         case 'slots':
             return completePalette(source.colours)
+        case 'cover':
+            // The playing cover's palette once read (setPlayingCover); Spotify's stands in before.
+            return coverPalette ?? SPOTIFY_PALETTE
     }
 }
 
@@ -784,8 +793,13 @@ export function clearGlass(doc: Document = document): void {
 
 /** The backdrop on the page now, kept so a new cover can repaint a cover backdrop on its own. */
 let currentBackdrop: { look: Look; frame: string; mode: Mode } | null = null
-/** The playing track's cover, as the page last reported it (App.svelte feeds it). */
+/** The playing track's cover, as the page last reported it (utils/cover-palette feeds it). */
 let coverUrl: string | null = null
+/** The cover's palette, once read; a look whose palette follows the cover wears it. */
+let coverPalette: Record<CSSVariable, string> | null = null
+/** The palette kind of the look last applied, and how to apply that look again. */
+let appliedPaletteKind: PaletteSource['kind'] | null = null
+let reapply: (() => void) | null = null
 
 function prefersReducedMotion(): boolean {
     return (
@@ -794,30 +808,114 @@ function prefersReducedMotion(): boolean {
     )
 }
 
-/** The address a look's picture loads from, if it has one yet. */
-async function backdropImageUrl(look: Look): Promise<string | null> {
-    const backdrop = look.backdrop
-    if (!backdrop) return null
-    if (backdrop.kind === 'cover') return coverUrl
-    if (backdrop.kind !== 'image') return null
-    if (backdrop.source.type === 'url') return backdrop.source.url
-    const still = Boolean(backdrop.info?.animated) && (!backdrop.animate || prefersReducedMotion())
-    return wallpaperUrl(backdrop.source.id, still)
+type BackdropMedia = {
+    /** The address the picture or video loads from; null while it is not there yet. */
+    url: string | null
+    /** The address is a video, played in a <video> behind the page rather than painted as a background. */
+    video: boolean
+    /** Whether a moving file moves: off with its switch, or under Reduce motion. */
+    play: boolean
 }
 
-function paintBackdrop(look: Look, frame: string, mode: Mode, imageUrl: string | null): void {
+const STILL_MEDIA: BackdropMedia = { url: null, video: false, play: false }
+
+/**
+ * What a look's backdrop shows, if anything yet: a stored file's address, a
+ * link, the playing cover; the still frame of a moving file when it is to
+ * hold still.
+ */
+async function backdropMedia(look: Look): Promise<BackdropMedia> {
+    const backdrop = look.backdrop
+    if (!backdrop) return STILL_MEDIA
+    if (backdrop.kind === 'cover') return { ...STILL_MEDIA, url: coverUrl }
+    if (backdrop.kind !== 'image') return STILL_MEDIA
+    const video = isVideoBackdrop(backdrop)
+    const moving = video || Boolean(backdrop.info?.animated)
+    const still = moving && (!backdrop.animate || prefersReducedMotion())
+    if (backdrop.source.type === 'url') return { url: backdrop.source.url, video, play: !still }
+    if (still) {
+        // A stored file's still frame is a picture; a video without one pauses on its first frame.
+        const frame = await wallpaperStill(backdrop.source.id)
+        if (frame) return { ...STILL_MEDIA, url: frame }
+    }
+    return { url: await wallpaperUrl(backdrop.source.id), video, play: !still }
+}
+
+const VIDEO_ID = 'chorus-backdrop-video'
+let onVisibility: (() => void) | null = null
+
+/**
+ * The <video> a video backdrop plays in: one element, the last child of
+ * <html> so it paints between the picture layer and the wash (theme.css
+ * places and sizes it), muted and looping, paused while the tab is hidden.
+ * The media override leaves it alone by its data-chorus-backdrop mark.
+ */
+function mountBackdropVideo(url: string, play: boolean): void {
+    let video = document.getElementById(VIDEO_ID) as HTMLVideoElement | null
+    if (!video) {
+        video = document.createElement('video')
+        video.id = VIDEO_ID
+        video.setAttribute('data-chorus-backdrop', '')
+        video.setAttribute('aria-hidden', 'true')
+        video.setAttribute('playsinline', '')
+        video.setAttribute('disablepictureinpicture', '')
+        video.setAttribute('disableremoteplayback', '')
+        video.muted = true
+        video.defaultMuted = true
+        video.loop = true
+        video.preload = 'auto'
+        video.tabIndex = -1
+        document.documentElement.appendChild(video)
+        onVisibility = () => {
+            const el = document.getElementById(VIDEO_ID) as HTMLVideoElement | null
+            if (!el) return
+            if (document.hidden) el.pause()
+            else if (el.dataset.play === 'true') void el.play().catch(() => undefined)
+        }
+        document.addEventListener('visibilitychange', onVisibility)
+    }
+    if (video.getAttribute('src') !== url) {
+        video.src = url
+        video.load()
+    }
+    video.dataset.play = String(play)
+    if (play && !document.hidden) void video.play().catch(() => undefined)
+    else video.pause()
+}
+
+function removeBackdropVideo(): void {
+    const video = document.getElementById(VIDEO_ID) as HTMLVideoElement | null
+    if (video) {
+        video.pause()
+        video.removeAttribute('src')
+        video.load()
+        video.remove()
+    }
+    if (onVisibility) {
+        document.removeEventListener('visibilitychange', onVisibility)
+        onVisibility = null
+    }
+}
+
+function paintBackdrop(look: Look, frame: string, mode: Mode, media: BackdropMedia): void {
     const backdrop = look.backdrop
     if (!backdrop) return
     const root = document.documentElement
-    const vars = backdropVariables(backdrop, { frame, mode, imageUrl })
+    const vars = backdropVariables(backdrop, {
+        frame,
+        mode,
+        imageUrl: media.video ? null : media.url
+    })
     for (const [name, value] of Object.entries(vars)) root.style.setProperty(name, value)
     root.style.setProperty(
         '--chorus-panel-alpha',
         String(panelAlpha(look.panels.showThrough, mode))
     )
-    root.setAttribute('data-backdrop', backdrop.kind)
+    root.setAttribute('data-backdrop', media.video ? 'video' : backdrop.kind)
     root.toggleAttribute('data-panel-glass', look.panels.glass)
     root.toggleAttribute('data-drift', backdrop.kind === 'gradient' && backdrop.drift)
+    if (media.video && media.url) mountBackdropVideo(media.url, media.play)
+    else removeBackdropVideo()
 }
 
 /**
@@ -832,19 +930,33 @@ async function applyBackdrop(pageLook: PageLook): Promise<void> {
         return
     }
     const frame = frameColor(pageLook.palette)
-    const imageUrl = await backdropImageUrl(look)
-    paintBackdrop(look, frame, pageLook.mode, imageUrl)
+    const media = await backdropMedia(look)
+    paintBackdrop(look, frame, pageLook.mode, media)
     currentBackdrop = { look, frame, mode: pageLook.mode }
     watchPagePanels()
 }
 
-/** The page tells theming which cover is playing; a cover backdrop follows it at once. */
-export function setBackdropCover(url: string | null): void {
-    if (url === coverUrl) return
-    coverUrl = url
-    if (currentBackdrop?.look.backdrop?.kind !== 'cover') return
-    const { look, frame, mode } = currentBackdrop
-    paintBackdrop(look, frame, mode, url)
+/**
+ * The page tells theming which cover is playing and, once read, its palette
+ * (utils/cover-palette). A cover backdrop follows the picture at once; a look
+ * whose palette follows the cover is applied again when the palette changes.
+ * Called without a palette, the one already known stays on, so a track
+ * change does not flash Spotify's colours while the new cover is read.
+ */
+export function setPlayingCover(
+    url: string | null,
+    palette?: Record<CSSVariable, string> | null
+): void {
+    if (url !== coverUrl) {
+        coverUrl = url
+        if (currentBackdrop?.look.backdrop?.kind === 'cover') {
+            const { look, frame, mode } = currentBackdrop
+            paintBackdrop(look, frame, mode, { ...STILL_MEDIA, url })
+        }
+    }
+    if (palette === undefined || palette === coverPalette) return
+    coverPalette = palette
+    if (appliedPaletteKind === 'cover') reapply?.()
 }
 
 export function clearBackdrop(doc: Document = document): void {
@@ -855,6 +967,7 @@ export function clearBackdrop(doc: Document = document): void {
     root.removeAttribute('data-panel-glass')
     root.removeAttribute('data-drift')
     for (const name of BACKDROP_PROPERTIES) root.style.removeProperty(name)
+    removeBackdropVideo()
     unwatchPagePanels()
 }
 
@@ -906,6 +1019,8 @@ async function applyLookNow(
 ): Promise<void> {
     if (typeof document === 'undefined' || !document.documentElement) return
     const look = lookFromSettings(settings, looks, override)
+    appliedPaletteKind = look.look?.palette.kind ?? null
+    reapply = () => void applyLook(settings, looks, override)
     const root = document.documentElement
     root.setAttribute('data-mode', look.mode)
 
@@ -935,6 +1050,8 @@ export function applyRackLook(
     const root = doc.documentElement
     if (!root) return
     const look = lookFromSettings(settings, looks)
+    appliedPaletteKind = look.look?.palette.kind ?? null
+    reapply = () => applyRackLook(settings, doc, looks)
     root.setAttribute('data-mode', look.mode)
     if (look.themedRack) applyThemeSurfaces(root, look.palette, look.mode)
     else clearThemeSurfaces(root)

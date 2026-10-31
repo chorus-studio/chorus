@@ -13,6 +13,8 @@ function mediaOverride() {
     const originalCreateElement = document.createElement
 
     function addSource(source: HTMLMediaElement) {
+        // Chorus's own video loop behind the page (a look's backdrop) is not the music.
+        if (source.hasAttribute('data-chorus-backdrop')) return
         if ((source as any).isPlaybackRateChanged) return
         ;(source as any).isPlaybackRateChanged = true
 

@@ -5,12 +5,15 @@
         IMAGE_BLUR_MAX,
         IMAGE_DIM_MAX,
         IMAGE_SATURATE_MAX,
+        isVideoBackdrop,
         type ImageBackdrop,
         type ImageFit
     } from '$lib/types/look'
     import {
         MAX_BYTES,
         MAX_STILL_EDGE,
+        MAX_VIDEO_BYTES,
+        MAX_VIDEO_SECONDS,
         WallpaperError,
         importWallpaper,
         saveWallpaper
@@ -126,7 +129,7 @@
 <input
     bind:this={fileInput}
     type="file"
-    accept="image/*"
+    accept="image/*,video/mp4,video/webm"
     class="hidden"
     onchange={(e) => takeFile(e.currentTarget.files?.[0])}
 />
@@ -134,7 +137,7 @@
 {#if !backdrop}
     <div
         role="group"
-        aria-label="Add a picture"
+        aria-label="Add a picture or video"
         class="flex flex-col items-center justify-center gap-y-2 rounded-md border border-dashed px-3 py-5 text-center transition-colors {dragging
             ? 'border-signal bg-signal/5'
             : 'border-hairline-strong bg-inset'}"
@@ -150,7 +153,7 @@
             <span class="text-xs text-ink-muted">Reading the picture…</span>
         {:else}
             <ImageIcon class="size-5 text-ink-muted" />
-            <span class="text-xs text-ink-fg-2">Drop an image or GIF here</span>
+            <span class="text-xs text-ink-fg-2">Drop an image, GIF or short video here</span>
             <div class="flex items-center gap-x-2">
                 <Button variant="outline" size="xs" onclick={() => fileInput?.click()}
                     >Browse…</Button
@@ -161,8 +164,10 @@
                 </Button>
             </div>
             <span class="text-[11px] leading-snug text-ink-muted">
-                JPEG, PNG, WebP, GIF or APNG. Stills are resized to {MAX_STILL_EDGE} px; animations stay
-                as they are, up to {Math.round(MAX_BYTES / (1024 * 1024))} MB.
+                JPEG, PNG, WebP, GIF or APNG, or an MP4 / WebM loop. Stills are resized to {MAX_STILL_EDGE}
+                px; animations stay as they are, up to {Math.round(MAX_BYTES / (1024 * 1024))} MB; a
+                video up to {Math.round(MAX_VIDEO_BYTES / (1024 * 1024))} MB and {MAX_VIDEO_SECONDS}
+                s.
             </span>
         {/if}
     </div>
@@ -186,9 +191,13 @@
             <span class="truncate font-mono text-[10px] text-ink-muted">
                 {#if backdrop.info}
                     {backdrop.info.width} × {backdrop.info.height} · {sizeText(backdrop.info.bytes)}
-                    {backdrop.info.animated ? '· animated' : ''} · kept in Chorus
+                    {backdrop.info.video
+                        ? `· video${backdrop.info.duration ? ` ${backdrop.info.duration} s` : ''}`
+                        : backdrop.info.animated
+                          ? '· animated'
+                          : ''} · kept in Chorus
                 {:else}
-                    linked · loads from its address each time
+                    linked {isVideoBackdrop(backdrop) ? 'video' : ''} · loads from its address each time
                 {/if}
             </span>
         </div>
@@ -323,7 +332,7 @@
         </div>
     </div>
 
-    {#if backdrop.info?.animated}
+    {#if backdrop.info?.animated || isVideoBackdrop(backdrop)}
         <label class="flex items-center gap-x-2 text-xs text-ink-fg-2">
             <Switch
                 checked={backdrop.animate}
@@ -331,7 +340,7 @@
                 aria-label="Play the animation"
             />
             <span>
-                Play the animation
+                {isVideoBackdrop(backdrop) ? 'Play the video' : 'Play the animation'}
                 <span class="text-ink-muted"
                     >· off, or under Reduce motion, a still frame shows</span
                 >
