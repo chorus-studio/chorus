@@ -61,7 +61,7 @@
 </script>
 
 <div class="flex flex-col gap-y-2.5">
-    <div class="flex items-center gap-x-3">
+    <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
         <span class="rack-label">Type</span>
         <SegmentedControl
             size="xs"
@@ -151,7 +151,7 @@
         </button>
     </div>
 
-    <div class="flex items-center gap-x-4">
+    <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
         {#if hasAngle}
             <div class="flex flex-1 items-center gap-x-2">
                 <span class="rack-label">Angle</span>
