@@ -106,7 +106,11 @@ html[data-backdrop] {
     --chorus-hero-pct: calc(var(--chorus-panel-pct, 100%) * var(--chorus-panel-alpha, 1));
 }
 html[data-backdrop] [style*='--background-base'] {
-    --background-base: color-mix(in srgb, var(--chorus-hero) var(--chorus-hero-pct), transparent) !important;
+    --background-base: color-mix(
+        in srgb,
+        var(--chorus-hero) var(--chorus-hero-pct),
+        transparent
+    ) !important;
     --background-base-min-contrast: color-mix(
         in srgb,
         var(--chorus-hero-top) var(--chorus-hero-pct),
