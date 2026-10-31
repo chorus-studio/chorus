@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { rewriteSpotifyCss } from './theming'
+import { SPOTIFY_PALETTE, resolvePalette, rewriteSpotifyCss, setPlayingCover } from './theming'
+import { derivePalette } from './look-palette'
 import { frameColor } from './theme-surfaces'
 
 const overlay = (alpha: string) =>
@@ -129,5 +130,22 @@ describe('frameColor', () => {
         expect(frameColor({ card: '#123527', shadow: '#123527' })).toBe('#184835')
         // hot_pink
         expect(frameColor({ card: '#d31589', shadow: '#d31589' })).toBe('#e81998')
+    })
+})
+
+describe('a palette that follows the cover', () => {
+    it("stands in with Spotify's until a cover's palette is known, then wears it", () => {
+        expect(resolvePalette({ kind: 'cover' })).toEqual(SPOTIFY_PALETTE)
+        const palette = derivePalette({ base: '#2a1a4a', accent: '#ff8c42' })
+        // The cover alone, before its colours are read: nothing changes.
+        setPlayingCover('https://i.scdn.co/image/a')
+        expect(resolvePalette({ kind: 'cover' })).toEqual(SPOTIFY_PALETTE)
+        setPlayingCover('https://i.scdn.co/image/a', palette)
+        expect(resolvePalette({ kind: 'cover' })).toBe(palette)
+        // The next track's cover arrives first; the palette already known stays on.
+        setPlayingCover('https://i.scdn.co/image/b')
+        expect(resolvePalette({ kind: 'cover' })).toBe(palette)
+        setPlayingCover('https://i.scdn.co/image/b', null)
+        expect(resolvePalette({ kind: 'cover' })).toEqual(SPOTIFY_PALETTE)
     })
 })

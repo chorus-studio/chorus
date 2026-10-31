@@ -227,6 +227,16 @@ const SEED_ACCENT_SATURATION_MIN = 45
 const SEED_ACCENT_LIGHTNESS = 62
 
 /**
+ * The palette a look whose palette follows the music takes from a cover: the
+ * Match-palette seed, always as a dark page (the light appearance inverts it
+ * like any other palette). Null for a cover with no swatches at all.
+ */
+export function paletteFromSwatches(swatches: Swatch[]): Record<CSSVariable, string> | null {
+    const seed = seedFromSwatches(swatches, 'dark')
+    return seed ? derivePalette(seed) : null
+}
+
+/**
  * A base and an accent from an image's swatches ("Match to backdrop"): the
  * most populous swatch gives the base its hue, deepened (or paled, in light)
  * to a surface; the most populous coloured swatch is the accent. Null when

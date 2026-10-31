@@ -33,6 +33,7 @@
         toSpicetifyIni
     } from '$lib/utils/look-palette'
     import { imageSwatches } from '$lib/utils/vibrant-colors'
+    import { playingPalette } from '$lib/utils/cover-palette'
     import { deleteWallpaper } from '$lib/utils/wallpapers'
     import {
         COVER_ZOOM_MAX,
@@ -88,9 +89,19 @@
     let iniText = $state('')
 
     const mode = $derived(resolveMode($settingsStore.theme.appearance))
-    const sketch = $derived(lookSketch(draft, mode, $nowPlaying.cover))
-    const colours = $derived(lookColours(draft, mode))
-    const rawPalette = $derived(resolvePalette(draft.palette))
+    // The cover's palette lands a beat after the cover; the preview follows it.
+    const sketch = $derived.by(() => {
+        void $playingPalette
+        return lookSketch(draft, mode, $nowPlaying.cover)
+    })
+    const colours = $derived.by(() => {
+        void $playingPalette
+        return lookColours(draft, mode)
+    })
+    const rawPalette = $derived.by(() => {
+        void $playingPalette
+        return resolvePalette(draft.palette)
+    })
     const showThroughMax = $derived(mode === 'light' ? SHOW_THROUGH_MAX_LIGHT : SHOW_THROUGH_MAX)
 
     const checks = $derived([
@@ -135,6 +146,8 @@
             draft.palette = { kind: 'colours', base: current.main, accent: current.button }
         } else if (kind === 'builtin') {
             draft.palette = { kind: 'builtin', name: 'spotify' }
+        } else if (kind === 'cover') {
+            draft.palette = { kind: 'cover' }
         } else {
             draft.palette = { kind: 'slots', colours: { ...current } }
         }
@@ -405,7 +418,12 @@
                                 title: 'Two colours derive all fifteen'
                             },
                             { label: 'Built-in', value: 'builtin' },
-                            { label: 'Advanced', value: 'slots', title: 'Every slot by hand' }
+                            { label: 'Advanced', value: 'slots', title: 'Every slot by hand' },
+                            {
+                                label: 'Album art',
+                                value: 'cover',
+                                title: 'Colours read from the playing cover'
+                            }
                         ]}
                     />
                 </div>
@@ -458,6 +476,14 @@
                             >Any of the built-in palettes as the colour half of this look.</span
                         >
                     </div>
+                {:else if draft.palette.kind === 'cover'}
+                    <span class={HINT}>
+                        The base and accent are read from the playing cover, as Match palette reads
+                        them, and change with the music. Light makes a pale version of each.
+                        {#if !$nowPlaying.cover}
+                            Nothing is playing now, so Spotify's colours stand in.
+                        {/if}
+                    </span>
                 {:else}
                     <div class="grid grid-cols-2 gap-1.5">
                         {#each Object.keys(SLOT_LABELS) as slot (slot)}
@@ -519,7 +545,11 @@
                         options={[
                             { label: 'None', value: 'none' },
                             { label: 'Gradient', value: 'gradient' },
-                            { label: 'Image', value: 'image', title: 'A picture or GIF' },
+                            {
+                                label: 'Image',
+                                value: 'image',
+                                title: 'A picture, GIF or video loop'
+                            },
                             {
                                 label: 'Album art',
                                 value: 'cover',

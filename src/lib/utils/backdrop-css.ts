@@ -133,6 +133,8 @@ export function backdropVariables(
                           : 'cover',
                 '--chorus-backdrop-position': anchorPosition(backdrop.anchor),
                 '--chorus-backdrop-repeat': backdrop.fit === 'tile' ? 'repeat' : 'no-repeat',
+                // A video loop cannot tile; it fills the window instead.
+                '--chorus-backdrop-fit': backdrop.fit === 'contain' ? 'contain' : 'cover',
                 '--chorus-backdrop-filter': filterCss(backdrop.blur, backdrop.saturate),
                 '--chorus-backdrop-blur': `${Math.round(backdrop.blur)}px`,
                 '--chorus-backdrop-scale': '1',
@@ -158,6 +160,7 @@ export const BACKDROP_PROPERTIES = [
     '--chorus-backdrop-size',
     '--chorus-backdrop-position',
     '--chorus-backdrop-repeat',
+    '--chorus-backdrop-fit',
     '--chorus-backdrop-filter',
     '--chorus-backdrop-blur',
     '--chorus-backdrop-scale',

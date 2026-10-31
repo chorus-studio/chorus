@@ -165,6 +165,31 @@ describe('sanitiseLook', () => {
         expect(seed?.palette).toEqual({ kind: 'colours', base: '#aabbcc', accent: '#123456' })
     })
 
+    it("keeps a palette that follows the cover, and a video file's info", () => {
+        expect(
+            sanitiseLook({ name: 'Live', palette: { kind: 'cover', extra: 1 } })?.palette
+        ).toEqual({
+            kind: 'cover'
+        })
+        const video = sanitiseBackdrop({
+            kind: 'image',
+            source: { type: 'file', id: 'v1' },
+            info: {
+                name: 'loop.mp4',
+                mime: 'video/mp4',
+                thumb: pixel,
+                animated: true,
+                video: true,
+                duration: 12.4
+            }
+        })
+        expect(video?.kind === 'image' && video.info).toMatchObject({
+            video: true,
+            duration: 12.4,
+            animated: true
+        })
+    })
+
     it('returns null for anything without a name', () => {
         expect(sanitiseLook(null)).toBeNull()
         expect(sanitiseLook({ id: 'x' })).toBeNull()

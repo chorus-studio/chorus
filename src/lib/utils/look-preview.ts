@@ -4,7 +4,7 @@
  * appearance, with the frame colour the page derives), the backdrop as CSS
  * background layers, and the panel colour at the look's show-through.
  */
-import type { Backdrop, Look } from '$lib/types/look'
+import { isVideoBackdrop, type Backdrop, type Look } from '$lib/types/look'
 import {
     SPOTIFY_PALETTE,
     STATIC_THEMES,
@@ -101,7 +101,7 @@ export function lookSketch(look: Look, mode: Mode, cover?: string | null): Sketc
         animated:
             (look.backdrop?.kind === 'gradient' && look.backdrop.drift) ||
             (look.backdrop?.kind === 'image' &&
-                Boolean(look.backdrop.info?.animated) &&
+                (Boolean(look.backdrop.info?.animated) || isVideoBackdrop(look.backdrop)) &&
                 look.backdrop.animate)
     }
 }

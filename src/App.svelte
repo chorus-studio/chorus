@@ -7,7 +7,8 @@
     import { playbackObserver } from '$lib/observers/playback'
     import { tracklistObserver } from '$lib/observers/tracklist'
     import { get } from 'svelte/store'
-    import { applyLook, setBackdropCover, watchSystemMode } from '$lib/utils/theming'
+    import { applyLook, watchSystemMode } from '$lib/utils/theming'
+    import { followPlayingCover } from '$lib/utils/cover-palette'
     import { settingsStore } from '$lib/stores/settings'
     import { looksStore } from '$lib/stores/looks'
     import { listenForQuickPresetCommands } from '$lib/utils/quick-presets'
@@ -63,13 +64,14 @@
         // one subscription keeps the page and rack in step whether the change
         // came from this page, the PiP window or the toolbar popup (via storage).
         // Saved looks (and which built-ins are hidden) live in their own store;
-        // a cover backdrop follows the playing track through the now-playing store.
+        // a cover backdrop, and a palette that follows the cover, follow the
+        // playing track through the now-playing store.
         const repaint = () => void applyLook(get(settingsStore), get(looksStore))
         themeChangeListener = repaint
         document.addEventListener('FROM_THEME_CHANGE', themeChangeListener)
         unsubscribeLook = settingsStore.subscribe((s) => void applyLook(s, get(looksStore)))
         unsubscribeLooks = looksStore.subscribe((l) => void applyLook(get(settingsStore), l))
-        unsubscribeCover = nowPlaying.subscribe((n) => setBackdropCover(n.cover ?? null))
+        unsubscribeCover = nowPlaying.subscribe((n) => void followPlayingCover(n.cover ?? null))
         unwatchSystem = watchSystemMode(repaint)
         // Preset keyboard commands (next / previous / slot N) arrive from the
         // background as window messages; applying them here keeps the stores,

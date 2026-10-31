@@ -6,6 +6,7 @@
     import { get } from 'svelte/store'
     import { paintPopup } from '$lib/utils/vibrant-colors'
     import { applyRackLook, watchSystemMode } from '$lib/utils/theming'
+    import { followPlayingCover } from '$lib/utils/cover-palette'
     import { getEnabled, setEnabled, watchEnabled } from '$lib/stores/enabled'
     import { settingsStore } from '$lib/stores/settings'
     import { looksStore } from '$lib/stores/looks'
@@ -61,12 +62,17 @@
         const unsubscribeLook = settingsStore.subscribe(repaint)
         const unsubscribeLooks = looksStore.subscribe(repaint)
         const unwatchSystem = watchSystemMode(repaint)
+        // A look whose palette follows the cover needs the cover here too.
+        const unsubscribeCover = nowPlaying.subscribe(
+            (n) => void followPlayingCover(n.cover ?? null)
+        )
 
         return () => {
             unwatch()
             unsubscribeLook()
             unsubscribeLooks()
             unwatchSystem()
+            unsubscribeCover()
         }
     })
 </script>

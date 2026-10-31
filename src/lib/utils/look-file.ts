@@ -129,6 +129,7 @@ function sanitisePalette(raw: unknown): PaletteSource {
         const text = normaliseHex(raw.text as string)
         return text ? { kind: 'colours', base, accent, text } : { kind: 'colours', base, accent }
     }
+    if (raw.kind === 'cover') return { kind: 'cover' }
     if (raw.kind === 'slots' && isRecord(raw.colours)) {
         const partial: Partial<Record<CSSVariable, string>> = {}
         for (const slot of SLOTS) {
@@ -165,7 +166,11 @@ function sanitiseInfo(raw: unknown): ImageInfo | undefined {
         height: clamp(raw.height, 0, 100000, 0),
         bytes: clamp(raw.bytes, 0, Number.MAX_SAFE_INTEGER, 0),
         animated: bool(raw.animated, false),
-        thumb
+        thumb,
+        ...(raw.video === true ? { video: true } : {}),
+        ...(typeof raw.duration === 'number' && Number.isFinite(raw.duration)
+            ? { duration: clamp(raw.duration, 0, 100000, 0) }
+            : {})
     }
 }
 

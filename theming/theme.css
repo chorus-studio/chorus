@@ -649,6 +649,25 @@ html[data-backdrop]::after {
     inset: 0;
     background-color: var(--chorus-backdrop-dim, transparent);
 }
+/* A video loop plays in a <video> theming appends to <html> (lib/utils/theming):
+   placed like the picture layer, oversized by twice the blur, under the page
+   at z-index -1, and by tree order between the picture layer and the wash. */
+html[data-backdrop] > #chorus-backdrop-video {
+    position: fixed;
+    top: calc(-2 * var(--chorus-backdrop-blur, 0px));
+    left: calc(-2 * var(--chorus-backdrop-blur, 0px));
+    width: calc(100% + 4 * var(--chorus-backdrop-blur, 0px));
+    height: calc(100% + 4 * var(--chorus-backdrop-blur, 0px));
+    max-width: none;
+    max-height: none;
+    z-index: -1;
+    pointer-events: none;
+    object-fit: var(--chorus-backdrop-fit, cover);
+    object-position: var(--chorus-backdrop-position, center);
+    filter: var(--chorus-backdrop-filter, none);
+    transform: scale(var(--chorus-backdrop-scale, 1));
+    background: transparent;
+}
 /* A drifting gradient: drawn at twice the viewport and slid across it. */
 @keyframes chorus-backdrop-drift {
     from {

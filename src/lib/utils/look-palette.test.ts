@@ -3,6 +3,7 @@ import {
     completePalette,
     derivePalette,
     normaliseHex,
+    paletteFromSwatches,
     parseSpicetifyIni,
     seedFromSwatches,
     toSpicetifyIni
@@ -153,5 +154,18 @@ describe('seedFromSwatches', () => {
         const seed = seedFromSwatches([{ hex: '#1b6b63', population: 10 }], 'light')
         expect(hexToHsl(seed!.base)[2]).toBeGreaterThan(80)
         expect(seedFromSwatches([], 'dark')).toBeNull()
+    })
+})
+
+describe('paletteFromSwatches', () => {
+    it('is the dark Match-palette seed derived, and null for no swatches', () => {
+        const swatches = [
+            { hex: '#2a1a4a', population: 900 },
+            { hex: '#ff8c42', population: 300 }
+        ]
+        const seed = seedFromSwatches(swatches, 'dark')!
+        expect(paletteFromSwatches(swatches)).toEqual(derivePalette(seed))
+        expect(hexToHsl(paletteFromSwatches(swatches)!.main)[2]).toBeLessThan(20)
+        expect(paletteFromSwatches([])).toBeNull()
     })
 })

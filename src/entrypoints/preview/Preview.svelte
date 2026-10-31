@@ -43,6 +43,7 @@
     import { frameColor, invertPalette } from '$lib/utils/theme-surfaces'
     import { DEFAULT_GLASS, settingsStore } from '$lib/stores/settings'
     import { nowPlaying } from '$lib/stores/now-playing'
+    import { followPlayingCover } from '$lib/utils/cover-palette'
     import { sleepStore } from '$lib/stores/sleep'
     import { configStore, createAudioPreset } from '$lib/stores/config'
     import { NORMAL_VALUES, QUICK_PRESETS, quickPresetById } from '$lib/audio-effects/quick-presets'
@@ -80,6 +81,8 @@
     const backdrop = glass
         ? `radial-gradient(circle at 18% 28%, #ff6b6b 0, transparent 34%), radial-gradient(circle at 72% 58%, #4d96ff 0, transparent 38%), radial-gradient(circle at 48% 92%, #ffd93d 0, transparent 30%), radial-gradient(circle at 88% 12%, #6bcb77 0, transparent 26%), ${chrome}`
         : chrome
+
+    onMount(() => nowPlaying.subscribe((n) => void followPlayingCover(n.cover ?? null)))
 
     onMount(async () => {
         document.documentElement.classList.add('dark')
