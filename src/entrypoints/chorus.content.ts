@@ -9,6 +9,7 @@ import { tracklistObserver } from '$lib/observers/tracklist'
 import { discographyPages } from '$lib/utils/discography-pages'
 import { getEnabled, watchEnabled } from '$lib/stores/enabled'
 import { type SettingsState, SETTINGS_STORE_KEY } from '$lib/stores/settings'
+import { readLooksState } from '$lib/utils/looks-state'
 import { type ContentScriptContext, injectScript, createIntegratedUi } from 'wxt/client'
 import { isReleasesRoute } from '$lib/utils/releases-route'
 
@@ -387,8 +388,9 @@ async function injectChorusUI(ctx: ContentScriptContext) {
 
     const settings = await storage.getItem<SettingsState>(SETTINGS_STORE_KEY)
     // Palette, appearance and glass are all resolved from settings (a saved
-    // palette only comes back while the Theme tab's "Apply theme" is on).
-    if (settings) await applyLook(settings)
+    // palette only comes back while the Theme tab's "Apply theme" is on); a
+    // saved look's details come from the looks record.
+    if (settings) await applyLook(settings, await readLooksState())
 
     integratedUi = createIntegratedUi(ctx, {
         position: 'inline',

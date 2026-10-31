@@ -43,7 +43,10 @@ export type SettingsState = {
         on_track_change: boolean
     }
     theme: {
+        /** The built-in palette in force when no look is. */
         name: ThemeName
+        /** A saved look's id (types/look.ts), built-in or the person's own; null for a bare palette. */
+        look: string | null
         appearance: Appearance
         popup: PopupColours
         glass: GlassSettings
@@ -78,6 +81,7 @@ const defaultSettingsState: SettingsState = {
     },
     theme: {
         name: 'spotify' as ThemeName,
+        look: null,
         appearance: 'dark',
         popup: 'album',
         glass: DEFAULT_GLASS

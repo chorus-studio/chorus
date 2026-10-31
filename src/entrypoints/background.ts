@@ -19,6 +19,8 @@ import {
 import type { NowPlaying } from '$lib/stores/now-playing'
 import type { SettingsState } from '$lib/stores/settings'
 import { THEME_NAMES } from '$lib/utils/theming'
+import { cycleLook } from '$lib/utils/look-cycle'
+import { ownLooks, readLooksState, visibleBuiltinLooks } from '$lib/utils/looks-state'
 import { registerTrackService } from '$lib/api/services/track'
 import { registerPlayerService } from '$lib/api/services/player'
 import { registerNewReleasesService } from '$lib/api/services/new-releases'
@@ -444,25 +446,28 @@ export default defineBackground(() => {
             if (nowPlaying) await showNotification(nowPlaying)
         }
 
+        // The visible built-in palettes, then the visible looks (built-in, then
+        // the person's own); hidden ones are skipped. The page repaints from
+        // the settings write; the event is a nudge for a tab whose storage
+        // watch is slow.
         if (command.startsWith('cycle-theme-')) {
             const settings = await storage.getItem<SettingsState>(STORE_KEYS.SETTINGS)
-            const theme = settings?.theme?.name
-            if (!theme) return
+            if (!settings?.theme?.name) return
+            const looks = await readLooksState()
+            const next = cycleLook(
+                { name: settings.theme.name, look: settings.theme.look ?? null },
+                command.endsWith('-next') ? 'next' : 'previous',
+                {
+                    names: THEME_NAMES.filter((name) => !looks.hiddenBuiltIn.includes(name)),
+                    looks: [...visibleBuiltinLooks(looks), ...ownLooks(looks)]
+                }
+            )
 
-            const index = THEME_NAMES.indexOf(theme)
-            const goToNext = command.endsWith('-next')
-            const nextIndex = goToNext
-                ? (index + 1) % THEME_NAMES.length
-                : index === 0
-                  ? THEME_NAMES.length - 1
-                  : index - 1
-            const nextTheme = THEME_NAMES[nextIndex]
-
-            await executeScript({ type: 'theme_change', data: nextTheme })
+            await executeScript({ type: 'theme_change', data: next.look ?? next.name })
             await storage.setItem(STORE_KEYS.SETTINGS, {
                 ...settings,
-                theme: { ...settings.theme, name: nextTheme },
-                ui: { ...settings.ui, theme: nextTheme !== 'spotify' }
+                theme: { ...settings.theme, ...next },
+                ui: { ...settings.ui, theme: next.look !== null || next.name !== 'spotify' }
             })
         }
 

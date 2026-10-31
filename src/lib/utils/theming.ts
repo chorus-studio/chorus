@@ -27,6 +27,11 @@ import {
     type Mode
 } from './theme-surfaces'
 import type { Appearance, SettingsState } from '$lib/stores/settings'
+import { builtinLook, type Look, type LooksState, type PaletteSource } from '$lib/types/look'
+import { completePalette, derivePalette } from './look-palette'
+import { BACKDROP_PROPERTIES, backdropVariables, panelAlpha } from './backdrop-css'
+import { wallpaperUrl } from './wallpapers'
+import { unwatchPagePanels, watchPagePanels } from './page-panels'
 
 export type { Mode }
 
@@ -143,9 +148,7 @@ export function watchSystemMode(onChange: () => void): () => void {
 }
 
 /** What the settings ask the page and rack to look like. */
-export type Look = {
-    /** Palette name while "Apply theme" is on, else `spotify`. */
-    name: ThemeName
+export type PageLook = {
     mode: Mode
     /** The palette the rack (and, when recoloured, the page) derives from, already inverted for light. */
     palette: Record<CSSVariable, string>
@@ -153,22 +156,58 @@ export type Look = {
     themedRack: boolean
     /** Spotify's own page is re-skinned with `palette`. */
     recolourPage: boolean
+    /** The saved look in force (a built-in or the person's own); null for a bare palette. */
+    look: Look | null
 }
 
-export function lookFromSettings(settings: SettingsState): Look {
+/** The fifteen page colours a look's palette source stands for, before any light inversion. */
+export function resolvePalette(source: PaletteSource): Record<CSSVariable, string> {
+    switch (source.kind) {
+        case 'builtin':
+            return STATIC_THEMES[source.name] ?? SPOTIFY_PALETTE
+        case 'colours':
+            return derivePalette(source)
+        case 'slots':
+            return completePalette(source.colours)
+    }
+}
+
+/** A saved look by id: one of the person's own from `looks`, else a built-in. */
+export function lookById(
+    looks: LooksState | null | undefined,
+    id: string | null | undefined
+): Look | null {
+    if (!id) return null
+    return looks?.looks[id] ?? builtinLook(id) ?? null
+}
+
+/**
+ * `settings.theme.look` names a saved look; without one, `settings.theme.name`
+ * is a bare built-in palette. `override` previews a look the editor has not
+ * saved yet.
+ */
+export function lookFromSettings(
+    settings: SettingsState,
+    looks?: LooksState | null,
+    override?: Look | null
+): PageLook {
     const mode = resolveMode(settings.theme?.appearance)
     const applied = Boolean(settings.ui?.theme)
+    const look = applied ? (override ?? lookById(looks, settings.theme?.look)) : null
     const name: ThemeName = applied ? (settings.theme?.name ?? 'spotify') : 'spotify'
-    const base = STATIC_THEMES[name] ?? SPOTIFY_PALETTE
+    const base = look ? resolvePalette(look.palette) : (STATIC_THEMES[name] ?? SPOTIFY_PALETTE)
     const light = mode === 'light'
     const palette = light ? invertPalette(base) : base
-    const themed = applied && name !== 'spotify'
+    const spotifyPalette = look
+        ? look.palette.kind === 'builtin' && look.palette.name === 'spotify'
+        : name === 'spotify'
+    const themed = applied && !spotifyPalette
     return {
-        name,
         mode,
         palette,
         themedRack: themed || light,
-        recolourPage: applied && (themed || light)
+        recolourPage: applied && (themed || light || Boolean(look?.backdrop)),
+        look
     }
 }
 
@@ -741,11 +780,90 @@ export function clearGlass(doc: Document = document): void {
     doc.getElementById(`${GLASS_FILTER_ID}-svg`)?.remove()
 }
 
+// ---- Backdrop ---------------------------------------------------------------
+
+/** The backdrop on the page now, kept so a new cover can repaint a cover backdrop on its own. */
+let currentBackdrop: { look: Look; frame: string; mode: Mode } | null = null
+/** The playing track's cover, as the page last reported it (App.svelte feeds it). */
+let coverUrl: string | null = null
+
+function prefersReducedMotion(): boolean {
+    return (
+        typeof window !== 'undefined' &&
+        Boolean(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches)
+    )
+}
+
+/** The address a look's picture loads from, if it has one yet. */
+async function backdropImageUrl(look: Look): Promise<string | null> {
+    const backdrop = look.backdrop
+    if (!backdrop) return null
+    if (backdrop.kind === 'cover') return coverUrl
+    if (backdrop.kind !== 'image') return null
+    if (backdrop.source.type === 'url') return backdrop.source.url
+    const still = Boolean(backdrop.info?.animated) && (!backdrop.animate || prefersReducedMotion())
+    return wallpaperUrl(backdrop.source.id, still)
+}
+
+function paintBackdrop(look: Look, frame: string, mode: Mode, imageUrl: string | null): void {
+    const backdrop = look.backdrop
+    if (!backdrop) return
+    const root = document.documentElement
+    const vars = backdropVariables(backdrop, { frame, mode, imageUrl })
+    for (const [name, value] of Object.entries(vars)) root.style.setProperty(name, value)
+    root.style.setProperty(
+        '--chorus-panel-alpha',
+        String(panelAlpha(look.panels.showThrough, mode))
+    )
+    root.setAttribute('data-backdrop', backdrop.kind)
+    root.toggleAttribute('data-panel-glass', look.panels.glass)
+    root.toggleAttribute('data-drift', backdrop.kind === 'gradient' && backdrop.drift)
+}
+
+/**
+ * Put a look's backdrop behind the page (theme.css paints it from the
+ * `--chorus-backdrop-*` properties) and start tagging the panels it shows
+ * through; or take it all down when the look has none.
+ */
+async function applyBackdrop(pageLook: PageLook): Promise<void> {
+    const look = pageLook.look
+    if (!pageLook.recolourPage || !look?.backdrop) {
+        clearBackdrop()
+        return
+    }
+    const frame = frameColor(pageLook.palette)
+    const imageUrl = await backdropImageUrl(look)
+    paintBackdrop(look, frame, pageLook.mode, imageUrl)
+    currentBackdrop = { look, frame, mode: pageLook.mode }
+    watchPagePanels()
+}
+
+/** The page tells theming which cover is playing; a cover backdrop follows it at once. */
+export function setBackdropCover(url: string | null): void {
+    if (url === coverUrl) return
+    coverUrl = url
+    if (currentBackdrop?.look.backdrop?.kind !== 'cover') return
+    const { look, frame, mode } = currentBackdrop
+    paintBackdrop(look, frame, mode, url)
+}
+
+export function clearBackdrop(doc: Document = document): void {
+    const root = doc.documentElement
+    if (!root) return
+    currentBackdrop = null
+    root.removeAttribute('data-backdrop')
+    root.removeAttribute('data-panel-glass')
+    root.removeAttribute('data-drift')
+    for (const name of BACKDROP_PROPERTIES) root.style.removeProperty(name)
+    unwatchPagePanels()
+}
+
 // ---- Applying a look --------------------------------------------------------
 
 /** Strip the page re-skin: Spotify's own stylesheets and colours come back. */
 export function removePageTheme(): void {
     unwatchStylesheets()
+    clearBackdrop()
     clearPageVariables()
     document
         .querySelectorAll(`style[id^="${OVERRIDE_ID_PREFIX}"]`)
@@ -768,24 +886,33 @@ let lookQueue: Promise<void> = Promise.resolve()
  * palette, appearance (dark / light / system) and glass. Calls are serialised
  * because re-skinning the page fetches and rewrites Spotify's stylesheets.
  */
-export function applyLook(settings: SettingsState): Promise<void> {
+export function applyLook(
+    settings: SettingsState,
+    looks?: LooksState | null,
+    override?: Look | null
+): Promise<void> {
     lookQueue = lookQueue
-        .then(() => applyLookNow(settings))
+        .then(() => applyLookNow(settings, looks, override))
         .catch((error) => {
             console.error('Error applying theme:', error)
         })
     return lookQueue
 }
 
-async function applyLookNow(settings: SettingsState): Promise<void> {
+async function applyLookNow(
+    settings: SettingsState,
+    looks?: LooksState | null,
+    override?: Look | null
+): Promise<void> {
     if (typeof document === 'undefined' || !document.documentElement) return
-    const look = lookFromSettings(settings)
+    const look = lookFromSettings(settings, looks, override)
     const root = document.documentElement
     root.setAttribute('data-mode', look.mode)
 
     if (look.recolourPage) {
         await injectThemeCss()
         applyPageVariables(look.palette, look.mode)
+        await applyBackdrop(look)
     } else {
         removePageTheme()
     }
@@ -800,10 +927,14 @@ async function applyLookNow(settings: SettingsState): Promise<void> {
  * The rack-only part of a look, for documents with no Spotify page in them
  * (the toolbar popup, and the PiP window alongside its style sync).
  */
-export function applyRackLook(settings: SettingsState, doc: Document = document): void {
+export function applyRackLook(
+    settings: SettingsState,
+    doc: Document = document,
+    looks?: LooksState | null
+): void {
     const root = doc.documentElement
     if (!root) return
-    const look = lookFromSettings(settings)
+    const look = lookFromSettings(settings, looks)
     root.setAttribute('data-mode', look.mode)
     if (look.themedRack) applyThemeSurfaces(root, look.palette, look.mode)
     else clearThemeSurfaces(root)

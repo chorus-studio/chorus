@@ -26,6 +26,7 @@ export const BACKUP_KEYS = [
     'chorus_discography', // progress through artists' albums
     'chorus_discography_prefs', // what counts towards it, auto-track
     'chorus_settings',
+    'chorus_looks', // saved looks and hidden built-ins; an uploaded wallpaper's bytes stay out
     'chorus_config', // auto-skip rules, Mine presets, hidden preset lists
     'chorus_playback',
     'chorus_seek',

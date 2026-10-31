@@ -7,8 +7,9 @@
     import { playbackObserver } from '$lib/observers/playback'
     import { tracklistObserver } from '$lib/observers/tracklist'
     import { get } from 'svelte/store'
-    import { applyLook, watchSystemMode } from '$lib/utils/theming'
+    import { applyLook, setBackdropCover, watchSystemMode } from '$lib/utils/theming'
     import { settingsStore } from '$lib/stores/settings'
+    import { looksStore } from '$lib/stores/looks'
     import { listenForQuickPresetCommands } from '$lib/utils/quick-presets'
     import { watchDiscography } from '$lib/utils/discography-watch'
     import { watchFeatures } from '$lib/utils/features-watch'
@@ -33,6 +34,8 @@
     let supportsPip = false
     let themeChangeListener: (e: Event) => void
     let unsubscribeLook: (() => void) | undefined
+    let unsubscribeLooks: (() => void) | undefined
+    let unsubscribeCover: (() => void) | undefined
     let unwatchSystem: (() => void) | undefined
     let unlistenQuickPresets: (() => void) | undefined
     let unwatchDiscography: (() => void) | undefined
@@ -59,10 +62,15 @@
         // Palette, "Apply theme", appearance and glass all live in settings, so
         // one subscription keeps the page and rack in step whether the change
         // came from this page, the PiP window or the toolbar popup (via storage).
-        themeChangeListener = () => void applyLook(get(settingsStore))
+        // Saved looks (and which built-ins are hidden) live in their own store;
+        // a cover backdrop follows the playing track through the now-playing store.
+        const repaint = () => void applyLook(get(settingsStore), get(looksStore))
+        themeChangeListener = repaint
         document.addEventListener('FROM_THEME_CHANGE', themeChangeListener)
-        unsubscribeLook = settingsStore.subscribe((s) => void applyLook(s))
-        unwatchSystem = watchSystemMode(() => void applyLook(get(settingsStore)))
+        unsubscribeLook = settingsStore.subscribe((s) => void applyLook(s, get(looksStore)))
+        unsubscribeLooks = looksStore.subscribe((l) => void applyLook(get(settingsStore), l))
+        unsubscribeCover = nowPlaying.subscribe((n) => setBackdropCover(n.cover ?? null))
+        unwatchSystem = watchSystemMode(repaint)
         // Preset keyboard commands (next / previous / slot N) arrive from the
         // background as window messages; applying them here keeps the stores,
         // and so every tab of the popover, in step with what is playing.
@@ -85,6 +93,10 @@
         }
         unsubscribeLook?.()
         unsubscribeLook = undefined
+        unsubscribeLooks?.()
+        unsubscribeLooks = undefined
+        unsubscribeCover?.()
+        unsubscribeCover = undefined
         unwatchSystem?.()
         unwatchSystem = undefined
         unlistenQuickPresets?.()

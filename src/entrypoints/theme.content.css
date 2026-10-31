@@ -894,3 +894,90 @@ a[data-encore-id='box'] {
 [data-testid='now-playing-bar'] .GT3btISbKLXrhHILRLON /* unconverted */ {
     padding-inline-start: 0 !important;
 }
+
+/* Backdrop. A look with a backdrop (lib/types/look) puts data-backdrop on
+   <html> and the picture, its fit, filter and wash in --chorus-backdrop-*
+   properties (lib/utils/backdrop-css). Two fixed layers carry it: the
+   picture on ::before, oversized by twice its blur so the blur's soft edge
+   stays off screen, and the wash on ::after. Both sit at z-index -1 in the
+   root stacking context, above the canvas and below the page, so none of
+   Spotify's own stacking is touched. The frame (the grid container and its
+   ancestors, the player bar's bleeding wrapper; lib/utils/page-panels
+   tags them) and <body> go transparent so the gaps show the picture, and the
+   panels take the main colour at --chorus-panel-alpha, the look's
+   show-through. Anything inside a panel that paints the same surface edge to
+   edge is a "layer" and goes transparent too; smaller things (a sticky
+   header, a card) keep their own colour. */
+html[data-backdrop] {
+    --chorus-panel-alpha: 1;
+}
+html[data-backdrop]::before,
+html[data-backdrop]::after {
+    content: '';
+    position: fixed;
+    z-index: -1;
+    pointer-events: none;
+}
+html[data-backdrop]::before {
+    inset: calc(-2 * var(--chorus-backdrop-blur, 0px));
+    background-color: var(--chorus-frame);
+    background-image: var(--chorus-backdrop-image, none);
+    background-size: var(--chorus-backdrop-size, cover);
+    background-position: var(--chorus-backdrop-position, center);
+    background-repeat: var(--chorus-backdrop-repeat, no-repeat);
+    filter: var(--chorus-backdrop-filter, none);
+    transform: scale(var(--chorus-backdrop-scale, 1));
+}
+html[data-backdrop]::after {
+    inset: 0;
+    background-color: var(--chorus-backdrop-dim, transparent);
+}
+/* A drifting gradient: drawn at twice the viewport and slid across it. */
+@keyframes chorus-backdrop-drift {
+    from {
+        background-position: 0% 0%;
+    }
+    to {
+        background-position: 100% 100%;
+    }
+}
+html[data-backdrop='gradient'][data-drift]::before {
+    background-size: 200% 200%;
+    animation: chorus-backdrop-drift 90s ease-in-out infinite alternate;
+}
+@media (prefers-reduced-motion: reduce) {
+    html[data-backdrop][data-drift]::before {
+        animation: none;
+    }
+}
+html[data-backdrop] body,
+html[data-backdrop] [data-chorus-frame],
+html[data-backdrop] [data-chorus-panel-layer] {
+    background-color: transparent !important;
+}
+html[data-backdrop] [data-chorus-panel],
+html[data-backdrop] #global-nav-bar,
+html[data-backdrop] [data-testid='global-nav-bar'],
+html[data-backdrop] [data-testid='now-playing-bar'] {
+    background-color: rgba(var(--chorus-rgb-main), var(--chorus-panel-alpha)) !important;
+}
+
+/* Glass panels: the backdrop blurred behind each panel. The blur sits on a
+   pseudo-element, never on the panel itself, because backdrop-filter makes
+   a stacking context and a containing block, and the top bar's search
+   dropdown and Spotify's menus have to keep escaping their panels. */
+html[data-backdrop][data-panel-glass] [data-testid='now-playing-bar'] {
+    position: relative;
+}
+html[data-backdrop][data-panel-glass]
+    [data-chorus-area]:not([data-chorus-area='now-playing-bar'])::before,
+html[data-backdrop][data-panel-glass] [data-testid='now-playing-bar']::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: var(--br-2);
+    pointer-events: none;
+    -webkit-backdrop-filter: blur(24px) saturate(140%);
+    backdrop-filter: blur(24px) saturate(140%);
+}
