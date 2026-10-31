@@ -25,9 +25,12 @@
  * The grid also holds overlays placed on the same areas (toasts, onboarding,
  * the cinema view), so each area name is claimed once, by the first child
  * that is (or holds) a painted panel; the bars are recognised by their test
- * ids. Spotify re-renders these regions on navigation, so the tags are
- * re-applied on a debounced mutation observer while a backdrop is on, and
- * removed when it goes.
+ * ids. Spotify re-renders these regions on navigation and, on a signed-in
+ * page, builds the grid itself after a first shell, so while a backdrop is
+ * on the tags are re-applied on a debounced mutation observer over the whole
+ * document (the grid is found afresh each pass), with a few timed retries
+ * after a pass that left a sized region without a panel (its stylesheet or
+ * its content still on the way); they are removed when the backdrop goes.
  */
 
 export const AREA_ATTR = 'data-chorus-area'
@@ -51,25 +54,40 @@ const WALK_DEPTH_MAX = 10
  */
 const COVER_SLACK = 24
 /** The most elements one pass looks at under an area, so a huge tree stays cheap. */
-const WALK_NODES_MAX = 80
+const WALK_NODES_MAX = 120
 /** The colour pass: how deep and how many elements under an area it checks. */
 const PAINT_DEPTH_MAX = 8
 const PAINT_NODES_MAX = 400
 /** An element painted in a panel colour counts when it spans this much of the area's width and is at least this tall. */
 const PAINT_MIN_WIDTH_SHARE = 0.4
 const PAINT_MIN_HEIGHT = 48
+/** When nothing on the covering chain paints, a painted element this large (both ways) stands in as the panel. */
+const FALLBACK_MIN_SHARE = 0.6
 /** The palette variables theming writes as plain hex, which panels paint in. */
 const PANEL_COLOUR_VARS = ['--chorus-main', '--chorus-sidebar', '--chorus-player']
 /** Tints theme.css builds with color-mix(); a probe element resolves them to rgb. */
 const PANEL_TINT_VARS = ['--chorus-hero', '--chorus-hero-top']
 const PROBE_ID = 'chorus-colour-probe'
 const DEBOUNCE_MS = 120
+/** After a pass that left a sized region without a panel: try again at these delays, then leave it to the observer. */
+const RETRY_DELAYS_MS = [400, 1500, 4000]
 
 let observer: MutationObserver | null = null
-let bodyObserver: MutationObserver | null = null
 let timer: ReturnType<typeof setTimeout> | null = null
+let retryTimer: ReturnType<typeof setTimeout> | null = null
+let retryIndex = 0
 let tagged: Set<Element> = new Set()
-let onResize: (() => void) | null = null
+let onWake: (() => void) | null = null
+
+/** What one pass found, for the retry decision. */
+export type PassResult = {
+    /** A layout grid was on the page. */
+    grid: boolean
+    /** Walked regions with a box of their own. */
+    sized: number
+    /** Of those, the ones given a panel. */
+    found: number
+}
 
 /**
  * The grid that lays the regions out: the nearest grid above the top bar that
@@ -179,7 +197,7 @@ function isChorusOwn(el: Element): boolean {
  * Sizeable elements under an area that paint one of the panel colours without
  * covering the area's box: the sidebar's list below its header, the Queue, the
  * Now playing view inside its cell. Sticky and fixed things (a header that
- * rows scroll under) keep their colour.
+ * rows scroll under) keep their colour. Shallowest first.
  */
 function paintedInPanelColours(
     root: HTMLElement,
@@ -218,27 +236,30 @@ function paintedInPanelColours(
     return found
 }
 
-function paintsSomething(el: HTMLElement): boolean {
-    const colour = getComputedStyle(el).backgroundColor
+function paintsColour(colour: string): boolean {
     if (!colour || colour === 'transparent') return false
     const alpha = /rgba?\([^)]*?(?:,|\/)\s*([\d.]+)\)$/.exec(colour)
     return !alpha || parseFloat(alpha[1]) > 0
 }
 
 /**
- * Whether a child covers its area's box: about as wide as it, and about as
+ * Whether a box covers its area's box: about as wide as it, and about as
  * tall or taller. Scroll content is taller than the box and has to count, or
  * the main view's content wrapper (which paints the main colour edge to edge)
  * stays opaque over a translucent panel; a sticky header or a hero band is
  * shorter and keeps its colour, a card is narrower.
  */
-function covers(child: Element, box: DOMRect): boolean {
-    const rect = child.getBoundingClientRect()
+function covers(rect: DOMRect, box: DOMRect): boolean {
     return (
         rect.width > 0 &&
         rect.width >= box.width - COVER_SLACK &&
         rect.height >= box.height - COVER_SLACK
     )
+}
+
+/** No box of its own (`display: contents`, an unsized wrapper): its children may still fill the area. */
+function sizeless(rect: DOMRect): boolean {
+    return rect.width === 0 || rect.height === 0
 }
 
 function tag(el: Element, attr: string, value = ''): void {
@@ -260,39 +281,48 @@ function clearTags(): void {
  * Down from an area's grid child through everything that covers it, breadth
  * first, so the shallowest painter is the panel and every deeper one a layer
  * (Spotify's regions branch: a scroll node beside an overlay, a content
- * wrapper beside a sticky strip). Null when nothing on the way paints (an
+ * wrapper beside a sticky strip). Wrappers with no box of their own are
+ * walked through, not counted. Null when nothing on the way paints (an
  * overlay, an empty region).
  */
-function findPanel(root: HTMLElement): { panel: HTMLElement; layers: HTMLElement[] } | null {
-    const box = root.getBoundingClientRect()
-    if (box.width === 0 || box.height === 0) return null
+function findPanel(
+    root: HTMLElement,
+    box: DOMRect
+): { panel: HTMLElement; layers: HTMLElement[] } | null {
     let panel: HTMLElement | null = null
     const layers: HTMLElement[] = []
-    const queue: Array<{ el: HTMLElement; depth: number }> = [{ el: root, depth: 0 }]
+    const queue: Array<{ el: HTMLElement; depth: number; fills: boolean }> = [
+        { el: root, depth: 0, fills: true }
+    ]
     let seen = 0
     while (queue.length && seen < WALK_NODES_MAX) {
-        const { el, depth } = queue.shift()!
+        const { el, depth, fills } = queue.shift()!
         seen++
-        if (paintsSomething(el)) {
+        const style = getComputedStyle(el)
+        if (style.display === 'none') continue
+        if (fills && paintsColour(style.backgroundColor)) {
             if (panel) layers.push(el)
             else panel = el
         }
         if (depth >= WALK_DEPTH_MAX) continue
         for (const child of el.children) {
-            if (child instanceof HTMLElement && covers(child, box)) {
-                queue.push({ el: child, depth: depth + 1 })
-            }
+            if (!(child instanceof HTMLElement)) continue
+            const rect = child.getBoundingClientRect()
+            if (covers(rect, box)) queue.push({ el: child, depth: depth + 1, fills: true })
+            else if (sizeless(rect)) queue.push({ el: child, depth: depth + 1, fills: false })
         }
     }
     return panel ? { panel, layers } : null
 }
 
 /** One tagging pass over the page. Safe to call with no grid on the page yet. */
-export function tagPagePanels(): void {
+export function tagPagePanels(): PassResult {
     // Our own tags change computed backgrounds, so each pass measures a clean page.
     clearTags()
+    const result: PassResult = { grid: false, sized: 0, found: 0 }
     const grid = gridContainer()
-    if (!grid) return
+    if (!grid) return result
+    result.grid = true
     for (let el: HTMLElement | null = grid; el && el !== document.body; el = el.parentElement) {
         tag(el, FRAME_ATTR)
     }
@@ -309,70 +339,105 @@ export function tagPagePanels(): void {
             // The bar's wrapper bleeds into the gaps and paints the frame colour; the <aside> is the panel.
             if (!child.matches(PLAYER_BAR)) tag(child, FRAME_ATTR)
         } else if (WALKED_AREAS.has(area)) {
-            const found = findPanel(child)
-            if (!found) continue
+            const box = child.getBoundingClientRect()
+            if (sizeless(box)) continue
+            result.sized++
+            let found = findPanel(child, box)
+            let painted: HTMLElement[]
+            if (found) {
+                painted = paintedInPanelColours(
+                    child,
+                    box,
+                    colours,
+                    new Set([found.panel, ...found.layers])
+                )
+            } else {
+                // Nothing on the covering chain paints: the painter sits inset
+                // past the slack, or beside a wrapper the chain cannot see
+                // through. The shallowest large element in a panel colour is
+                // the panel, the rest of them layers.
+                painted = paintedInPanelColours(child, box, colours, new Set())
+                const panel = painted.find((el) => {
+                    const rect = el.getBoundingClientRect()
+                    return (
+                        rect.width >= box.width * FALLBACK_MIN_SHARE &&
+                        rect.height >= box.height * FALLBACK_MIN_SHARE
+                    )
+                })
+                if (!panel) continue
+                found = { panel, layers: [] }
+                painted = painted.filter((el) => el !== panel)
+            }
+            result.found++
             claimed.add(area)
             tag(child, AREA_ATTR, area)
             tag(found.panel, PANEL_ATTR)
             for (const layer of found.layers) tag(layer, LAYER_ATTR)
-            const skip = new Set<Element>([found.panel, ...found.layers])
-            const box = child.getBoundingClientRect()
-            for (const layer of paintedInPanelColours(child, box, colours, skip)) {
-                tag(layer, LAYER_ATTR)
-            }
+            for (const layer of painted) tag(layer, LAYER_ATTR)
         }
     }
+    return result
+}
+
+/**
+ * A pass, and when it left a sized region without a panel (its stylesheet
+ * or content still loading, a transition mid-way) a few timed retries,
+ * growing apart; a complete pass starts the count over.
+ */
+function runPass(): void {
+    const { grid, sized, found } = tagPagePanels()
+    if (!grid || found >= sized) {
+        retryIndex = 0
+        return
+    }
+    if (retryTimer || retryIndex >= RETRY_DELAYS_MS.length) return
+    retryTimer = setTimeout(() => {
+        retryTimer = null
+        runPass()
+    }, RETRY_DELAYS_MS[retryIndex++])
 }
 
 function schedule(): void {
     if (timer) return
     timer = setTimeout(() => {
         timer = null
-        tagPagePanels()
+        runPass()
     }, DEBOUNCE_MS)
 }
 
-/** Keep the page's panels tagged while a backdrop is on. Idempotent. */
+/**
+ * Keep the page's panels tagged while a backdrop is on. Idempotent. The
+ * observer covers the whole document rather than the grid: a signed-in page
+ * builds its grid after a first shell, and Spotify's stylesheets (and our
+ * rewritten copies of them) land in <head>; each pass finds the grid afresh.
+ */
 export function watchPagePanels(): void {
     if (observer || typeof document === 'undefined') return
     observer = new MutationObserver(schedule)
-    const start = () => {
-        const grid = gridContainer()
-        if (!grid) return false
-        observer?.observe(grid, { childList: true, subtree: true })
-        tagPagePanels()
-        return true
-    }
-    if (!start()) {
-        // The grid is not there yet (first paint): wait for it.
-        bodyObserver = new MutationObserver(() => {
-            if (start()) {
-                bodyObserver?.disconnect()
-                bodyObserver = null
-            }
-        })
-        bodyObserver.observe(document.body ?? document.documentElement, {
-            childList: true,
-            subtree: true
-        })
-    }
-    onResize = schedule
-    window.addEventListener('resize', onResize)
+    observer.observe(document.documentElement, { childList: true, subtree: true })
+    onWake = schedule
+    window.addEventListener('resize', onWake)
+    document.addEventListener('visibilitychange', onWake)
+    runPass()
 }
 
 /** Stop watching and take every tag off the page. */
 export function unwatchPagePanels(): void {
     observer?.disconnect()
     observer = null
-    bodyObserver?.disconnect()
-    bodyObserver = null
     if (timer) {
         clearTimeout(timer)
         timer = null
     }
-    if (onResize) {
-        window.removeEventListener('resize', onResize)
-        onResize = null
+    if (retryTimer) {
+        clearTimeout(retryTimer)
+        retryTimer = null
+    }
+    retryIndex = 0
+    if (onWake) {
+        window.removeEventListener('resize', onWake)
+        document.removeEventListener('visibilitychange', onWake)
+        onWake = null
     }
     clearTags()
 }
