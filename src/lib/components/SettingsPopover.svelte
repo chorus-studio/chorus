@@ -1,5 +1,7 @@
 <script lang="ts">
     import { nowPlaying } from '$lib/stores/now-playing'
+    import { popoverTab } from '$lib/stores/effects-ui'
+    import { isSleepSet, sleepStore } from '$lib/stores/sleep'
 
     import * as Tooltip from '$lib/components/ui/tooltip'
     import * as Popover from '$lib/components/ui/popover'
@@ -7,12 +9,24 @@
     import { buttonVariants } from '$lib/components/ui/button'
 
     let isOpen = $state(false)
-    // The trigger glows when the current track carries Chorus state (a snip or a
-    // per-track speed) so the user can tell at a glance without opening it.
-    const engaged = $derived(Boolean($nowPlaying?.snip || $nowPlaying?.playback))
+    // The trigger glows when the current track carries Chorus state (a snip, a
+    // per-track speed, a running sleep timer) so the user can tell at a glance
+    // without opening it.
+    const engaged = $derived(
+        Boolean($nowPlaying?.snip || $nowPlaying?.playback) || isSleepSet($sleepStore)
+    )
+
+    // The tray's sleep moon asks for the Sleep tab; the request is cleared on
+    // close so the next open goes back to the pinned default.
+    $effect(() => {
+        if ($popoverTab) isOpen = true
+    })
+    function onOpenChange(open: boolean) {
+        if (!open) popoverTab.set(null)
+    }
 </script>
 
-<Popover.Root bind:open={isOpen}>
+<Popover.Root bind:open={isOpen} {onOpenChange}>
     <Tooltip.Provider delayDuration={300}>
         <Tooltip.Root>
             <Tooltip.Trigger>
@@ -55,6 +69,6 @@
         align="end"
         class="fixed bottom-[88px] left-[72px] h-[360px] w-[440px] overflow-hidden p-0"
     >
-        <TabsList />
+        <TabsList initialTab={$popoverTab ?? undefined} />
     </Popover.Content>
 </Popover.Root>

@@ -44,6 +44,7 @@
     import { DEFAULT_GLASS, settingsStore } from '$lib/stores/settings'
     import { nowPlaying } from '$lib/stores/now-playing'
     import { sleepStore } from '$lib/stores/sleep'
+    import SleepTrayButton from '$lib/components/SleepTrayButton.svelte'
     import { configStore, createAudioPreset } from '$lib/stores/config'
     import { NORMAL_VALUES, QUICK_PRESETS, quickPresetById } from '$lib/audio-effects/quick-presets'
     import { applyPresetValues } from '$lib/utils/quick-presets'
@@ -120,11 +121,17 @@
         // ?volume=120 gives the playing track a saved volume offset.
         const volume = Number(params.get('volume'))
         if (volume > 0) await nowPlaying.updateState({ volume })
-        // ?sleep=23 sets a sleep timer 23 minutes out; ?sleep=track, at the track's end.
+        // ?sleep=23 shows a timer with 23 minutes left (of ?of=30 set, for the
+        // bar); ?sleep=end, one for the end of the playing item.
         const sleep = params.get('sleep')
-        if (sleep === 'track') await sleepStore.start('track')
-        else if (sleep && Number(sleep) > 0)
-            await sleepStore.start(15, Date.now() + (Number(sleep) - 15) * 60_000)
+        if (sleep === 'end' || sleep === 'track') await sleepStore.start('end')
+        else if (sleep && Number(sleep) > 0) {
+            const left = Number(sleep)
+            const of = Math.max(left, Number(params.get('of')) || 30)
+            await sleepStore.start(of, Date.now() - (of - left) * 60_000)
+        }
+        // ?media=long_form plays a show: the Sleep tab says "episode".
+        if (params.get('media') === 'long_form') await seekStore.updateMediaType('long_form')
     })
 
     // ?dialog=blocked&view=grid seeds a few blocked tracks (solid-colour covers) and
@@ -773,6 +780,7 @@
                     <HeartButton />
                     <SettingsPopover />
                     <SkipButton />
+                    <SleepTrayButton />
                 </div>
             </div>
             <div class="flex max-w-[620px] flex-1 flex-col items-center gap-y-1.5">

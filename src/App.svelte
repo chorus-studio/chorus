@@ -30,6 +30,7 @@
     import HeartButton from '$lib/components/HeartButton.svelte'
     import SettingsPopover from '$lib/components/SettingsPopover.svelte'
     import SnipMarkButton from '$lib/components/SnipMarkButton.svelte'
+    import SleepTrayButton from '$lib/components/SleepTrayButton.svelte'
 
     let supportsPip = false
     let themeChangeListener: (e: Event) => void
@@ -145,4 +146,5 @@
     {#if supportsPip}
         <PipButton />
     {/if}
+    <SleepTrayButton />
 </div>

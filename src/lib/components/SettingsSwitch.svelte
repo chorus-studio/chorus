@@ -16,14 +16,16 @@
     } = $props()
 </script>
 
-<div class="flex min-w-0 flex-col gap-y-0.5">
+<!-- Rows are 24 px with no gap: eight tabs under "Tabs shown" have to fit the
+     360 px popover beside the Settings header without scrolling. -->
+<div class="flex min-w-0 flex-col">
     <span class="rack-label flex h-[18px] items-center">{title}</span>
     {#each items as item (item.key)}
         {@const checked = Boolean(
             $settingsStore[type][item.key as keyof SettingsState[typeof type]]
         )}
         <label
-            class="flex h-[26px] cursor-pointer items-center justify-between gap-x-2 text-xs {checked
+            class="flex h-6 cursor-pointer items-center justify-between gap-x-2 text-xs {checked
                 ? 'text-ink-fg-2'
                 : 'text-ink-muted'}"
             title={item.hint}

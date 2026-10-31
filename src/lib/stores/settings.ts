@@ -36,6 +36,7 @@ export type SettingsState = {
         fx: boolean
         eq: boolean
         ms: boolean
+        sleep: boolean
     }
     notifications: {
         granted: boolean
@@ -72,7 +73,8 @@ const defaultSettingsState: SettingsState = {
         seek: true,
         fx: true,
         eq: true,
-        ms: true
+        ms: true,
+        sleep: true
     },
     notifications: {
         granted: false,
