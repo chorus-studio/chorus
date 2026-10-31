@@ -21,11 +21,16 @@
  *   list below its header, the Queue, the Now playing view inside its cell.
  *   The panel takes the translucent colour; the layers go transparent; a
  *   sticky header and anything small keeps its own opaque colour.
+ * - `data-chorus-panel-pseudo="before after"` on an element whose ::before
+ *   or ::after paints a panel colour (the Now playing view paints its
+ *   surface on one); theme.css clears those pseudo-elements.
  *
  * The grid also holds overlays placed on the same areas (toasts, onboarding,
- * the cinema view), so each area name is claimed once, by the first child
- * that is (or holds) a painted panel; the bars are recognised by their test
- * ids. Spotify re-renders these regions on navigation and, on a signed-in
+ * a modal slot), so each area name is claimed once, by the first child that
+ * is (or holds) a painted panel; the bars are recognised by their test ids.
+ * A child placed across several columns (the Now playing view expanded to
+ * its cinema, library to right sidebar) is a region of its own, named for
+ * its span, or its first line would read as a sidebar's. Spotify re-renders these regions on navigation and, on a signed-in
  * page, builds the grid itself after a first shell, so while a backdrop is
  * on the tags are re-applied on a debounced mutation observer over the whole
  * document (the grid is found afresh each pass), with a few timed retries
@@ -37,6 +42,7 @@ export const AREA_ATTR = 'data-chorus-area'
 export const PANEL_ATTR = 'data-chorus-panel'
 export const LAYER_ATTR = 'data-chorus-panel-layer'
 export const FRAME_ATTR = 'data-chorus-frame'
+export const PSEUDO_ATTR = 'data-chorus-panel-pseudo'
 
 const NAV_BAR = '[data-testid="global-nav-bar"]'
 const PLAYER_BAR = '[data-testid="now-playing-bar"]'
@@ -55,9 +61,9 @@ const WALK_DEPTH_MAX = 10
 const COVER_SLACK = 24
 /** The most elements one pass looks at under an area, so a huge tree stays cheap. */
 const WALK_NODES_MAX = 120
-/** The colour pass: how deep and how many elements under an area it checks. */
-const PAINT_DEPTH_MAX = 8
-const PAINT_NODES_MAX = 400
+/** The colour pass: how deep and how many elements under an area it checks (the Now playing view's surface sits seven deep in its cell). */
+const PAINT_DEPTH_MAX = 14
+const PAINT_NODES_MAX = 800
 /** An element painted in a panel colour counts when it spans this much of the area's width and is at least this tall. */
 const PAINT_MIN_WIDTH_SHARE = 0.4
 const PAINT_MIN_HEIGHT = 48
@@ -110,20 +116,33 @@ function gridContainer(): HTMLElement | null {
     return nearest
 }
 
+const NAMED_LINE = /^[a-z][a-z-]*$/
+
 /**
  * Which region a grid child is. The bars are known by their test ids (the
  * top bar's placement starts at the banner line above its own area); the
- * rest by the first named line of their area, e.g. `main-view`; null for a
- * numbered placement.
+ * main view by what it holds; the rest by the first named line of their
+ * area, e.g. `left-sidebar`, or by their span when they run across columns;
+ * null for a numbered placement (regionsOf then tells the sides by where
+ * they sit).
  */
 function areaOf(el: HTMLElement): string | null {
     if (el.matches(NAV_BAR) || el.querySelector(NAV_BAR)) return 'global-nav'
     if (el.matches(PLAYER_BAR) || el.querySelector(PLAYER_BAR)) return 'now-playing-bar'
-    const start = getComputedStyle(el).gridRowStart
-    if (/^[a-z][a-z-]*$/.test(start)) return start
-    // Numbered placement: the main view is known by what it holds; the sides by where they sit (regionsOf).
     if (el.matches(MAIN_VIEW) || el.querySelector(MAIN_VIEW)) return 'main-view'
-    return null
+    const style = getComputedStyle(el)
+    const start = style.gridRowStart
+    if (!NAMED_LINE.test(start)) return null
+    const end = style.gridColumnEnd
+    if (NAMED_LINE.test(end) && end !== start && end !== style.gridColumnStart) {
+        return `span:${start}:${end}`
+    }
+    return start
+}
+
+/** Areas whose panel is found by walking down from the grid child. */
+function isWalked(area: string): boolean {
+    return WALKED_AREAS.has(area) || area.startsWith('span:')
 }
 
 /**
@@ -193,39 +212,54 @@ function isChorusOwn(el: Element): boolean {
     return Boolean(el.closest('[id^="chorus-"], .chorus-tray'))
 }
 
+type Painted = {
+    el: HTMLElement
+    /** The element's own background is a panel colour. */
+    own: boolean
+    /** Pseudo-elements of it that paint a panel colour: 'before', 'after'. */
+    pseudo: string[]
+}
+
+/** Whether a pseudo-element is rendered and paints one of the colours. */
+function pseudoPaints(el: HTMLElement, which: '::before' | '::after', colours: Set<string>): boolean {
+    const style = getComputedStyle(el, which)
+    return style.content !== 'none' && colours.has(style.backgroundColor)
+}
+
 /**
  * Sizeable elements under an area that paint one of the panel colours without
  * covering the area's box: the sidebar's list below its header, the Queue, the
- * Now playing view inside its cell. Sticky and fixed things (a header that
- * rows scroll under) keep their colour. Shallowest first.
+ * Now playing view inside its cell; and those whose ::before or ::after does
+ * (the Now playing view paints its surface on one). Sticky and fixed things
+ * (a header that rows scroll under) keep their colour. Elements in `skip`
+ * (the panel and its chain layers) are checked for pseudo-elements only.
+ * Shallowest first.
  */
 function paintedInPanelColours(
     root: HTMLElement,
     box: DOMRect,
     colours: Set<string>,
     skip: Set<Element>
-): HTMLElement[] {
-    const found: HTMLElement[] = []
+): Painted[] {
+    const found: Painted[] = []
     const queue: Array<{ el: HTMLElement; depth: number }> = [{ el: root, depth: 0 }]
     let seen = 0
     while (queue.length && seen < PAINT_NODES_MAX) {
         const { el, depth } = queue.shift()!
         seen++
-        if (depth > 0 && !skip.has(el)) {
+        const rect = el.getBoundingClientRect()
+        if (
+            rect.width >= box.width * PAINT_MIN_WIDTH_SHARE &&
+            rect.height >= PAINT_MIN_HEIGHT &&
+            !isChorusOwn(el)
+        ) {
             const style = getComputedStyle(el)
-            if (
-                colours.has(style.backgroundColor) &&
-                style.position !== 'sticky' &&
-                style.position !== 'fixed'
-            ) {
-                const rect = el.getBoundingClientRect()
-                if (
-                    rect.width >= box.width * PAINT_MIN_WIDTH_SHARE &&
-                    rect.height >= PAINT_MIN_HEIGHT &&
-                    !isChorusOwn(el)
-                ) {
-                    found.push(el)
-                }
+            if (style.position !== 'sticky' && style.position !== 'fixed') {
+                const own = depth > 0 && !skip.has(el) && colours.has(style.backgroundColor)
+                const pseudo: string[] = []
+                if (pseudoPaints(el, '::before', colours)) pseudo.push('before')
+                if (pseudoPaints(el, '::after', colours)) pseudo.push('after')
+                if (own || pseudo.length) found.push({ el, own, pseudo })
             }
         }
         if (depth >= PAINT_DEPTH_MAX) continue
@@ -285,6 +319,7 @@ function clearTags(): void {
         el.removeAttribute(PANEL_ATTR)
         el.removeAttribute(LAYER_ATTR)
         el.removeAttribute(FRAME_ATTR)
+        el.removeAttribute(PSEUDO_ATTR)
     }
     tagged = new Set()
 }
@@ -351,12 +386,12 @@ export function tagPagePanels(): PassResult {
             tag(child, AREA_ATTR, area)
             // The bar's wrapper bleeds into the gaps and paints the frame colour; the <aside> is the panel.
             if (!child.matches(PLAYER_BAR)) tag(child, FRAME_ATTR)
-        } else if (WALKED_AREAS.has(area)) {
+        } else if (isWalked(area)) {
             const box = child.getBoundingClientRect()
             if (sizeless(box)) continue
             sizedAreas.add(area)
             let found = findPanel(child, box)
-            let painted: HTMLElement[]
+            let painted: Painted[]
             if (found) {
                 painted = paintedInPanelColours(
                     child,
@@ -370,7 +405,8 @@ export function tagPagePanels(): PassResult {
                 // through. The shallowest large element in a panel colour is
                 // the panel, the rest of them layers.
                 painted = paintedInPanelColours(child, box, colours, new Set())
-                const panel = painted.find((el) => {
+                const panel = painted.find(({ el, own }) => {
+                    if (!own) return false
                     const rect = el.getBoundingClientRect()
                     return (
                         rect.width >= box.width * FALLBACK_MIN_SHARE &&
@@ -378,14 +414,17 @@ export function tagPagePanels(): PassResult {
                     )
                 })
                 if (!panel) continue
-                found = { panel, layers: [] }
-                painted = painted.filter((el) => el !== panel)
+                found = { panel: panel.el, layers: [] }
+                panel.own = false
             }
             claimed.add(area)
             tag(child, AREA_ATTR, area)
             tag(found.panel, PANEL_ATTR)
             for (const layer of found.layers) tag(layer, LAYER_ATTR)
-            for (const layer of painted) tag(layer, LAYER_ATTR)
+            for (const { el, own, pseudo } of painted) {
+                if (own) tag(el, LAYER_ATTR)
+                if (pseudo.length) tag(el, PSEUDO_ATTR, pseudo.join(' '))
+            }
         }
     }
     result.sized = sizedAreas.size

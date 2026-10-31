@@ -1025,6 +1025,13 @@ html[data-backdrop] [data-chorus-frame],
 html[data-backdrop] [data-chorus-panel-layer] {
     background-color: transparent !important;
 }
+/* A pseudo-element that paints a panel colour (the Now playing view draws
+   its surface on its ::before) goes clear like a layer; the walker names
+   which of the two. */
+html[data-backdrop] [data-chorus-panel-pseudo~='before']::before,
+html[data-backdrop] [data-chorus-panel-pseudo~='after']::after {
+    background-color: transparent !important;
+}
 /* Entity pages (artist, album, playlist) paint the main colour on their
    content wrappers as well, which run far past the view; the panel walker
    (lib/utils/page-panels) tags those it can reach as layers, and this catches
