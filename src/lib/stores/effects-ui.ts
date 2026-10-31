@@ -23,3 +23,7 @@ export const presetsSubView = writable<PresetsSubView>('cards')
 export type SnipSubView = 'editor' | 'lyrics'
 
 export const snipSubView = writable<SnipSubView>('editor')
+
+// A request from outside the popover (the player tray's sleep moon) to open
+// it on a tab. SettingsPopover opens on a value and clears it when closed.
+export const popoverTab = writable<string | null>(null)

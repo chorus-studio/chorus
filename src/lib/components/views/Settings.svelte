@@ -76,7 +76,8 @@
         { key: 'fx', label: 'Reverb' },
         { key: 'eq', label: 'EQ' },
         { key: 'ms', label: 'Stereo' },
-        { key: 'seek', label: 'Seek' }
+        { key: 'seek', label: 'Seek' },
+        { key: 'sleep', label: 'Sleep' }
     ]
 
     const uiItems = $derived(UI_ITEMS.filter((item) => item.key !== 'pip' || pipSupported))

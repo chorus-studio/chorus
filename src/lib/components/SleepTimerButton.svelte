@@ -2,14 +2,16 @@
     import { onMount } from 'svelte'
     import Moon from '@lucide/svelte/icons/moon'
     import X from '@lucide/svelte/icons/x'
+    import { seekStore } from '$lib/stores/seek'
     import { sleepStore, SLEEP_CHOICES, isSleepSet, type SleepChoice } from '$lib/stores/sleep'
-    import { sleepLabel, sleepShort } from '$lib/utils/sleep-timer'
+    import { sleepLabel, sleepNoun, sleepShort } from '$lib/utils/sleep-timer'
     import { cn } from '$lib/utils.js'
 
     // The popup header's sleep timer: a moon that reads the state ("23m",
-    // "track") and, when clicked, swaps the header's icons for a row of
+    // "end") and, when clicked, swaps the header's icons for a row of
     // choices. A chip row, not a menu: a floating menu would be clipped by
-    // the popup window's bounds.
+    // the popup window's bounds. The popover's Sleep tab has the full set
+    // (custom lengths, +15 min); this is the quick remote.
     let { open = $bindable(false), class: className = '' }: { open?: boolean; class?: string } =
         $props()
 
@@ -25,11 +27,12 @@
         now = Date.now()
     })
 
+    const noun = $derived(sleepNoun($seekStore.media_type))
     const active = $derived(isSleepSet($sleepStore))
     const short = $derived(sleepShort($sleepStore, now))
     const label = $derived(
         active
-            ? `Sleep timer: pauses ${sleepLabel($sleepStore, now)} — click to change`
+            ? `Sleep timer: pauses ${sleepLabel($sleepStore, now, noun)} — click to change`
             : 'Sleep timer: pause playback later'
     )
 
@@ -50,7 +53,7 @@
                 {minutes < 60 ? `${minutes}m` : '1h'}
             </button>
         {/each}
-        <button type="button" class={chip} onclick={() => choose('track')}>track end</button>
+        <button type="button" class={chip} onclick={() => choose('end')}>{noun} end</button>
         {#if active}
             <button
                 type="button"

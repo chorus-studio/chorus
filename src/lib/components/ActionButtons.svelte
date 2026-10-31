@@ -10,6 +10,7 @@
     import { msParamsStore } from '$lib/stores/ms-params'
     import { eqSubView, fxSubView, msSubView, presetsSubView } from '$lib/stores/effects-ui'
     import { nowPlaying } from '$lib/stores/now-playing'
+    import { isSleepSet, sleepStore } from '$lib/stores/sleep'
     import { playbackStore, defaultPlayback } from '$lib/stores/playback'
     import {
         applyNormal,
@@ -228,7 +229,20 @@
     )
 </script>
 
-{#if hasActions}
+{#if tab === 'sleep'}
+    <!-- The sleep timer's one action: off. Nothing to reset or save while it is idle. -->
+    {#if isSleepSet($sleepStore)}
+        <Button
+            variant="ghost"
+            size="sm"
+            onclick={() => sleepStore.stop()}
+            title="Turn the sleep timer off"
+        >
+            <Power class="size-3.5" />
+            Turn off
+        </Button>
+    {/if}
+{:else if hasActions}
     <div class="flex items-center gap-1">
         {#if !showDelete}
             <Button variant="ghost" size="sm" onclick={handleReset} title={resetTitle}>

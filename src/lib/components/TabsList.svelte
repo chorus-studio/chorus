@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { onMount } from 'svelte'
+    import { onMount, untrack } from 'svelte'
     import type { Component } from 'svelte'
     import { storage } from '@wxt-dev/storage'
 
@@ -8,6 +8,7 @@
 
     import Pin from '@lucide/svelte/icons/pin'
     import Play from '@lucide/svelte/icons/play'
+    import Moon from '@lucide/svelte/icons/moon'
     import Gauge from '@lucide/svelte/icons/gauge'
     import Waves from '@lucide/svelte/icons/waves'
     import Scissors from '@lucide/svelte/icons/scissors'
@@ -21,6 +22,7 @@
     import EQView from '$lib/components/views/EQView.svelte'
     import Snip from '$lib/components/views/Snip.svelte'
     import Seek from '$lib/components/views/Seek.svelte'
+    import Sleep from '$lib/components/views/Sleep.svelte'
     import Speed from '$lib/components/views/Speed.svelte'
     import PopUp from '$lib/components/views/PopUp.svelte'
     import MSView from '$lib/components/views/MSView.svelte'
@@ -37,6 +39,7 @@
     import { effectsStore } from '$lib/stores/effects'
     import { lofiStore } from '$lib/stores/lofi'
     import { nowPlaying } from '$lib/stores/now-playing'
+    import { isSleepSet, sleepStore } from '$lib/stores/sleep'
     import { playbackStore, effectivePlayback } from '$lib/stores/playback'
     import { settingsStore } from '$lib/stores/settings'
     import { QUICK_PRESETS, matchPreset } from '$lib/audio-effects/quick-presets'
@@ -59,7 +62,8 @@
         { id: 'fx', label: 'Reverb', icon: Waves },
         { id: 'eq', label: 'EQ', icon: SlidersHorizontal },
         { id: 'ms', label: 'Stereo', icon: MoveHorizontal },
-        { id: 'seek', label: 'Seek', icon: FastForward }
+        { id: 'seek', label: 'Seek', icon: FastForward },
+        { id: 'sleep', label: 'Sleep', icon: Moon }
     ]
 
     const tabs = $derived(
@@ -84,6 +88,7 @@
         eq: EQView,
         ms: MSView,
         seek: Seek,
+        sleep: Sleep,
         speed: Speed,
         settings: SettingsInfo,
         player: PopUp
@@ -108,7 +113,8 @@
         speed: Boolean($nowPlaying?.playback),
         fx: $effectsStore.reverb !== 'none',
         eq: $effectsStore.equalizer !== 'none',
-        ms: $effectsStore.msProcessor !== 'none'
+        ms: $effectsStore.msProcessor !== 'none',
+        sleep: isSleepSet($sleepStore)
     })
 
     const activeMeta = $derived(TAB_META.find((t) => t.id === activeTab))
@@ -146,13 +152,23 @@
         }
     }
 
+    // The pinned default opens first; `initialTab` (the preview, or the tray's
+    // sleep moon asking for the Sleep tab) opens instead without becoming it.
     async function getDefaultView() {
-        let tab = initialTab ?? (await storage.getItem<string>(VIEW_KEY)) ?? filteredTabs[0]
+        let tab = (await storage.getItem<string>(VIEW_KEY)) ?? filteredTabs[0]
         // 'fx|eq' was split into separate 'fx' + 'eq' tabs; migrate a stored default.
         if (tab === 'fx|eq') tab = 'eq'
         defaultView = tab == 'player' && !pip ? filteredTabs[0] : tab
-        activeTab = defaultView
+        activeTab = initialTab ?? defaultView
     }
+
+    // Asked for another tab while already open (the moon, with the popover up).
+    $effect(() => {
+        const requested = initialTab
+        untrack(() => {
+            if (requested && activeTab && requested !== activeTab) setActiveTab(requested)
+        })
+    })
 
     async function handleVolumeTypeChange(value: string) {
         await volumeStore.updateVolume({ type: value as VolumeType })
