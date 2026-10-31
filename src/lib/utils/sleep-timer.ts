@@ -2,15 +2,45 @@ import { get } from 'svelte/store'
 import { sleepStore, type SleepState } from '$lib/stores/sleep'
 import { mediaStore } from '$lib/stores/media'
 import { nowPlaying } from '$lib/stores/now-playing'
+import { featureOn } from '$lib/utils/features'
+import { toSegments, type Snip } from '$lib/utils/snip-ranges'
 import { secondsToTime } from '$lib/utils/time'
 
 /** The output fades over these last seconds before the pause. */
 export const SLEEP_FADE_SECONDS = 5
+/**
+ * "End of this item" pauses this close to the end rather than waiting for the
+ * next item to start: Spotify's position label is whole seconds, and the
+ * handover (or a repeat of the same item) can come before any tick sees it.
+ */
+export const SLEEP_END_SECONDS = 1
+/** The volume goes back this long after the pause, so the last second is not heard at full volume. */
+export const SLEEP_RESTORE_DELAY_MS = 500
 
 /** What the playing item is called. Spotify's web links can't tell an audiobook chapter from a podcast episode, so both are episodes. */
 export type SleepNoun = 'track' | 'episode'
 export const sleepNoun = (mediaType: 'default' | 'long_form' | undefined): SleepNoun =>
     mediaType === 'long_form' ? 'episode' : 'track'
+
+/** What the timer reads off the now-playing store. */
+type PlayingItem = { duration: number; current: number; snip?: Snip | null }
+
+/**
+ * Where the playing item hands over, in seconds from its start: the end of its
+ * last play section when it carries a snip (and snips are on), else its
+ * length; null while the length is unknown.
+ */
+export function sleepItemEnd(item: PlayingItem): number | null {
+    if (!(item.duration > 0)) return null
+    const segments = featureOn('snips') ? toSegments(item.snip ?? null, item.duration) : []
+    return segments.at(-1)?.end ?? item.duration
+}
+
+/** Seconds left before the playing item hands over; null while its length is unknown. */
+export function sleepItemRemaining(item: PlayingItem): number | null {
+    const end = sleepItemEnd(item)
+    return end === null ? null : Math.max(0, end - item.current)
+}
 
 /** Milliseconds until a timed sleep is due; null when it is not timed. */
 export function sleepDueIn(state: SleepState, now = Date.now()): number | null {
@@ -34,9 +64,19 @@ export function sleepLabel(
     return m ? `in ${h} h ${m} min` : `in ${h} h`
 }
 
-/** The compact form for the popup header and the player tray: "23m", "1h05", "end"; null when off. */
-export function sleepShort(state: SleepState, now = Date.now()): string | null {
-    if (state.at_end) return 'end'
+/**
+ * The compact form for the popup header and the player tray: "23m", "1h05";
+ * at the end of the item, the time left in it ("2:28"), or "end" until that
+ * is known. null when off.
+ */
+export function sleepShort(
+    state: SleepState,
+    now = Date.now(),
+    itemLeft: number | null = null
+): string | null {
+    if (state.at_end) {
+        return itemLeft === null ? 'end' : secondsToTime(Math.max(0, Math.round(itemLeft)))
+    }
     const due = sleepDueIn(state, now)
     if (due === null) return null
     const minutes = Math.ceil(due / 60_000)
@@ -69,14 +109,16 @@ export function sleepEndsAtClock(state: SleepState): string | null {
 
 /**
  * Run the sleep timer in the Spotify tab. A timed sleep fades the output over
- * its last seconds and pauses when due; "end of this item" fades over the
- * item's last seconds and pauses as the next one starts, before it is heard.
- * The fade is a gain ramp in the page's audio chain (FROM_SLEEP_LISTENER);
- * when the chain is not built the pause is simply abrupt. Turning the timer
- * off mid-fade puts the volume back. Returns the unsubscribe.
+ * its last seconds and pauses when due. "End of this item" fades over the
+ * item's last seconds (its last snip section's, when it carries one) and
+ * pauses a second before it hands over, so neither the next item nor a repeat
+ * of this one is heard; the playback poll (observers/track) leaves the end
+ * alone meanwhile. The fade is a volume ramp in the page (FROM_SLEEP_LISTENER).
+ * Turning the timer off mid-fade puts the volume back. Returns the unsubscribe.
  */
 export function watchSleepTimer(): () => void {
     let timer: ReturnType<typeof setTimeout> | null = null
+    let restoreTimer: ReturnType<typeof setTimeout> | null = null
     let fading = false
     let lastItem: string | null = null
 
@@ -100,16 +142,25 @@ export function watchSleepTimer(): () => void {
         post({ action: 'restore' })
     }
 
+    /** Press pause while something plays, by the button's own label; the store's flag stands in when the label is not English. */
+    function pressPause() {
+        const button = document.querySelector<HTMLButtonElement>(
+            'button[data-testid="control-button-playpause"]'
+        )
+        if (!button) return
+        const label = button.getAttribute('aria-label')
+        const playing = label === 'Pause' || (label !== 'Play' && get(mediaStore).playing)
+        if (playing) button.click()
+    }
+
     async function finish() {
         clearTimer()
-        if (get(mediaStore).playing) {
-            document
-                .querySelector<HTMLButtonElement>('button[data-testid="control-button-playpause"]')
-                ?.click()
-        }
-        // Back to the set volume once paused, so the next play is not silent.
+        pressPause()
+        // Back to the set volume a moment after the pause, so the last second
+        // is not heard at full volume and the next play is not silent.
         fading = false
-        post({ action: 'restore' })
+        if (restoreTimer) clearTimeout(restoreTimer)
+        restoreTimer = setTimeout(() => post({ action: 'restore' }), SLEEP_RESTORE_DELAY_MS)
         await sleepStore.stop()
     }
 
@@ -136,24 +187,31 @@ export function watchSleepTimer(): () => void {
 
     const unsubscribeNow = nowPlaying.subscribe((state) => {
         const sleep = get(sleepStore)
-        // The item is told apart by the widget's "Title by Artist" id, the
-        // same key the store itself uses: episodes and chapters have one too,
-        // while track_id is only filled from a /track/ link and never
-        // changes across a show.
+        // Items are told apart by the widget's "Title by Artist" id, the key the
+        // store itself uses: episodes and chapters have one too, while track_id
+        // is only filled from a /track/ link and never changes across a show.
         const item = state.id || state.track_id || null
         const changed = lastItem !== null && item !== lastItem
         lastItem = item
         if (!sleep.at_end) return
+        // Spotify moved on before the pause landed (a short item, a missed
+        // tick): pause now, before the next one is heard.
         if (changed) {
             void finish()
             return
         }
-        const remaining = state.duration > 0 ? state.duration - state.current : Infinity
-        if (remaining <= SLEEP_FADE_SECONDS) fade(Math.max(0.5, remaining))
+        const remaining = sleepItemRemaining(state)
+        if (remaining === null) return
+        if (remaining <= SLEEP_END_SECONDS) {
+            void finish()
+            return
+        }
+        if (remaining <= SLEEP_FADE_SECONDS) fade(remaining)
     })
 
     return () => {
         clearTimer()
+        if (restoreTimer) clearTimeout(restoreTimer)
         unsubscribeSleep()
         unsubscribeNow()
     }

@@ -5,8 +5,9 @@
     import { buttonVariants } from '$lib/components/ui/button'
     import { popoverTab } from '$lib/stores/effects-ui'
     import { seekStore } from '$lib/stores/seek'
+    import { nowPlaying } from '$lib/stores/now-playing'
     import { isSleepSet, sleepStore } from '$lib/stores/sleep'
-    import { sleepLabel, sleepNoun, sleepShort } from '$lib/utils/sleep-timer'
+    import { sleepItemRemaining, sleepLabel, sleepNoun, sleepShort } from '$lib/utils/sleep-timer'
 
     // The player tray's sleep timer: a moon with the time left, shown only
     // while a timer runs, last in the tray. Clicking it opens the popover on
@@ -22,7 +23,10 @@
     })
 
     const active = $derived(isSleepSet($sleepStore))
-    const short = $derived(sleepShort($sleepStore, now))
+    // At the end of the item the moon counts the item itself down.
+    const short = $derived(
+        sleepShort($sleepStore, now, $sleepStore.at_end ? sleepItemRemaining($nowPlaying) : null)
+    )
     const label = $derived(
         `Sleep timer: pauses ${sleepLabel($sleepStore, now, sleepNoun($seekStore.media_type))}. Open the Sleep tab`
     )

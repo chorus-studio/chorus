@@ -3,8 +3,9 @@
     import Moon from '@lucide/svelte/icons/moon'
     import X from '@lucide/svelte/icons/x'
     import { seekStore } from '$lib/stores/seek'
+    import { nowPlaying } from '$lib/stores/now-playing'
     import { sleepStore, SLEEP_CHOICES, isSleepSet, type SleepChoice } from '$lib/stores/sleep'
-    import { sleepLabel, sleepNoun, sleepShort } from '$lib/utils/sleep-timer'
+    import { sleepItemRemaining, sleepLabel, sleepNoun, sleepShort } from '$lib/utils/sleep-timer'
     import { cn } from '$lib/utils.js'
 
     // The popup header's sleep timer: a moon that reads the state ("23m",
@@ -29,7 +30,10 @@
 
     const noun = $derived(sleepNoun($seekStore.media_type))
     const active = $derived(isSleepSet($sleepStore))
-    const short = $derived(sleepShort($sleepStore, now))
+    // At the end of the item the moon counts the item itself down.
+    const short = $derived(
+        sleepShort($sleepStore, now, $sleepStore.at_end ? sleepItemRemaining($nowPlaying) : null)
+    )
     const label = $derived(
         active
             ? `Sleep timer: pauses ${sleepLabel($sleepStore, now, noun)} — click to change`

@@ -64,6 +64,9 @@ export default class MediaElement {
         this.source.addEventListener('play', () => {
             if (this.mediaOverride) {
                 this.mediaOverride.setPlaying(true)
+                // A sleep fade that ended in a pause is undone on the next play,
+                // whatever became of the restore message, so it is not silent.
+                this.mediaOverride.sleepRestore()
                 return
             }
             // Don't build the Chorus audio chain while the extension is disabled

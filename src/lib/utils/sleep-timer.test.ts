@@ -27,10 +27,14 @@ import {
 } from '$lib/stores/sleep'
 import { mediaStore as mediaStoreMock } from '$lib/stores/media'
 import { nowPlaying as nowPlayingMock } from '$lib/stores/now-playing'
+import type { Snip } from '$lib/utils/snip-ranges'
 import {
     SLEEP_FADE_SECONDS,
+    SLEEP_RESTORE_DELAY_MS,
     sleepCountdown,
     sleepDueIn,
+    sleepItemEnd,
+    sleepItemRemaining,
     sleepLabel,
     sleepNoun,
     sleepProgress,
@@ -45,6 +49,7 @@ const nowPlaying = nowPlayingMock as unknown as Writable<{
     id?: string
     duration: number
     current: number
+    snip?: Snip | null
 }>
 
 const MIN = 60_000
@@ -83,8 +88,25 @@ describe('labels', () => {
         expect(sleepShort({ ...off, ends_at: NOW + 22.2 * MIN }, NOW)).toBe('23m')
         expect(sleepShort(timed(65), NOW)).toBe('1h05')
         expect(sleepShort({ ...off, ends_at: NOW + 1000 }, NOW)).toBe('1m')
-        expect(sleepShort(atEnd, NOW)).toBe('end')
         expect(sleepShort(off, NOW)).toBeNull()
+    })
+
+    it('count the item down at its end, once its length is known', () => {
+        expect(sleepShort(atEnd, NOW)).toBe('end')
+        expect(sleepShort(atEnd, NOW, 148)).toBe('2:28')
+        expect(sleepShort(atEnd, NOW, 0.4)).toBe('0:00')
+    })
+
+    it('know where the playing item hands over, its snip included', () => {
+        expect(sleepItemEnd({ duration: 200, current: 10 })).toBe(200)
+        expect(sleepItemRemaining({ duration: 200, current: 150 })).toBe(50)
+        expect(sleepItemEnd({ duration: 0, current: 10 })).toBeNull()
+        const play: Snip = { mode: 'play', ranges: [{ start: 30, end: 120.5 }] }
+        expect(sleepItemEnd({ duration: 200, current: 10, snip: play })).toBe(120.5)
+        const skipTail: Snip = { mode: 'skip', ranges: [{ start: 150, end: 200 }] }
+        expect(sleepItemEnd({ duration: 200, current: 10, snip: skipTail })).toBe(150)
+        const skipMiddle: Snip = { mode: 'skip', ranges: [{ start: 60, end: 90 }] }
+        expect(sleepItemEnd({ duration: 200, current: 10, snip: skipMiddle })).toBe(200)
     })
 
     it('count down to the second for the Sleep tab', () => {
@@ -166,13 +188,18 @@ describe('watchSleepTimer', () => {
     const click = vi.fn()
     let stop: () => void
 
+    // Spotify's play/pause button, by its label.
+    const playButton = (label: string) => ({
+        querySelector: () => ({ click, getAttribute: () => label })
+    })
+
     beforeEach(() => {
         vi.useFakeTimers()
         vi.setSystemTime(NOW)
         posted.length = 0
         click.mockClear()
         vi.stubGlobal('window', { postMessage: (msg: unknown) => posted.push(msg) })
-        vi.stubGlobal('document', { querySelector: () => ({ click }) })
+        vi.stubGlobal('document', playButton('Pause'))
         mediaStore.set({ playing: true })
         nowPlaying.set({ track_id: 't1', duration: 200, current: 0 })
         stop = watchSleepTimer()
@@ -187,28 +214,47 @@ describe('watchSleepTimer', () => {
 
     const fades = () => posted.filter((m: any) => m.data.action === 'fade')
     const restores = () => posted.filter((m: any) => m.data.action === 'restore')
+    const fadeOf = (seconds: number) => ({
+        type: 'FROM_SLEEP_LISTENER',
+        data: { action: 'fade', seconds }
+    })
 
     it('fades over the last seconds of a timed sleep, then pauses and clears', async () => {
         await sleepStore.start(15)
         await vi.advanceTimersByTimeAsync(15 * MIN - SLEEP_FADE_SECONDS * 1000 - 1)
         expect(fades()).toHaveLength(0)
         await vi.advanceTimersByTimeAsync(1)
-        expect(fades()).toEqual([
-            { type: 'FROM_SLEEP_LISTENER', data: { action: 'fade', seconds: SLEEP_FADE_SECONDS } }
-        ])
+        expect(fades()).toEqual([fadeOf(SLEEP_FADE_SECONDS)])
         expect(click).not.toHaveBeenCalled()
         await vi.advanceTimersByTimeAsync(SLEEP_FADE_SECONDS * 1000)
         expect(click).toHaveBeenCalledTimes(1)
-        expect(restores()).toHaveLength(1)
         expect(get(sleepStore)).toEqual(off)
+        // The volume comes back a moment after the pause, not with it.
+        expect(restores()).toHaveLength(0)
+        await vi.advanceTimersByTimeAsync(SLEEP_RESTORE_DELAY_MS)
+        expect(restores()).toHaveLength(1)
     })
 
     it('does not press pause when nothing is playing', async () => {
+        vi.stubGlobal('document', playButton('Play'))
         mediaStore.set({ playing: false })
         await sleepStore.start(15)
         await vi.advanceTimersByTimeAsync(15 * MIN + 10)
         expect(click).not.toHaveBeenCalled()
         expect(get(sleepStore).ends_at).toBeNull()
+    })
+
+    it('goes by the button when its label is readable, else by the store', async () => {
+        vi.stubGlobal('document', playButton('Play'))
+        mediaStore.set({ playing: true })
+        await sleepStore.start(15)
+        await vi.advanceTimersByTimeAsync(15 * MIN + 10)
+        expect(click).not.toHaveBeenCalled()
+
+        vi.stubGlobal('document', playButton('Pausa'))
+        await sleepStore.start(15)
+        await vi.advanceTimersByTimeAsync(15 * MIN + 10)
+        expect(click).toHaveBeenCalledTimes(1)
     })
 
     it('puts the volume back when turned off mid-fade', async () => {
@@ -221,51 +267,69 @@ describe('watchSleepTimer', () => {
         expect(click).not.toHaveBeenCalled()
     })
 
-    it('a timer extended mid-fade keeps playing, at full volume', async () => {
+    it('a timer extended mid-fade keeps playing and pauses at the new end', async () => {
         await sleepStore.start(15)
         await vi.advanceTimersByTimeAsync(15 * MIN - 2000)
         expect(fades()).toHaveLength(1)
         await sleepStore.extend(15)
         await vi.advanceTimersByTimeAsync(5000)
         expect(click).not.toHaveBeenCalled()
-        // The fade is not undone (the state is still timed) but the next one
-        // is scheduled from the new end.
         await vi.advanceTimersByTimeAsync(15 * MIN)
         expect(click).toHaveBeenCalledTimes(1)
     })
 
-    it('for the end of the track, fades in its last seconds and pauses as the next starts', async () => {
+    it('for the end of the track, fades in its last seconds and pauses a second before it', async () => {
         await sleepStore.start('end')
         nowPlaying.set({ track_id: 't1', duration: 200, current: 150 })
         expect(fades()).toHaveLength(0)
         nowPlaying.set({ track_id: 't1', duration: 200, current: 197 })
-        expect(fades()).toEqual([
-            { type: 'FROM_SLEEP_LISTENER', data: { action: 'fade', seconds: 3 } }
-        ])
+        expect(fades()).toEqual([fadeOf(3)])
+        nowPlaying.set({ track_id: 't1', duration: 200, current: 199 })
+        await vi.advanceTimersByTimeAsync(0)
+        expect(click).toHaveBeenCalledTimes(1)
+        expect(get(sleepStore).at_end).toBe(false)
+        await vi.advanceTimersByTimeAsync(SLEEP_RESTORE_DELAY_MS)
+        expect(restores()).toHaveLength(1)
+        // The same track starting over (repeat one, a one-track queue) is not
+        // a second pause.
+        nowPlaying.set({ track_id: 't1', duration: 200, current: 0 })
+        await vi.advanceTimersByTimeAsync(0)
+        expect(click).toHaveBeenCalledTimes(1)
+    })
+
+    it('pauses at the end of the snip when the track carries one', async () => {
+        const snip: Snip = { mode: 'play', ranges: [{ start: 0, end: 120 }] }
+        await sleepStore.start('end')
+        nowPlaying.set({ track_id: 't1', duration: 200, current: 116, snip })
+        expect(fades()).toEqual([fadeOf(4)])
+        nowPlaying.set({ track_id: 't1', duration: 200, current: 119, snip })
+        await vi.advanceTimersByTimeAsync(0)
+        expect(click).toHaveBeenCalledTimes(1)
+    })
+
+    it('pauses when the next item starts first, before it is heard', async () => {
+        await sleepStore.start('end')
+        nowPlaying.set({ track_id: 't1', duration: 200, current: 150 })
         nowPlaying.set({ track_id: 't2', duration: 180, current: 0 })
         await vi.advanceTimersByTimeAsync(0)
         expect(click).toHaveBeenCalledTimes(1)
-        expect(restores()).toHaveLength(1)
         expect(get(sleepStore).at_end).toBe(false)
     })
 
-    it('for the end of an episode, whose track id never changes, goes by the title', async () => {
+    it('for an episode, whose track id never changes, goes by the clock and the title', async () => {
         // Episodes and chapters link to /episode/ or /show/, so the store's
         // track_id stays whatever it last was; only the widget's id moves.
-        nowPlaying.set({
-            track_id: '',
-            id: 'Why we sleep by The Daily',
-            duration: 1800,
-            current: 100
-        })
+        const id = 'Why we sleep by The Daily'
+        nowPlaying.set({ track_id: '', id, duration: 1800, current: 100 })
         await sleepStore.start('end')
-        nowPlaying.set({
-            track_id: '',
-            id: 'Why we sleep by The Daily',
-            duration: 1800,
-            current: 1796
-        })
-        expect(fades()).toHaveLength(1)
+        nowPlaying.set({ track_id: '', id, duration: 1800, current: 1796 })
+        expect(fades()).toEqual([fadeOf(4)])
+        nowPlaying.set({ track_id: '', id, duration: 1800, current: 1799 })
+        await vi.advanceTimersByTimeAsync(0)
+        expect(click).toHaveBeenCalledTimes(1)
+        expect(get(sleepStore).at_end).toBe(false)
+
+        await sleepStore.start('end')
         nowPlaying.set({
             track_id: '',
             id: 'The next one by The Daily',
@@ -273,9 +337,7 @@ describe('watchSleepTimer', () => {
             current: 0
         })
         await vi.advanceTimersByTimeAsync(0)
-        expect(click).toHaveBeenCalledTimes(1)
-        expect(restores()).toHaveLength(1)
-        expect(get(sleepStore).at_end).toBe(false)
+        expect(click).toHaveBeenCalledTimes(2)
     })
 
     it('a sleep already past when the tab loads pauses straight away', async () => {

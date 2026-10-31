@@ -5,6 +5,7 @@ import { effectsStore } from '$lib/stores/effects'
 import { lofiStore } from '$lib/stores/lofi'
 import { nowPlaying } from '$lib/stores/now-playing'
 import { snipStore } from '$lib/stores/snip'
+import { sleepStore } from '$lib/stores/sleep'
 import { featureOn } from '$lib/utils/features'
 import { announceSkip, noteTrackStarted } from '$lib/utils/skip-notice'
 import { playback } from '$lib/utils/playback'
@@ -200,6 +201,9 @@ export class TrackObserver {
 
         const { segments, editing } = this.activeSegments()
         const start = firstSegmentStart(segments)
+        // A sleep timer set to the end of this item pauses it there (utils/
+        // sleep-timer): nothing below may loop it, restart it or move on first.
+        const sleepingAtEnd = sleepStore.get().at_end
         const duration = currentSong.duration
         // duration 0 means "never known", not a zero-length track — without
         // the guard it would make atTrackEnd permanently true and insta-skip.
@@ -217,6 +221,7 @@ export class TrackObserver {
                 if (next) return this.playbackController.jumpTo(next.start)
 
                 // Past the last section: the snip has played out.
+                if (sleepingAtEnd) return
                 if (editing) return this.playbackController.jumpTo(start)
                 if (this.loop.looping) return this.loopOrAdvance(start)
                 this._skipping = true
@@ -227,12 +232,14 @@ export class TrackObserver {
             if (inside.end !== null) return
             // While editing, keep the track going round rather than letting
             // Spotify move on, so the draft stays audible.
-            if (editing && nearTrackEnd) return this.playbackController.jumpTo(start)
+            if (editing && nearTrackEnd && !sleepingAtEnd) {
+                return this.playbackController.jumpTo(start)
+            }
         }
 
         // The natural end of the track: no snip, or its last section runs to the end.
-        if (this.loop.looping && nearTrackEnd) return this.loopOrAdvance(start)
-        if (!atTrackEnd) return
+        if (this.loop.looping && nearTrackEnd && !sleepingAtEnd) return this.loopOrAdvance(start)
+        if (!atTrackEnd || sleepingAtEnd) return
 
         // A counted loop that ran out, or a snipped / blocked track, moves on
         // without waiting for Spotify's own auto-advance.

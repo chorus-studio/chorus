@@ -337,22 +337,59 @@ export default class AudioManager {
         }
     }
 
+    /** A sleep fade is in force (the output at, or on its way to, silence) until restoreGain. */
+    private _faded = false
+    /** The element's volume before a fade without a chain, to put back after it. */
+    private _fadeFrom?: number
+    private _elementFade: ReturnType<typeof setInterval> | null = null
+
     /** Ramp the output to silence over `seconds` (the sleep timer's last moments). */
     fadeOut(seconds: number): void {
-        if (!this._gainNode || !this._audioContext) return
-        const now = this._audioContext.currentTime
-        const gain = this._gainNode.gain
-        gain.cancelScheduledValues(now)
-        gain.setValueAtTime(gain.value, now)
-        gain.linearRampToValueAtTime(0, now + Math.max(0.05, seconds))
+        const length = Math.max(0.05, seconds)
+        this._faded = true
+        if (this._gainNode && this._audioContext) {
+            const now = this._audioContext.currentTime
+            const gain = this._gainNode.gain
+            gain.cancelScheduledValues(now)
+            gain.setValueAtTime(gain.value, now)
+            gain.linearRampToValueAtTime(0, now + length)
+            return
+        }
+        // No chain yet (no effect or Chorus volume in use): step the element's
+        // own volume down instead, remembering where it was.
+        if (!(this._element instanceof HTMLMediaElement)) return
+        const element = this._element
+        this.stopElementFade()
+        this._fadeFrom ??= element.volume
+        const from = element.volume
+        const steps = Math.max(1, Math.round(length * 20))
+        let step = 0
+        this._elementFade = setInterval(() => {
+            step += 1
+            element.volume = Math.max(0, from * (1 - step / steps))
+            if (step >= steps) this.stopElementFade()
+        }, 50)
     }
 
-    /** Put the output back where the volume asks, after a fade. */
+    /** Put the output back where the volume asks, after a fade; a no-op when nothing faded. */
     restoreGain(): void {
-        if (!this._gainNode || !this._audioContext) return
-        const now = this._audioContext.currentTime
-        this._gainNode.gain.cancelScheduledValues(now)
-        this._gainNode.gain.setValueAtTime(this.targetGain(), now)
+        if (!this._faded) return
+        this._faded = false
+        this.stopElementFade()
+        if (this._gainNode && this._audioContext) {
+            const now = this._audioContext.currentTime
+            this._gainNode.gain.cancelScheduledValues(now)
+            this._gainNode.gain.setValueAtTime(this.targetGain(), now)
+        }
+        if (this._fadeFrom !== undefined && this._element instanceof HTMLMediaElement) {
+            this._element.volume = this._fadeFrom
+        }
+        this._fadeFrom = undefined
+    }
+
+    private stopElementFade(): void {
+        if (this._elementFade) clearInterval(this._elementFade)
+        this._elementFade = null
     }
 
     /** The gain the volume settings ask for, the number setGain writes. */

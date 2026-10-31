@@ -17,6 +17,7 @@
         SLEEP_FADE_SECONDS,
         sleepCountdown,
         sleepEndsAtClock,
+        sleepItemEnd,
         sleepNoun,
         sleepProgress
     } from '$lib/utils/sleep-timer'
@@ -51,15 +52,13 @@
     const endsAt = $derived(sleepEndsAtClock($sleepStore))
     const progress = $derived(sleepProgress($sleepStore, now) ?? 0)
 
-    // What's playing, for the end-of card and the running panel.
+    // What's playing, for the end-of card and the running panel: the item ends
+    // where its last snip section does, when it carries one.
+    const itemEnd = $derived(sleepItemEnd($nowPlaying))
     const itemLeft = $derived(
-        $nowPlaying.duration > 0
-            ? Math.max(0, Math.round($nowPlaying.duration - $nowPlaying.current))
-            : null
+        itemEnd === null ? null : Math.max(0, Math.round(itemEnd - $nowPlaying.current))
     )
-    const itemProgress = $derived(
-        $nowPlaying.duration > 0 ? Math.min(1, $nowPlaying.current / $nowPlaying.duration) : 0
-    )
+    const itemProgress = $derived(itemEnd ? Math.min(1, $nowPlaying.current / itemEnd) : 0)
     const itemLine = $derived(
         [
             $nowPlaying.title,
