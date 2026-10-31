@@ -4,9 +4,10 @@
  * The web player lays its regions out on one CSS grid (top bar, library,
  * main view, right sidebar, player bar) with named areas, but the class
  * names on those regions are hashed per build, so nothing in theme.css can
- * name them. This module reads each grid child's computed `grid-area` and
- * tags the region `data-chorus-area="main-view"` and so on; theme.css takes
- * it from there. Two more tags make the translucency work:
+ * name them. This module reads each grid child's computed `grid-area` (or,
+ * when the placement is numbered, tells the main view by what it holds and
+ * the sides by where they sit) and tags the region
+ * `data-chorus-area="main-view"` and so on; theme.css takes it from there. Two more tags make the translucency work:
  *
  * - `data-chorus-frame` on the grid container and its ancestors up to <body>
  *   (and on the player bar's bleeding wrapper), which paint the frame colour
@@ -36,6 +37,10 @@ export const FRAME_ATTR = 'data-chorus-frame'
 
 const NAV_BAR = '[data-testid="global-nav-bar"]'
 const PLAYER_BAR = '[data-testid="now-playing-bar"]'
+/** What the main view holds, for telling the regions apart when their placement is not named. */
+const MAIN_VIEW = '.main-view-container, main'
+/** A grid child this tall, relative to the grid, is a side region rather than a banner or a bar. */
+const SIDE_REGION_HEIGHT_SHARE = 0.5
 /** Areas whose panel is found by walking down from the grid child; the bars are painted by their own selectors. */
 const WALKED_AREAS = new Set(['left-sidebar', 'main-view', 'right-sidebar'])
 const WALK_DEPTH_MAX = 10
@@ -66,14 +71,25 @@ let timer: ReturnType<typeof setTimeout> | null = null
 let tagged: Set<Element> = new Set()
 let onResize: (() => void) | null = null
 
+/**
+ * The grid that lays the regions out: the nearest grid above the top bar that
+ * also holds the main view. The nearest grid alone is not enough when the bar
+ * sits in a grid of its own (the signed-in layout wraps it), which has no
+ * regions among its children.
+ */
 function gridContainer(): HTMLElement | null {
     const nav = document.querySelector<HTMLElement>(NAV_BAR)
+    const main = document.querySelector<HTMLElement>(MAIN_VIEW)
     let el: HTMLElement | null = nav?.parentElement ?? null
+    let nearest: HTMLElement | null = null
     while (el && el !== document.body) {
-        if (getComputedStyle(el).display === 'grid') return el
+        if (getComputedStyle(el).display === 'grid') {
+            nearest ??= el
+            if (!main || el.contains(main)) return el
+        }
         el = el.parentElement
     }
-    return null
+    return nearest
 }
 
 /**
@@ -86,7 +102,33 @@ function areaOf(el: HTMLElement): string | null {
     if (el.matches(NAV_BAR) || el.querySelector(NAV_BAR)) return 'global-nav'
     if (el.matches(PLAYER_BAR) || el.querySelector(PLAYER_BAR)) return 'now-playing-bar'
     const start = getComputedStyle(el).gridRowStart
-    return /^[a-z][a-z-]*$/.test(start) ? start : null
+    if (/^[a-z][a-z-]*$/.test(start)) return start
+    // Numbered placement: the main view is known by what it holds; the sides by where they sit (regionsOf).
+    if (el.matches(MAIN_VIEW) || el.querySelector(MAIN_VIEW)) return 'main-view'
+    return null
+}
+
+/**
+ * Each grid child with its region. A child whose placement is numbered and
+ * that holds nothing we know is a side region when it is tall and sits left
+ * or right of the main view.
+ */
+function regionsOf(grid: HTMLElement): Array<{ child: HTMLElement; area: string | null }> {
+    const entries = [...grid.children]
+        .filter((child): child is HTMLElement => child instanceof HTMLElement)
+        .map((child) => ({ child, area: areaOf(child) }))
+    const main = entries.find((entry) => entry.area === 'main-view')
+    if (!main) return entries
+    const mainRect = main.child.getBoundingClientRect()
+    const gridHeight = grid.getBoundingClientRect().height
+    for (const entry of entries) {
+        if (entry.area) continue
+        const rect = entry.child.getBoundingClientRect()
+        if (rect.width === 0 || rect.height < gridHeight * SIDE_REGION_HEIGHT_SHARE) continue
+        if (rect.right <= mainRect.left + 1) entry.area = 'left-sidebar'
+        else if (rect.left >= mainRect.right - 1) entry.area = 'right-sidebar'
+    }
+    return entries
 }
 
 /** `#rrggbb` as `rgb(r, g, b)`, the form computed styles use. */
@@ -256,9 +298,7 @@ export function tagPagePanels(): void {
     }
     const claimed = new Set<string>()
     const colours = panelColours()
-    for (const child of grid.children) {
-        if (!(child instanceof HTMLElement)) continue
-        const area = areaOf(child)
+    for (const { child, area } of regionsOf(grid)) {
         if (!area || claimed.has(area)) continue
         if (area === 'global-nav') {
             claimed.add(area)
