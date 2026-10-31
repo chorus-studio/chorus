@@ -75,11 +75,21 @@ const PANEL_COLOUR_VARS = ['--chorus-main', '--chorus-sidebar', '--chorus-player
 const PANEL_TINT_VARS = ['--chorus-hero', '--chorus-hero-top']
 const PROBE_ID = 'chorus-colour-probe'
 const DEBOUNCE_MS = 120
+/**
+ * An element this big arriving under the grid is tagged before the next
+ * paint rather than after the debounce: the Now playing view's cinema
+ * rebuilds the surface behind the lyrics as you scroll, and a rebuilt node
+ * paints Spotify's own colour until it is tagged again.
+ */
+const PROMPT_MIN_EDGE = 240
+/** Two prompt passes closer than this fall back to the debounce, so a storm of insertions stays cheap. */
+const PROMPT_GAP_MS = 50
 /** After a pass that left a sized region without a panel: try again at these delays, then leave it to the observer. */
 const RETRY_DELAYS_MS = [400, 1500, 4000]
 
 let observer: MutationObserver | null = null
 let timer: ReturnType<typeof setTimeout> | null = null
+let lastPromptPass = 0
 let retryTimer: ReturnType<typeof setTimeout> | null = null
 let retryIndex = 0
 let tagged: Set<Element> = new Set()
@@ -221,7 +231,11 @@ type Painted = {
 }
 
 /** Whether a pseudo-element is rendered and paints one of the colours. */
-function pseudoPaints(el: HTMLElement, which: '::before' | '::after', colours: Set<string>): boolean {
+function pseudoPaints(
+    el: HTMLElement,
+    which: '::before' | '::after',
+    colours: Set<string>
+): boolean {
     const style = getComputedStyle(el, which)
     return style.content !== 'none' && colours.has(style.backgroundColor)
 }
@@ -458,6 +472,34 @@ function schedule(): void {
     }, DEBOUNCE_MS)
 }
 
+/** A page element with a box of its own this big; never one of Chorus's. */
+function isSizeable(node: Node): boolean {
+    if (!(node instanceof HTMLElement) || isChorusOwn(node)) return false
+    const rect = node.getBoundingClientRect()
+    return rect.width >= PROMPT_MIN_EDGE && rect.height >= PROMPT_MIN_EDGE
+}
+
+/**
+ * On mutations: a pass at once when a sizeable element arrived (before the
+ * browser paints it in Spotify's colour), the debounced pass otherwise.
+ */
+function onMutations(records: MutationRecord[]): void {
+    const now = performance.now()
+    const prompt =
+        now - lastPromptPass >= PROMPT_GAP_MS &&
+        records.some((record) => Array.from(record.addedNodes).some(isSizeable))
+    if (!prompt) {
+        schedule()
+        return
+    }
+    lastPromptPass = now
+    if (timer) {
+        clearTimeout(timer)
+        timer = null
+    }
+    runPass()
+}
+
 /**
  * Keep the page's panels tagged while a backdrop is on. Idempotent. The
  * observer covers the whole document rather than the grid: a signed-in page
@@ -466,7 +508,7 @@ function schedule(): void {
  */
 export function watchPagePanels(): void {
     if (observer || typeof document === 'undefined') return
-    observer = new MutationObserver(schedule)
+    observer = new MutationObserver(onMutations)
     observer.observe(document.documentElement, { childList: true, subtree: true })
     onWake = schedule
     window.addEventListener('resize', onWake)
