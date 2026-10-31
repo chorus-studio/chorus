@@ -334,7 +334,7 @@
     const VALUE = 'font-mono text-[11px] text-ink-fg-2'
 </script>
 
-<div class="flex h-full min-h-0 flex-col">
+<div class="flex min-h-0 flex-col">
     <div class="flex items-center gap-x-2 border-b border-hairline px-3 py-2.5">
         <Button
             variant="ghost"
