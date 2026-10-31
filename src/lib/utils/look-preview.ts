@@ -48,7 +48,7 @@ function withFrame(palette: Record<CSSVariable, string>, mode: Mode): SketchColo
 
 /** A look's page colours for the appearance, as theming.ts will write them. */
 export function lookColours(look: Look, mode: Mode): SketchColours {
-    return withFrame(resolvePalette(look.palette), mode)
+    return withFrame(resolvePalette(look.palette, look.backdrop), mode)
 }
 
 export function paletteSketch(name: ThemeName, mode: Mode): Sketch {

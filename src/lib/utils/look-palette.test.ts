@@ -5,7 +5,9 @@ import {
     normaliseHex,
     paletteFromSwatches,
     parseSpicetifyIni,
+    seedFromGradient,
     seedFromSwatches,
+    swatchesFromGradient,
     toSpicetifyIni
 } from './look-palette'
 import { contrastRatio, hexToHsl } from './popup-palette'
@@ -167,5 +169,49 @@ describe('paletteFromSwatches', () => {
         expect(paletteFromSwatches(swatches)).toEqual(derivePalette(seed))
         expect(hexToHsl(paletteFromSwatches(swatches)!.main)[2]).toBeLessThan(20)
         expect(paletteFromSwatches([])).toBeNull()
+    })
+})
+
+describe('seedFromGradient', () => {
+    const neon = {
+        kind: 'gradient' as const,
+        type: 'linear' as const,
+        angle: 45,
+        origin: 'center' as const,
+        drift: false,
+        stops: [
+            { color: '#0f0f0f', at: 0 },
+            { color: '#ff00ff', at: 25 },
+            { color: '#00ffff', at: 75 },
+            { color: '#0f0f0f', at: 100 }
+        ]
+    }
+
+    it('weights each stop by the span it colours', () => {
+        expect(swatchesFromGradient(neon).map((s) => s.population)).toEqual([13, 38, 38, 13])
+        const mesh = swatchesFromGradient({ ...neon, type: 'mesh' })
+        expect(mesh[0]).toEqual({ hex: '#0f0f0f', population: 50 })
+    })
+
+    it('takes the base from the widest stop and the accent from the hue furthest away', () => {
+        const seed = seedFromGradient(neon, 'dark')!
+        const [baseHue, , baseLight] = hexToHsl(seed.base)
+        const [accentHue] = hexToHsl(seed.accent)
+        expect(Math.round(baseHue)).toBe(300)
+        expect(baseLight).toBeLessThan(20)
+        expect(Math.round(accentHue)).toBe(180)
+        // One coloured stop: it is the accent too.
+        const single = seedFromGradient(
+            {
+                ...neon,
+                stops: [
+                    { color: '#101010', at: 0 },
+                    { color: '#ff8c42', at: 100 }
+                ]
+            },
+            'dark'
+        )!
+        expect(Math.round(hexToHsl(single.accent)[0])).toBe(Math.round(hexToHsl('#ff8c42')[0]))
+        expect(seedFromGradient({ ...neon, stops: [] }, 'dark')).toBeNull()
     })
 })

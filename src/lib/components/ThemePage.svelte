@@ -18,13 +18,7 @@
     import { looksStore, ownLooks, findLook } from '$lib/stores/looks'
     import { nowPlaying } from '$lib/stores/now-playing'
     import { openLookEditor, remixForEditing } from '$lib/stores/look-editor'
-    import {
-        THEME_NAMES,
-        applyLook,
-        lookById,
-        resolveMode,
-        type ThemeName
-    } from '$lib/utils/theming'
+    import { THEME_NAMES, applyLook, resolveMode, type ThemeName } from '$lib/utils/theming'
     import { lookSketch, paletteSketch, type Sketch } from '$lib/utils/look-preview'
     import { playingPalette } from '$lib/utils/cover-palette'
     import { LookFileError, parseLookFile } from '$lib/utils/look-file'
@@ -298,14 +292,11 @@
     // ---- the editor (a drawer over the live page; this page steps aside) ----
 
     function startNew() {
-        // A new look starts from whatever is on now, backdrop aside.
-        const current = lookById(get(looksStore), $settingsStore.theme.look)
         openLookEditor(
             newLook({
                 name: looksStore.uniqueName('New look'),
-                palette: current
-                    ? structuredClone(current.palette)
-                    : { kind: 'builtin', name: $settingsStore.theme.name }
+                // The palette reads itself from whatever backdrop the new look gets.
+                palette: { kind: 'backdrop' }
             }),
             true
         )

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { SPOTIFY_PALETTE, resolvePalette, rewriteSpotifyCss, setPlayingCover } from './theming'
-import { derivePalette } from './look-palette'
+import { derivePalette, seedFromGradient } from './look-palette'
+import { BUILTIN_LOOKS } from '$lib/types/look'
 import { frameColor } from './theme-surfaces'
 
 const overlay = (alpha: string) =>
@@ -147,5 +148,19 @@ describe('a palette that follows the cover', () => {
         expect(resolvePalette({ kind: 'cover' })).toBe(palette)
         setPlayingCover('https://i.scdn.co/image/b', null)
         expect(resolvePalette({ kind: 'cover' })).toEqual(SPOTIFY_PALETTE)
+    })
+})
+
+describe('a palette read from the backdrop', () => {
+    it('reads a gradient on the spot, a picture from its seed, and stands in otherwise', () => {
+        const gradient = BUILTIN_LOOKS[0].backdrop!
+        expect(gradient.kind).toBe('gradient')
+        if (gradient.kind !== 'gradient') return
+        expect(resolvePalette({ kind: 'backdrop' }, gradient)).toEqual(
+            derivePalette(seedFromGradient(gradient, 'dark')!)
+        )
+        const seed = { base: '#10263a', accent: '#ffb36b' }
+        expect(resolvePalette({ kind: 'backdrop', seed }, null)).toEqual(derivePalette(seed))
+        expect(resolvePalette({ kind: 'backdrop' }, null)).toEqual(SPOTIFY_PALETTE)
     })
 })
