@@ -15,17 +15,24 @@
     import SegmentedControl from '$lib/components/SegmentedControl.svelte'
     import LookSketch from './theming/LookSketch.svelte'
     import { settingsStore, type Appearance } from '$lib/stores/settings'
-    import { looksStore, ownLooks } from '$lib/stores/looks'
+    import { looksStore, ownLooks, findLook } from '$lib/stores/looks'
     import { nowPlaying } from '$lib/stores/now-playing'
-    import { openLookEditor } from '$lib/stores/look-editor'
-    import { THEME_NAMES, lookById, resolveMode, type ThemeName } from '$lib/utils/theming'
+    import { openLookEditor, remixForEditing } from '$lib/stores/look-editor'
+    import {
+        THEME_NAMES,
+        applyLook,
+        lookById,
+        resolveMode,
+        type ThemeName
+    } from '$lib/utils/theming'
     import { lookSketch, paletteSketch, type Sketch } from '$lib/utils/look-preview'
     import { playingPalette } from '$lib/utils/cover-palette'
     import { LookFileError, parseLookFile } from '$lib/utils/look-file'
     import { saveTextFile } from '$lib/utils/save-file'
     import { extensionVersion } from '$lib/utils/extension-version'
     import { closeThemePage } from '$lib/utils/theme-route'
-    import { BUILTIN_LOOKS, newLook, type Look } from '$lib/types/look'
+    import { BUILTIN_LOOKS, SHOW_THROUGH_MAX, newLook, type Look } from '$lib/types/look'
+    import { CustomSlider } from '$lib/components/ui/custom-slider'
     import { cn } from '$lib/utils.js'
 
     // The theme page across Spotify's main view: the content script mounts
@@ -73,13 +80,14 @@
     const hidden = $derived(new Set($looksStore.hiddenBuiltIn))
     const items = $derived.by<Item[]>(() => {
         const cover = $nowPlaying.cover
+        const through = $settingsStore.theme.showThrough
         // A look whose palette follows the cover redraws when that palette is read.
         void $playingPalette
         const mine = ownLooks($looksStore).map((look) => ({
             id: look.id,
             kind: 'look' as const,
             label: look.name,
-            sketch: lookSketch(look, mode, cover),
+            sketch: lookSketch(look, mode, cover, through),
             mine: true,
             builtIn: false,
             hidden: false
@@ -88,7 +96,7 @@
             id: look.id,
             kind: 'look' as const,
             label: look.name,
-            sketch: lookSketch(look, mode, cover),
+            sketch: lookSketch(look, mode, cover, through),
             mine: false,
             builtIn: true,
             hidden: hidden.has(look.id)
@@ -163,6 +171,24 @@
         })
     }
 
+    // The default show-through paints live and persists a beat later, so a
+    // drag doesn't write storage (and re-run the look in every window) per pixel.
+    let showThrough = $state($settingsStore.theme.showThrough)
+    let showThroughTimer: ReturnType<typeof setTimeout> | null = null
+    function setShowThrough(value: number) {
+        showThrough = value
+        const settings = {
+            ...$settingsStore,
+            theme: { ...$settingsStore.theme, showThrough: value }
+        }
+        void applyLook(settings, get(looksStore))
+        if (showThroughTimer) clearTimeout(showThroughTimer)
+        showThroughTimer = setTimeout(() => {
+            showThroughTimer = null
+            settingsStore.updateSettings({ theme: settings.theme })
+        }, 200)
+    }
+
     // Radio-group keyboard pattern: arrows move within the grid (its column
     // count read off the first row) and select as they go, Home/End jump to
     // the ends, Tab lands on the current one.
@@ -205,8 +231,11 @@
             )
             return
         }
-        const copy = await looksStore.duplicateLook(item.id)
-        if (copy) openLookEditor(copy, false)
+        // A remix (or a duplicate) opens as an unsaved draft, like New look: Save creates it.
+        const source = findLook($looksStore, item.id)
+        if (!source) return
+        const name = looksStore.uniqueName(source.builtIn ? source.name : `${source.name} copy`)
+        openLookEditor(await remixForEditing(source, name), true)
     }
 
     async function setHidden(item: Item, value: boolean) {
@@ -403,6 +432,25 @@
                             Apply theme
                         </label>
                         <span class={HINT}>Off, Spotify wears its own colours again.</span>
+                    </div>
+                    <div class="flex flex-col gap-y-2 px-2.5 py-2">
+                        <div class="flex items-center justify-between">
+                            <span class="rack-label">Show-through</span>
+                            <span class="font-mono text-[11px] text-ink-fg-2">{showThrough} %</span>
+                        </div>
+                        <CustomSlider
+                            type="single"
+                            min={0}
+                            max={SHOW_THROUGH_MAX}
+                            step={5}
+                            value={showThrough}
+                            label="Default show-through"
+                            onValueChange={(v) => setShowThrough(v as number)}
+                        />
+                        <span class={HINT}>
+                            How much of a backdrop shows through the panels, for every look without
+                            a value of its own; the editor can set one per look.
+                        </span>
                     </div>
                     <div class="flex flex-col gap-y-2 px-2.5 py-2">
                         <span class="rack-label">Appearance</span>

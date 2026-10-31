@@ -12,10 +12,12 @@
  *   (and on the player bar's bleeding wrapper), which paint the frame colour
  *   over the whole page and have to go transparent for the backdrop to show.
  * - `data-chorus-panel` on the one element that paints each panel, and
- *   `data-chorus-panel-layer` on any element under it that fills the panel
- *   and paints the same surface again (Spotify stacks a few). The panel takes
- *   the translucent colour; the layers go transparent; anything smaller than
- *   the panel (a sticky header, a card) keeps its own opaque colour.
+ *   `data-chorus-panel-layer` on any element under it that covers the panel
+ *   (as wide as it, and at least as tall: the main view's scroll content runs
+ *   far past the box on an artist or album page) and paints the same surface
+ *   again (Spotify stacks a few). The panel takes the translucent colour; the
+ *   layers go transparent; anything narrower or shorter than the panel (a
+ *   sticky header, a hero band, a card) keeps its own opaque colour.
  *
  * The grid also holds overlays placed on the same areas (toasts, onboarding,
  * the cinema view), so each area name is claimed once, by the first child
@@ -35,7 +37,7 @@ const PLAYER_BAR = '[data-testid="now-playing-bar"]'
 /** Areas whose panel is found by walking down from the grid child; the bars are painted by their own selectors. */
 const WALKED_AREAS = new Set(['left-sidebar', 'main-view', 'right-sidebar'])
 const WALK_DEPTH_MAX = 10
-/** A child this close to its area's box in both dimensions fills it. */
+/** A child this close to its area's box in width, and no shorter than it, covers it. */
 const FILL_TOLERANCE = 2
 const DEBOUNCE_MS = 120
 
@@ -75,11 +77,18 @@ function paintsSomething(el: HTMLElement): boolean {
     return !alpha || parseFloat(alpha[1]) > 0
 }
 
-function fills(child: Element, box: DOMRect): boolean {
+/**
+ * Whether a child covers its area's box: as wide as it, and at least as tall.
+ * Scroll content is taller than the box and has to count, or the main view's
+ * content wrapper (which paints the main colour edge to edge) stays opaque
+ * over a translucent panel; a sticky header or a hero band is shorter and
+ * keeps its colour.
+ */
+function covers(child: Element, box: DOMRect): boolean {
     const rect = child.getBoundingClientRect()
     return (
         Math.abs(rect.width - box.width) <= FILL_TOLERANCE &&
-        Math.abs(rect.height - box.height) <= FILL_TOLERANCE
+        rect.height >= box.height - FILL_TOLERANCE
     )
 }
 
@@ -99,7 +108,7 @@ function clearTags(): void {
 }
 
 /**
- * Down from an area's grid child through whatever fills it: the first element
+ * Down from an area's grid child through whatever covers it: the first element
  * that paints is the panel, later painted ones are layers. Null when nothing
  * on the way paints (an overlay, an empty region).
  */
@@ -116,7 +125,7 @@ function findPanel(root: HTMLElement): { panel: HTMLElement; layers: HTMLElement
         }
         let next: HTMLElement | null = null
         for (const child of el.children) {
-            if (child instanceof HTMLElement && fills(child, box)) {
+            if (child instanceof HTMLElement && covers(child, box)) {
                 next = child
                 break
             }

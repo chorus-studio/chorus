@@ -9,7 +9,6 @@ import {
     BUILTIN_LOOKS,
     DEFAULT_LOOKS_STATE,
     isBuiltinLook,
-    remixLook,
     type Look,
     type LooksState
 } from '$lib/types/look'
@@ -89,17 +88,6 @@ function createLooksStore() {
         }
     }
 
-    /** A copy of any look (a remix of a built-in, a duplicate of one's own) under a new name. */
-    async function duplicateLook(id: string): Promise<Look | null> {
-        const source = findLook(get(store), id)
-        if (!source) return null
-        const copy = remixLook(
-            source,
-            uniqueName(source.builtIn ? source.name : `${source.name} copy`)
-        )
-        return saveLook(copy)
-    }
-
     /** A look read from a file, taken in as one of the person's own, picture and all. */
     async function importLook(parsed: ParsedLookFile): Promise<Look> {
         const id = crypto.randomUUID()
@@ -146,7 +134,6 @@ function createLooksStore() {
         subscribe,
         saveLook,
         deleteLook,
-        duplicateLook,
         importLook,
         exportLook,
         setHidden,

@@ -248,7 +248,11 @@ export function sanitiseLook(raw: unknown): Look | null {
         palette: sanitisePalette(raw.palette),
         backdrop: sanitiseBackdrop(raw.backdrop),
         panels: {
-            showThrough: clamp(panels.showThrough, 0, SHOW_THROUGH_MAX, 25),
+            // A number is the look's own; anything else follows the default in settings.
+            showThrough:
+                typeof panels.showThrough === 'number'
+                    ? clamp(panels.showThrough, 0, SHOW_THROUGH_MAX, 25)
+                    : null,
             glass: bool(panels.glass, false)
         },
         ...(typeof raw.remixedFrom === 'string'

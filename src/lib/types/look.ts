@@ -107,8 +107,8 @@ export type PaletteSource =
     | { kind: 'cover' }
 
 export type Panels = {
-    /** 0–100 %: how much of the backdrop shows through the page's panels; at 100 they vanish. */
-    showThrough: number
+    /** 0–100 %: how much of the backdrop shows through the page's panels; at 100 they vanish. Null follows the default in settings (`theme.showThrough`). */
+    showThrough: number | null
     /** Blur the backdrop behind each panel. */
     glass: boolean
 }
@@ -137,6 +137,8 @@ export const DEFAULT_LOOKS_STATE: LooksState = { version: 1, looks: {}, hiddenBu
 
 /** The panels can go all the way to clear; Glass keeps the text readable over the blur when they do. */
 export const SHOW_THROUGH_MAX = 100
+/** What `theme.showThrough` starts at, and what a look without its own value shows until settings load. */
+export const SHOW_THROUGH_DEFAULT = 25
 export const GRADIENT_STOPS_MAX = 5
 export const GRADIENT_STOPS_MIN = 2
 export const IMAGE_DIM_MAX = 80
@@ -157,7 +159,13 @@ export const ANCHORS: Anchor[] = [
     'bottom right'
 ]
 
-export const DEFAULT_PANELS: Panels = { showThrough: 25, glass: false }
+/** A new look (and every built-in) follows the default show-through. */
+export const DEFAULT_PANELS: Panels = { showThrough: null, glass: false }
+
+/** A look's show-through, or the default when it has none of its own. */
+export function resolveShowThrough(panels: Panels, fallback: number): number {
+    return panels.showThrough ?? fallback
+}
 
 export const DEFAULT_GRADIENT: GradientBackdrop = {
     kind: 'gradient',

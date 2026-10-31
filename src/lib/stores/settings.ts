@@ -1,4 +1,5 @@
 import { storage } from '@wxt-dev/storage'
+import { SHOW_THROUGH_DEFAULT } from '$lib/types/look'
 import { writable, get } from 'svelte/store'
 import type { ThemeName } from '$lib/utils/theming'
 import { syncWithType } from '$lib/utils/store-utils'
@@ -48,6 +49,8 @@ export type SettingsState = {
         name: ThemeName
         /** A saved look's id (types/look.ts), built-in or the person's own; null for a bare palette. */
         look: string | null
+        /** 0–100 %: how much of a backdrop shows through the panels, for looks without their own value. */
+        showThrough: number
         appearance: Appearance
         popup: PopupColours
         glass: GlassSettings
@@ -84,6 +87,7 @@ const defaultSettingsState: SettingsState = {
     theme: {
         name: 'spotify' as ThemeName,
         look: null,
+        showThrough: SHOW_THROUGH_DEFAULT,
         appearance: 'dark',
         popup: 'album',
         glass: DEFAULT_GLASS
