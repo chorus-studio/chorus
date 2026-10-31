@@ -13,18 +13,10 @@ export type FeatureKey = 'snips' | 'blocks' | 'effects'
 export type Appearance = 'dark' | 'light' | 'system'
 /** Where the toolbar popup takes its colours from (the PiP player always follows the theme). */
 export type PopupColours = 'album' | 'theme'
-/** Glass material tweaks: panel opacity (0..1), backdrop blur (px), refraction strength (0 = off). */
-export type GlassSettings = {
-    opacity: number
-    blur: number
-    refraction: number
-}
-
 export type SettingsState = {
     ui: {
         pip: boolean
         theme: boolean
-        glass: boolean
         playlist: boolean
         volume: boolean
         progress: boolean
@@ -53,18 +45,14 @@ export type SettingsState = {
         showThrough: number
         appearance: Appearance
         popup: PopupColours
-        glass: GlassSettings
     }
     features: Record<FeatureKey, boolean>
 }
-
-export const DEFAULT_GLASS: GlassSettings = { opacity: 0.5, blur: 40, refraction: 22 }
 
 const defaultSettingsState: SettingsState = {
     ui: {
         pip: false,
         theme: false,
-        glass: false,
         volume: false,
         progress: true,
         playlist: false
@@ -89,19 +77,9 @@ const defaultSettingsState: SettingsState = {
         look: null,
         showThrough: SHOW_THROUGH_DEFAULT,
         appearance: 'dark',
-        popup: 'album',
-        glass: DEFAULT_GLASS
+        popup: 'album'
     },
     features: { snips: true, blocks: true, effects: true }
-}
-
-/** `ui.frosted` became `ui.glass`; carry a saved "on" across so the panels don't go solid on update. */
-function migrate(settings: SettingsState): SettingsState {
-    const ui = settings.ui as SettingsState['ui'] & { frosted?: boolean }
-    if (ui && ui.frosted && ui.glass === undefined) {
-        return { ...settings, ui: { ...ui, glass: true } }
-    }
-    return settings
 }
 
 function createSettingsStore() {
@@ -137,7 +115,7 @@ function createSettingsStore() {
         if (!settings) return
 
         // Sync the stored settings with the current type definition
-        const syncedSettings = syncWithType(migrate(settings), defaultSettingsState)
+        const syncedSettings = syncWithType(settings, defaultSettingsState)
         set(syncedSettings)
 
         // Update storage with synced settings

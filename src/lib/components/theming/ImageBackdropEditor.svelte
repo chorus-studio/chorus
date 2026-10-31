@@ -4,7 +4,6 @@
         DEFAULT_IMAGE_OPTIONS,
         IMAGE_BLUR_MAX,
         IMAGE_DIM_MAX,
-        IMAGE_SATURATE_MAX,
         isVideoBackdrop,
         type ImageBackdrop,
         type ImageFit
@@ -27,7 +26,6 @@
     import { Input } from '$lib/components/ui/input'
     import { CustomSlider } from '$lib/components/ui/custom-slider'
     import SegmentedControl from '$lib/components/SegmentedControl.svelte'
-    import AnchorGrid from './AnchorGrid.svelte'
 
     // The image half of the Backdrop section: a drop zone until a picture is
     // in, then the picture's chip and its controls. A dropped file is checked
@@ -261,17 +259,13 @@
             onValueChange={(v) => patch({ fit: v as ImageFit })}
             options={[
                 { label: 'Fill', value: 'cover', title: 'Fill the window, cropping the edges' },
-                { label: 'Whole', value: 'contain', title: 'Show the whole picture' },
+                // Whole letterboxes a backdrop; it stays only for a look that already has it.
+                ...(backdrop.fit === 'contain'
+                    ? [{ label: 'Whole', value: 'contain', title: 'Show the whole picture' }]
+                    : []),
                 { label: 'Tile', value: 'tile', title: 'Repeat the picture at its own size' }
             ]}
         />
-    </div>
-    <div class="flex items-center justify-between gap-x-3">
-        <div class="flex flex-col gap-y-0.5">
-            <span class={LABEL}>Anchor</span>
-            <span class={HINT}>Which part stays in view when the window is narrow</span>
-        </div>
-        <AnchorGrid value={backdrop.anchor} onChange={(anchor) => patch({ anchor })} />
     </div>
 
     <div class="flex flex-col gap-y-1.5">
@@ -302,21 +296,6 @@
             value={backdrop.blur}
             label="Blur"
             onValueChange={(v) => patch({ blur: v as number })}
-        />
-    </div>
-    <div class="flex flex-col gap-y-1.5">
-        <div class="flex items-center justify-between">
-            <span class={LABEL}>Saturation</span>
-            <span class={VALUE}>{backdrop.saturate} %</span>
-        </div>
-        <CustomSlider
-            type="single"
-            min={0}
-            max={IMAGE_SATURATE_MAX}
-            step={10}
-            value={backdrop.saturate}
-            label="Saturation"
-            onValueChange={(v) => patch({ saturate: v as number })}
         />
     </div>
 

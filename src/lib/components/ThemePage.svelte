@@ -473,7 +473,7 @@
                         <span class="rack-label">Shortcuts</span>
                         <span class={HINT}>
                             Alt+Shift+] and Alt+Shift+[ step through what is not hidden. The popup
-                            and glass settings stay in Chorus settings › Theme.
+                            colour setting stays in Chorus settings › Theme.
                         </span>
                     </div>
                 </aside>

@@ -203,7 +203,7 @@ describe('sanitiseLook', () => {
         )
     })
 
-    it('keeps a palette read from the backdrop, with its seed when it has one, and the surfaces', () => {
+    it('keeps a palette read from the backdrop, with its seed when it has one', () => {
         expect(sanitiseLook({ name: 'B', palette: { kind: 'backdrop' } })?.palette).toEqual({
             kind: 'backdrop'
         })
@@ -216,12 +216,13 @@ describe('sanitiseLook', () => {
                 }
             })?.palette
         ).toEqual({ kind: 'backdrop', seed: { base: '#aabbcc', accent: '#ff8c42' } })
-        expect(sanitiseLook({ name: 'B', panels: { surfaces: 'tinted' } })?.panels.surfaces).toBe(
-            'tinted'
-        )
-        expect(
-            sanitiseLook({ name: 'B', panels: { surfaces: 'shiny' } })?.panels.surfaces
-        ).toBeUndefined()
+    })
+
+    it('drops the surfaces a look file may still carry', () => {
+        expect(sanitiseLook({ name: 'B', panels: { surfaces: 'tinted' } })?.panels).toEqual({
+            showThrough: null,
+            glass: false
+        })
     })
 
     it('returns null for anything without a name', () => {

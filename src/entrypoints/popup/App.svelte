@@ -5,7 +5,7 @@
     import { nowPlaying } from '$lib/stores/now-playing'
     import { get } from 'svelte/store'
     import { paintPopup } from '$lib/utils/vibrant-colors'
-    import { applyRackLook, watchSystemMode } from '$lib/utils/theming'
+    import { applyRackLook, lookFromSettings, watchSystemMode } from '$lib/utils/theming'
     import { followPlayingCover } from '$lib/utils/cover-palette'
     import { getEnabled, setEnabled, watchEnabled } from '$lib/stores/enabled'
     import { settingsStore } from '$lib/stores/settings'
@@ -30,7 +30,9 @@
     let vocalSupported = $state(false)
     // The frames shown before and instead of the player match its height (the
     // glass card adds 8 px of padding), so the popup never resizes.
-    const frameHeight = $derived($settingsStore.ui.glass ? 'h-[184px]' : 'h-[176px]')
+    const frameHeight = $derived(
+        lookFromSettings($settingsStore, $looksStore).look?.panels.glass ? 'h-[184px]' : 'h-[176px]'
+    )
 
     // First paint before the player mounts, so the loading frame already wears
     // the cover's colour (or the rack tokens for "Popup: Theme"); PopUp keeps

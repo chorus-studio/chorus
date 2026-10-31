@@ -4,8 +4,7 @@
         GRADIENT_STOPS_MAX,
         GRADIENT_STOPS_MIN,
         type GradientBackdrop,
-        type GradientKind,
-        type RadialShape
+        type GradientKind
     } from '$lib/types/look'
     import { gradientCss } from '$lib/utils/backdrop-css'
     import X from '@lucide/svelte/icons/x'
@@ -14,7 +13,6 @@
     import { CustomSlider } from '$lib/components/ui/custom-slider'
     import SegmentedControl from '$lib/components/SegmentedControl.svelte'
     import ColourField from './ColourField.svelte'
-    import AnchorGrid from './AnchorGrid.svelte'
     import { cn } from '$lib/utils.js'
 
     let {
@@ -57,7 +55,6 @@
             .join(', ')})`
     )
     const hasAngle = $derived(gradient.type === 'linear' || gradient.type === 'conic')
-    const hasOrigin = $derived(gradient.type === 'radial' || gradient.type === 'conic')
     const canRepeat = $derived(gradient.type !== 'mesh')
     /** The preset the gradient still is, until a stop or setting moves off it. */
     const activePreset = $derived(
@@ -166,34 +163,6 @@
             ]}
         />
     </div>
-    {#if gradient.type === 'radial'}
-        <div class="flex items-center justify-between gap-x-3">
-            <span class={MONO}>Rings</span>
-            <SegmentedControl
-                size="sm"
-                ariaLabel="Radial shape"
-                value={gradient.shape ?? 'ellipse'}
-                onValueChange={(v) => patch({ shape: v as RadialShape })}
-                options={[
-                    { label: 'Ellipse', value: 'ellipse', title: 'Stretched to the window' },
-                    { label: 'Circle', value: 'circle', title: 'Round, as rings should be' }
-                ]}
-            />
-        </div>
-    {/if}
-    {#if hasOrigin}
-        <div class="flex items-center justify-between gap-x-3">
-            <div class="flex flex-col gap-y-0.5">
-                <span class={MONO}>Origin</span>
-                <span class={HINT}>Where the gradient starts</span>
-            </div>
-            <AnchorGrid
-                value={gradient.origin}
-                onChange={(origin) => patch({ origin })}
-                label="Gradient origin"
-            />
-        </div>
-    {/if}
     {#if hasAngle}
         <div class="flex flex-col gap-y-1.5">
             <div class="flex items-center justify-between">

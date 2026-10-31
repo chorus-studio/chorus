@@ -44,8 +44,7 @@
         type BackdropKind,
         type ImageBackdrop,
         type Look,
-        type PaletteSource,
-        type Surfaces
+        type PaletteSource
     } from '$lib/types/look'
 
     // The look editor, laid out for the card that floats over Spotify's live
@@ -174,7 +173,17 @@
         ...(paletteKind === 'slots'
             ? [{ label: 'Advanced', value: 'slots', title: 'Every slot by hand' }]
             : []),
-        { label: 'From cover', value: 'cover', title: 'Colours read from the playing cover' }
+        // From cover is what From backdrop does under an Album art backdrop; it
+        // stays only for a look that already has it.
+        ...(paletteKind === 'cover'
+            ? [
+                  {
+                      label: 'From cover',
+                      value: 'cover',
+                      title: 'Colours read from the playing cover'
+                  }
+              ]
+            : [])
     ])
     /** One line under the source picker: what this source does, and why the colours may be stand-ins. */
     const sourceHint = $derived.by(() => {
@@ -505,7 +514,8 @@
                         )}
                         <span class={HINT}>
                             The playing cover, enlarged past the blur's soft edge and washed with
-                            the frame colour. It changes with the music; the palette stays yours.
+                            the frame colour. It changes with the music, and with the palette From
+                            backdrop the colours follow it.
                         </span>
                     {/if}
                 </div>
@@ -666,54 +676,21 @@
                                 aria-label="Follow the default show-through"
                             />
                         </div>
-                        <div class={ROW}>
-                            <div class="flex min-w-0 flex-col gap-y-0.5">
-                                <span class={LABEL}>Glass</span>
-                                <span class={HINT}>
-                                    Blurs the backdrop behind each panel, so text stays readable at
-                                    high show-through.
-                                </span>
-                            </div>
-                            <Switch
-                                checked={draft.panels.glass}
-                                onCheckedChange={(v) =>
-                                    (draft.panels = { ...draft.panels, glass: v })}
-                                aria-label="Glass on the panels"
-                            />
-                        </div>
-                        <div class="flex flex-col gap-y-2">
-                            <div class="flex items-center justify-between gap-x-3">
-                                <span class={LABEL}>Bar controls</span>
-                                <SegmentedControl
-                                    size="sm"
-                                    ariaLabel="Bar controls"
-                                    value={draft.panels.surfaces ?? 'clear'}
-                                    onValueChange={(v) =>
-                                        (draft.panels = {
-                                            ...draft.panels,
-                                            surfaces: v as Surfaces
-                                        })}
-                                    options={[
-                                        {
-                                            label: 'Frosted',
-                                            value: 'clear',
-                                            title: 'See-through, with a soft shadow'
-                                        },
-                                        {
-                                            label: 'Solid',
-                                            value: 'tinted',
-                                            title: "The palette's card colour"
-                                        }
-                                    ]}
-                                />
-                            </div>
+                    {/if}
+                    <div class={ROW}>
+                        <div class="flex min-w-0 flex-col gap-y-0.5">
+                            <span class={LABEL}>Glass</span>
                             <span class={HINT}>
-                                The search box, the home button and Chorus's trays. Frosted lets the
-                                backdrop through with a soft shadow; Solid paints them in the
-                                palette's card colour.
+                                Frosted Chorus panels over the page, and Spotify's panels over the
+                                backdrop where one shows through.
                             </span>
                         </div>
-                    {/if}
+                        <Switch
+                            checked={draft.panels.glass}
+                            onCheckedChange={(v) => (draft.panels = { ...draft.panels, glass: v })}
+                            aria-label="Glass"
+                        />
+                    </div>
                 </div>
             </Tabs.Content>
         </div>

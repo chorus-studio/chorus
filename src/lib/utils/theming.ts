@@ -732,87 +732,26 @@ export function applyThemeVariables(
 // ---- Glass ------------------------------------------------------------------
 
 const GLASS_FILTER_ID = 'chorus-glass'
-export const GLASS_BLUR_MIN = 16
-const SVG_NS = 'http://www.w3.org/2000/svg'
 
 /**
- * The SVG filter behind the refraction option: low-frequency noise displaces
- * the blurred backdrop so edges of the page wobble through the panel like
- * thick glass. Chrome applies it from backdrop-filter; browsers that don't
- * drop that declaration and keep the plain blur (app.css).
+ * Glass: Chorus's floating panels go translucent over a blurred, saturated
+ * view of the page (app.css), and Spotify's panels blur the backdrop behind
+ * them (theme.css, data-panel-glass). One switch on the look drives both;
+ * the material itself is fixed, app.css setting the alpha and the blur.
  */
-function ensureGlassFilter(doc: Document): SVGElement | null {
-    const existing = doc.getElementById(`${GLASS_FILTER_ID}-map`)
-    if (existing) return existing as unknown as SVGElement
-    if (!doc.body) return null
-    const svg = doc.createElementNS(SVG_NS, 'svg')
-    svg.id = `${GLASS_FILTER_ID}-svg`
-    svg.setAttribute('width', '0')
-    svg.setAttribute('height', '0')
-    svg.setAttribute('aria-hidden', 'true')
-    svg.style.cssText = 'position:absolute;width:0;height:0;pointer-events:none'
-    const filter = doc.createElementNS(SVG_NS, 'filter')
-    filter.id = GLASS_FILTER_ID
-    filter.setAttribute('x', '0')
-    filter.setAttribute('y', '0')
-    filter.setAttribute('width', '100%')
-    filter.setAttribute('height', '100%')
-    filter.setAttribute('color-interpolation-filters', 'sRGB')
-    const noise = doc.createElementNS(SVG_NS, 'feTurbulence')
-    noise.setAttribute('type', 'fractalNoise')
-    noise.setAttribute('baseFrequency', '0.006 0.009')
-    noise.setAttribute('numOctaves', '2')
-    noise.setAttribute('seed', '5')
-    noise.setAttribute('result', 'noise')
-    const soften = doc.createElementNS(SVG_NS, 'feGaussianBlur')
-    soften.setAttribute('in', 'noise')
-    soften.setAttribute('stdDeviation', '3')
-    soften.setAttribute('result', 'map')
-    const map = doc.createElementNS(SVG_NS, 'feDisplacementMap')
-    map.id = `${GLASS_FILTER_ID}-map`
-    map.setAttribute('in', 'SourceGraphic')
-    map.setAttribute('in2', 'map')
-    map.setAttribute('scale', '0')
-    map.setAttribute('xChannelSelector', 'R')
-    map.setAttribute('yChannelSelector', 'G')
-    filter.append(noise, soften, map)
-    svg.append(filter)
-    doc.body.append(svg)
-    return map
-}
-
-/**
- * Glass surfaces: floating Chorus panels go translucent over a blurred,
- * saturated view of what is behind them (app.css). The settings' opacity and
- * blur land as variables on the root; refraction toggles the SVG filter.
- */
-export function applyGlass(settings: SettingsState, doc: Document = document): void {
+export function applyGlass(on: boolean, doc: Document = document): void {
     const root = doc.documentElement
     if (!root) return
-    const on = Boolean(settings.ui?.glass)
-    const { opacity, blur, refraction } = settings.theme?.glass ?? {
-        opacity: 0.5,
-        blur: 40,
-        refraction: 22
-    }
     root.toggleAttribute('data-glass', on)
-    root.style.setProperty('--glass-alpha', String(opacity))
-    // Below this radius the page's text stays legible through the glass and
-    // fights the panel's own; the Theme tab's slider starts here too.
-    root.style.setProperty('--glass-blur', `${Math.max(blur, GLASS_BLUR_MIN)}px`)
-    const refract = on && refraction > 0
-    root.toggleAttribute('data-refraction', refract)
-    if (refract) ensureGlassFilter(doc)?.setAttribute('scale', String(refraction))
-}
-
-export function clearGlass(doc: Document = document): void {
-    const root = doc.documentElement
-    if (!root) return
-    root.removeAttribute('data-glass')
+    // Left over from the sliders and the refraction filter this once had.
     root.removeAttribute('data-refraction')
     root.style.removeProperty('--glass-alpha')
     root.style.removeProperty('--glass-blur')
     doc.getElementById(`${GLASS_FILTER_ID}-svg`)?.remove()
+}
+
+export function clearGlass(doc: Document = document): void {
+    applyGlass(false, doc)
 }
 
 // ---- Backdrop ---------------------------------------------------------------
@@ -945,7 +884,10 @@ function paintBackdrop(
     root.style.setProperty('--chorus-panel-pct', `${Math.round(alpha * 100)}%`)
     root.setAttribute('data-backdrop', media.video ? 'video' : backdrop.kind)
     root.toggleAttribute('data-panel-glass', look.panels.glass)
-    root.setAttribute('data-surfaces', look.panels.surfaces ?? 'clear')
+    // The bars' controls (the search box, the home button, Chorus's trays) go
+    // clear with a shadow while the backdrop shows through, and take the card
+    // colour when the panels are solid.
+    root.setAttribute('data-surfaces', showThrough > 0 ? 'clear' : 'tinted')
     root.toggleAttribute('data-drift', backdrop.kind === 'gradient' && backdrop.drift)
     if (media.video && media.url) mountBackdropVideo(media.url, media.play)
     else removeBackdropVideo()
@@ -1070,7 +1012,7 @@ async function applyLookNow(
     if (look.themedRack) applyThemeSurfaces(root, look.palette, look.mode)
     else clearThemeSurfaces(root)
 
-    applyGlass(settings, document)
+    applyGlass(Boolean(look.look?.panels.glass), document)
 }
 
 /**
@@ -1090,7 +1032,7 @@ export function applyRackLook(
     root.setAttribute('data-mode', look.mode)
     if (look.themedRack) applyThemeSurfaces(root, look.palette, look.mode)
     else clearThemeSurfaces(root)
-    applyGlass(settings, doc)
+    applyGlass(Boolean(look.look?.panels.glass), doc)
 }
 
 /**
