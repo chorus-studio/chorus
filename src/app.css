@@ -230,14 +230,6 @@
 .chorus-scrim {
     background-color: hsl(var(--ink) / 0.7);
 }
-/* "Hold to peek" in the look editor: the settings dialog and its scrim step
-   aside while the button is held, so the page shows the look being made. */
-[data-chorus-peek] .chorus-scrim,
-[data-chorus-peek] #chorus-config-dialog-content {
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 120ms ease-out;
-}
 [data-glass] .chorus-scrim {
     background-color: hsl(var(--ink) / 0.5);
     -webkit-backdrop-filter: none;
@@ -345,4 +337,13 @@ a[href$='/download'] {
     -webkit-padding-end: 64px;
     padding-inline-end: 64px;
     padding-left: 48px;
+}
+
+/* The theme page (lib/components/ThemePage) is mounted into Spotify's main view
+   and, under a backdrop, paints like a translucent panel; the view's own
+   content underneath would show through it, so that content is hidden
+   while the page is there. The releases page is opaque and needs no such
+   rule. */
+.main-view-container:has(> #chorus-theme-page) > :not(#chorus-theme-page) {
+    visibility: hidden;
 }

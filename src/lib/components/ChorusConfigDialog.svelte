@@ -86,7 +86,9 @@
                 <Tabs.Content value="shortcuts" class="mt-0"><ChorusConfigShortcuts /></Tabs.Content
                 >
                 <Tabs.Content value="fx-eq" class="mt-0"><ChorusConfigFXEQ /></Tabs.Content>
-                <Tabs.Content value="theming" class="mt-0"><ChorusConfigTheming /></Tabs.Content>
+                <Tabs.Content value="theming" class="mt-0">
+                    <ChorusConfigTheming onNavigate={() => (open = false)} />
+                </Tabs.Content>
                 <Tabs.Content value="backup" class="mt-0"><ChorusConfigBackup /></Tabs.Content>
             </div>
         </Tabs.Root>
