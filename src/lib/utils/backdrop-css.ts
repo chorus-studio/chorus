@@ -166,5 +166,6 @@ export const BACKDROP_PROPERTIES = [
     '--chorus-backdrop-blur',
     '--chorus-backdrop-scale',
     '--chorus-backdrop-dim',
-    '--chorus-panel-alpha'
+    '--chorus-panel-alpha',
+    '--chorus-panel-pct'
 ] as const

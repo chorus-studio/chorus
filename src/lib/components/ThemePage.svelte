@@ -377,9 +377,11 @@
             </div>
 
             <div class="flex items-start gap-x-6">
-                <!-- A panel of its own, like Spotify's sidebar: readable whatever shows through the page. -->
+                <!-- A frosted card, bordered like Spotify's own panels, so the rail stays
+                     legible over whatever the backdrop and the grid put behind it. Under
+                     the glass setting it takes the rack's glass material (.chorus-float). -->
                 <aside
-                    class="chorus-float sticky top-0 flex w-[224px] shrink-0 flex-col gap-y-1 self-start rounded-xl border border-hairline bg-ink/90 p-2 shadow-float"
+                    class="chorus-float sticky top-4 flex w-[228px] shrink-0 flex-col gap-y-1 self-start rounded-xl border border-hairline-strong bg-ink/80 p-2 shadow-float backdrop-blur-xl backdrop-saturate-150"
                 >
                     <div class="relative mb-1.5">
                         <Search
