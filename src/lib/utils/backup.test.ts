@@ -213,7 +213,7 @@ describe('parseBackup', () => {
         }
         expect(Object.keys(looks.looks)).toEqual(['a', 'b'])
         expect(looks.looks.b).toMatchObject({
-            panels: { showThrough: 60, glass: false },
+            panels: { showThrough: 100, glass: false },
             palette: { kind: 'builtin', name: 'spotify' }
         })
         expect(looks.hiddenBuiltIn).toEqual(['regal'])
