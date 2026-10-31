@@ -230,14 +230,6 @@
 .chorus-scrim {
     background-color: hsl(var(--ink) / 0.7);
 }
-/* "Hold to peek" in the look editor: the settings dialog and its scrim step
-   aside while the button is held, so the page shows the look being made. */
-[data-chorus-peek] .chorus-scrim,
-[data-chorus-peek] #chorus-config-dialog-content {
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 120ms ease-out;
-}
 [data-glass] .chorus-scrim {
     background-color: hsl(var(--ink) / 0.5);
     -webkit-backdrop-filter: none;

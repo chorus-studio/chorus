@@ -1,4 +1,5 @@
 import { mount, unmount } from 'svelte'
+import { get } from 'svelte/store'
 
 import { MatchPattern } from 'wxt/sandbox'
 import { applyLook, removeTheme } from '$lib/utils/theming'
@@ -12,6 +13,8 @@ import { type SettingsState, SETTINGS_STORE_KEY } from '$lib/stores/settings'
 import { readLooksState } from '$lib/utils/looks-state'
 import { type ContentScriptContext, injectScript, createIntegratedUi } from 'wxt/client'
 import { isReleasesRoute } from '$lib/utils/releases-route'
+import { isThemeRoute } from '$lib/utils/theme-route'
+import { lookEditing } from '$lib/stores/look-editor'
 
 import '../app.css'
 import App from '../App.svelte'
@@ -24,6 +27,8 @@ import SnipsDialog from '$lib/components/SnipsDialog.svelte'
 import DiscographyDialog from '$lib/components/DiscographyDialog.svelte'
 import NewReleasesDialog from '$lib/components/NewReleasesDialog.svelte'
 import NewReleasesPage from '$lib/components/NewReleasesPage.svelte'
+import ThemePage from '$lib/components/ThemePage.svelte'
+import LookDrawer from '$lib/components/theming/LookDrawer.svelte'
 
 // Stable Spotify anchors. The footer `now-playing-bar` persists for the lifetime
 // of the page (only its descendants swap), so it is a reliable observation root.
@@ -253,18 +258,23 @@ function unmountReleasesPage() {
     releasesPage = null
 }
 
+/** Spotify's main view, made a containing block for the overlays Chorus puts over it. */
+function mainViewHost(): HTMLElement | null {
+    const host =
+        document.querySelector<HTMLElement>(MAIN_VIEW) ??
+        document.querySelector('main')?.parentElement ??
+        null
+    if (host && getComputedStyle(host).position === 'static') host.style.position = 'relative'
+    return host
+}
+
 function syncReleasesPage() {
     if (!chorusEnabled || !isReleasesRoute(location.hash)) return unmountReleasesPage()
     if (releasesPage?.container.isConnected) return
     unmountReleasesPage()
 
-    const host =
-        document.querySelector<HTMLElement>(MAIN_VIEW) ??
-        document.querySelector('main')?.parentElement ??
-        null
+    const host = mainViewHost()
     if (!host) return
-    if (getComputedStyle(host).position === 'static') host.style.position = 'relative'
-
     const container = document.createElement('div')
     container.id = 'chorus-releases-page'
     host.appendChild(container)
@@ -275,18 +285,97 @@ function syncReleasesPage() {
     )
 }
 
+// The theme page works the same way at #chorus/theme (lib/utils/theme-route),
+// and the look drawer (lib/components/theming/LookDrawer) is mounted over the
+// main view while lib/stores/look-editor holds a draft: it sits beside the live
+// page, so the page itself previews the draft. Both re-mount on the same
+// signals as the releases page, the drawer also when its store changes.
+const THEME_SYNC_EVENT = 'chorus:theme-sync'
+const DRAWER_SYNC_EVENT = 'chorus:drawer-sync'
+let themePage: { instance: Record<string, any>; container: HTMLElement } | null = null
+let themePageTimer: ReturnType<typeof setInterval> | null = null
+let lookDrawer: { instance: Record<string, any>; container: HTMLElement } | null = null
+let lookDrawerTimer: ReturnType<typeof setInterval> | null = null
+
+function unmountThemePage() {
+    if (themePageTimer != null) {
+        clearInterval(themePageTimer)
+        themePageTimer = null
+    }
+    if (!themePage) return
+    try {
+        unmount(themePage.instance)
+    } catch (error) {
+        console.warn('Failed to unmount the theme page', error)
+    }
+    themePage.container.remove()
+    themePage = null
+}
+
+function syncThemePage() {
+    if (!chorusEnabled || !isThemeRoute(location.hash)) return unmountThemePage()
+    if (themePage?.container.isConnected) return
+    unmountThemePage()
+
+    const host = mainViewHost()
+    if (!host) return
+    const container = document.createElement('div')
+    container.id = 'chorus-theme-page'
+    host.appendChild(container)
+    themePage = { instance: mount(ThemePage, { target: container }), container }
+    themePageTimer = setInterval(() => window.dispatchEvent(new Event(THEME_SYNC_EVENT)), 1000)
+}
+
+function unmountLookDrawer() {
+    if (lookDrawerTimer != null) {
+        clearInterval(lookDrawerTimer)
+        lookDrawerTimer = null
+    }
+    if (!lookDrawer) return
+    try {
+        unmount(lookDrawer.instance)
+    } catch (error) {
+        console.warn('Failed to unmount the look drawer', error)
+    }
+    lookDrawer.container.remove()
+    lookDrawer = null
+}
+
+function syncLookDrawer() {
+    if (!chorusEnabled || !get(lookEditing)) return unmountLookDrawer()
+    if (lookDrawer?.container.isConnected) return
+    unmountLookDrawer()
+
+    const host = mainViewHost()
+    if (!host) return
+    const container = document.createElement('div')
+    container.id = 'chorus-look-drawer'
+    host.appendChild(container)
+    lookDrawer = { instance: mount(LookDrawer, { target: container }), container }
+    lookDrawerTimer = setInterval(() => window.dispatchEvent(new Event(DRAWER_SYNC_EVENT)), 1000)
+}
+
+function syncRoutes() {
+    syncReleasesPage()
+    syncThemePage()
+    syncLookDrawer()
+}
+
 function onRouterMessage(event: MessageEvent) {
     if (event.source !== window || event.data?.type !== 'FROM_ROUTER') return
-    syncReleasesPage()
+    syncRoutes()
 }
 
 function bindRouteListeners() {
     if (routeListenersBound) return
     routeListenersBound = true
     window.addEventListener('message', onRouterMessage)
-    window.addEventListener('hashchange', syncReleasesPage)
-    window.addEventListener('popstate', syncReleasesPage)
+    window.addEventListener('hashchange', syncRoutes)
+    window.addEventListener('popstate', syncRoutes)
     window.addEventListener(RELEASES_SYNC_EVENT, syncReleasesPage)
+    window.addEventListener(THEME_SYNC_EVENT, syncThemePage)
+    window.addEventListener(DRAWER_SYNC_EVENT, syncLookDrawer)
+    lookEditing.subscribe(() => syncLookDrawer())
 }
 
 // The single source of truth for "is the Chorus UI where it should be?". Re-mounts
@@ -305,6 +394,11 @@ function reconcile() {
     // the now-playing widget, so it is armed here rather than from the App and
     // survives the App's remounts. No-ops once watching.
     if (!discographyPages.observing) discographyPages.observe()
+
+    // The pages Chorus puts over the main view (New releases, Theme, the look
+    // drawer) need no player, so they come before the widget check: a page
+    // that is still loading, or a logged-out one, gets them too.
+    syncRoutes()
 
     const widget = document.querySelector(NOW_PLAYING_WIDGET)
     if (!widget) return
@@ -332,8 +426,6 @@ function reconcile() {
     // Chorus bar/slider and uncovers the native ones. Idempotent, so it runs
     // on every tick once the App is up.
     if (document.getElementById('chorus-ui')) playbackObserver.updateChorusUI()
-
-    syncReleasesPage()
 }
 
 // Debounced reconcile — coalesces Spotify's bursty mutation batches. setTimeout
@@ -467,6 +559,9 @@ function removeChorusUI() {
     mountedExtras = []
     document.getElementById('chorus-top-bar-tray')?.remove()
     unmountReleasesPage()
+    unmountThemePage()
+    lookEditing.set(null)
+    unmountLookDrawer()
 
     document.removeEventListener('FROM_MEDIA_PLAY_INIT', handleMediaPlayInit)
 
