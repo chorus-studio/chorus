@@ -15,6 +15,10 @@
     import DiscographyDialog from '$lib/components/DiscographyDialog.svelte'
     import NewReleasesDialog from '$lib/components/NewReleasesDialog.svelte'
     import NewReleasesPage from '$lib/components/NewReleasesPage.svelte'
+    import ThemePage from '$lib/components/ThemePage.svelte'
+    import LookDrawer from '$lib/components/theming/LookDrawer.svelte'
+    import { openLookEditor } from '$lib/stores/look-editor'
+    import { BUILTIN_LOOKS, newLook } from '$lib/types/look'
     import Search from '@lucide/svelte/icons/search'
     import Bell from '@lucide/svelte/icons/bell'
     import { newReleasesStore, releasesUI } from '$lib/stores/new-releases'
@@ -85,6 +89,26 @@
 
     onMount(() => nowPlaying.subscribe((n) => void followPlayingCover(n.cover ?? null)))
 
+    // ?scene=look-drawer opens the drawer on a new look (&look=aurora on a
+    // built-in's copy) over a stand-in for Spotify's page.
+    onMount(() => {
+        if (scene !== 'look-drawer') return
+        const base = BUILTIN_LOOKS.find((look) => look.id === params.get('look'))
+        openLookEditor(
+            base
+                ? {
+                      ...structuredClone(base),
+                      id: 'preview-copy',
+                      name: `${base.name} copy`,
+                      builtIn: undefined
+                  }
+                : newLook({ name: 'New look' }),
+            !base,
+            false
+        )
+        ready = true
+    })
+
     onMount(async () => {
         document.documentElement.classList.add('dark')
         document.documentElement.setAttribute('data-mode', mode)
@@ -154,6 +178,7 @@
     let ready = $state(
         !['blocked', 'backup', 'snips', 'discography', 'releases'].includes(dialog) &&
             scene !== 'releases-page' &&
+            scene !== 'look-drawer' &&
             scene !== 'topbar' &&
             !['presets', 'fx', 'eq', 'ms'].includes(tab)
     )
@@ -834,6 +859,41 @@
             style="--background-base: {themeConfig?.main ?? '#121212'}"
         >
             {#if ready}<NewReleasesPage /><Alert />{/if}
+        </div>
+    {:else if scene === 'theme-page'}
+        <!-- Spotify's main view, roughly: the page overlays it and takes its background. -->
+        <div
+            id="frame"
+            class="relative h-[860px] w-[1180px] overflow-hidden rounded-lg"
+            style="--background-base: {themeConfig?.main ?? '#121212'}"
+        >
+            {#if ready}<ThemePage /><Alert />{/if}
+        </div>
+    {:else if scene === 'look-drawer'}
+        <!-- Spotify's main view with a page on it; the drawer docks at its right edge. -->
+        <div
+            id="frame"
+            class="relative h-[860px] w-[1180px] overflow-hidden rounded-lg"
+            style="background: {themeConfig?.main ?? '#121212'}"
+        >
+            <div class="flex flex-col gap-y-6 p-8 opacity-70">
+                <div class="flex items-end gap-x-5">
+                    <div class="size-40 rounded-md bg-current opacity-20"></div>
+                    <div class="flex flex-col gap-y-3">
+                        <div class="h-3 w-16 rounded bg-current opacity-30"></div>
+                        <div class="h-12 w-72 rounded bg-current opacity-50"></div>
+                        <div class="h-3 w-40 rounded bg-current opacity-30"></div>
+                    </div>
+                </div>
+                {#each [1, 2, 3, 4, 5, 6, 7] as row (row)}
+                    <div class="flex items-center gap-x-4">
+                        <div class="size-10 rounded bg-current opacity-20"></div>
+                        <div class="h-3 w-56 rounded bg-current opacity-30"></div>
+                        <div class="h-3 w-32 rounded bg-current opacity-20"></div>
+                    </div>
+                {/each}
+            </div>
+            {#if ready}<LookDrawer /><Alert />{/if}
         </div>
     {:else if scene === 'dialog'}
         <div id="frame" class="flex items-center gap-x-4 rounded-lg bg-ink p-4">

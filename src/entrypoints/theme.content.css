@@ -981,6 +981,16 @@ html[data-backdrop] [data-testid='now-playing-bar'] {
     background-color: rgba(var(--chorus-rgb-main), var(--chorus-panel-alpha)) !important;
 }
 
+/* The theme page (lib/components/ThemePage) sits over the main view. Under a
+   backdrop it paints like a panel; inside a tagged panel it paints nothing,
+   since the panel behind it already does. */
+html[data-backdrop] #chorus-theme-page-root {
+    background-color: rgba(var(--chorus-rgb-main), var(--chorus-panel-alpha)) !important;
+}
+html[data-backdrop] [data-chorus-panel] #chorus-theme-page-root {
+    background-color: transparent !important;
+}
+
 /* Glass panels: the backdrop blurred behind each panel. The blur sits on a
    pseudo-element, never on the panel itself, because backdrop-filter makes
    a stacking context and a containing block, and the top bar's search
