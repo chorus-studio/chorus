@@ -37,8 +37,14 @@ const PLAYER_BAR = '[data-testid="now-playing-bar"]'
 /** Areas whose panel is found by walking down from the grid child; the bars are painted by their own selectors. */
 const WALKED_AREAS = new Set(['left-sidebar', 'main-view', 'right-sidebar'])
 const WALK_DEPTH_MAX = 10
-/** A child this close to its area's box in width, and no shorter than it, covers it. */
-const FILL_TOLERANCE = 2
+/**
+ * How much narrower or shorter than its area's box a child may be and still
+ * count as covering it: a scrollbar gutter, an inset panel's margins (the
+ * right sidebar's Now playing view sits a few px in from its grid cell).
+ */
+const COVER_SLACK = 24
+/** The most elements one pass looks at under an area, so a huge tree stays cheap. */
+const WALK_NODES_MAX = 80
 const DEBOUNCE_MS = 120
 
 let observer: MutationObserver | null = null
@@ -78,17 +84,18 @@ function paintsSomething(el: HTMLElement): boolean {
 }
 
 /**
- * Whether a child covers its area's box: as wide as it, and at least as tall.
- * Scroll content is taller than the box and has to count, or the main view's
- * content wrapper (which paints the main colour edge to edge) stays opaque
- * over a translucent panel; a sticky header or a hero band is shorter and
- * keeps its colour.
+ * Whether a child covers its area's box: about as wide as it, and about as
+ * tall or taller. Scroll content is taller than the box and has to count, or
+ * the main view's content wrapper (which paints the main colour edge to edge)
+ * stays opaque over a translucent panel; a sticky header or a hero band is
+ * shorter and keeps its colour, a card is narrower.
  */
 function covers(child: Element, box: DOMRect): boolean {
     const rect = child.getBoundingClientRect()
     return (
-        Math.abs(rect.width - box.width) <= FILL_TOLERANCE &&
-        rect.height >= box.height - FILL_TOLERANCE
+        rect.width > 0 &&
+        rect.width >= box.width - COVER_SLACK &&
+        rect.height >= box.height - COVER_SLACK
     )
 }
 
@@ -108,29 +115,32 @@ function clearTags(): void {
 }
 
 /**
- * Down from an area's grid child through whatever covers it: the first element
- * that paints is the panel, later painted ones are layers. Null when nothing
- * on the way paints (an overlay, an empty region).
+ * Down from an area's grid child through everything that covers it, breadth
+ * first, so the shallowest painter is the panel and every deeper one a layer
+ * (Spotify's regions branch: a scroll node beside an overlay, a content
+ * wrapper beside a sticky strip). Null when nothing on the way paints (an
+ * overlay, an empty region).
  */
 function findPanel(root: HTMLElement): { panel: HTMLElement; layers: HTMLElement[] } | null {
     const box = root.getBoundingClientRect()
     if (box.width === 0 || box.height === 0) return null
     let panel: HTMLElement | null = null
     const layers: HTMLElement[] = []
-    let el: HTMLElement | null = root
-    for (let depth = 0; el && depth < WALK_DEPTH_MAX; depth++) {
+    const queue: Array<{ el: HTMLElement; depth: number }> = [{ el: root, depth: 0 }]
+    let seen = 0
+    while (queue.length && seen < WALK_NODES_MAX) {
+        const { el, depth } = queue.shift()!
+        seen++
         if (paintsSomething(el)) {
             if (panel) layers.push(el)
             else panel = el
         }
-        let next: HTMLElement | null = null
+        if (depth >= WALK_DEPTH_MAX) continue
         for (const child of el.children) {
             if (child instanceof HTMLElement && covers(child, box)) {
-                next = child
-                break
+                queue.push({ el: child, depth: depth + 1 })
             }
         }
-        el = next
     }
     return panel ? { panel, layers } : null
 }

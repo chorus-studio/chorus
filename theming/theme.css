@@ -518,11 +518,24 @@ input:checked ~ .x-toggle-indicatorWrapper .x-toggle-indicator {
 .npv-header__metadata {
     color: var(--chorus-text);
 }
-/* misc */
-.lyrics-lyrics-container {
+/* Lyrics. Spotify colours the lyrics page from the playing cover through
+   custom properties set inline on the page's root (the class that root
+   carried, lyrics-lyrics-container, is gone), and paints the page from them.
+   Under a theme the palette takes their place, and under a backdrop the page
+   is one of the translucent panels. !important beats the inline values. */
+.lyrics-lyrics-container,
+[style*='--lyrics-color'] {
     --lyrics-color-active: var(--chorus-text) !important;
     --lyrics-color-inactive: var(--chorus-subtext) !important;
+    --lyrics-color-passed: var(--chorus-subtext) !important;
+    --lyrics-color-messaging: var(--chorus-text) !important;
     --lyrics-color-background: var(--chorus-main) !important;
+    background-color: var(--chorus-main) !important;
+}
+html[data-backdrop] .lyrics-lyrics-container,
+html[data-backdrop] [style*='--lyrics-color'] {
+    --lyrics-color-background: rgba(var(--chorus-rgb-main), var(--chorus-panel-alpha)) !important;
+    background-color: rgba(var(--chorus-rgb-main), var(--chorus-panel-alpha)) !important;
 }
 .lyrics-lyrics-background {
     background: var(--chorus-card) !important;
