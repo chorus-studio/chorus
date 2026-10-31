@@ -8,6 +8,7 @@
     import { applyRackLook, watchSystemMode } from '$lib/utils/theming'
     import { getEnabled, setEnabled, watchEnabled } from '$lib/stores/enabled'
     import { settingsStore } from '$lib/stores/settings'
+    import { looksStore } from '$lib/stores/looks'
 
     import Logo from '$lib/components/Logo.svelte'
     import PopUp from '$lib/components/views/PopUp.svelte'
@@ -56,12 +57,15 @@
 
         // Rack tokens (palette, appearance, glass) follow settings; changes made
         // on the page arrive here through storage.
-        const unsubscribeLook = settingsStore.subscribe((s) => applyRackLook(s, document))
-        const unwatchSystem = watchSystemMode(() => applyRackLook(get(settingsStore), document))
+        const repaint = () => applyRackLook(get(settingsStore), document, get(looksStore))
+        const unsubscribeLook = settingsStore.subscribe(repaint)
+        const unsubscribeLooks = looksStore.subscribe(repaint)
+        const unwatchSystem = watchSystemMode(repaint)
 
         return () => {
             unwatch()
             unsubscribeLook()
+            unsubscribeLooks()
             unwatchSystem()
         }
     })

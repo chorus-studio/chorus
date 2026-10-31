@@ -31,6 +31,11 @@ function loadImage(url: string, element: HTMLImageElement): Promise<void> {
     })
 }
 
+/** The colours of any picture the page may load (a cover, a wallpaper's thumbnail), by population. */
+export async function imageSwatches(url: string): Promise<Swatch[]> {
+    return coverSwatches(url)
+}
+
 async function coverSwatches(url: string): Promise<Swatch[]> {
     const image = new Image(64, 64)
     await loadImage(url, image)
