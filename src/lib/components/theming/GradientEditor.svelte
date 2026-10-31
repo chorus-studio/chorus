@@ -4,7 +4,8 @@
         GRADIENT_STOPS_MAX,
         GRADIENT_STOPS_MIN,
         type GradientBackdrop,
-        type GradientKind
+        type GradientKind,
+        type RadialShape
     } from '$lib/types/look'
     import { gradientCss } from '$lib/utils/backdrop-css'
     import X from '@lucide/svelte/icons/x'
@@ -56,6 +57,7 @@
     )
     const hasAngle = $derived(gradient.type === 'linear' || gradient.type === 'conic')
     const hasOrigin = $derived(gradient.type === 'radial' || gradient.type === 'conic')
+    const canRepeat = $derived(gradient.type !== 'mesh')
 </script>
 
 <div class="flex flex-col gap-y-2.5">
@@ -73,8 +75,22 @@
                 { label: 'Mesh', value: 'mesh', title: 'Soft blobs of each colour over the last' }
             ]}
         />
+        <span class="flex-1"></span>
+        {#if canRepeat}
+            <label
+                class="flex items-center gap-x-2 text-xs text-ink-fg-2"
+                title="Repeats the colours from the last stop outward: rings from a radial, stripes from a linear, spokes from a conic. Put the last stop early, say 20 %, for a tight pattern."
+            >
+                <Switch
+                    checked={Boolean(gradient.repeat)}
+                    onCheckedChange={(v) => patch({ repeat: v })}
+                    aria-label="Repeat"
+                />
+                Repeat
+            </label>
+        {/if}
         <label
-            class="ml-auto flex items-center gap-x-2 text-xs text-ink-fg-2"
+            class="flex items-center gap-x-2 text-xs text-ink-fg-2"
             title="Slowly moves the gradient; held still under Reduce motion"
         >
             <Switch
@@ -155,6 +171,21 @@
                 >
             </div>
         {/if}
+        {#if gradient.type === 'radial'}
+            <div class="flex items-center gap-x-2">
+                <span class="rack-label">Shape</span>
+                <SegmentedControl
+                    size="xs"
+                    ariaLabel="Radial shape"
+                    value={gradient.shape ?? 'ellipse'}
+                    onValueChange={(v) => patch({ shape: v as RadialShape })}
+                    options={[
+                        { label: 'Ellipse', value: 'ellipse', title: 'Stretched to the window' },
+                        { label: 'Circle', value: 'circle', title: 'Round, as rings should be' }
+                    ]}
+                />
+            </div>
+        {/if}
         {#if hasOrigin}
             <div class="flex items-center gap-x-2">
                 <span class="rack-label">Origin</span>
@@ -169,7 +200,7 @@
 
     <div class="flex flex-col gap-y-1.5">
         <span class="rack-label">Presets</span>
-        <div class="grid grid-cols-8 gap-1.5">
+        <div class="grid grid-cols-12 gap-1.5">
             {#each presets as preset (preset.name)}
                 <button
                     type="button"

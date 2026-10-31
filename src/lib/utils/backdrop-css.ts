@@ -32,11 +32,14 @@ export function gradientCss(gradient: GradientBackdrop): string {
         .sort((a, b) => a.at - b.at)
         .map((stop) => `${stop.color} ${Math.round(stop.at)}%`)
     const at = anchorPosition(gradient.origin ?? 'center')
+    // A repeating gradient tiles its stops from the last one outward: rings from
+    // a radial, stripes from a linear, spokes from a conic. A mesh has no period.
+    const kind = gradient.repeat && gradient.type !== 'mesh' ? 'repeating-' : ''
     switch (gradient.type) {
         case 'radial':
-            return `radial-gradient(ellipse at ${at}, ${stops.join(', ')})`
+            return `${kind}radial-gradient(${gradient.shape ?? 'ellipse'} at ${at}, ${stops.join(', ')})`
         case 'conic':
-            return `conic-gradient(from ${Math.round(gradient.angle)}deg at ${at}, ${stops.join(', ')})`
+            return `${kind}conic-gradient(from ${Math.round(gradient.angle)}deg at ${at}, ${stops.join(', ')})`
         case 'mesh': {
             const sorted = [...gradient.stops].sort((a, b) => a.at - b.at)
             const ground = sorted[sorted.length - 1]?.color ?? '#000000'
@@ -50,7 +53,7 @@ export function gradientCss(gradient: GradientBackdrop): string {
             return [...blobs, `linear-gradient(${ground}, ${ground})`].join(', ')
         }
         default:
-            return `linear-gradient(${Math.round(gradient.angle)}deg, ${stops.join(', ')})`
+            return `${kind}linear-gradient(${Math.round(gradient.angle)}deg, ${stops.join(', ')})`
     }
 }
 

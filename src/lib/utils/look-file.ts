@@ -189,7 +189,9 @@ export function sanitiseBackdrop(raw: unknown): Backdrop | null {
                 angle: clamp(raw.angle, 0, 360, 135),
                 origin: anchor(raw.origin),
                 stops,
-                drift: bool(raw.drift, false)
+                drift: bool(raw.drift, false),
+                ...(raw.repeat === true ? { repeat: true } : {}),
+                ...(raw.shape === 'circle' || raw.shape === 'ellipse' ? { shape: raw.shape } : {})
             }
         }
         case 'image': {

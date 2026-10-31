@@ -10,6 +10,7 @@
 import type { CSSVariable, ThemeName } from '$lib/utils/theming'
 
 export type GradientKind = 'linear' | 'radial' | 'conic' | 'mesh'
+export type RadialShape = 'circle' | 'ellipse'
 /** `at` is the stop's place along the gradient, 0–100. */
 export type GradientStop = { color: string; at: number }
 export type Anchor =
@@ -33,6 +34,10 @@ export type GradientBackdrop = {
     stops: GradientStop[]
     /** Slowly moves the gradient; held still under Reduce motion. */
     drift: boolean
+    /** Repeats the colours from the last stop outward (rings, stripes); the stops' positions set the period. Not for a mesh. */
+    repeat?: boolean
+    /** A radial gradient's shape: `ellipse` (the default) fits the window, `circle` keeps rings round. */
+    shape?: RadialShape
 }
 
 export type ImageFit = 'cover' | 'contain' | 'tile'
@@ -202,7 +207,9 @@ function builtin(
 /**
  * The built-in looks: a gradient over the built-in palette nearest its
  * colours, so a gradient is never a bare wash with Spotify's greys on top.
- * Eight kept from the fifty the first custom-theming branch carried.
+ * Twenty-four, as many as there are palettes, most grown from the fifty the
+ * first custom-theming branch carried; the bright ones are the full-page
+ * washes cdrani showed, the dim ones textures for a page that stays dark.
  */
 export const BUILTIN_LOOKS: Look[] = [
     builtin('aurora', 'Aurora', 'regal', {
@@ -279,6 +286,181 @@ export const BUILTIN_LOOKS: Look[] = [
             { color: '#7c4dff', at: 33 },
             { color: '#00e5ff', at: 66 },
             { color: '#0b0620', at: 100 }
+        ]
+    }),
+    builtin('candy_sky', 'Candy sky', 'hot_pink', {
+        type: 'linear',
+        angle: 135,
+        stops: [
+            { color: '#ff2fb3', at: 0 },
+            { color: '#7b3fe4', at: 50 },
+            { color: '#1e90ff', at: 100 }
+        ]
+    }),
+    builtin('solar_flare', 'Solar flare', 'lava', {
+        type: 'linear',
+        angle: 135,
+        stops: [
+            { color: '#ff7a00', at: 0 },
+            { color: '#ff3d3d', at: 45 },
+            { color: '#c2186b', at: 100 }
+        ]
+    }),
+    builtin('violet_hour', 'Violet hour', 'regal', {
+        type: 'radial',
+        angle: 0,
+        origin: 'top right',
+        stops: [
+            { color: '#ff9f1c', at: 0 },
+            { color: '#e0479e', at: 35 },
+            { color: '#5b1fa6', at: 70 },
+            { color: '#2a0a4a', at: 100 }
+        ]
+    }),
+    builtin('rainbow_rings', 'Rainbow rings', 'raisin', {
+        type: 'radial',
+        shape: 'circle',
+        repeat: true,
+        angle: 0,
+        origin: 'left',
+        stops: [
+            { color: '#ff2d55', at: 0 },
+            { color: '#ffcc00', at: 8 },
+            { color: '#34c759', at: 16 },
+            { color: '#0a84ff', at: 24 },
+            { color: '#ff2d55', at: 32 }
+        ]
+    }),
+    builtin('tie_dye', 'Tie dye', 'ubuntu', {
+        type: 'conic',
+        angle: 0,
+        stops: [
+            { color: '#ff1493', at: 0 },
+            { color: '#ff8c00', at: 25 },
+            { color: '#ffff00', at: 50 },
+            { color: '#1e90ff', at: 75 },
+            { color: '#ff1493', at: 100 }
+        ]
+    }),
+    builtin('neon_nights', 'Neon nights', 'synthwave', {
+        type: 'linear',
+        angle: 45,
+        stops: [
+            { color: '#0f0f0f', at: 0 },
+            { color: '#ff00ff', at: 25 },
+            { color: '#00ffff', at: 75 },
+            { color: '#0f0f0f', at: 100 }
+        ]
+    }),
+    builtin('spotlight', 'Spotlight', 'citrus', {
+        type: 'radial',
+        shape: 'circle',
+        angle: 0,
+        origin: 'top',
+        stops: [
+            { color: '#ffd700', at: 0 },
+            { color: '#b8860b', at: 20 },
+            { color: '#1a1a0a', at: 50 },
+            { color: '#0a0a0a', at: 100 }
+        ]
+    }),
+    builtin('ice_cave', 'Ice cave', 'artic', {
+        type: 'radial',
+        angle: 0,
+        origin: 'bottom',
+        stops: [
+            { color: '#e0ffff', at: 0 },
+            { color: '#87ceeb', at: 20 },
+            { color: '#4682b4', at: 40 },
+            { color: '#1a3a5a', at: 70 },
+            { color: '#0a1a2a', at: 100 }
+        ]
+    }),
+    builtin('blood_moon', 'Blood moon', 'wine', {
+        type: 'radial',
+        shape: 'circle',
+        angle: 0,
+        origin: 'top right',
+        stops: [
+            { color: '#8b0000', at: 0 },
+            { color: '#4a0000', at: 15 },
+            { color: '#1a0000', at: 35 },
+            { color: '#0a0000', at: 100 }
+        ]
+    }),
+    builtin('royal_purple', 'Royal purple', 'regal', {
+        type: 'linear',
+        angle: 225,
+        stops: [
+            { color: '#141e30', at: 0 },
+            { color: '#5b247a', at: 50 },
+            { color: '#1a1a2e', at: 100 }
+        ]
+    }),
+    builtin('peacock', 'Peacock', 'ocean', {
+        type: 'linear',
+        angle: 60,
+        stops: [
+            { color: '#0a2a2a', at: 0 },
+            { color: '#006666', at: 25 },
+            { color: '#008b8b', at: 50 },
+            { color: '#004040', at: 75 },
+            { color: '#0a1a1a', at: 100 }
+        ]
+    }),
+    builtin('rose_gold', 'Rose gold', 'cherry_blossom', {
+        type: 'linear',
+        angle: 145,
+        stops: [
+            { color: '#1a0a0a', at: 0 },
+            { color: '#4a2a2a', at: 30 },
+            { color: '#b76e79', at: 50 },
+            { color: '#4a2a2a', at: 70 },
+            { color: '#1a0a0a', at: 100 }
+        ]
+    }),
+    builtin('oil_slick', 'Oil slick', 'graphite', {
+        type: 'linear',
+        angle: 160,
+        stops: [
+            { color: '#0a0a0a', at: 0 },
+            { color: '#1a0a3a', at: 20 },
+            { color: '#003366', at: 40 },
+            { color: '#006633', at: 60 },
+            { color: '#660033', at: 80 }
+        ]
+    }),
+    builtin('forest_mist', 'Forest mist', 'matcha', {
+        type: 'linear',
+        angle: 170,
+        stops: [
+            { color: '#0a1a0a', at: 0 },
+            { color: '#1a3a1a', at: 30 },
+            { color: '#2a4a2a', at: 50 },
+            { color: '#1a2a1a', at: 70 },
+            { color: '#0a1a0a', at: 100 }
+        ]
+    }),
+    builtin('horizon', 'Horizon', 'slate', {
+        type: 'linear',
+        angle: 0,
+        stops: [
+            { color: '#0a0a2a', at: 0 },
+            { color: '#1a2a4a', at: 40 },
+            { color: '#3a4a6a', at: 50 },
+            { color: '#1a2a4a', at: 60 },
+            { color: '#0a0a2a', at: 100 }
+        ]
+    }),
+    builtin('ripple', 'Ripple', 'midnight', {
+        type: 'radial',
+        shape: 'circle',
+        repeat: true,
+        angle: 0,
+        stops: [
+            { color: '#0a1a2a', at: 0 },
+            { color: '#1a2a3a', at: 5 },
+            { color: '#0a1a2a', at: 10 }
         ]
     })
 ]

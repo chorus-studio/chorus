@@ -10,9 +10,13 @@ import {
 import {
     BUILTIN_LOOKS,
     DEFAULT_IMAGE_OPTIONS,
+    GRADIENT_STOPS_MAX,
+    GRADIENT_STOPS_MIN,
     isVideoBackdrop,
     type GradientBackdrop
 } from '$lib/types/look'
+import { THEME_NAMES } from './theming'
+import { normaliseHex } from './look-palette'
 
 const linear: GradientBackdrop = {
     kind: 'gradient',
@@ -38,6 +42,29 @@ describe('gradientCss', () => {
         expect(gradientCss({ ...linear, type: 'conic', angle: 180, origin: 'bottom' })).toBe(
             'conic-gradient(from 180deg at bottom, #0f0c29 0%, #302b63 50%, #24243e 100%)'
         )
+    })
+
+    it('repeats from the last stop when asked, and shapes a radial', () => {
+        expect(gradientCss({ ...linear, repeat: true })).toMatch(
+            /^repeating-linear-gradient\(135deg, /
+        )
+        expect(gradientCss({ ...linear, type: 'radial', shape: 'circle', origin: 'left' })).toBe(
+            'radial-gradient(circle at left, #0f0c29 0%, #302b63 50%, #24243e 100%)'
+        )
+        expect(
+            gradientCss({
+                ...linear,
+                type: 'radial',
+                repeat: true,
+                origin: 'left',
+                shape: 'circle'
+            })
+        ).toMatch(/^repeating-radial-gradient\(circle at left, /)
+        expect(gradientCss({ ...linear, type: 'conic', repeat: true })).toMatch(
+            /^repeating-conic-gradient\(from 135deg at center, /
+        )
+        // A mesh has no period to repeat.
+        expect(gradientCss({ ...linear, type: 'mesh', repeat: true })).not.toContain('repeating')
     })
 
     it('lays a mesh out as blobs over the last stop', () => {
@@ -172,5 +199,34 @@ describe('isVideoBackdrop', () => {
         ).toBe(false)
         expect(isVideoBackdrop(BUILTIN_LOOKS[0].backdrop)).toBe(false)
         expect(isVideoBackdrop(null)).toBe(false)
+    })
+})
+
+describe('BUILTIN_LOOKS', () => {
+    it('has as many looks as palettes, each sound', () => {
+        expect(BUILTIN_LOOKS).toHaveLength(THEME_NAMES.length)
+        expect(new Set(BUILTIN_LOOKS.map((look) => look.id)).size).toBe(BUILTIN_LOOKS.length)
+        expect(new Set(BUILTIN_LOOKS.map((look) => look.name.toLowerCase())).size).toBe(
+            BUILTIN_LOOKS.length
+        )
+        for (const look of BUILTIN_LOOKS) {
+            expect(look.builtIn).toBe(true)
+            expect(look.palette.kind).toBe('builtin')
+            if (look.palette.kind === 'builtin') expect(THEME_NAMES).toContain(look.palette.name)
+            expect(look.backdrop?.kind).toBe('gradient')
+            if (look.backdrop?.kind !== 'gradient') continue
+            const { stops, type, repeat, shape } = look.backdrop
+            expect(stops.length).toBeGreaterThanOrEqual(GRADIENT_STOPS_MIN)
+            expect(stops.length).toBeLessThanOrEqual(GRADIENT_STOPS_MAX)
+            for (const stop of stops) {
+                expect(normaliseHex(stop.color)).toBe(stop.color)
+                expect(stop.at).toBeGreaterThanOrEqual(0)
+                expect(stop.at).toBeLessThanOrEqual(100)
+            }
+            if (repeat) expect(type).not.toBe('mesh')
+            if (shape) expect(type).toBe('radial')
+            // The CSS each one becomes parses as one background layer list.
+            expect(gradientCss(look.backdrop)).toMatch(/gradient\(/)
+        }
     })
 })
