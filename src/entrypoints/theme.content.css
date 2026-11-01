@@ -846,6 +846,17 @@ html[data-backdrop] [style*='--lyrics-color'] {
     --lyrics-color-background: rgba(var(--chorus-rgb-main), var(--chorus-panel-alpha)) !important;
     background-color: rgba(var(--chorus-rgb-main), var(--chorus-panel-alpha)) !important;
 }
+/* Inside a tagged panel (the main view, or the Now playing view expanded to
+   its cinema) the panel already paints that colour at that alpha, so the
+   lyrics paint nothing of their own, or the two would stack. */
+html[data-backdrop] [data-chorus-panel] .FUYNhisXTCmbzt9IDxnT,
+.bbJIIopLxggQmv5x,
+.lofIAg8Ixko3mfBrbfej,
+.tr8V5eHsUaIkOYVw7eSG,
+html[data-backdrop] [data-chorus-panel] [style*='--lyrics-color'] {
+    --lyrics-color-background: transparent !important;
+    background-color: transparent !important;
+}
 .L9xhJOJnV2OL5Chm3Jew,
 .RFThkjLuWfPUO9shrMOZ,
 .nIWoY9ePLgi1am10,
@@ -1028,6 +1039,12 @@ html[data-backdrop] body,
 html[data-backdrop] [data-chorus-frame],
 html[data-backdrop] [data-chorus-panel-layer] {
     background-color: transparent !important;
+}
+/* A layer that paints its surface as a picture goes clear too: the Now
+   playing view expanded to its cinema draws the colour behind the lyrics as
+   a one-colour gradient, in the shade it read from the cover. */
+html[data-backdrop] [data-chorus-panel-layer] {
+    background-image: none !important;
 }
 /* A pseudo-element that paints a panel colour (the Now playing view draws
    its surface on its ::before) goes clear like a layer; the walker names
